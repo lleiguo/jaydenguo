@@ -45,3 +45,9 @@ next-env.d.ts
 /dist
 /test-results
 /playwright-report
+
+# terraform
+/infra/.terraform/
+/infra/.terraform.lock.hcl
+/infra/*.tfvars
+!/infra/example.tfvars

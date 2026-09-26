@@ -132,14 +132,14 @@ Claude Code. They are rough and will be revised after each milestone.
 | M0.3 | CI workflow: install, typecheck, lint, unit tests, integration tests (Postgres service), e2e (Chromium), dependency audit. | NFR-2, §9 | Green on a PR. |
 | M0.4 | A SessionStart hook for Claude Code on the web: installs dependencies and starts Postgres, so tests run in cloud sessions. | §5.2 | A fresh cloud session can run `pnpm test`. |
 | M0.5 | SP-1 region check. | F-11 | Note in spikes.md. |
-| M0.6 | Terraform: enable APIs; Artifact Registry; Cloud SQL (PG16, smallest shared-core, backups + PITR 7 d, IAM auth, no authorised networks); KMS key ring and key; Secret Manager; service accounts `web` (KMS encrypt only) and `worker` (KMS decrypt only); regional log bucket with the `_Default` sink routed to it; backup bucket with a 1-year retention policy; budgets (infrastructure and AI). All in Canada. | NFR-1a, NFR-3, NFR-7, CRED-3 | `terraform plan` is clean. Applied to the owner's project. |
+| M0.6 | Terraform: enable APIs; Artifact Registry; Cloud SQL (PG16, smallest shared-core, backups + PITR 7 d, IAM auth, no authorised networks); KMS key ring and key; Secret Manager; service accounts `web` (KMS encrypt only) and `worker` (KMS decrypt only); regional log bucket with the `_Default` sink routed to it; backup bucket with a 1-year retention policy; a project budget alert (the separate AI budget moves to M5.1, see spikes.md). All in Canada. | NFR-1a, NFR-3, NFR-7, CRED-3 | `terraform plan` is clean. Applied to the owner's project. |
 | M0.7 | Dockerfiles for web and worker. Deploy workflow: build, push to Artifact Registry, deploy to Cloud Run (web service, worker job) via Workload Identity Federation. | §5 | Merging to `main` deploys a "hello" page. |
 | M0.8 | Firebase Hosting with a rewrite to Cloud Run. Connect `jaydenguo.com` (O-2). HSTS and security headers. `robots.txt` disallow-all. `noindex`. | AUTH-3, NFR-2 | `https://jaydenguo.com` serves over TLS, and the headers pass a check. |
 
 ### M1 (slice S1): Foundation (≈ 12 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
-| M1.1 | Auth.js Google sign-in with an allow-list (owner only). Middleware guards every page and `/api/v1/*`. "Sign out everywhere". Login rate limit. Dev-only login shortcut, with a CI check that it's absent from the production build. | AUTH-1..4, NFR-2 | An e2e test proves that a non-allow-listed account and an anonymous request are refused on every route (route list generated, not hand-written). |
+| M1.1 | Google sign-in with an allow-list (owner only). Implementation depends on the F-14 decision: A = own OpenID Connect sign-in with a single `__session` cookie and Postgres sessions; B = Auth.js behind a load balancer. All responses send `Cache-Control: private, no-store` (Firebase Hosting is a CDN). Middleware guards every page and `/api/v1/*`. "Sign out everywhere". Login rate limit. Dev-only login shortcut, with a CI check that it's absent from the production build. | AUTH-1..4, NFR-2 | An e2e test proves that a non-allow-listed account and an anonymous request are refused on every route (route list generated, not hand-written). |
 | M1.2 | Crypto module: envelope encryption (AES-256-GCM data keys wrapped by KMS; a local key in dev). `key_version`. Rotation command. Log redaction helper. | CRED-3, CRED-5, §7.3 | Unit tests. An integration test proves a sync log contains no secret. The rotation test re-wraps all keys. |
 | M1.3 | Connected accounts page and API. Write-only secret fields, "Test connection", remove (deletes ciphertext and revokes OAuth), audit log entries. Google OAuth connect flow with scopes requested only when needed. | CRED-1,2,4,6,7 | e2e test: add, test, update and remove a credential. The API has no route that returns a secret. |
 | M1.4 | Schema for events, overrides, revisions, locations and conflicts. Upsert engine (insert, update with revision, mark cancelled, respect overrides and manual corrections, "source changed" flag). | CAL-6, CON-5, SYNC-3 | Property tests: running twice gives no changes; overrides are never lost; nothing is hard-deleted. |
@@ -190,7 +190,7 @@ before M2.
 ### M5 (slice S5): Extras (≈ 10 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
-| M5.1 | SP-6 Vertex spike. Update the §8 cost estimate in the spec if it differs. | VID, NFR-7 | Note plus measured cost per debate. |
+| M5.1 | SP-6 Vertex spike. Update the §8 cost estimate in the spec if it differs. Add the separate AI budget alert, filtered on the Vertex AI billing service. | VID, NFR-7 | Note plus measured cost per debate. AI budget in Terraform. |
 | M5.2 | Video intake: link form; Google Drive fetch; Google Photos Picker flow; YouTube links saved but marked "not reviewable" (F-3); history list with soft delete. | VID-1, VID-2, VID-4, F-3, F-4 | e2e tests with a stubbed Google. Temp files are always deleted (test). |
 | M5.3 | Media prep: segment trim; ffmpeg frame extraction with denser sampling around motion, capped at ~60 frames; timestamps. | §6.3 | Unit tests on a sample clip. |
 | M5.4 | LLM clients (Gemini and Claude on Vertex), with structured-output JSON schemas for review, critique, rebuttal, score and combine. Refusal and error handling. Tokens and cost recorded per call. | §6.3, VID-5 | Contract tests with recorded responses. |
@@ -270,7 +270,7 @@ or his opponents.
 
 | Milestone | Status |
 |---|---|
-| M0 Skeleton and infrastructure | not started |
+| M0 Skeleton and infrastructure | code done 2026-09-26: app, database, worker, tests, CI, session hook, images, Terraform, deploy workflow. Waiting on owner setup (O-1, O-2, `infra/README.md`) to apply and go live. SP-1 partial (spikes.md). |
 | M1 Foundation (S1) | not started |
 | M2 Swimming (S2) | not started |
 | M3 Tennis (S3) | not started |

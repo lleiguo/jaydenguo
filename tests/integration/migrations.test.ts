@@ -6,9 +6,13 @@ import { runMigrations } from "@/server/db/migrate";
 // a service container in CI).
 describe("migrations", () => {
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const webRole = "hub_web_test";
 
   beforeAll(async () => {
-    await runMigrations();
+    await pool.query(`DO $$ BEGIN
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${webRole}') THEN CREATE ROLE ${webRole}; END IF;
+    END $$`);
+    await runMigrations(undefined, webRole);
   });
   afterAll(async () => {
     await pool.end();
@@ -23,7 +27,17 @@ describe("migrations", () => {
   });
 
   it("is safe to run twice", async () => {
-    await expect(runMigrations()).resolves.toBeUndefined();
+    await expect(runMigrations(undefined, webRole)).resolves.toBeUndefined();
+  });
+
+  it("gives the web user read/write but not ownership", async () => {
+    const { rows } = await pool.query<{ can_write: boolean; can_drop: boolean }>(
+      `select has_table_privilege($1, 'public.sources', 'INSERT') as can_write,
+              pg_get_userbyid(c.relowner) = $1 as can_drop
+       from pg_class c where c.relname = 'sources'`,
+      [webRole],
+    );
+    expect(rows[0]).toEqual({ can_write: true, can_drop: false });
   });
 
   it("enforces allowed sync run statuses", async () => {
