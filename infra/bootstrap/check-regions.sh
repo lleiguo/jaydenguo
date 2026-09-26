@@ -8,11 +8,20 @@ REGION="${1:-northamerica-northeast2}"
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1
 fail=0
 
+# GNU timeout isn't on macOS by default (Homebrew coreutils calls it gtimeout).
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT=(timeout 60)
+elif command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT=(gtimeout 60)
+else
+  TIMEOUT=()
+fi
+
 check() {
   local name="$1"; shift
   local out
-  if ! out=$(timeout 60 "$@" 2>&1); then
-    printf '  ERROR    %s: %s\n' "$name" "$(echo "$out" | grep -m1 -iE 'error|denied|not enabled|timed out' || echo "command failed or timed out")"
+  if ! out=$(${TIMEOUT[@]+"${TIMEOUT[@]}"} "$@" 2>&1); then
+    printf '  ERROR    %s: %s\n' "$name" "$(echo "$out" | grep -m1 -iE 'error|denied|not enabled' || echo "$out" | tail -n 1)"
     fail=1
   elif echo "$out" | grep -qx "$REGION"; then
     printf '  ok       %s\n' "$name"
