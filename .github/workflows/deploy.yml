@@ -51,6 +51,7 @@ jobs:
           docker push "${REGISTRY}/worker:${SHA}"
 
       - name: Update worker and migrate the database
+        timeout-minutes: 10
         run: |
           gcloud run jobs update worker --region "$REGION" --image "${REGISTRY}/worker:${SHA}"
           gcloud run jobs execute worker --region "$REGION" --args=migrate --wait

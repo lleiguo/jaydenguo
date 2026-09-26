@@ -32,11 +32,13 @@ allowed fallback (spec F-11, NFR-1a).
    for the full result.
 5. Fill in variables: `cp infra/example.tfvars infra/prod.tfvars` and edit.
 6. Apply:
+
    ```bash
    cd infra
    terraform init -backend-config="bucket=<project-id>-tfstate"
    terraform apply -var-file=prod.tfvars
    ```
+
    Commit the generated `.terraform.lock.hcl` after the first real init.
 
    If the budget fails with a 403 about a "quota project", your local
@@ -44,6 +46,7 @@ allowed fallback (spec F-11, NFR-1a).
    `gcloud auth application-default login --project <project-id>`, or set
    `create_budget = false` in `prod.tfvars` and create the budget in the
    Console (Billing → Budgets & alerts: this project, alerts at 50/90/100%).
+
 7. Add secret values (never paste them anywhere else):
    ```bash
    openssl rand -base64 48 | gcloud secrets versions add auth-secret --data-file=-
@@ -55,11 +58,22 @@ allowed fallback (spec F-11, NFR-1a).
    from `terraform output db_users`.
 9. DNS: add the records from `terraform output dns_records` at the registrar
    for `jaydenguo.com`. The certificate is issued once DNS verifies.
-10. GitHub → Settings → Variables → Actions: set `GCP_PROJECT_ID`,
-    `GCP_REGION`, and from `terraform output`: `GCP_REGISTRY`,
-    `GCP_WIF_PROVIDER`, `GCP_DEPLOYER_SA`.
-11. Merge to `main`. The Deploy workflow builds both images, runs the
-    `migrate` job and deploys `web`.
+10. GitHub → Settings → Secrets and variables → Actions → **Variables**:
+
+    | Variable           | Value                                              |
+    | ------------------ | -------------------------------------------------- |
+    | `GCP_PROJECT_ID`   | the project ID                                     |
+    | `GCP_REGION`       | `northamerica-northeast2`                          |
+    | `GCP_REGISTRY`     | `terraform output -raw registry`                   |
+    | `GCP_WIF_PROVIDER` | `terraform output -raw workload_identity_provider` |
+    | `GCP_DEPLOYER_SA`  | `terraform output -raw deployer_service_account`   |
+
+    zsh prints a `%` after `-raw` output that has no trailing newline. It is
+    not part of the value; don't copy it.
+
+11. Actions → Deploy → **Run workflow** on `main` (later deploys run
+    automatically after CI passes on `main`). It builds both images, runs
+    the `migrate` job and deploys `web`.
 
 ## Day to day
 
