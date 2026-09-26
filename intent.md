@@ -1,5 +1,5 @@
 # Intent: Jayden's schedule and progress hub (jaydenguo.com)
-Author: Jayden's parent (lleiguo). Status: draft.
+Author: Jayden's parent (lleiguo). Status: approved (2026-09-26).
 
 ## Problem
 Jayden (9) trains and competes in tennis and swimming, plays soccer and hockey,
