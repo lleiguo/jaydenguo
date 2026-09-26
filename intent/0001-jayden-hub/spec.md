@@ -193,39 +193,49 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 
 | ID | Area | Requirement |
 |---|---|---|
-| NFR-1 | Privacy | Data about Jayden goes only to: the hosting provider, the database provider, Google (through the owner's own accounts), and the Anthropic API for video review, email extraction and match summaries. No analytics or ad trackers. No third-party scripts in pages. |
+| NFR-1 | Privacy | Data about Jayden goes only to: Google Cloud (hosting, database, storage, all in Canada), Google (through the owner's own accounts), and the Anthropic API for video review, email extraction and match summaries. No analytics or ad trackers. No third-party scripts in pages. |
 | NFR-2 | Security | HTTPS only with HSTS. Strict CSP. CSRF protection on mutations. Dependencies scanned in CI. Rate limiting on login. The owner's Google account must have 2-step verification (checklist item). |
 | NFR-3 | Durability | Nightly encrypted database backup to separate object storage, kept 1 year, plus the provider's point-in-time restore (7 days minimum). A restore is tested once before go-live. |
 | NFR-4 | Performance | Calendar week view loads in under 2 s on 4G. Clash detection over 2 years of events runs in under 200 ms. |
 | NFR-5 | Mobile | Mobile-first layouts at 375 px and up. Touch drag and drop. Installable as a PWA. |
 | NFR-6 | Availability | Best effort. Downtime is acceptable. A sync failure must never corrupt or delete existing data. |
-| NFR-7 | Cost | Target under US$30/month for hosting and database, plus LLM usage (estimate in §8). |
+| NFR-7 | Cost | Target under US$40/month for Google Cloud, plus LLM usage (estimate in §8). A budget alert enforces it. |
 | NFR-8 | Maintainability | One repository in one language (TypeScript). Each source integration is an isolated adapter with recorded-fixture tests, so a site change breaks one adapter, not the app. |
 | NFR-9 | Accessibility | WCAG 2.1 AA for colour contrast, keyboard use and screen-reader labels. Drag and drop has a non-drag alternative ("Move to…" menu). |
 
 ---
 
-## 5. Architecture
+## 5. Architecture (Google Cloud)
+
+Everything runs in one Google Cloud project in the Toronto region
+(`northamerica-northeast2`), so Jayden's data stays in Canada. If Canada isn't
+required, any single region works and nothing else in this design changes.
 
 ```
-            ┌──────────────── jaydenguo.com (Cloudflare DNS + TLS) ───────────────┐
- Browser ──▶│  Web app (Next.js, TypeScript)                                       │
- (PWA)      │   - UI: calendar (FullCalendar), sport pages, school, video, settings│
-            │   - API routes / server actions, Auth.js (Google sign-in, allow-list)│
-            └───────────────┬──────────────────────────────────────┬───────────────┘
-                            │ SQL                                   │ enqueue jobs
-                      ┌─────▼─────┐                          ┌─────▼──────────────┐
-                      │ Postgres  │◀──── results / events ───│ Worker (Node)      │
-                      │ (managed) │                          │  - job queue       │
-                      └─────┬─────┘                          │    (pg-boss)       │
-                            │ nightly dump                   │  - scheduler (cron)│
-                      ┌─────▼─────┐                          │  - source adapters │
-                      │ Object    │                          │    (Playwright,    │
-                      │ storage   │                          │     Google APIs,   │
-                      │ (backups) │                          │     iCal)          │
-                      └───────────┘                          │  - ffmpeg frames   │
-                                                             │  - Claude API      │
-                                                             └────────────────────┘
+ Browser (PWA) ──HTTPS──▶ jaydenguo.com
+                           │  Firebase Hosting (custom domain + managed TLS),
+                           │  rewrites all requests to Cloud Run
+                           ▼
+                 ┌───────────────────────────┐   Run Jobs API    ┌──────────────────────────┐
+                 │ Cloud Run service: web    │──(on-demand)─────▶│ Cloud Run jobs: worker   │
+                 │ Next.js UI + JSON API     │                   │ same image, one task per │
+                 │ Auth.js (Google sign-in)  │                   │ run: sync:<source>,      │
+                 └──────┬──────────┬─────────┘                   │ review:<video>, backup   │
+                        │          │ encrypt only                │ Playwright, ffmpeg,      │
+                        │          ▼                             │ Google APIs, iCal, LLM   │
+                        │   ┌─────────────┐   decrypt only       └──┬───────────┬───────────┘
+                        │   │ Cloud KMS   │◀────────────────────────┘           │
+                        │   │ (key for    │                                     │
+                        │   │ credentials)│      Cloud Scheduler ──daily──▶ worker jobs
+                        │   └─────────────┘                                     │
+                        ▼                                                       ▼
+                 ┌──────────────────────────────┐  nightly export  ┌──────────────────────┐
+                 │ Cloud SQL for PostgreSQL 16  │─────────────────▶│ Cloud Storage bucket │
+                 │ auto backups + PITR (7 days) │                  │ (Canada, 1-year      │
+                 └──────────────────────────────┘                  │ retention lock)      │
+                                                                   └──────────────────────┘
+  Secret Manager: OAuth client secrets, Auth.js secret, LLM API keys
+  Cloud Logging + Monitoring: logs (secrets redacted), sync-failure alerts, budget alerts
 ```
 
 | Decision | Choice | Reason |
@@ -234,25 +244,60 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 | Web framework | Next.js (App Router) | Server rendering, API routes and auth in one project. |
 | Calendar UI | FullCalendar (standard, MIT) | Mature day, week, month and list views, and drag and drop with touch support. |
 | Charts | A light chart library (e.g. Recharts) | Progression and trend charts. |
-| Database | PostgreSQL (managed, e.g. Neon or Supabase) | Relational data, point-in-time restore, `LISTEN/NOTIFY` for live updates. |
-| Jobs | pg-boss on Postgres | No separate queue service. Gives retries, cron and one-at-a-time locks per source. |
-| Scraping | Playwright (Chromium) in the worker | The tennis, swim, Veracross and Spordle sites need a login and JavaScript. |
-| Hosting | Container host with always-on small machines (e.g. Fly.io): 1 web + 1 worker | The worker needs Chromium and ffmpeg, so serverless functions are a poor fit. |
 | API | Documented JSON API (REST, typed with OpenAPI) used by the web UI | Lets a future native app reuse the same backend (§1.1). |
+| Web hosting | Cloud Run service, scales to zero | Pay only while in use. A cold start adds about 1–3 s to the first load after a quiet period. Setting min instances to 1 removes that, for a few dollars a month (owner's choice). |
+| Domain and TLS | Firebase Hosting in front of Cloud Run | Free managed certificate for `jaydenguo.com`, with no load balancer to pay for. DNS stays at the current registrar (A/TXT records). |
+| Background work | Cloud Run jobs (one image with Chromium and ffmpeg), started by Cloud Scheduler daily and by the web app for on-demand refresh and video reviews | Needs no always-on worker. Each source runs as its own job, so one broken site can't block the others. |
+| Job state and locks | `sync_run` table plus a Postgres advisory lock per source | Stops two refreshes of the same source running at once (SYNC-2). No separate queue service. |
+| Database | Cloud SQL for PostgreSQL 16, smallest shared-core size, automated daily backups and 7-day point-in-time restore | Managed, in-region, and fits the data size (well under 10 GB for years). |
+| DB connection | Cloud SQL Node.js connector with IAM database auth. No authorised networks. | No database passwords, and no open IP. |
+| Credential key | Cloud KMS key (§7.3). The web service account can only encrypt; the worker service account can only decrypt. | IAM enforces "web writes, never reads" (CRED-4). |
+| App secrets | Secret Manager, mounted into Cloud Run | Kept out of the repo and out of images. |
+| Backups | Cloud SQL backups plus a nightly export to a Cloud Storage bucket with a 1-year retention policy | Meets NFR-3, and a mistake in the database can't delete the exports. |
+| Live updates | The browser polls a small "changes since" endpoint every 10 s while the page is open and visible | Meets CAL-8, and works with Cloud Run scaling to zero. |
 | Auth | Auth.js with Google provider and an email allow-list | Reuses the owner's Google account. No passwords of our own. |
-| Live updates | Server-sent events backed by Postgres `LISTEN/NOTIFY`, with a 10 s polling fallback | Meets CAL-8 without extra services. |
+| Build and deploy | GitHub Actions builds images, pushes them to Artifact Registry and deploys to Cloud Run. Authenticates with Workload Identity Federation, so no service-account keys. | Nothing long-lived is stored in GitHub. |
+| Infrastructure setup | Terraform in `infra/` | The whole project can be recreated and reviewed as code. |
+| Cost guardrails | A Cloud Billing budget with alerts at 50/90/100% of the monthly target | Catches runaway LLM or database costs early. |
 | LLM | Anthropic Claude API, model `claude-opus-5` | Vision for video frames, extraction for emails, short prediction summaries. |
 
 ### 5.1 Sync flow
-1. The scheduler (daily) or the owner (on-demand) enqueues `sync:<source>`.
-2. The adapter loads its credentials (decrypted in memory only), fetches data
-   and maps it to a normalised shape with a stable `external_id`.
+1. Cloud Scheduler (daily) or the owner (on-demand) starts a worker job for
+   `sync:<source>`. The job takes that source's advisory lock, or exits if
+   the source is already running.
+2. The adapter asks KMS to decrypt its credentials, keeps them in memory only,
+   fetches data and maps it to a normalised shape with a stable `external_id`.
 3. The upsert step compares with the stored rows. It inserts new rows, updates
    changed ones (writing a revision), and marks missing ones `cancelled`.
    Rows with a local override or a manual correction are not overwritten
    (CON-5, TEN-8).
 4. Clash detection re-runs for the affected date range.
-5. A `NOTIFY` pushes changes to open browsers. The run record is saved.
+5. The run record is saved. Open browsers pick up the changes on their next
+   poll.
+
+### 5.2 Local development
+- **Start-up:** `docker compose up` starts Postgres 16, matching Cloud SQL.
+  `npm run dev` starts the web app. `npm run job -- sync:<source>` runs any
+  worker job locally, the same code Cloud Run runs.
+- **Schema:** migrations are versioned in the repo and are the only way the
+  schema changes. The same migrations run locally, in CI and in production.
+- **Seed data:** `npm run seed` loads a realistic fake season (events with a
+  few clashes, tennis matches, swim results, homework). The app is usable
+  without connecting any real account.
+- **No production secrets locally:**
+  - Local encryption uses a local development key instead of KMS, behind the
+    same interface.
+  - Source adapters run against recorded page fixtures by default. Live mode
+    is opt-in, with the owner's login in a git-ignored `.env.local`.
+  - LLM calls use recorded responses by default. Live mode is opt-in, with a
+    low-limit key.
+  - Google APIs use a separate dev OAuth client that redirects to `localhost`.
+- **Dev sign-in:** a dev-only login shortcut. It is disabled in production
+  builds, and a CI check confirms it's off.
+- **Environments:** local, CI (GitHub Actions with a Postgres service
+  container) and production. There is no staging environment in v1.
+- **Acceptance:** a new machine goes from `git clone` to a running app with
+  seed data in under 10 minutes, following the README.
 
 ---
 
@@ -330,8 +375,8 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 ### 7.3 Credential encryption
 - Each credential is encrypted with its own random data key (AES-256-GCM).
   That data key is encrypted ("wrapped") with a master key that lives only in
-  the host's secret store as an environment secret, never in the database or
-  the repository.
+  Cloud KMS (a key-encryption key that never leaves KMS), never in the
+  database or the repository.
 - `key_version` allows the master key to be rotated. A rotation script
   re-wraps all data keys.
 - Decryption happens only in the worker, and only at the moment of use. Web
@@ -345,17 +390,20 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 
 | Item | Estimate |
 |---|---|
-| Hosting: web + worker small machines | $10–20 |
-| Managed Postgres (small) | $0–20 |
-| Backup object storage | < $1 |
+| Cloud Run: web service (scale to zero) + worker jobs | $0–5 (≈ +$5–10 if web min instances = 1) |
+| Cloud SQL for PostgreSQL, smallest shared-core size, 10 GB SSD, backups | $10–30 |
+| Cloud Storage (backup exports), Artifact Registry, KMS, Secret Manager, Scheduler | < $3 |
+| Firebase Hosting (custom domain + TLS) | $0 (free tier) |
 | Domain (already owned) | — |
 | Claude: video reviews (about 60 frames each, ~$0.30–0.60 per review, ~10/month) | $3–6 |
 | Claude: email extraction (~100 short emails/month) | < $3 |
 | Claude: prediction summaries | < $1 |
-| **Total** | **about $15–50** |
+| **Total** | **about $15–45** |
 
-Costs could be lowered, for example with a cheaper model for email extraction.
-That is the owner's decision and is not assumed here.
+Google Cloud prices are indicative and must be checked in the GCP pricing
+calculator for the Toronto region during S1. Cloud SQL is the largest fixed
+cost. Costs could be lowered, for example with a cheaper model for email
+extraction. That is the owner's decision and is not assumed here.
 
 ---
 
@@ -384,22 +432,5 @@ That is the owner's decision and is not assumed here.
 | F-7 | **Spordle and Veracross feed availability not confirmed.** | They may need scraping instead of iCal. | Check during S1/S4. The adapter design supports either. | No |
 | F-8 | **"Real time" is limited by the sources.** Edits made on this site are instant, but source data only arrives on the daily or on-demand sync. | A coach's change in TeamSnap appears at the next sync, not instantly. | On-demand refresh (SYNC-2). Email suggestions catch last-minute changes. | No |
 | F-9 | **A child's data at a guessable domain.** | A misconfiguration could expose data. | AUTH-1..3, the NFR-2 checklist, and no public pages. A security review before go-live. | No |
-
----
-
-## 11. Assumptions (carried from intent)
-- Resolving a clash changes only this site. Nobody is notified.
-- Only the owner logs in. There are no roles or extra users.
-- Events are copied one way to a dedicated Google Calendar, which can be switched off.
-- Linked videos are sent to Claude for review, and nothing is kept afterwards.
-- Home time zone is a setting, confirmed at setup.
-
-## 12. Open questions (not blocking; each has a default)
-1. Which Google account holds the household calendar, and which inbox gets
-   club emails? *Default: the owner's account, lleiguo@gmail.com, for both.*
-2. Classroom fallback if the school blocks access (F-5). *Default: guardian
-   email summaries, then manual.*
-3. Which activities use TeamSnap and which use Spordle? *Default: set on the
-   sources page during S1.*
-4. Where do math, Chinese and fitness schedules come from? *Default: repeating
-   events in the household calendar.*
+| F-10 | **Cold starts.** Cloud Run scaled to zero takes about 1–3 s to wake on the first visit after a quiet period, which can miss NFR-4 (under 2 s). | The first load of the day may feel slow. | Start with scale to zero. If it's annoying, set the web service's min instances to 1 (about $5–10/month). | No, unless you want min instances = 1 from day one |
+| F-11 | **Toronto region availability.** Every service used (Cloud Run jobs, Cloud SQL, KMS, Scheduler) needs to be confirmed in `northamerica-northeast2` during S1. | Some components may need Montréal (`northamerica-northeast1`) instead. | Still in Canada, and nothing else changes. | No |
