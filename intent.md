@@ -21,16 +21,16 @@ One private site at jaydenguo.com where a parent can see everything and act on i
   personal-best progression for each event over time (e.g. 200 IM), and a
   forecast of where his times are heading.
 - **Soccer and hockey:** schedule only.
-- **Technique review:** upload a video or paste a link for any sport and get an
-  AI review of what is good, what is not, and what to work on next.
+- **Technique review:** paste a link to a video hosted elsewhere (e.g. YouTube,
+  Google Photos) for any sport and get an AI review of what is good, what is
+  not, and what to work on next. No direct video upload.
 - **School:** daily class schedule (Veracross), school calendar, and Google
   Classroom homework and quiz results in one place.
 - Data refreshes automatically every day, and the parent can also trigger a
   refresh on demand (all sources or one). Changes made on the site show up
   straight away.
 - **History is kept:** every calendar event (past and future) is stored
-  permanently, as is every uploaded video, submitted video link and its AI
-  review, so progress can be looked back on over the years.
+  permanently, as is every submitted video link and its AI review, so progress can be looked back on over the years.
 - **Connected accounts:** the parent can enter logins for the sites the data
   comes from (club sites, results sites, school portals) on the site, and they
   are stored securely and used only by the sync jobs.
@@ -41,12 +41,13 @@ One private site at jaydenguo.com where a parent can see everything and act on i
   databases, club/team schedules for soccer and hockey, Veracross, Google
   Classroom, the school calendar, and the class providers' schedules.
 - New systems: website and hosting on jaydenguo.com; a backend database for
-  events, results and link history; file storage for uploaded videos; an
+  events, results and video-link history (videos stay with their host); an
   encrypted store for source-site credentials; daily and on-demand sync jobs;
   and an LLM for video review and match/time forecasts.
 
 ## Constraints
-- It holds a child's personal data (schedule, locations, school records, video),
+- It holds a child's personal data (schedule, locations, school records, video
+  links),
   so the site must be private behind login. No public pages about Jayden.
 - Use only access the family already has. Read school and sports data with the
   parent's own accounts or official exports/feeds. No scraping that breaks a
@@ -56,7 +57,10 @@ One private site at jaydenguo.com where a parent can see everything and act on i
   time. Where a source offers sign-in with an access token (e.g. Google OAuth),
   use that instead of storing a password.
 - Nothing is deleted automatically: calendar events are kept forever, and
-  videos, links and reviews are kept until the parent deletes them.
+  video links and reviews are kept until the parent deletes them.
+- Videos are never uploaded to or stored on the site, only linked. The review
+  depends on the link being viewable by the analysis service (e.g. public or
+  unlisted).
 - Predictions and technique feedback are advice, not coaching fact. Label them
   as such and show what they are based on.
 - Keep running costs low (a family project, not a business).
@@ -75,6 +79,7 @@ One private site at jaydenguo.com where a parent can see everything and act on i
 5. Who else needs to log in (other parent, grandparents, Jayden), and should
    they have view-only or edit access?
 6. Should events sync out to the family's Google Calendar as well?
-7. Is it OK to send videos to a third-party AI service for analysis?
-8. Is there a size or length limit for uploaded videos (e.g. full matches vs
-   short clips)? This drives storage cost.
+7. Is it OK to send linked videos to a third-party AI service for analysis?
+8. Are the videos usually public/unlisted, or private (e.g. a Google Photos
+   album shared only with family)? Private links may need your Google account
+   connected so the video can be read.
