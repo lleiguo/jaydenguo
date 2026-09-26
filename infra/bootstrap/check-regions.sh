@@ -37,7 +37,12 @@ check "Cloud Run"                    gcloud run regions list --format='value(loc
 check "Artifact Registry"            gcloud artifacts locations list --format='value(name)'
 check "Cloud KMS"                    gcloud kms locations list --format='value(locationId)'
 check "Cloud Scheduler"              gcloud scheduler locations list --format='value(locationId)'
-check "Compute (Cloud SQL, Storage)" gcloud compute regions list --format='value(name)'
+
+# After `terraform apply`: confirm where the data actually lives (NFR-1a).
+PROJECT="$(gcloud config get-value project 2>/dev/null)"
+check "Cloud SQL instance 'hub'" gcloud sql instances describe hub --format='value(region)'
+check "Backup bucket"         bash -c "gcloud storage buckets describe gs://${PROJECT}-backups --format='value(location)' | tr '[:upper:]' '[:lower:]'"
+check "Terraform state bucket" bash -c "gcloud storage buckets describe gs://${PROJECT}-tfstate --format='value(location)' | tr '[:upper:]' '[:lower:]'"
 
 echo
 echo "ERROR usually means that API isn't enabled yet. Run this after"
