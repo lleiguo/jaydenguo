@@ -436,3 +436,22 @@ extraction. That is the owner's decision and is not assumed here.
 | F-9 | **A child's data at a guessable domain.** | A misconfiguration could expose data. | AUTH-1..3, the NFR-2 checklist, and no public pages. A security review before go-live. | No |
 | F-10 | **Cold starts.** Cloud Run scaled to zero takes about 1–3 s to wake on the first visit after a quiet period, which can miss NFR-4 (under 2 s). | The first load of the day may feel slow. | Start with scale to zero. If it's annoying, set the web service's min instances to 1 (about $5–10/month). | **Decided 2026-09-26:** start with scale to zero. |
 | F-11 | **Toronto region availability.** Every service used (Cloud Run jobs, Cloud SQL, KMS, Scheduler) needs to be confirmed in `northamerica-northeast2` during S1. | Some components may need Montréal (`northamerica-northeast1`) instead. | Still in Canada, and nothing else changes. | **Decided 2026-09-26:** data must stay in Canada (Toronto, or Montréal as fallback). |
+
+---
+
+## 11. Assumptions (carried from intent)
+- Resolving a clash changes only this site. Nobody is notified.
+- Only the owner logs in. There are no roles or extra users.
+- Events are copied one way to a dedicated Google Calendar, which can be switched off.
+- Linked videos are sent to Claude for review, and nothing is kept afterwards.
+- Home time zone is a setting, confirmed at setup.
+
+## 12. Open questions (not blocking; each has a default)
+1. Which Google account holds the household calendar, and which inbox gets
+   club emails? *Default: the owner's account, lleiguo@gmail.com, for both.*
+2. Classroom fallback if the school blocks access (F-5). *Default: guardian
+   email summaries, then manual.*
+3. Which activities use TeamSnap and which use Spordle? *Default: set on the
+   sources page during S1.*
+4. Where do math, Chinese and fitness schedules come from? *Default: repeating
+   events in the household calendar.*
