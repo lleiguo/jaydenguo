@@ -226,7 +226,7 @@ for any service that isn't available in Toronto.
                  ┌───────────────────────────┐   Run Jobs API    ┌──────────────────────────┐
                  │ Cloud Run service: web    │──(on-demand)─────▶│ Cloud Run jobs: worker   │
                  │ Next.js UI + JSON API     │                   │ same image, one task per │
-                 │ Auth.js (Google sign-in)  │                   │ run: sync:<source>,      │
+                 │ Google sign-in (OIDC)     │                   │ run: sync:<source>,      │
                  └──────┬──────────┬─────────┘                   │ review:<video>, backup   │
                         │          │ encrypt only                │ Playwright, ffmpeg,      │
                         │          ▼                             │ Google APIs, iCal, LLM   │
@@ -241,7 +241,7 @@ for any service that isn't available in Toronto.
                  │ auto backups + PITR (7 days) │                  │ (Canada, 1-year      │
                  └──────────────────────────────┘                  │ retention lock)      │
                                                                    └──────────────────────┘
-  Secret Manager: OAuth client secrets, Auth.js secret, LLM API keys
+  Secret Manager: OAuth client secrets, session-signing secret
   Cloud Logging + Monitoring: logs (secrets redacted), sync-failure alerts, budget alerts
 ```
 
@@ -262,7 +262,7 @@ for any service that isn't available in Toronto.
 | App secrets | Secret Manager, mounted into Cloud Run | Kept out of the repo and out of images. |
 | Backups | Cloud SQL backups plus a nightly export to a Cloud Storage bucket with a 1-year retention policy | Meets NFR-3, and a mistake in the database can't delete the exports. |
 | Live updates | The browser polls a small "changes since" endpoint every 10 s while the page is open and visible | Meets CAL-8, and works with Cloud Run scaling to zero. |
-| Auth | Auth.js with Google provider and an email allow-list | Reuses the owner's Google account. No passwords of our own. |
+| Auth | Own Google sign-in (OpenID Connect, authorization code + PKCE) with an email allow-list. One `__session` cookie holds a random session ID; sessions are stored in Postgres. | Reuses the owner's Google account, with no passwords of our own. Firebase Hosting forwards only `__session` (F-14). Server-side sessions make "sign out everywhere" (AUTH-4) a delete. |
 | Build and deploy | GitHub Actions builds images, pushes them to Artifact Registry and deploys to Cloud Run. Authenticates with Workload Identity Federation, so no service-account keys. | Nothing long-lived is stored in GitHub. |
 | Infrastructure setup | Terraform in `infra/` | The whole project can be recreated and reviewed as code. |
 | Cost guardrails | A Cloud Billing budget with alerts at 50/90/100% of the monthly target | Catches runaway LLM or database costs early. |
@@ -484,7 +484,7 @@ extraction. That is the owner's decision and is not assumed here.
 | F-11 | **Toronto region availability.** Every service used (Cloud Run jobs, Cloud SQL, KMS, Scheduler) needs to be confirmed in `northamerica-northeast2` during S1. | Some components may need Montréal (`northamerica-northeast1`) instead. | Still in Canada, and nothing else changes. | **Decided 2026-09-26:** data must stay in Canada (Toronto, or Montréal as fallback). |
 | F-12 | **AI judges are imperfect.** Models favour certain styles and sometimes their own writing. They can also agree with each other and still be wrong about what's in the video. | A confident verdict can still be wrong. | Blind A/B labels, random order, self-scores measured separately, the "grounded" criterion, and the parent vote as the real measure (VID-3d). The verdict is labelled "AI judges' opinion". | No |
 | F-13 | **Different inputs.** Gemini sees the full video, while Claude sees frames. Gemini may win simply because it sees more. | The comparison isn't perfectly like-for-like. | This is accepted, because the question is which review is more useful in practice. The scoreboard records input type so it can be taken into account. | No |
-| F-14 | **Firebase Hosting forwards only one cookie.** Behind Firebase Hosting, Cloud Run only receives a cookie named `__session`; all others are stripped. Auth.js needs several cookies, so sign-in would fail. Firebase Hosting rewrites to Cloud Run in Toronto also need confirming (SP-1). | Sign-in (AUTH-1..4) can't use Auth.js as specified. | **A (recommended):** our own small Google sign-in (OpenID Connect) with one `__session` cookie holding a random session ID, and sessions stored in Postgres. It also makes "sign out everywhere" (AUTH-4) simple. $0. **B:** replace Firebase Hosting with a Google Cloud load balancer. Auth.js works unchanged. About $18–25/month extra. | **Yes:** choose A or B before M1 |
+| F-14 | **Firebase Hosting forwards only one cookie.** Behind Firebase Hosting, Cloud Run only receives a cookie named `__session`; all others are stripped. Auth.js needs several cookies, so sign-in would fail. Firebase Hosting rewrites to Cloud Run in Toronto also need confirming (SP-1). | Sign-in (AUTH-1..4) can't use Auth.js as specified. | **A (recommended):** our own small Google sign-in (OpenID Connect) with one `__session` cookie holding a random session ID, and sessions stored in Postgres. It also makes "sign out everywhere" (AUTH-4) simple. $0. **B:** replace Firebase Hosting with a Google Cloud load balancer. Auth.js works unchanged. About $18–25/month extra. | **Decided 2026-09-26:** A. |
 
 ---
 
