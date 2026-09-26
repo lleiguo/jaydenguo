@@ -27,7 +27,9 @@ allowed fallback (spec F-11, NFR-1a).
 3. Create the Terraform state bucket:
    `infra/bootstrap/bootstrap.sh <project-id>`
 4. Check that every service is offered in Toronto (spike SP-1):
-   `infra/bootstrap/check-regions.sh`
+   `infra/bootstrap/check-regions.sh`. APIs that aren't enabled yet show as
+   `ERROR`; that's expected before step 6. Re-run it after `terraform apply`
+   for the full result.
 5. Fill in variables: `cp infra/example.tfvars infra/prod.tfvars` and edit.
 6. Apply:
    ```bash
