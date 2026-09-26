@@ -15,4 +15,4 @@ Rules:
 
 | # | Change | Intent | Spec | Plan |
 |---|---|---|---|---|
-| 0001 | [Jayden hub](0001-jayden-hub/) | approved 2026-09-26 | draft | — |
+| 0001 | [Jayden hub](0001-jayden-hub/) | approved 2026-09-26 | approved 2026-09-26 | draft |
