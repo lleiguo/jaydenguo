@@ -1,5 +1,5 @@
 # Plan: Jayden's schedule and progress hub (jaydenguo.com)
-Source: [spec.md](spec.md) (approved 2026-09-26). Status: draft for review.
+Source: [spec.md](spec.md) (approved 2026-09-26). Status: approved (2026-09-26).
 Owner: Jayden's parent (lleiguo). Written by Claude, reviewed by the owner.
 
 This plan says how the approved spec will be built: in what order, in which

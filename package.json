@@ -1,0 +1,53 @@
+{
+  "name": "jaydenguo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "pnpm build:web && pnpm build:worker",
+    "build:web": "next build && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/",
+    "build:worker": "esbuild src/worker/main.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outfile=dist/worker.mjs",
+    "start": "node .next/standalone/server.js",
+    "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run --project unit",
+    "test:int": "vitest run --project integration",
+    "test:e2e": "playwright test",
+    "db:up": "docker compose up -d --wait db",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/worker/main.ts migrate",
+    "job": "tsx src/worker/main.ts"
+  },
+  "dependencies": {
+    "@google-cloud/cloud-sql-connector": "^1.12.0",
+    "drizzle-orm": "^0.45.3",
+    "next": "16.3.6",
+    "pg": "^8.23.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.11",
+    "esbuild": "^0.28.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.6",
+    "prettier": "^3.9.9",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.2"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  }
+}
