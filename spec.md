@@ -101,7 +101,7 @@ cannot be met as written, or only with a trade-off the owner must accept.
 | SRC-5 | Tennis Canada tournament site (`tc.tournamentsoftware.com`) | Tournaments, entries, draws, match results; opponents' profiles and results | Headless-browser scraping of pages the owner can see | Stored credentials |
 | SRC-6 | Commit Swimming (`team.commitswimming.com`) | Meets, entries, results, training schedule if present | Headless-browser scraping | Stored credentials |
 | SRC-7 | Veracross parent portal | Daily timetable, school calendar, closures | Calendar subscription (iCal) where offered. Scrape the timetable. | Stored credentials |
-| SRC-8 | Google Classroom | Courses, homework, due dates, grades | Classroom API | Jayden's student Google account, OAuth (see F-4) |
+| SRC-8 | Google Classroom | Courses, homework, due dates, grades | Classroom API | Jayden's student Google account, OAuth (see F-5) |
 | SRC-9 | Math, Chinese, fitness providers | Class schedule | Household calendar, a provider iCal link, or manual repeating events | Depends on the provider |
 | SRC-10 | YouTube, Google Photos, Google Drive | Videos for review | See VID-2 and F-3 | Owner's Google OAuth |
 
