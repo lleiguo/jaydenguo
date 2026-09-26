@@ -32,7 +32,8 @@ One private site at jaydenguo.com where a parent can see everything and act on i
 - **History is kept:** every calendar event (past and future) is stored
   permanently, as is every submitted video link and its AI review, so progress can be looked back on over the years.
 - **Connected accounts:** the parent can enter logins for the sites the data
-  comes from (club sites, results sites, school portals) on the site, and they
+  comes from (club sites, results sites, school portals, YouTube, Google
+  Photos) on the site, and they
   are stored securely and used only by the sync jobs.
 
 ## Affected users and systems
@@ -58,9 +59,9 @@ One private site at jaydenguo.com where a parent can see everything and act on i
   use that instead of storing a password.
 - Nothing is deleted automatically: calendar events are kept forever, and
   video links and reviews are kept until the parent deletes them.
-- Videos are never uploaded to or stored on the site, only linked. The review
-  depends on the link being viewable by the analysis service (e.g. public or
-  unlisted).
+- Videos are never uploaded to or stored on the site, only linked. Videos can
+  stay private: the site reads them through the parent's connected YouTube or
+  Google Photos account, and only fetches a video long enough to analyse it.
 - Predictions and technique feedback are advice, not coaching fact. Label them
   as such and show what they are based on.
 - Keep running costs low (a family project, not a business).
@@ -80,6 +81,3 @@ One private site at jaydenguo.com where a parent can see everything and act on i
    they have view-only or edit access?
 6. Should events sync out to the family's Google Calendar as well?
 7. Is it OK to send linked videos to a third-party AI service for analysis?
-8. Are the videos usually public/unlisted, or private (e.g. a Google Photos
-   album shared only with family)? Private links may need your Google account
-   connected so the video can be read.
