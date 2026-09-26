@@ -29,7 +29,7 @@ cannot be met as written, or only with a trade-off the owner must accept.
 ### Out of scope (v1)
 - Direct video upload or video storage.
 - Writing back to source systems: no rebooking with clubs, no messages to coaches.
-- Logins for anyone except the owner. The data model allows more users later.
+- Logins for anyone except the owner, and user roles. Only the owner uses the site.
 - Native mobile apps. v1 is a mobile-first web app that can be installed to
   the home screen (PWA). A native iOS/Android app is a candidate for later
   (see §1.1).
@@ -63,7 +63,6 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 | AUTH-2 | Every page and API route requires a valid session. | An unauthenticated request to any route returns a redirect or 401. Automated tests cover every route. |
 | AUTH-3 | Search engines and link previews reveal nothing. | `robots.txt` disallows everything. Pages send `noindex`. The login page has no name, photo or other detail about Jayden. |
 | AUTH-4 | Sessions last 30 days on a trusted device and can be revoked. | "Sign out everywhere" ends all sessions within 1 minute. |
-| AUTH-5 | The data model supports more users with a role (`owner`, `editor`, `viewer`). | v1 has only `owner` in use. Adding an `editor` is a data change, not a code change. |
 
 ---
 
@@ -303,7 +302,7 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 ### 7.1 Main entities
 | Entity | Key fields |
 |---|---|
-| `user` | id, email, role |
+| `user` | id, email |
 | `source` | id, kind (google_calendar, ical, teamsnap, spordle, gmail, tennis_tc, commit_swim, veracross, classroom, …), category mapping, enabled, schedule |
 | `credential` | id, source_id, kind (oauth, password, secret_url), ciphertext, wrapped_dek, key_version, updated_at, last_used_at |
 | `sync_run` | id, source_id, trigger (scheduled/manual), status, counts, error_message, started_at, finished_at |
@@ -390,7 +389,7 @@ That is the owner's decision and is not assumed here.
 
 ## 11. Assumptions (carried from intent)
 - Resolving a clash changes only this site. Nobody is notified.
-- Only the owner logs in for v1 (roles exist for later).
+- Only the owner logs in. There are no roles or extra users.
 - Events are copied one way to a dedicated Google Calendar, which can be switched off.
 - Linked videos are sent to Claude for review, and nothing is kept afterwards.
 - Home time zone is a setting, confirmed at setup.
