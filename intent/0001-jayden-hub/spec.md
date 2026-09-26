@@ -159,7 +159,12 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 |---|---|---|
 | VID-1 | Submit a video link for any sport, with a short note (e.g. "second serve, focus on toss"). | The form takes a URL, sport, date filmed (defaults to today) and note. The link is saved before any analysis runs. |
 | VID-2 | Supported sources: Google Drive links and Google Photos (through the Google Photos picker). YouTube: see F-3. | The site fetches private videos through the owner's connected Google account. The video is streamed or temp-downloaded, processed, then deleted. Nothing is kept after the review. |
-| VID-3 | The review. | Sections: what's good, what to fix (ranked by impact), 1–3 drills, and what to film next time. Each point references a time in the video where possible. The review is framed for a 9-year-old's development stage. Labelled as AI feedback, not a coach's assessment. Method in §6.3. |
+| VID-3 | Each review has a fixed structure. | Sections: what's good, what to fix (ranked by impact), 1–3 drills, and what to film next time. Each point references a time in the video where possible. The review is framed for a 9-year-old's development stage. Labelled as AI feedback, not a coach's assessment. Method in §6.3. |
+| VID-3a | Two independent reviews. | Gemini and Claude each review the same video without seeing the other's review. |
+| VID-3b | Cross-examination and scoring. | Each model critiques and scores both reviews, labelled only "Review A" and "Review B" in random order. Scoring uses the rubric in §6.3. Each author then gets one rebuttal to the critique of its own review, and the judges give final scores. |
+| VID-3c | Verdict and combined advice. | The page shows the winner with its score margin. Points both models agree on are marked "agreed", and disputed points are marked with both sides' arguments. The winning model writes a final combined review that keeps only the points that survived critique. If the judges' final totals are within 1 point, the result is shown as a tie. |
+| VID-3d | Parent vote. | The owner can mark which review was actually more useful. The vote is stored and never overwritten. A small scoreboard shows, per sport: judge wins, parent-vote wins, and how often the judges agreed with the parent. |
+| VID-3e | Settings. | Debate mode is on by default. A setting switches to a single-model review (either model) to save cost. |
 | VID-4 | History kept until the owner deletes it. | A list per sport, newest first: link, note, date, status (queued, analysing, done, failed) and the review. Old reviews can be compared side by side. |
 | VID-5 | Reviews run in the background. | The page shows progress. Failures give a readable reason (e.g. "Can't open this link. Is the Google account still connected?"). |
 
@@ -193,14 +198,14 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 
 | ID | Area | Requirement |
 |---|---|---|
-| NFR-1 | Privacy | Data about Jayden goes only to: Google Cloud (hosting, database, storage, all in Canada), Google (through the owner's own accounts), and the Anthropic API for video review, email extraction and match summaries. No analytics or ad trackers. No third-party scripts in pages. |
+| NFR-1 | Privacy | Data about Jayden goes only to: Google Cloud (hosting, database, storage, all in Canada), Google (through the owner's own accounts), and Vertex AI on Google Cloud (Gemini and Claude) for video review, email extraction and match summaries. There are no separate LLM API keys. No analytics or ad trackers. No third-party scripts in pages. |
 | NFR-1a | Data residency | All stored data (database, backups, logs, container images) stays in Google Cloud regions in Canada. Calls to Google's own APIs and the LLM for processing are the only data leaving Canada, and nothing is stored there. |
 | NFR-2 | Security | HTTPS only with HSTS. Strict CSP. CSRF protection on mutations. Dependencies scanned in CI. Rate limiting on login. The owner's Google account must have 2-step verification (checklist item). |
 | NFR-3 | Durability | Nightly encrypted database backup to separate object storage, kept 1 year, plus the provider's point-in-time restore (7 days minimum). A restore is tested once before go-live. |
 | NFR-4 | Performance | Calendar week view loads in under 2 s on 4G. Clash detection over 2 years of events runs in under 200 ms. |
 | NFR-5 | Mobile | Mobile-first layouts at 375 px and up. Touch drag and drop. Installable as a PWA. |
 | NFR-6 | Availability | Best effort. Downtime is acceptable. A sync failure must never corrupt or delete existing data. |
-| NFR-7 | Cost | Target under US$40/month for Google Cloud, plus LLM usage (estimate in §8). A budget alert enforces it. |
+| NFR-7 | Cost | Target under US$40/month for Google Cloud infrastructure, plus LLM usage (estimate in §8). One budget alert covers infrastructure and another covers AI. |
 | NFR-8 | Maintainability | One repository in one language (TypeScript). Each source integration is an isolated adapter with recorded-fixture tests, so a site change breaks one adapter, not the app. |
 | NFR-9 | Accessibility | WCAG 2.1 AA for colour contrast, keyboard use and screen-reader labels. Drag and drop has a non-drag alternative ("Move to…" menu). |
 
@@ -242,7 +247,7 @@ for any service that isn't available in Toronto.
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Language | TypeScript everywhere | One language for UI, API and scrapers. Playwright and the Google and Anthropic SDKs are all first-class in TypeScript. |
+| Language | TypeScript everywhere | One language for UI, API and scrapers. Playwright, Google Cloud (Vertex AI) and the Anthropic SDK are all first-class in TypeScript. |
 | Web framework | Next.js (App Router) | Server rendering, API routes and auth in one project. |
 | Calendar UI | FullCalendar (standard, MIT) | Mature day, week, month and list views, and drag and drop with touch support. |
 | Charts | A light chart library (e.g. Recharts) | Progression and trend charts. |
@@ -261,7 +266,7 @@ for any service that isn't available in Toronto.
 | Build and deploy | GitHub Actions builds images, pushes them to Artifact Registry and deploys to Cloud Run. Authenticates with Workload Identity Federation, so no service-account keys. | Nothing long-lived is stored in GitHub. |
 | Infrastructure setup | Terraform in `infra/` | The whole project can be recreated and reviewed as code. |
 | Cost guardrails | A Cloud Billing budget with alerts at 50/90/100% of the monthly target | Catches runaway LLM or database costs early. |
-| LLM | Anthropic Claude API, model `claude-opus-5` | Vision for video frames, extraction for emails, short prediction summaries. |
+| LLM | Vertex AI on Google Cloud: Gemini (latest Pro model available at build time) and Claude (`claude-opus-5`) | One Google Cloud bill, service-account auth and no API keys to store. Gemini reads the video directly; Claude reads frames. Both review, and each judges the other (§6.3). Claude handles email extraction and prediction summaries. Exact model IDs and regions are confirmed in S5. |
 
 ### 5.1 Sync flow
 1. Cloud Scheduler (daily) or the owner (on-demand) starts a worker job for
@@ -331,16 +336,56 @@ for any service that isn't available in Toronto.
   "Estimate". Growth spurts at this age make forecasts uncertain, and the UI
   says so.
 
-### 6.3 Video technique review
-- The Claude API takes images, not video files. The worker fetches the video
-  through the owner's connected account and extracts frames with ffmpeg. It
-  uses about 1–2 frames per second, capped at about 60 frames, with denser
-  sampling around motion. Each frame is timestamped.
-- It sends the frames, the sport, the owner's note and a sport-specific rubric
-  (e.g. tennis serve: stance, toss, trophy position, contact, follow-through;
-  freestyle: body line, catch, rotation, kick, breathing) to `claude-opus-5`.
-  The reply comes back in a fixed structure (VID-3).
-- Temp files are deleted when the job finishes, whether it succeeded or failed.
+### 6.3 Video technique review (two models, debate and judge)
+**Input**
+- The worker fetches the video through the owner's connected Google account.
+- Gemini receives the video itself. The worker trims it to the stroke or swim
+  segment the owner marks, if any, and asks Gemini for a higher frame rate on
+  fast strokes.
+- Claude receives frames extracted with ffmpeg: about 1–2 per second overall,
+  denser (10–15 per second) around the key motion, capped at about 60 frames,
+  each timestamped.
+- Both get the same sport, owner's note and sport-specific rubric (e.g. tennis
+  serve: stance, toss, trophy position, contact, follow-through; freestyle:
+  body line, catch, rotation, kick, breathing).
+
+**Rounds**
+1. **Review.** Both models write a review independently, in the VID-3
+   structure.
+2. **Critique and score.** Each model judges both reviews. The reviews are
+   anonymised as A and B, and the order is randomised per judge. Each judge
+   sees the same media it had in round 1. Scores are 1–5 per criterion:
+   - *Grounded:* every claim is visible in the video at the cited time. Claims
+     that can't be seen are listed as unsupported.
+   - *Correct technique:* the claims are sound for the sport.
+   - *Age-appropriate:* suitable for a 9-year-old's development stage; no
+     adult-elite cues; nothing unsafe.
+   - *Actionable:* the fixes and drills can be done at the next practice.
+   - *Prioritised:* the most impactful fix comes first.
+   Each judge also lists specific errors and points the other review missed.
+3. **Rebuttal.** Each author sees the critiques of its own review, and may
+   concede points or defend them in one short reply citing timestamps.
+4. **Final scoring.** Both judges re-score with the rebuttals in view.
+   - Winner: highest average of the two judges' final totals, with ties
+     within 1 point.
+   - Each model also scores its own review, blind. This measures
+     self-preference bias, which is reported on the scoreboard but doesn't
+     count toward the winner.
+5. **Combined review.** The winner writes the final advice. It keeps agreed
+   points, drops points conceded in rebuttal, and marks points still disputed.
+
+**Output and storage**
+- Stored per review (all kept, VID-4): both reviews, all critiques, all
+  scores, rebuttals, the verdict, the combined review, model IDs and versions,
+  prompt version, and the parent's vote.
+- Every model call uses structured output with a fixed JSON schema, so scores
+  and verdicts are machine-readable.
+
+**Guardrails**
+- The parent vote is the real measure of quality. The scoreboard (VID-3d)
+  shows whether the judges' verdicts match what the parent finds useful.
+- Temp video and frame files are deleted when the job finishes, whether it
+  succeeded or failed.
 
 ---
 
@@ -363,7 +408,8 @@ for any service that isn't available in Toronto.
 | `swim_meet` / `swim_entry` / `swim_result` | meet, course, event (distance+stroke), seed_time, time_ms, splits, place, is_pb, manual_correction |
 | `school_period` | date, period, course, room, teacher |
 | `classroom_item` | course, title, due_at, state, grade, max_points, link |
-| `video_review` | id, sport, url, provider, note, filmed_on, status, review (json), model, created_at, deleted_at |
+| `video_review` | id, sport, url, provider, note, filmed_on, status, mode (debate/single), verdict (winner, margin, tie), combined_review (json), parent_vote, created_at, deleted_at |
+| `video_review_round` | review_id, round (review/critique/rebuttal/final_score/combine), model, model_version, prompt_version, input_label (A/B), output (json), scores (json), tokens, cost |
 | `email_suggestion` | id, gmail_message_id, extracted (json), confidence, status (pending/approved/rejected) |
 | `audit_log` | at, actor, action, target (no secret values) |
 
@@ -397,10 +443,10 @@ for any service that isn't available in Toronto.
 | Cloud Storage (backup exports), Artifact Registry, KMS, Secret Manager, Scheduler | < $3 |
 | Firebase Hosting (custom domain + TLS) | $0 (free tier) |
 | Domain (already owned) | — |
-| Claude: video reviews (about 60 frames each, ~$0.30–0.60 per review, ~10/month) | $3–6 |
-| Claude: email extraction (~100 short emails/month) | < $3 |
-| Claude: prediction summaries | < $1 |
-| **Total** | **about $15–45** |
+| Video reviews in debate mode: 2 reviews + 2×2 critiques + 2 rebuttals + 2×2 final scores + 1 combined (~$1.50–3.00 per video, ~10/month) | $15–30 |
+| Email extraction on Claude (~100 short emails/month) | < $3 |
+| Prediction summaries on Claude | < $1 |
+| **Total** | **about $30–70** (debate mode); about $15–45 in single-model mode |
 
 Google Cloud prices are indicative and must be checked in the GCP pricing
 calculator for the Toronto region during S1. Cloud SQL is the largest fixed
@@ -436,6 +482,8 @@ extraction. That is the owner's decision and is not assumed here.
 | F-9 | **A child's data at a guessable domain.** | A misconfiguration could expose data. | AUTH-1..3, the NFR-2 checklist, and no public pages. A security review before go-live. | No |
 | F-10 | **Cold starts.** Cloud Run scaled to zero takes about 1–3 s to wake on the first visit after a quiet period, which can miss NFR-4 (under 2 s). | The first load of the day may feel slow. | Start with scale to zero. If it's annoying, set the web service's min instances to 1 (about $5–10/month). | **Decided 2026-09-26:** start with scale to zero. |
 | F-11 | **Toronto region availability.** Every service used (Cloud Run jobs, Cloud SQL, KMS, Scheduler) needs to be confirmed in `northamerica-northeast2` during S1. | Some components may need Montréal (`northamerica-northeast1`) instead. | Still in Canada, and nothing else changes. | **Decided 2026-09-26:** data must stay in Canada (Toronto, or Montréal as fallback). |
+| F-12 | **AI judges are imperfect.** Models favour certain styles and sometimes their own writing. They can also agree with each other and still be wrong about what's in the video. | A confident verdict can still be wrong. | Blind A/B labels, random order, self-scores measured separately, the "grounded" criterion, and the parent vote as the real measure (VID-3d). The verdict is labelled "AI judges' opinion". | No |
+| F-13 | **Different inputs.** Gemini sees the full video, while Claude sees frames. Gemini may win simply because it sees more. | The comparison isn't perfectly like-for-like. | This is accepted, because the question is which review is more useful in practice. The scoreboard records input type so it can be taken into account. | No |
 
 ---
 
@@ -443,7 +491,7 @@ extraction. That is the owner's decision and is not assumed here.
 - Resolving a clash changes only this site. Nobody is notified.
 - Only the owner logs in. There are no roles or extra users.
 - Events are copied one way to a dedicated Google Calendar, which can be switched off.
-- Linked videos are sent to Claude for review, and nothing is kept afterwards.
+- Linked videos are sent to Gemini and Claude through Vertex AI for review, and nothing is kept afterwards except the reviews.
 - Home time zone is a setting, confirmed at setup.
 
 ## 12. Open questions (not blocking; each has a default)
