@@ -38,9 +38,16 @@ One private site at jaydenguo.com where a parent can see everything and act on i
 
 ## Affected users and systems
 - Users: the parent (primary). Possibly the other parent, and later Jayden.
-- External sources (read-only): tennis tournament/ranking sites, swim results
-  databases, club/team schedules for soccer and hockey, Veracross, Google
-  Classroom, the school calendar, and the class providers' schedules.
+- External sources (read-only):
+  - Tennis results, draws and opponents: Tennis Canada's tournament site
+    (tc.tournamentsoftware.com, Jayden's player profile), with the parent's login.
+  - Swim meets, entries and results: Commit Swimming team app
+    (team.commitswimming.com, "my team" results).
+  - Schedules come from several places: the shared household calendar (managed
+    by hand by the parent), emails from coaches and clubs, and club apps
+    (TeamSnap, Spordle and others).
+  - School: Veracross (parent account), Google Classroom (Jayden's student
+    account), and the school calendar.
 - New systems: website and hosting on jaydenguo.com; a backend database for
   events, results and video-link history (videos stay with their host); an
   encrypted store for source-site credentials; daily and on-demand sync jobs;
@@ -67,17 +74,21 @@ One private site at jaydenguo.com where a parent can see everything and act on i
 - Keep running costs low (a family project, not a business).
 - Must work well on a phone, since it will mostly be checked on the go.
 
+## Assumptions (defaults until the parent says otherwise)
+- Fixing a clash by drag and drop changes only this calendar. Nobody is
+  notified and nothing is rebooked with a club.
+- Only the parent logs in at first. The design leaves room to add another
+  parent later with view-only or edit access.
+- Events sync one way out to the family's Google Calendar, and this can be
+  turned off.
+- Linked videos are sent to Claude for analysis, and nothing is kept after
+  the review.
+
 ## Open questions
-1. Where does he compete? Which tennis (e.g. UTR, USTA, Tennis Canada) and swim
-   (e.g. USA Swimming/SwimCloud, Swimming Canada) bodies hold his results?
-2. How do schedules arrive today for each activity: shared calendar, club app
-   (TeamSnap, SportsEngine, etc.), email, or PDF?
-3. When a clash is fixed by drag and drop, should that only change our calendar,
-   or also notify the coach or book with the club?
-4. Does the school allow Google Classroom and Veracross access for a parent
-   account through their APIs, or will data have to come from guardian emails
-   or manual entry?
-5. Who else needs to log in (other parent, grandparents, Jayden), and should
-   they have view-only or edit access?
-6. Should events sync out to the family's Google Calendar as well?
-7. Is it OK to send linked videos to a third-party AI service for analysis?
+1. Which Google account holds the shared household calendar, and which inbox
+   gets the coach and club emails? The sync needs to read both.
+2. Jayden's Classroom account is a school-managed student account. The school
+   may block third-party apps from connecting to it. If so, is a guardian
+   summary email or manual entry an acceptable fallback?
+3. Which activities use which club app (e.g. TeamSnap for soccer, Spordle for
+   hockey)? Are there others besides these two?
