@@ -194,6 +194,7 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 | ID | Area | Requirement |
 |---|---|---|
 | NFR-1 | Privacy | Data about Jayden goes only to: Google Cloud (hosting, database, storage, all in Canada), Google (through the owner's own accounts), and the Anthropic API for video review, email extraction and match summaries. No analytics or ad trackers. No third-party scripts in pages. |
+| NFR-1a | Data residency | All stored data (database, backups, logs, container images) stays in Google Cloud regions in Canada. Calls to Google's own APIs and the LLM for processing are the only data leaving Canada, and nothing is stored there. |
 | NFR-2 | Security | HTTPS only with HSTS. Strict CSP. CSRF protection on mutations. Dependencies scanned in CI. Rate limiting on login. The owner's Google account must have 2-step verification (checklist item). |
 | NFR-3 | Durability | Nightly encrypted database backup to separate object storage, kept 1 year, plus the provider's point-in-time restore (7 days minimum). A restore is tested once before go-live. |
 | NFR-4 | Performance | Calendar week view loads in under 2 s on 4G. Clash detection over 2 years of events runs in under 200 ms. |
@@ -208,8 +209,9 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 ## 5. Architecture (Google Cloud)
 
 Everything runs in one Google Cloud project in the Toronto region
-(`northamerica-northeast2`), so Jayden's data stays in Canada. If Canada isn't
-required, any single region works and nothing else in this design changes.
+(`northamerica-northeast2`). All data must stay in Canada (owner decision,
+2026-09-26). Montréal (`northamerica-northeast1`) is the only allowed fallback
+for any service that isn't available in Toronto.
 
 ```
  Browser (PWA) ──HTTPS──▶ jaydenguo.com
@@ -432,5 +434,5 @@ extraction. That is the owner's decision and is not assumed here.
 | F-7 | **Spordle and Veracross feed availability not confirmed.** | They may need scraping instead of iCal. | Check during S1/S4. The adapter design supports either. | No |
 | F-8 | **"Real time" is limited by the sources.** Edits made on this site are instant, but source data only arrives on the daily or on-demand sync. | A coach's change in TeamSnap appears at the next sync, not instantly. | On-demand refresh (SYNC-2). Email suggestions catch last-minute changes. | No |
 | F-9 | **A child's data at a guessable domain.** | A misconfiguration could expose data. | AUTH-1..3, the NFR-2 checklist, and no public pages. A security review before go-live. | No |
-| F-10 | **Cold starts.** Cloud Run scaled to zero takes about 1–3 s to wake on the first visit after a quiet period, which can miss NFR-4 (under 2 s). | The first load of the day may feel slow. | Start with scale to zero. If it's annoying, set the web service's min instances to 1 (about $5–10/month). | No, unless you want min instances = 1 from day one |
-| F-11 | **Toronto region availability.** Every service used (Cloud Run jobs, Cloud SQL, KMS, Scheduler) needs to be confirmed in `northamerica-northeast2` during S1. | Some components may need Montréal (`northamerica-northeast1`) instead. | Still in Canada, and nothing else changes. | No |
+| F-10 | **Cold starts.** Cloud Run scaled to zero takes about 1–3 s to wake on the first visit after a quiet period, which can miss NFR-4 (under 2 s). | The first load of the day may feel slow. | Start with scale to zero. If it's annoying, set the web service's min instances to 1 (about $5–10/month). | **Decided 2026-09-26:** start with scale to zero. |
+| F-11 | **Toronto region availability.** Every service used (Cloud Run jobs, Cloud SQL, KMS, Scheduler) needs to be confirmed in `northamerica-northeast2` during S1. | Some components may need Montréal (`northamerica-northeast1`) instead. | Still in Canada, and nothing else changes. | **Decided 2026-09-26:** data must stay in Canada (Toronto, or Montréal as fallback). |
