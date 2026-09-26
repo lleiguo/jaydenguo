@@ -30,8 +30,19 @@ cannot be met as written, or only with a trade-off the owner must accept.
 - Direct video upload or video storage.
 - Writing back to source systems: no rebooking with clubs, no messages to coaches.
 - Logins for anyone except the owner. The data model allows more users later.
-- Native mobile apps. The web app is installable to the home screen (PWA).
+- Native mobile apps. v1 is a mobile-first web app that can be installed to
+  the home screen (PWA). A native iOS/Android app is a candidate for later
+  (see §1.1).
 - Push notifications. A daily email digest is a candidate for v2.
+
+### 1.1 Mobile app decision
+v1 ships as a PWA, not a native app. It works on any phone from one codebase,
+needs no app-store review, and covers the core use: checking the calendar and
+resolving clashes on the go. A native app becomes worth it mainly for
+reliable push notifications, home-screen widgets ("today's schedule") and
+offline use. To keep that door open, all data goes through a documented JSON
+API (not UI-only server actions), so a later React Native/Expo app can reuse it
+unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 
 ### Delivery slices (recommended order for plan.md)
 | Slice | Contents | Why this order |
@@ -64,6 +75,7 @@ cannot be met as written, or only with a trade-off the owner must accept.
 | CAL-1 | One calendar shows every event from every source, color-coded by category. | Categories: tennis, swimming, soccer, hockey, math, Chinese, fitness, school class, school closure, other. Each has its own color and icon, so they are distinguishable without color (accessibility). |
 | CAL-2 | Day, week, month and agenda views. Agenda is the default on phones. | Views switch without a page reload. The week view is usable at 375 px wide. |
 | CAL-3 | Filter by category and by source. | Filters persist per device. |
+| CAL-3a | Quick toggle between **School** and **Activities** layers on the combined calendar. | Two toggle chips always visible above the calendar: "School" (classes, homework due dates, school calendar events) and "Activities" (all sports and classes). Either can be shown or hidden with one tap, and both can be on at once. Closure-day banners stay visible even when School is hidden. Clash highlighting still counts hidden events, and a hidden clashing event shows as a "clash with a hidden event" marker. The choice persists per device. |
 | CAL-4 | Every event shows where it came from and when it was last synced. | The event detail shows source name, last sync time, and a link to the source page when one exists. |
 | CAL-5 | The owner can create, edit and delete manual events, including repeating ones. | Repeat rules support weekly, every N weeks, and date-range limits. Edits take effect immediately. |
 | CAL-6 | Events are kept forever. | No event row is ever hard-deleted. A source event that disappears is marked `cancelled` and stays visible in history. A manual delete sets `deleted_at`, and the event can be restored from a "Deleted" view. Every change is written to an event revision history. |
@@ -227,6 +239,7 @@ cannot be met as written, or only with a trade-off the owner must accept.
 | Jobs | pg-boss on Postgres | No separate queue service. Gives retries, cron and one-at-a-time locks per source. |
 | Scraping | Playwright (Chromium) in the worker | The tennis, swim, Veracross and Spordle sites need a login and JavaScript. |
 | Hosting | Container host with always-on small machines (e.g. Fly.io): 1 web + 1 worker | The worker needs Chromium and ffmpeg, so serverless functions are a poor fit. |
+| API | Documented JSON API (REST, typed with OpenAPI) used by the web UI | Lets a future native app reuse the same backend (§1.1). |
 | Auth | Auth.js with Google provider and an email allow-list | Reuses the owner's Google account. No passwords of our own. |
 | Live updates | Server-sent events backed by Postgres `LISTEN/NOTIFY`, with a 10 s polling fallback | Meets CAL-8 without extra services. |
 | LLM | Anthropic Claude API, model `claude-opus-5` | Vision for video frames, extraction for emails, short prediction summaries. |
@@ -363,9 +376,9 @@ That is the owner's decision and is not assumed here.
 
 | # | Concern | Impact | Proposed handling | Owner decision needed? |
 |---|---|---|---|---|
-| F-1 | **Scraping terms of the tournament and swim sites.** Neither the Tennis Canada tournament site nor Commit Swimming offers a public API. Their terms may forbid automated access even with his own login. | The site could block the account, or pages could change and break a sync. | Scrape only pages the owner can see, once a day plus on-demand, rate-limited (SYNC-5). Manual entry as a fallback (SYNC-6). The owner reviews each site's terms before S2/S3. Ask Tennis Canada or Commit for an export or feed if one exists. | **Yes:** accept this risk to proceed. |
+| F-1 | **Scraping terms of the tournament and swim sites.** Neither the Tennis Canada tournament site nor Commit Swimming offers a public API. Their terms may forbid automated access even with his own login. | The site could block the account, or pages could change and break a sync. | Scrape only pages the owner can see, once a day plus on-demand, rate-limited (SYNC-5). Manual entry as a fallback (SYNC-6). The owner reviews each site's terms before S2/S3. Ask Tennis Canada or Commit for an export or feed if one exists. | **Decided 2026-09-26:** owner accepts the risk. |
 | F-2 | **Opponent data for predictions.** Opponents' results are only as complete as the tournament site. Players new to the circuit will have little history. | Predictions will often be "low confidence" early on. | Show confidence clearly (TEN-6) and backtest (§6.1). | No |
-| F-3 | **YouTube videos can't be fetched for analysis.** The YouTube API doesn't provide video files, and YouTube's terms forbid downloading outside YouTube's own features, even for the owner's own private videos. | YouTube links can be saved in history but not reviewed by the site. | Support Google Drive and Google Photos (picker) for reviews. For a YouTube video, keep the original in Photos or Drive and link that. YouTube links can still be saved with manual notes. | **Yes:** confirm Photos/Drive for videos you want reviewed. |
+| F-3 | **YouTube videos can't be fetched for analysis.** The YouTube API doesn't provide video files, and YouTube's terms forbid downloading outside YouTube's own features, even for the owner's own private videos. | YouTube links can be saved in history but not reviewed by the site. | Support Google Drive and Google Photos (picker) for reviews. For a YouTube video, keep the original in Photos or Drive and link that. YouTube links can still be saved with manual notes. | **Decided 2026-09-26:** owner accepts. Photos/Drive for reviews. |
 | F-4 | **Google Photos links need the Photos picker.** Since March 2025 the Google Photos API can't read an existing library from a pasted share link. Apps must use the Photos Picker, where the owner selects the video. | "Paste a Google Photos link" becomes "Pick from Google Photos" (one extra tap). | Build the Picker flow into VID-1. Drive links work as pasted. | No, unless you object |
 | F-5 | **Classroom on a school-managed student account.** The school's Google Workspace admin may block third-party apps from Jayden's account. | SCH-3/SCH-4 may be impossible through the API. | Test during S4. Fallback 1: Classroom guardian email summaries (if the school enables them), parsed from Gmail through EML. Fallback 2: manual. The intent's open question 2 is still open. | **Yes, if blocked:** choose a fallback |
 | F-6 | **Google app verification for Gmail/Classroom access.** Reading Gmail is a "restricted" Google scope. For a personal app, Google allows an unverified app for fewer than 100 users, with a warning screen. | One-time "unverified app" warning when connecting. Refresh tokens expire every 7 days if the app is left in "Testing" mode. | Publish the Google app in "Production" as an unverified personal app, and use it only with the family's accounts. | No |
