@@ -38,6 +38,12 @@ allowed fallback (spec F-11, NFR-1a).
    terraform apply -var-file=prod.tfvars
    ```
    Commit the generated `.terraform.lock.hcl` after the first real init.
+
+   If the budget fails with a 403 about a "quota project", your local
+   credentials are billing API calls to Google's gcloud project. Either run
+   `gcloud auth application-default login --project <project-id>`, or set
+   `create_budget = false` in `prod.tfvars` and create the budget in the
+   Console (Billing → Budgets & alerts: this project, alerts at 50/90/100%).
 7. Add secret values (never paste them anywhere else):
    ```bash
    openssl rand -base64 48 | gcloud secrets versions add auth-secret --data-file=-

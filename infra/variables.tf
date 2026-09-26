@@ -26,9 +26,16 @@ variable "github_repository" {
   default     = "lleiguo/jaydenguo"
 }
 
+variable "create_budget" {
+  description = "Create the budget alert with Terraform. Set false to create it in the Console instead."
+  type        = bool
+  default     = true
+}
+
 variable "billing_account_id" {
-  description = "Billing account for the budget alert (e.g. 012345-6789AB-CDEF01)."
+  description = "Billing account for the budget alert (e.g. 012345-6789AB-CDEF01). Unused when create_budget is false."
   type        = string
+  default     = ""
 }
 
 variable "monthly_budget" {
