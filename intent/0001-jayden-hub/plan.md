@@ -270,7 +270,7 @@ or his opponents.
 
 | Milestone | Status |
 |---|---|
-| M0 Skeleton and infrastructure | code done 2026-09-26: app, database, worker, tests, CI, session hook, images, Terraform, deploy workflow. Waiting on owner setup (O-1, O-2, `infra/README.md`) to apply and go live. SP-1 partial (spikes.md). |
+| M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
 | M1 Foundation (S1) | not started |
 | M2 Swimming (S2) | not started |
 | M3 Tennis (S3) | not started |
