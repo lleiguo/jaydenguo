@@ -1,0 +1,20 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { cache } from "react";
+import { getDb } from "../db";
+import { findSession, type SessionUser } from "./session";
+import { SESSION_COOKIE } from "./tokens";
+
+// The signed-in user for this request, looked up once per render.
+export const currentSession = cache(async (): Promise<SessionUser | null> => {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  return findSession(await getDb(), token);
+});
+
+// For pages: the proxy already redirects anonymous requests; this is the
+// second, independent check.
+export async function requirePageSession(): Promise<SessionUser> {
+  const session = await currentSession();
+  if (!session) redirect("/login");
+  return session;
+}

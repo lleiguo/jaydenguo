@@ -154,6 +154,20 @@ Claude Code. They are rough and will be revised after each milestone.
 | M1.13 | Backups: a nightly worker job exports Cloud SQL to the retention bucket. Restore runbook in the README. Test restore once. | NFR-3 | The restore is done into a scratch instance and its row counts match. |
 | M1.14 | Seed script with a realistic fake season. README "run it locally in 5 minutes". | §5.2 | A fresh clone reaches a running app with seed data in under 10 minutes (timed). |
 
+**Build notes (M1):**
+- M1.1: Next.js always serves hashed `/_next/static/*` files with
+  `public, max-age=31536000, immutable` and doesn't allow overriding it.
+  Those files are build output with no personal data, so they are the one
+  exception to `Cache-Control: private, no-store`; the proxy skips them.
+- M1.1: end-to-end tests sign in through a fake OpenID Connect provider on
+  localhost (`tests/e2e/support/fake-oidc.ts`, allowed only on the loopback
+  address), or by writing a session row directly. The production build has
+  no sign-in shortcut; `pnpm check:build` checks it in CI.
+- M1.1: session rows are keyed by an HMAC of the cookie value (key:
+  `auth-secret`), so a database copy can't be replayed as a cookie. The
+  proxy checks the session in Postgres on every request, so "sign out
+  everywhere" takes effect immediately.
+
 **S1 exit:** the owner uses the calendar for about a week. Fix list triaged
 before M2.
 
@@ -271,7 +285,7 @@ or his opponents.
 | Milestone | Status |
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
-| M1 Foundation (S1) | not started |
+| M1 Foundation (S1) | in progress. M1.1 done. |
 | M2 Swimming (S2) | not started |
 | M3 Tennis (S3) | not started |
 | M4 School (S4) | not started |
