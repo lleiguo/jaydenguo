@@ -27,7 +27,7 @@ test("a feed source syncs on demand, shows its history, and a second refresh is 
   const name = `Soccer ${testInfo.project.name} ${Date.now()}`;
   await signInAs(context, OWNER);
   await addFeedCredential(context, `${name} link`, "team.ics");
-  await page.goto("/sources");
+  await page.goto("/settings/sources");
   await addFeedSource(page, name, `${name} link`, "soccer");
 
   const card = sourceCard(page, name);
@@ -52,7 +52,7 @@ test("a failing source shows a red status with the reason in plain language (SYN
   const name = `Hockey ${testInfo.project.name} ${Date.now()}`;
   await signInAs(context, OWNER);
   await addFeedCredential(context, `${name} link`, "missing.ics");
-  await page.goto("/sources");
+  await page.goto("/settings/sources");
   await addFeedSource(page, name, `${name} link`, "hockey");
   const card = sourceCard(page, name);
   await card.getByRole("button", { name: "Refresh" }).click();
@@ -70,15 +70,15 @@ test("the household Google calendar can be chosen and synced (SRC-1)", async ({
   const account = `household-${testInfo.project.name}@example.test`;
   const name = `Household ${testInfo.project.name} ${Date.now()}`;
   await signInAs(context, OWNER);
-  await page.goto("/accounts");
+  await page.goto("/settings/accounts");
   await page
     .getByRole("region", { name: "Google" })
     .getByRole("link", { name: /Connect Google account|Reconnect Google/ })
     .click();
   await page.getByRole("link", { name: account }).click();
-  await expect(page).toHaveURL(/\/accounts$/);
+  await expect(page).toHaveURL(/\/settings\/accounts$/);
 
-  await page.goto("/sources");
+  await page.goto("/settings/sources");
   const form = page.getByRole("form", { name: "Add a source" });
   await form.getByLabel("Type").selectOption("google_calendar");
   await form.getByLabel("Name").fill(name);

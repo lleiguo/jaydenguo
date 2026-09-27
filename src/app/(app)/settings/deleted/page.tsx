@@ -4,7 +4,7 @@ import { DeletedList } from "@/components/calendar/deleted-list";
 export default function DeletedPage() {
   return (
     <main className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Deleted events</h1>
+      <h2 className="font-semibold">Deleted events</h2>
       <DeletedList />
     </main>
   );

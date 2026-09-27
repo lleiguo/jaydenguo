@@ -12,7 +12,6 @@ export default async function SettingsPage() {
   const homeTimeZone = await getHomeTimeZone(db);
   return (
     <main className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">Settings</h1>
       <section aria-labelledby="general" className="flex flex-col gap-3">
         <h2 id="general" className="font-semibold">
           General
