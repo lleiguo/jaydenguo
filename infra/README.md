@@ -91,9 +91,13 @@ picker at the top).
    - Audience: **External**.
    - Contact information: your address. Agree to the policy, **Create**.
 2. **Scopes.** Google Auth Platform → **Data access** → **Add or remove
-   scopes**. Tick `openid`, `.../auth/userinfo.email` and
-   `.../auth/calendar.readonly` (the household calendar, M1.6). **Update**,
-   then **Save**.
+   scopes**. Tick `openid` and `.../auth/userinfo.email`. The calendar scope
+   only appears in the list once the Calendar API is enabled, so under
+   **Manually add scopes** paste the full address
+   `https://www.googleapis.com/auth/calendar.readonly` (the household
+   calendar, M1.6) and click **Add to table**. **Update**, then **Save**.
+   (Alternatively `gcloud services enable calendar-json.googleapis.com`
+   first, then tick it in the list.)
 3. **Publish.** Google Auth Platform → **Audience** → **Publish app** →
    **Confirm**. The status becomes "In production". Don't submit for
    verification: this is an unverified personal app (spec F-6). The first
