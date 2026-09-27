@@ -295,7 +295,7 @@ before M2.
 | M3.6 | Prediction explanation from Claude (Vertex), generated only from the computed numbers. Prompt and version stored. | TEN-6 | A snapshot test with recorded LLM responses. |
 | M3.7 | Manual score and time edits, with the "source disagrees" flag. | TEN-8, SYNC-6 | e2e test: an edit survives the next sync. |
 
-**Build notes (M3; see [handoff.md](handoff.md)):**
+**Build notes (M3):**
 - M3.1: every page TEN-2..7 needs is public and server-rendered (spikes.md
   SP-2), so the `tennis-tc` adapter reads them over plain HTTP with an HTML
   parser (`node-html-parser`), not Chromium, and without signing in. The
@@ -458,7 +458,7 @@ or his opponents.
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
 | M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
-| M3 Tennis (S3) | **built, not merged (2026-09-27).** M3.1–M3.7 done on `claude/m3-tennis-feature-94v4q6`; M3.2 schema on `m3/2-schema` merges first. Still open: M3.3 live smoke test, M3.6 recorded Claude response (no Vertex quota yet), O-5 signed-in look. See [handoff.md](handoff.md). |
-| M4 School (S4) | not started |
+| M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
+| M4 School (S4) | not started. Start from [handoff.md](handoff.md). |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |

@@ -1,142 +1,144 @@
-# Handoff: M3 Tennis (2026-09-27)
+# Handoff: M4 School (2026-09-27)
 
-Where M3 stopped, for whoever picks it up next. Read with [plan.md](plan.md)
-§5 (M3 table and "Build notes (M3)") and [spikes.md](spikes.md) SP-2.
+For whoever starts M4. Read with [plan.md](plan.md) §5 (the M4 table),
+[spec.md](spec.md) §3.8 (SCH), CAL-3a, CAL-7, SRC-7, SRC-8, F-5 and F-7,
+and [spikes.md](spikes.md) SP-4.
 
-Branch: `claude/m3-tennis-feature-94v4q6`, from `main` at `cf0af47` (M2
-merged). Everything below is committed there, including work in progress.
-**Don't merge it as is**: M3.2 and M3.3 are unfinished (see below). Merging
-deploys, and the migration would run.
+## Starting state
+- `main` at `cfc480f` has M0–M3 merged (M3: PRs #17, #18). Deployed
+  through GitHub Actions on merge.
+- M4 is not started. No `veracross` or `classroom` adapter exists yet.
 
-## Starting state checked
-- `origin/main` has "m2/3-pages" (#16), so M2's code is in.
-- The owner's M2 live check passed (2026-09-27).
-- Still open from M1: M1.6 live smoke and the M1.7 Spordle decision (O-6
-  feed links), and the M1.13 restore test (`infra/bootstrap/restore-test.sh`).
+## What M4 can build on (already in `main`)
+- **Categories and layers:** `school_class` and `school_closure` exist
+  (`src/domain/constants.ts`, `src/components/calendar/categories.ts`).
+  The School/Activities chips (CAL-3a) and closure banners (CAL-7) are in
+  `src/components/calendar/calendar-app.tsx`; closure banners stay visible
+  when School is hidden.
+- **Clash rules for school:** `src/domain/clashes.ts` already skips classes
+  on closure days, never clashes class with class, and marks activities
+  on closure days "school closed" (`src/server/calendar/load.ts`).
+- **School calendar feed:** the generic `ical` adapter
+  (`src/adapters/ical`) can read a Veracross calendar subscription link
+  (a `secret_url` credential; the Accounts page already offers
+  "Veracross" with kinds `secret_url` and `password`). Map its closures to
+  `school_closure` with category rules on the Sources page.
+- **Google grants:** `src/server/credentials/google-connect.ts` asks for
+  scopes per feature (`GOOGLE_SCOPES`, only `calendar` so far). Classroom
+  scopes would be added there as a new feature.
+- **Patterns to copy:**
+  - Adapter over plain HTTP with a cookie jar, request cap, loopback-only
+    test base URL: `src/adapters/tennis-tc/index.ts`.
+  - Adapter through Chromium when a site needs a browser:
+    `src/adapters/commit-swim`.
+  - Fake site for tests serving scrubbed fixtures:
+    `tests/e2e/support/fake-tc.ts` (+ `fake-tc-port.ts`), wired into
+    `playwright.config.ts` and wiped in `tests/e2e/support/global-setup.ts`.
+  - Sport-specific tables applied after events in `src/worker/sync.ts`
+    (`batch.swim`, `batch.tennis`), pure upsert rules in
+    `src/domain/*-upsert.ts`, read models in `src/server/*/load.ts`.
+  - Test-only clock: `TENNIS_TC_NOW`, honoured only with a loopback
+    `TENNIS_TC_BASE_URL` (`tennisTestNow()` in the tennis adapter).
 
-## Done
-- **M3.1 (SP-2), done.** Page map, findings and decision in spikes.md SP-2.
-  - `src/adapters/tennis-tc/parse.ts`: pure parsers for every page used
-    (profile, years, tournaments per year, tournament overview, bracket,
-    draw match list, error pages). They read whitelisted fields only.
-  - `tests/fixtures/tennis-tc/`: 17 scrubbed pages plus `manifest.json`
-    (fake IDs). The leak check passed. They're listed in `.prettierignore`
-    so the HTML stays as recorded.
-  - `tests/e2e/support/fake-tc.ts` (+ `fake-tc-port.ts`, port 4467): serves
-    the fixtures at the real paths, redirects `/player/<org>/<member>`
-    like the site does, returns the site's 200 error page for anything
-    else, and plants contact details on the profile page to prove the
-    adapter drops them. `TC_NOW` (2024-09-28T16:00Z) is the day between
-    his quarter final and his semi final in the fixture.
-  - `scripts/tennis-tc-probe.ts`: the SP-2 "done when" script. It ran live
-    and printed his last 10 matches and one opponent's (output kept
-    outside the repo).
+## Plan order
+1. **M4.1 = SP-5, Classroom access spike (F-5).** Needs the owner (O-7):
+   they sign in with Jayden's school Google account and consent. Try the
+   Classroom API read of courses and coursework
+   (`classroom.courses.readonly`, `classroom.coursework.me.readonly`, and
+   the student-submissions scope for grades). If the school's Workspace
+   admin blocks third-party apps, record the exact error in spikes.md and
+   choose a fallback with the owner: (1) Classroom guardian email
+   summaries parsed from Gmail (needs M5's Gmail adapter, EML), or
+   (2) manual entry. Its done-when is "works, or a fallback is chosen".
+   Note: a student account is a different Google account from the owner's;
+   the connect flow must let the owner pick it (the grant is still stored
+   as the owner's credential, CRED).
+2. **M4.2 Veracross.** First finish SP-4 for Veracross (F-7): does the
+   parent portal give a calendar subscription link (then it's just an
+   `ical` source), and how is the daily timetable shown (scrape)? The
+   timetable scraper is a new `veracross` adapter using the stored parent
+   login (O-7). Done when: fixture tests, a "Today at school" card
+   (periods, classes, rooms, teachers), closures as banners, and **school
+   blocks collapse into one "School" block by default and expand** (SCH-1;
+   not built yet, nothing in the calendar collapses today).
+3. **M4.3 Classroom adapter** (or the fallback): homework with states
+   (assigned, turned in, late, missing), "missing" and "due in 24 h"
+   highlighted, upcoming due dates in the agenda, grades per course with a
+   trend. Needs new tables (e.g. courses, assignments, submissions or
+   grades): edit `db/schema/`, then `pnpm db:generate --name school`.
+   The next migration is 0009.
+4. **M4.4 links and layer:** every school item links back to Classroom or
+   Veracross (SCH-5); homework due dates and school events sit in the
+   School layer (CAL-3a). e2e test.
 
-## Built (2026-09-27, local session)
-All of M3.2–M3.7 is built on this branch; details in plan.md "Build
-notes (M3)". Checks run locally: format, lint, typecheck, unit (139),
-integration (35), `pnpm build`, `pnpm check:build`, e2e (93 passed, 13
-desktop-only tests skipped on the phone project).
-- **M3.2 schema:** split out onto `m3/2-schema` (from `main`) with the
-  migrations test extended for the match rules, and merged back into this
-  branch. Its PR to `main` goes first: it's schema only, so deploying it
-  just runs migration 0007. After it merges, schema changes are new
-  migrations (this branch already adds 0008).
-- **M3.3:** `src/server/tennis/apply.ts` writes a sync; the worker applies
-  it after the events; `smoke` prints tennis counts. Sources takes his
-  profile link for `tennis_tc`. The "Tennis Canada tournaments" login stays
-  on the Accounts page until O-5 is settled.
-- **M3.4:** `/tennis` pages and `/api/v1/tennis/*`; e2e in
-  `tests/e2e/tennis.spec.ts`.
-- **M3.5:** `src/domain/glicko2.ts` (matches the paper's example),
-  `src/domain/tennis-predict.ts`, `/tennis/accuracy`,
-  `scripts/tennis-backtest.ts`.
-- **M3.6:** `src/server/tennis/explain.ts`, table `tennis_explanations`
-  (0008), Terraform env `VERTEX_PROJECT` / `CLAUDE_VERTEX_REGION` on the
-  worker job (IAM `roles/aiplatform.user` was already there).
-- **M3.7:** `src/server/tennis/mutations.ts`, edit and add forms; e2e shows
-  an edit surviving the next sync.
+Branches: one PR per milestone or smaller, each targeting `main` (stacked
+`m4/…` branches worked well in M2; give the owner PR links that target
+`main`). Update plan.md §9 and the M4 build notes in the same PRs.
 
-## Before merging (owner)
-1. Merge the `m3/2-schema` PR first.
-2. Apply Terraform from this branch (worker env for Vertex), before the
-   code that reads it is deployed.
-3. Ask for Claude quota on Vertex AI: a test call on 2026-09-27 got
-   "429 Quota exceeded for ... global_online_prediction_requests_per_base_model
-   ... anthropic-claude-opus" on the `global` endpoint (`us-east5` doesn't
-   serve `claude-opus-5` to the project). Until then the sync logs
-   "tennis explanation failed" and the pages show the numbers without the
-   paragraph. Then re-record the fixture:
-   `RECORD_LLM=1 VERTEX_PROJECT=<project> pnpm exec vitest run --project integration tests/integration/tennis-explain.test.ts`
-   (needs `gcloud auth application-default login`), and check the new
-   snapshot.
-4. After deploy: add the Tennis Canada source on the Sources page with his
-   profile link, press Refresh (the M3.3 live smoke test), and check his
-   tournaments on the calendar. Then run `scripts/tennis-backtest.ts`
-   against production (through the Cloud SQL proxy) for the PR's
-   calibration table; it prints aggregates only.
+## Privacy (school data)
+- Veracross and Classroom pages show other children, teachers and
+  families. Read whitelisted fields only, like the tennis and swim
+  parsers. Never print raw pages, rosters or names into a transcript;
+  inspect shapes (classes, counts) and keep real pages in the session
+  scratchpad.
+- Fixtures must be scrubbed before they enter the repo (the repo is
+  public): fake names, rooms, teachers, course names and IDs; keep the
+  school's name and the home time zone out. Grep the branch diff for real
+  strings before pushing. See spikes.md SP-2/SP-3 for how the scrubber and
+  leak check were done.
+- Grades and homework are Jayden's own data: they stay in Cloud SQL
+  (Canada) and are never sent to an LLM in M4.
 
-## Still to do
-- **O-5 signed-in look** (owner in the desktop app's browser pane; see
-  below). If signed-in pages show entries before draws, add the `/user`
-  sign-in to the adapter and an "entered" state before the draw.
-- The fixture backtest (112 matches, almost all "low" confidence) is
-  barely better than a coin toss (Brier 0.245 against 0.25). Real data
-  will have more history; revisit the weights once the production numbers
-  are in.
+## Owner steps M4 needs
+- **O-7:** the Veracross parent login (entered on the Accounts page, never
+  in chat) and, if offered, the Veracross calendar subscription link.
+- **O-7 / F-5:** consent with Jayden's school Google account during SP-5,
+  done by the owner in the Claude desktop app's browser pane or their own
+  browser. Claude never handles the password.
+- Possibly: a new OAuth scope on the Google consent screen for Classroom
+  (the app is an unverified personal app, F-6; Classroom scopes are
+  sensitive, so Google shows the unverified warning).
 
-## Where the build departed from the plan
-All recorded in plan.md "Build notes (M3)":
-- Plain HTTP plus an HTML parser instead of Playwright; public pages only;
-  the source uses his profile link instead of a stored login.
-- Ratings are computed, not stored.
-- `tennis_draws` stores only his draw position and next match, not the
-  whole draw (privacy).
-- One branch (`claude/m3-tennis-feature-94v4q6`) instead of stacked
-  `m3/…` branches: this cloud session can only push to that branch.
+## Still open from earlier milestones
+- **M3.6:** the explanation fixture `tests/fixtures/llm/tennis-explain.json`
+  is still the hand-written stand-in (`recorded: false`). The project had
+  no Claude quota on Vertex (all three global `anthropic-claude-opus`
+  quotas were 0 on 2026-09-27; the owner was shown how to request 5
+  requests, 20,000 input and 10,000 output tokens per minute). Once
+  granted, re-record:
+  `RECORD_LLM=1 VERTEX_PROJECT=jaydenguo DATABASE_URL=… pnpm exec vitest run --project integration tests/integration/tennis-explain.test.ts -u`
+  and review the new snapshot.
+- **M3.3 live smoke:** after deploy, the owner adds the Tennis Canada source
+  with his profile link and presses Refresh. Then run
+  `scripts/tennis-backtest.ts` against production for the calibration
+  table (aggregates only).
+- **O-5 signed-in look** at tc.tournamentsoftware.com (do upcoming entries
+  show before draws?), done by the owner in the browser pane.
+- **M1:** M1.6 live smoke and M1.7 Spordle decision (O-6 feed links), and
+  the M1.13 restore test (`infra/bootstrap/restore-test.sh`).
 
-## Gotchas
-- **Privacy:** never print raw pages or names to a transcript. Inspect
-  shapes (classes, counts) only. Real pages and probe output belong in the
-  session scratchpad. To refresh fixtures, re-run the scrubber (a Python
-  script kept outside the repo, described in spikes.md SP-2) and the leak
-  check, then grep the branch diff for the real strings before pushing.
-- The site returns **status 200 for error pages**. `isErrorPage` checks
-  the content.
-- **Unplayed matches carry no member numbers.** Players are resolved
-  through tournament player numbers learned from played matches.
-- **Seeds** appear as "Name [1]" in draws; the parser splits them off.
-  Without that, names don't match across pages.
-- Draw **match lists are in schedule order**; use the bracket fragment
-  (`GetDrawContent`) for draw order.
-- In cloud sessions, Node's `fetch` ignores `HTTPS_PROXY`: run live
-  scripts with `NODE_USE_ENV_PROXY=1` (and allow `tc.tournamentsoftware.com`
-  in the environment's network settings). Not needed on Cloud Run.
-- `tsx` scripts can't use top-level await here (CJS transform); wrap them
-  in `main()`.
-- Keep the home time zone out of the repo: fixtures use Toronto offsets.
+## Local environment (owner's Mac)
+- Postgres 16 on port 5433 (Homebrew; PG14 holds 5432):
+  `DATABASE_URL=postgres://hub:hub@localhost:5433/hub`. The integration and
+  e2e suites share this database with local dev.
+- pnpm 10.33 lives in `~/.local/bin` (add it to `PATH`). Run
+  `pnpm install` after switching branches.
+- `gh` isn't signed in; `git push` over SSH works. Give the owner compare
+  links (`https://github.com/lleiguo/jaydenguo/compare/main...<branch>?expand=1`).
+- `.claude/worktrees/` makes `pnpm lint` and `pnpm format:check` report
+  bogus problems; run `eslint --ignore-pattern '.claude/**'` and check
+  prettier on the changed paths.
+- gcloud application-default credentials work for project `jaydenguo`.
+  Terraform is initialised in `infra/` with `prod.tfvars` (untracked); apply
+  with `terraform apply -var-file=prod.tfvars` before merging code that
+  needs new env or secrets.
+- In Playwright, `getByLabel("Name")` matches any label containing "name"
+  (e.g. "tournament"); word new labels and options with that in mind, or
+  use `{ exact: true }`.
+- `tsx` scripts: wrap top-level code in `main()`.
 
-## Owner decisions (answered 2026-09-27)
-- **M2 live check:** passed. M2 is done (plan §9).
-- **O-8, Claude on Vertex for M3.6:** enabled. The owner accepts sending
-  the computed match numbers (never raw pages or profiles) to a region
-  outside Canada if Claude isn't served in one. At M3.6, pick the region
-  and model from what the project offers, and add the worker's Vertex IAM
-  in Terraform (apply it from the branch before merging).
-- **O-5, signed-in look:** wanted. Still to do: the owner signs in to
-  tc.tournamentsoftware.com themselves, in the Claude desktop app's
-  browser pane (as for SP-3), and Claude reads pages only. The questions:
-  do upcoming entries show before the draw is published, and does
-  anything else differ from the public pages? A cloud session can't do
-  this: it has no browser pane, and the password must never go in chat. If
-  entries do show, add an optional sign-in to the adapter (the `/user`
-  form POST) using the login entered on the Accounts page, whose "Tennis
-  Canada tournaments" option then stays.
-- **Crawl size:** up to 30 opponents and 150 requests per run is OK.
-- **robots.txt:** noted by the owner; covered by F-1.
-
-## Still open
-- The profile link is pasted on the Sources page after deploy (step 4
-  above).
-- Still open from M1: M1.6 live smoke and M1.7 (O-6 feed links), and the
-  M1.13 restore test.
+## Checks before every push
+`pnpm typecheck`, lint, `pnpm test`, `pnpm test:int` (needs
+`DATABASE_URL`), `pnpm build`, `pnpm check:build`, and `pnpm test:e2e`
+for the areas touched. Last full run on `main`'s code (2026-09-27): unit
+139, integration 35, e2e 93 passed (13 desktop-only skipped on phone).
