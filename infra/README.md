@@ -111,13 +111,14 @@ picker at the top).
      `https://jaydenguo.com/accounts/google/callback` (connecting Google
      sources).
    - **Create**. Keep the dialog open for the next step.
-5. **Store the production values** in Secret Manager. In a terminal, run each
-   command, paste the value when it waits, then press Enter and Ctrl-D (so
-   the value never lands in shell history):
+5. **Store the production values** in Secret Manager. Run each command,
+   paste the value (it isn't shown), press Enter, and wait for
+   `Created version [1] of the secret …`. This keeps the value out of shell
+   history and adds no trailing newline:
 
    ```bash
-   gcloud secrets versions add google-oauth-client-id --data-file=-
-   gcloud secrets versions add google-oauth-client-secret --data-file=-
+   read -rs V && printf '%s' "$V" | gcloud secrets versions add google-oauth-client-id --data-file=-; unset V
+   read -rs V && printf '%s' "$V" | gcloud secrets versions add google-oauth-client-secret --data-file=-; unset V
    ```
 
    Then close the dialog. (The secret can be shown again from the client's

@@ -23,7 +23,7 @@ export function allowedEmails(): string[] {
 
 // Key for hashing session tokens before they are stored.
 export function authSecret(): string {
-  const secret = process.env.AUTH_SECRET;
+  const secret = process.env.AUTH_SECRET?.trim();
   if (secret) return secret;
   if (isProduction) throw new Error("AUTH_SECRET must be set");
   return "dev-only-auth-secret-not-for-production";
@@ -32,8 +32,9 @@ export function authSecret(): string {
 export type OidcSettings = { issuer: URL; clientId: string; clientSecret: string };
 
 export function oidcSettings(): OidcSettings {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  // Trimmed: a value pasted into Secret Manager can carry a stray newline.
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set");
   // OIDC_ISSUER exists so end-to-end tests can sign in against a fake
   // provider on localhost; see isLocalIssuer.
