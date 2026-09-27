@@ -293,7 +293,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
           <option value="ical">Calendar feed (TeamSnap, Spordle, other iCal link)</option>
           <option value="google_calendar">Google Calendar</option>
           <option value="commit_swim">Commit Swimming (meets and results)</option>
-          <option value="tennis_tc">Tennis Canada tournaments (draws and matches)</option>
+          <option value="tennis_tc">Tennis Canada (draws, matches and results)</option>
         </select>
       </label>
       <label className="flex flex-col">

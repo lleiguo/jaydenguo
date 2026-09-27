@@ -56,6 +56,8 @@ export default defineConfig({
         WORKER_COMMAND: `node ${path.resolve("dist/worker.mjs")}`,
         COMMIT_SWIM_BASE_URL: `http://127.0.0.1:${FAKE_COMMIT_PORT}`,
         TENNIS_TC_BASE_URL: `http://127.0.0.1:${FAKE_TC_PORT}`,
+        // The fixture's "today", between his quarter final and semi final.
+        TENNIS_TC_NOW: "2024-09-28T16:00:00Z",
         // The fake site needs no politeness gap between requests.
         FETCH_MIN_GAP_MS: "0",
       },

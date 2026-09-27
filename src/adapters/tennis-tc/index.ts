@@ -44,6 +44,20 @@ export function tennisBaseUrl(): string {
   return u.origin;
 }
 
+// Tests against the fake site pin "now" to the fixture's day (the site's
+// pages are from 2024). Only honoured with a loopback TENNIS_TC_BASE_URL,
+// so it can't affect the real site.
+export function tennisTestNow(): Date | null {
+  const at = process.env.TENNIS_TC_NOW;
+  if (!at || !process.env.TENNIS_TC_BASE_URL) return null;
+  tennisBaseUrl(); // throws unless loopback
+  return new Date(at);
+}
+const withClock = (ctx: AdapterContext): AdapterContext => {
+  const now = tennisTestNow();
+  return now ? { ...ctx, now } : ctx;
+};
+
 // The player's public profile link, e.g.
 // https://tc.tournamentsoftware.com/player-profile/<id>.
 export function profileIdFromLink(link: unknown): string | null {
@@ -301,6 +315,6 @@ export const tennisTcAdapter: Adapter<TcRaw> = {
   kind: "tennis_tc",
   label: "Tennis Canada tournaments",
   credentialKinds: [],
-  fetchRaw: fetchTennis,
-  normalise: normaliseTennis,
+  fetchRaw: (ctx) => fetchTennis(withClock(ctx)),
+  normalise: (raw, ctx) => normaliseTennis(raw, withClock(ctx)),
 };

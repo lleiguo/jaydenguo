@@ -1,0 +1,54 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`tennis prediction explanations > sends Claude numbers only and stores the paragraph with the prompt version > explanation 1`] = `"This estimate gives him a 30% chance of winning. His opponent's rating is about 190 points higher, but it rests on only two rated matches, so it is very uncertain, while his own rating is well established from 43 matches. They haven't played each other before. His recent form is strong (8 wins in his last 10, winning 78% of games), which nudges the estimate only slightly. Confidence is low because so little is known about his opponent; a close match that goes to a third set is quite possible."`;
+
+exports[`tennis prediction explanations > sends Claude numbers only and stores the paragraph with the prompt version > inputs 1`] = `
+{
+  "adjustmentsLogOdds": {
+    "headToHead": 0,
+    "marginOfVictory": 0.04,
+    "recentForm": -0.02,
+  },
+  "confidence": "low",
+  "fromRatingsAlonePercent": 30,
+  "headToHead": {
+    "losses": 0,
+    "wins": 0,
+  },
+  "likelyScoreBand": "More likely a loss; a third set is possible",
+  "opponent": {
+    "gamesWonPercent": 60,
+    "last10": {
+      "losses": 0,
+      "wins": 2,
+    },
+    "ratedMatches": 2,
+    "rating": 1747,
+    "ratingDeviation": 253,
+  },
+  "player": {
+    "gamesWonPercent": 78,
+    "last10": {
+      "losses": 2,
+      "wins": 8,
+    },
+    "ratedMatches": 43,
+    "rating": 1553,
+    "ratingDeviation": 79,
+  },
+  "winProbabilityPercent": 30,
+}
+`;
+
+exports[`tennis prediction explanations > sends Claude numbers only and stores the paragraph with the prompt version > system prompt 1`] = `
+"You explain tennis match predictions to a parent whose child plays junior tournaments.
+You get the numbers a rating model computed for one upcoming singles match: "player" is their child and "opponent" is the other child. You never get names.
+
+Write one short paragraph (at most 90 words) in plain, warm, factual language:
+- State the win probability exactly as given, as a whole percentage, and call it an estimate.
+- Explain which inputs matter most: the rating gap and how certain the ratings are, head-to-head meetings, recent form (last 10 matches) and share of games won.
+- Say what the confidence level means in this case (for example, few rated matches).
+- Refer to the players as "he" and "his opponent". Do not invent facts, names, scores or advice about tactics.
+- Never give a different probability or say the result is certain.
+Reply with the paragraph only."
+`;

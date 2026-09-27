@@ -351,6 +351,27 @@ export async function syncTennis(
       const name = batchNames.get(sourceKey);
       return !!manual && !!name && nameKey(manual.name) === name;
     };
+    // A hand-typed match the site also lists now points at the site's
+    // players (so head-to-head finds it). If the site has the sides the
+    // other way round, the owner's winner and score are flipped to match.
+    const linkSides = (row: MatchRow, record: TennisMatchValues) => {
+      const mine = rowValues(row, keyOf, tournamentExternal);
+      const same = (a: string, b: string) => a === b || sameOpponent(a, b);
+      const straight = mine.side1.every((k) => record.side1.some((r) => same(k, r)));
+      const c = columns(record);
+      return {
+        side1: c.side1,
+        side1Partner: c.side1Partner,
+        side2: c.side2,
+        side2Partner: c.side2Partner,
+        ...(straight
+          ? {}
+          : {
+              winner: row.winner === null ? null : 3 - row.winner,
+              sets: ((row.sets ?? []) as SetScore[]).map(([a, b]) => [b, a]),
+            }),
+      };
+    };
     const plan = planMatches(stored, batch.matches, {
       selfKey: batch.selfMemberId,
       window: batch.window,
@@ -408,7 +429,9 @@ export async function syncTennis(
           .update(tennisMatches)
           .set({
             ...fill,
-            ...(item.link ? { sourceId, externalId: item.record!.externalId } : {}),
+            ...(item.link
+              ? { sourceId, externalId: item.record!.externalId, ...linkSides(row, item.record!) }
+              : {}),
             sourceValues: values,
             sourceHash: item.hash,
             sourceDisagrees: item.disagrees,

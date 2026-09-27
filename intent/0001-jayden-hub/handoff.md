@@ -32,89 +32,58 @@ deploys, and the migration would run.
     and printed his last 10 matches and one opponent's (output kept
     outside the repo).
 
-## In progress (committed, unfinished)
-- **M3.2 schema:** split out onto `m3/2-schema` (from `main`, 2026-09-27)
-  with the migrations test extended for the match rules; that branch is
-  merged back into this one. Open its PR against `main` and merge it
-  first: it's schema only, so deploying it just runs migration 0007. If
-  the schema changes before that merge, delete 0007 (and its entry in
-  `db/migrations/meta`) and generate it again on `m3/2-schema` rather than
-  adding a 0008. After it merges, any change is a new migration.
-- **M3.3 adapter, partly built:**
-  - Done and checked by hand against the fake site:
-    `src/adapters/tennis-tc/index.ts` (HTTP client with cookie jar,
-    loopback-only `TENNIS_TC_BASE_URL`, request cap, crawl order,
-    opponent queue) and `normalise.ts` (players, tournaments, draws with
-    next match, matches, calendar records). Against the fixtures: 46
-    requests; the next match comes out as "Semi final vs <opponent>" with
-    seed 1, line 1 of 16; the compass draw comes out as "out"; no warnings;
-    none of the planted contact details are kept.
-  - `src/domain/tennis-draw.ts` (position, seed, next opponent or "winner
-    of A vs B") and `src/domain/tennis-upsert.ts` (batch types,
-    `planTournaments`, `planMatches` with the TEN-8 rules and linking of
-    hand-entered matches). Neither has tests yet.
-  - Wired in so far: `tennis?: TennisBatch` on `NormalisedBatch`
-    (`src/adapters/types.ts`) and `tennis_tc` in `src/adapters/registry.ts`.
-  - **Not wired:** nothing writes the tennis batch to the database, and
-    the Sources API doesn't accept `tennis_tc` yet, so no tennis source can
-    be created. The calendar part would already work through the generic
-    event upsert.
-- Dependency added: `node-html-parser` (`pnpm audit --prod` clean).
+## Built (2026-09-27, local session)
+All of M3.2–M3.7 is built on this branch; details in plan.md "Build
+notes (M3)". Checks run locally: format, lint, typecheck, unit (139),
+integration (35), `pnpm build`, `pnpm check:build`, e2e (93 passed, 13
+desktop-only tests skipped on the phone project).
+- **M3.2 schema:** split out onto `m3/2-schema` (from `main`) with the
+  migrations test extended for the match rules, and merged back into this
+  branch. Its PR to `main` goes first: it's schema only, so deploying it
+  just runs migration 0007. After it merges, schema changes are new
+  migrations (this branch already adds 0008).
+- **M3.3:** `src/server/tennis/apply.ts` writes a sync; the worker applies
+  it after the events; `smoke` prints tennis counts. Sources takes his
+  profile link for `tennis_tc`. The "Tennis Canada tournaments" login stays
+  on the Accounts page until O-5 is settled.
+- **M3.4:** `/tennis` pages and `/api/v1/tennis/*`; e2e in
+  `tests/e2e/tennis.spec.ts`.
+- **M3.5:** `src/domain/glicko2.ts` (matches the paper's example),
+  `src/domain/tennis-predict.ts`, `/tennis/accuracy`,
+  `scripts/tennis-backtest.ts`.
+- **M3.6:** `src/server/tennis/explain.ts`, table `tennis_explanations`
+  (0008), Terraform env `VERTEX_PROJECT` / `CLAUDE_VERTEX_REGION` on the
+  worker job (IAM `roles/aiplatform.user` was already there).
+- **M3.7:** `src/server/tennis/mutations.ts`, edit and add forms; e2e shows
+  an edit surviving the next sync.
 
-## Next, in plan order
-1. **M3.3, finish:**
-   - `src/server/tennis/apply.ts`, like `src/server/swim/apply.ts`: one
-     transaction with an advisory lock. Upsert players by member number;
-     plan and write tournaments; replace the draws of tournaments this run
-     read; plan matches (`planMatches`, with `selfKey` = his member number
-     and `sameOpponent` matching a hand-typed opponent by name); write
-     revisions and a `change_log` row of kind `tennis`. Map player keys
-     (member number or `player:<uuid>`) to `tennis_players.id`. Set
-     `profile_fetched_at` for players with `profileFetched`.
-   - Call it from `src/worker/sync.ts` after the events, like `batch.swim`,
-     and add tennis counts to `smokeJob`.
-   - Sources: add `tennis_tc` to `SOURCE_KINDS`, `createSourceInput` and
-     `updateSourceInput` in `src/server/sources.ts`. The credential becomes
-     optional for this kind; `config.profileUrl` is required and validated
-     with `profileIdFromLink`. In `src/components/sources/sources-panel.tsx`,
-     add a profile-link field instead of the account picker, with default
-     category tennis. Decide whether to keep the "Tennis Canada
-     tournaments" login on the Accounts page (see owner decisions).
-   - Tests: unit tests for the parsers on the fixtures, `tennis-draw`
-     (knockout, feeder, bye, compass, won, out) and `tennis-upsert`
-     (idempotent, never cancels on an empty fetch, never cancels
-     opponents' matches, keeps corrections, links hand-entered matches);
-     `tests/unit/adapter-tennis-tc.test.ts` running `fetchTennis` +
-     `normaliseTennis` against `createFakeTc` on port 0 (no browser
-     needed); `tests/integration/tennis-sync.test.ts` like
-     `swim-sync.test.ts` (sync twice = no changes; a second sync after
-     backdating `sync_runs`; nothing from `PLANTED_PRIVATE` stored).
-     Add the fake to `playwright.config.ts` webServers and
-     `TENNIS_TC_BASE_URL` to the app's env there; wipe tennis tables in
-     `tests/e2e/support/global-setup.ts`.
-   - Seed data (`src/worker/seed.ts`): a sample tennis source and a few
-     matches, if the pages need them.
-2. **M3.4 pages:** `src/server/tennis/load.ts` read models, served under
-   `/api/v1/tennis/*` and read by server components under
-   `src/app/(app)/tennis/`: tournaments (upcoming, in progress, past), a
-   tournament with his draws and next match, a head-to-head per opponent
-   (from stored matches, singles only), opponent form (last 10, 12-month
-   win rate), and results with a season filter and a running W–L. A
-   "Refresh" button like swimming's. e2e in `tests/e2e/tennis.spec.ts`
-   (desktop only, serial, shared source).
-3. **M3.5 Glicko-2:** `src/domain/glicko2.ts` (unit tests against the
-   worked example in Glickman's Glicko-2 paper), `tennis-predict.ts` (win
-   probability with small head-to-head, form and margin adjustments;
-   confidence low when either player has fewer than 5 rated matches), a
-   "How accurate is this?" page, and `scripts/tennis-backtest.ts` printing
-   aggregate calibration only. The chart pattern is
-   `src/components/swim/progression-chart.tsx` (hand-drawn SVG, CSS
-   classes, dataviz palette) with a CSP-violation check in e2e.
-4. **M3.7 edits:** add or correct a score or time (`src/server/tennis/mutations.ts`
-   like `swim/mutations.ts`, "Use the site's result", "source disagrees"
-   flag). e2e: an edit survives the next sync.
-5. **M3.6 explanation from Claude on Vertex:** unblocked (O-8 answered
-   below). Load the claude-api skill before writing it.
+## Before merging (owner)
+1. Merge the `m3/2-schema` PR first.
+2. Apply Terraform from this branch (worker env for Vertex), before the
+   code that reads it is deployed.
+3. Ask for Claude quota on Vertex AI: a test call on 2026-09-27 got
+   "429 Quota exceeded for ... global_online_prediction_requests_per_base_model
+   ... anthropic-claude-opus" on the `global` endpoint (`us-east5` doesn't
+   serve `claude-opus-5` to the project). Until then the sync logs
+   "tennis explanation failed" and the pages show the numbers without the
+   paragraph. Then re-record the fixture:
+   `RECORD_LLM=1 VERTEX_PROJECT=<project> pnpm exec vitest run --project integration tests/integration/tennis-explain.test.ts`
+   (needs `gcloud auth application-default login`), and check the new
+   snapshot.
+4. After deploy: add the Tennis Canada source on the Sources page with his
+   profile link, press Refresh (the M3.3 live smoke test), and check his
+   tournaments on the calendar. Then run `scripts/tennis-backtest.ts`
+   against production (through the Cloud SQL proxy) for the PR's
+   calibration table; it prints aggregates only.
+
+## Still to do
+- **O-5 signed-in look** (owner in the desktop app's browser pane; see
+  below). If signed-in pages show entries before draws, add the `/user`
+  sign-in to the adapter and an "entered" state before the draw.
+- The fixture backtest (112 matches, almost all "low" confidence) is
+  barely better than a coin toss (Brier 0.245 against 0.25). Real data
+  will have more history; revisit the weights once the production numbers
+  are in.
 
 ## Where the build departed from the plan
 All recorded in plan.md "Build notes (M3)":
@@ -146,9 +115,6 @@ All recorded in plan.md "Build notes (M3)":
 - `tsx` scripts can't use top-level await here (CJS transform); wrap them
   in `main()`.
 - Keep the home time zone out of the repo: fixtures use Toronto offsets.
-- Not run on this branch yet: `pnpm build`, `pnpm check:build`,
-  `pnpm test:e2e`. These passed: format, lint, typecheck, unit (94),
-  integration (29).
 
 ## Owner decisions (answered 2026-09-27)
 - **M2 live check:** passed. M2 is done (plan §9).
@@ -170,7 +136,7 @@ All recorded in plan.md "Build notes (M3)":
 - **robots.txt:** noted by the owner; covered by F-1.
 
 ## Still open
-- The profile link is pasted on the Sources page once M3.3 lands.
+- The profile link is pasted on the Sources page after deploy (step 4
+  above).
 - Still open from M1: M1.6 live smoke and M1.7 (O-6 feed links), and the
   M1.13 restore test.
-  covered by the accepted F-1 risk, but worth knowing.

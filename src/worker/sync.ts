@@ -9,6 +9,7 @@ import { extendAllSeries } from "../server/calendar/mutations";
 import { getHomeTimeZone } from "../server/settings";
 import { syncSwim } from "../server/swim/apply";
 import { syncTennis } from "../server/tennis/apply";
+import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
 import type { JobContext } from "./context";
@@ -146,6 +147,16 @@ async function runLocked(
       .update(sources)
       .set({ lastSuccessAt: sql`now()`, consecutiveFailures: 0 })
       .where(eq(sources.id, sourceId));
+    // TEN-6: Claude's paragraph for his next matches' predictions. Best
+    // effort, after the run is recorded, so it never fails a sync.
+    if (batch.tennis) {
+      try {
+        const explained = await explainNextMatches(db, claudeExplainer(), log);
+        log("tennis explanations", explained);
+      } catch (err) {
+        log("tennis explanations failed", { error: err }, "WARNING");
+      }
+    }
     log("sync finished", {
       sourceId,
       runId: run.id,
