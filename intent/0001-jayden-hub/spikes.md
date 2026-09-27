@@ -71,3 +71,20 @@ Fixture tests in `tests/unit/adapter-ical.test.ts`.
 - **Budget filtering by service** needs Google's billing service IDs, which
   couldn't be looked up. M0 has one project budget; the separate AI budget
   moves to M5 (after SP-6).
+
+## Findings during the M1 rollout (2026-09-27)
+
+- **Firebase Hosting kept the M0 home page for a year's worth of cache.**
+  Next.js served the prerendered M0 page with `s-maxage=31536000`, so the
+  CDN kept serving it after M1 deployed; deploying Cloud Run doesn't clear
+  the Hosting cache. Fixed by releasing a new Hosting version (a release
+  clears the cache). Every response now sends `private, no-store`, so this
+  can't recur, but if a stale page ever appears again, a new Hosting
+  release is the fix.
+- **Google OAuth consent screen:** filling in the home page, privacy policy
+  or logo, or listing a sensitive scope, sends the app to Google's
+  verification, which needs a public home page (against AUTH-3). Publish
+  unverified with only `openid` and `email`; the calendar scope is asked for
+  at connect time (F-6). `infra/README.md` has the exact steps.
+- **Secret Manager values:** pasting into `--data-file=-` and pressing Enter
+  stores a trailing newline; use `read -rs V && printf '%s' "$V" | …`.
