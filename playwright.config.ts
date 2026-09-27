@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { APP_URL, AUTH_SECRET, E2E_PORT, OWNER, PROJECTS, soleOwner } from "./tests/e2e/support/env";
 import { FAKE_COMMIT_PORT } from "./tests/e2e/support/fake-commit-port";
 import { FAKE_OIDC_PORT } from "./tests/e2e/support/fake-oidc-port";
+import { FAKE_TC_PORT } from "./tests/e2e/support/fake-tc-port";
 
 // Cloud sessions ship a pre-installed Chromium; CI installs its own.
 const executablePath = process.env.PW_CHROMIUM_PATH || undefined;
@@ -33,6 +34,12 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
+      // Stands in for the Tennis Canada tournament site (tests/e2e/support/fake-tc.ts).
+      command: "pnpm exec tsx tests/e2e/support/fake-tc.ts",
+      url: `http://127.0.0.1:${FAKE_TC_PORT}/player-profile/x`,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       command: `PORT=${E2E_PORT} HOSTNAME=127.0.0.1 node .next/standalone/server.js`,
       url: `${APP_URL}/api/healthz`,
       reuseExistingServer: !process.env.CI,
@@ -48,6 +55,9 @@ export default defineConfig({
         // Jobs the site starts run as local processes of the built worker.
         WORKER_COMMAND: `node ${path.resolve("dist/worker.mjs")}`,
         COMMIT_SWIM_BASE_URL: `http://127.0.0.1:${FAKE_COMMIT_PORT}`,
+        TENNIS_TC_BASE_URL: `http://127.0.0.1:${FAKE_TC_PORT}`,
+        // The fake site needs no politeness gap between requests.
+        FETCH_MIN_GAP_MS: "0",
       },
     },
   ],

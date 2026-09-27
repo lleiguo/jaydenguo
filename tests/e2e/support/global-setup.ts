@@ -28,6 +28,19 @@ export default async function globalSetup() {
     await pool.query("delete from swim_entries");
     await pool.query("delete from swim_results");
     await pool.query("delete from swim_meets");
+    // Tennis likewise: one fixture, synced into fresh sources.
+    const tennisEvents = `select e.id from events e join sources s on s.id = e.source_id where s.kind = 'tennis_tc'`;
+    await pool.query(`delete from event_overrides where event_id in (${tennisEvents})`);
+    await pool.query(`delete from event_revisions where event_id in (${tennisEvents})`);
+    await pool.query(
+      `delete from conflicts where event_a in (${tennisEvents}) or event_b in (${tennisEvents})`,
+    );
+    await pool.query(`delete from events where id in (${tennisEvents})`);
+    await pool.query("delete from tennis_match_revisions");
+    await pool.query("delete from tennis_matches");
+    await pool.query("delete from tennis_draws");
+    await pool.query("delete from tennis_tournaments");
+    await pool.query("delete from tennis_players");
   } finally {
     await pool.end();
   }

@@ -39,21 +39,26 @@ type Credential = {
   meta: { calendars?: { id: string; summary: string; primary: boolean }[] };
 };
 
-type Kind = "google_calendar" | "ical" | "commit_swim";
+type Kind = "google_calendar" | "ical" | "commit_swim" | "tennis_tc";
 const KIND_LABEL: Record<Kind, string> = {
   google_calendar: "Google Calendar",
   ical: "Calendar feed",
   commit_swim: "Commit Swimming",
+  tennis_tc: "Tennis Canada tournaments",
 };
+// Kinds that read public pages and need no account.
+const NO_ACCOUNT: Kind[] = ["tennis_tc"];
 const ACCOUNT_NOUN: Record<Kind, [string, string]> = {
   google_calendar: ["a Google account", "Google account"],
   ical: ["a private calendar link", "Calendar link"],
   commit_swim: ["a Commit Swimming login", "Commit Swimming login"],
+  tennis_tc: ["", ""],
 };
 const DEFAULT_CATEGORY: Record<Kind, string> = {
   google_calendar: "other",
   ical: "soccer",
   commit_swim: "swimming",
+  tennis_tc: "tennis",
 };
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : "never");
@@ -154,8 +159,9 @@ function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => vo
         </span>
       </div>
       <div className="text-neutral-600 dark:text-neutral-400">
-        {KIND_LABEL[s.kind] ?? s.kind} · {s.credentialLabel ?? "no account"} · default category{" "}
-        {label(s.categoryMapping.default)}
+        {KIND_LABEL[s.kind] ?? s.kind} ·{" "}
+        {NO_ACCOUNT.includes(s.kind) ? "public pages" : (s.credentialLabel ?? "no account")} · default
+        category {label(s.categoryMapping.default)}
       </div>
       {failed && s.lastRun?.errorMessage && (
         <p className="text-red-700 dark:text-red-400" data-testid="source-error">
@@ -257,8 +263,13 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
           body: JSON.stringify({
             kind,
             name: f.get("name"),
-            credentialId: cred?.id,
-            config: kind === "google_calendar" ? { calendarId: f.get("calendarId") } : {},
+            credentialId: NO_ACCOUNT.includes(kind) ? undefined : cred?.id,
+            config:
+              kind === "google_calendar"
+                ? { calendarId: f.get("calendarId") }
+                : kind === "tennis_tc"
+                  ? { profileUrl: f.get("profileUrl") }
+                  : {},
             categoryMapping: { default: f.get("category"), rules },
           }),
         });
@@ -282,13 +293,25 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
           <option value="ical">Calendar feed (TeamSnap, Spordle, other iCal link)</option>
           <option value="google_calendar">Google Calendar</option>
           <option value="commit_swim">Commit Swimming (meets and results)</option>
+          <option value="tennis_tc">Tennis Canada tournaments (draws and matches)</option>
         </select>
       </label>
       <label className="flex flex-col">
         Name
         <input name="name" required className="rounded border px-2 py-1" placeholder="e.g. Soccer team" />
       </label>
-      {usable.length === 0 ? (
+      {kind === "tennis_tc" ? (
+        <label className="flex flex-col">
+          His profile link on tc.tournamentsoftware.com
+          <input
+            name="profileUrl"
+            type="url"
+            required
+            className="rounded border px-2 py-1"
+            placeholder="https://tc.tournamentsoftware.com/player-profile/…"
+          />
+        </label>
+      ) : usable.length === 0 ? (
         <p>
           First add {ACCOUNT_NOUN[kind][0]} on the{" "}
           <a className="underline" href="/accounts">
@@ -354,7 +377,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
       <button
         type="submit"
         className="self-start rounded bg-blue-700 px-3 py-1 text-white"
-        disabled={usable.length === 0}
+        disabled={usable.length === 0 && !NO_ACCOUNT.includes(kind)}
       >
         Add source
       </button>
