@@ -26,7 +26,11 @@ export function commitBaseUrl(): string {
 async function launch(): Promise<Browser> {
   const { chromium } = await import("playwright-core");
   try {
-    return await chromium.launch({ executablePath: process.env.PW_CHROMIUM_PATH || undefined });
+    // Containers can have a tiny /dev/shm; Chromium then uses /tmp instead.
+    return await chromium.launch({
+      executablePath: process.env.PW_CHROMIUM_PATH || undefined,
+      args: ["--disable-dev-shm-usage"],
+    });
   } catch {
     throw new SyncError("The sync browser couldn't start. It will be tried again next time.");
   }
