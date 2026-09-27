@@ -3,18 +3,12 @@ import { currentSession } from "./auth/current";
 import type { SessionUser } from "./auth/session";
 import { getDb } from "./db";
 import type { Db } from "./db/client";
+import { HttpError } from "./errors";
 
 // Shared shape for /api/v1 route handlers: checks the session (again, after
 // the proxy), turns validation errors into 400s and never leaks internals.
 
-export class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { HttpError };
 
 export type ApiContext<P> = { request: Request; session: SessionUser; db: Db; params: P };
 

@@ -1,8 +1,10 @@
 // Worker job registry. Cloud Run jobs run the same image with the job name
 // as the argument, e.g. `node worker.js migrate` (plan M0.7).
 import { runMigrations } from "../server/db/migrate";
+import type { JobContext } from "./context";
+import { removeCredentialJob, rotateKeysJob, testCredentialJob } from "./credentials";
 
-export type JobContext = { log: (msg: string, fields?: Record<string, unknown>) => void };
+export type { JobContext } from "./context";
 export type Job = { description: string; run: (args: string[], ctx: JobContext) => Promise<void> };
 
 export const jobs: Record<string, Job> = {
@@ -16,6 +18,18 @@ export const jobs: Record<string, Job> = {
   noop: {
     description: "Do nothing; used to check the worker image starts",
     run: async (_args, ctx) => ctx.log("noop"),
+  },
+  "credential:test": {
+    description: "Test a stored login or link: credential:test <id>",
+    run: testCredentialJob,
+  },
+  "credential:remove": {
+    description: "Revoke and delete an OAuth credential: credential:remove <id>",
+    run: removeCredentialJob,
+  },
+  "rotate-keys": {
+    description: "Re-wrap every credential data key with the current KMS key version",
+    run: (args, ctx) => rotateKeysJob(args, ctx),
   },
 };
 
@@ -31,6 +45,6 @@ export function parseCommand(argv: string[]): ParsedCommand {
 
 export function helpText(): string {
   return Object.entries(jobs)
-    .map(([name, job]) => `  ${name.padEnd(12)} ${job.description}`)
+    .map(([name, job]) => `  ${name.padEnd(18)} ${job.description}`)
     .join("\n");
 }

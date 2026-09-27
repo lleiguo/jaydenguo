@@ -23,6 +23,8 @@
   },
   "dependencies": {
     "@google-cloud/cloud-sql-connector": "^1.12.0",
+    "@google-cloud/kms": "^6.2.0",
+    "@google-cloud/run": "^4.1.0",
     "drizzle-orm": "^0.45.3",
     "next": "16.3.6",
     "openid-client": "^6.8.8",

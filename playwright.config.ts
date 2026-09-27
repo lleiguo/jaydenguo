@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { APP_URL, AUTH_SECRET, E2E_PORT, OWNER, PROJECTS, soleOwner } from "./tests/e2e/support/env";
 import { FAKE_OIDC_PORT } from "./tests/e2e/support/fake-oidc-port";
@@ -36,6 +37,8 @@ export default defineConfig({
         GOOGLE_CLIENT_ID: "e2e-client",
         GOOGLE_CLIENT_SECRET: "e2e-client-secret",
         OIDC_ISSUER: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
+        // Jobs the site starts run as local processes of the built worker.
+        WORKER_COMMAND: `node ${path.resolve("dist/worker.mjs")}`,
       },
     },
   ],

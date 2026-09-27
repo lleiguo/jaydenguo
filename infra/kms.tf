@@ -23,6 +23,14 @@ resource "google_kms_crypto_key_iam_member" "web_encrypt" {
   member        = google_service_account.web.member
 }
 
+# The worker also encrypts, only to re-wrap data keys during rotation
+# (`rotate-keys` job, plan M1.2). The web service still can't decrypt.
+resource "google_kms_crypto_key_iam_member" "worker_encrypt" {
+  crypto_key_id = google_kms_crypto_key.credentials.id
+  role          = "roles/cloudkms.cryptoKeyEncrypter"
+  member        = google_service_account.worker.member
+}
+
 resource "google_kms_crypto_key_iam_member" "worker_decrypt" {
   crypto_key_id = google_kms_crypto_key.credentials.id
   role          = "roles/cloudkms.cryptoKeyDecrypter"

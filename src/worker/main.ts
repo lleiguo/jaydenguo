@@ -1,9 +1,6 @@
+import { createDb, createPool, type Db, type PoolHandle } from "../server/db/client";
+import { log } from "../server/log";
 import { helpText, jobs, parseCommand } from "./jobs";
-
-// Structured one-line JSON logs, readable by Cloud Logging.
-function log(message: string, fields: Record<string, unknown> = {}) {
-  console.log(JSON.stringify({ severity: "INFO", message, ...fields }));
-}
 
 async function main() {
   const command = parseCommand(process.argv.slice(2));
@@ -12,20 +9,32 @@ async function main() {
     return;
   }
   if (command.kind === "error") {
-    console.error(JSON.stringify({ severity: "ERROR", message: command.message }));
+    log(command.message, {}, "ERROR");
     process.exitCode = 2;
     return;
   }
+  let pool: PoolHandle | undefined;
+  let db: Db | undefined;
   const started = Date.now();
   log("job started", { job: command.name });
-  await jobs[command.name].run(command.args, { log });
-  log("job finished", { job: command.name, ms: Date.now() - started });
+  try {
+    await jobs[command.name].run(command.args, {
+      log,
+      db: async () => {
+        pool ??= await createPool();
+        db ??= createDb(pool.pool);
+        return db;
+      },
+    });
+    log("job finished", { job: command.name, ms: Date.now() - started });
+  } finally {
+    await pool?.close();
+  }
 }
 
 main()
   .catch((err: unknown) => {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(JSON.stringify({ severity: "ERROR", message: "job failed", error: message }));
+    log("job failed", { error: err }, "ERROR");
     process.exitCode = 1;
   })
   // A Cloud Run job only finishes when the process exits. Exit explicitly so

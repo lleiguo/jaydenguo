@@ -5,6 +5,11 @@ locals {
     GOOGLE_CLIENT_SECRET = "google-oauth-client-secret"
   }
 
+  worker_secret_env = {
+    GOOGLE_CLIENT_ID     = "google-oauth-client-id"
+    GOOGLE_CLIENT_SECRET = "google-oauth-client-secret"
+  }
+
   db_env = {
     INSTANCE_CONNECTION_NAME = google_sql_database_instance.hub.connection_name
     DB_NAME                  = google_sql_database.hub.name
@@ -127,6 +132,20 @@ resource "google_cloud_run_v2_job" "worker" {
           content {
             name  = env.key
             value = env.value
+          }
+        }
+
+        # Refreshing and revoking Google grants (plan M1.3).
+        dynamic "env" {
+          for_each = local.worker_secret_env
+          content {
+            name = env.key
+            value_source {
+              secret_key_ref {
+                secret  = google_secret_manager_secret.app[env.value].secret_id
+                version = "latest"
+              }
+            }
           }
         }
       }

@@ -1,6 +1,7 @@
 // Core tables for M0 (spec §7.1). Later milestones add their own files here.
 import { sql } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { credentials } from "./credentials";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -18,6 +19,11 @@ export const sources = pgTable("sources", {
   enabled: boolean("enabled").notNull().default(true),
   // Cron expression in the home time zone; null means daily default.
   schedule: text("schedule"),
+  // Sign-in or feed link this source uses. Several sources can share one
+  // credential (one Google grant covers Calendar, Gmail, Classroom).
+  credentialId: uuid("credential_id").references(() => credentials.id),
+  // Adapter settings that aren't secret, e.g. which Google calendar.
+  config: jsonb("config").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

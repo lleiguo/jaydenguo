@@ -27,6 +27,12 @@ function configFor(settings: OidcSettings): Promise<client.Configuration> {
   return cached.config;
 }
 
+// Shared with the Google account connection flow and the worker's token
+// refresh and revocation.
+export function googleConfig(): Promise<client.Configuration> {
+  return configFor(oidcSettings());
+}
+
 export type AuthorizationRequest = {
   url: URL;
   state: string;
@@ -35,7 +41,7 @@ export type AuthorizationRequest = {
 };
 
 export async function buildAuthorizationRequest(redirectUri: string): Promise<AuthorizationRequest> {
-  const config = await configFor(oidcSettings());
+  const config = await googleConfig();
   const codeVerifier = client.randomPKCECodeVerifier();
   const state = client.randomState();
   const nonce = client.randomNonce();
@@ -59,7 +65,7 @@ export async function completeAuthorization(
   callbackUrl: URL,
   expected: { state: string; nonce: string; codeVerifier: string },
 ): Promise<VerifiedIdentity> {
-  const config = await configFor(oidcSettings());
+  const config = await googleConfig();
   const tokens = await client.authorizationCodeGrant(config, callbackUrl, {
     pkceCodeVerifier: expected.codeVerifier,
     expectedState: expected.state,
