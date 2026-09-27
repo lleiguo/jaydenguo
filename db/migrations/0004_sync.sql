@@ -1,0 +1,1 @@
+ALTER TABLE "credentials" ADD COLUMN "meta" jsonb DEFAULT '{}'::jsonb NOT NULL;

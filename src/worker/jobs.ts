@@ -3,6 +3,7 @@
 import { runMigrations } from "../server/db/migrate";
 import type { JobContext } from "./context";
 import { removeCredentialJob, rotateKeysJob, testCredentialJob } from "./credentials";
+import { smokeJob, syncJob } from "./sync";
 
 export type { JobContext } from "./context";
 export type Job = { description: string; run: (args: string[], ctx: JobContext) => Promise<void> };
@@ -26,6 +27,14 @@ export const jobs: Record<string, Job> = {
   "credential:remove": {
     description: "Revoke and delete an OAuth credential: credential:remove <id>",
     run: removeCredentialJob,
+  },
+  sync: {
+    description: "Sync sources: sync <source-id | all> [manual | scheduled]",
+    run: syncJob,
+  },
+  smoke: {
+    description: "Live check of one source without saving: smoke <source-id>",
+    run: smokeJob,
   },
   "rotate-keys": {
     description: "Re-wrap every credential data key with the current KMS key version",

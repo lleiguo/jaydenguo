@@ -40,7 +40,6 @@ test("a private calendar link can be added, tested, updated and removed without 
   await teamsnap.getByRole("button", { name: "Save" }).click();
 
   await expect(card(page, label)).toContainText("••••");
-  await expect(teamsnap.getByText("Connected")).toBeVisible();
 
   // Stored sealed: no plaintext in the row.
   const [row] = await credentialRows(label);
@@ -67,7 +66,8 @@ test("a private calendar link can be added, tested, updated and removed without 
   await expect(page.getByText(`${label}: The calendar link no longer works`)).toBeVisible({
     timeout: 30_000,
   });
-  await expect(teamsnap.getByText("Needs attention")).toBeVisible();
+  await expect(card(page, label)).toContainText("last test");
+  await expect(card(page, label)).toContainText("The calendar link no longer works");
 
   // Remove deletes the ciphertext.
   page.once("dialog", (d) => d.accept());

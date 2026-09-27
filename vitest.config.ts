@@ -12,6 +12,7 @@ export default defineConfig({
           name: "integration",
           include: ["tests/integration/**/*.test.ts"],
           fileParallelism: false,
+          env: { FETCH_MIN_GAP_MS: "0" },
         },
       },
     ],

@@ -8,6 +8,7 @@ import { appUrl, authSecret } from "../config";
 import { seal } from "../crypto/envelope";
 import { defaultKeyWrapper, type KeyWrapper } from "../crypto/key-wrapper";
 import type { Db } from "../db/client";
+import { listGoogleCalendars, type GoogleCalendarInfo } from "../../adapters/google-calendar";
 import { aadFor } from "./aad";
 import { audit } from "./store";
 
@@ -93,6 +94,14 @@ export async function finishGoogleConnect(
   if (!tokens.refresh_token) throw new Error("Google returned no refresh token");
   const granted = (tokens.scope ?? request.scopes.join(" ")).split(" ").filter(Boolean);
 
+  // While the access token is at hand, note the account's calendars so the
+  // Sources page can offer them (the web app can't use the refresh token).
+  let calendars: GoogleCalendarInfo[] | undefined;
+  if (granted.includes(GOOGLE_SCOPES.calendar)) {
+    calendars = await listGoogleCalendars(tokens.access_token).catch(() => undefined);
+  }
+  const meta = calendars ? { calendars } : {};
+
   // One credential per Google account: reconnecting replaces the token.
   const [existing] = await db
     .select({ id: credentials.id })
@@ -103,7 +112,7 @@ export async function finishGoogleConnect(
   if (existing) {
     await db
       .update(credentials)
-      .set({ ...sealed, scopes: granted, status: "active", updatedAt: new Date(), lastError: null })
+      .set({ ...sealed, scopes: granted, meta, status: "active", updatedAt: new Date(), lastError: null })
       .where(eq(credentials.id, id));
   } else {
     await db.insert(credentials).values({
@@ -113,6 +122,7 @@ export async function finishGoogleConnect(
       label: `Google (${email.toLowerCase()})`,
       username: email.toLowerCase(),
       scopes: granted,
+      meta,
       ...sealed,
     });
   }

@@ -1,0 +1,42 @@
+{
+  "timeMin": "2026-09-01T00:00:00Z",
+  "timeMax": "2027-11-05T00:00:00Z",
+  "items": [
+    {
+      "id": "abc123_20261005T220000Z",
+      "status": "confirmed",
+      "summary": "Math class",
+      "location": "Learning Centre, 100 Example St",
+      "htmlLink": "https://www.google.com/calendar/event?eid=example1",
+      "start": { "dateTime": "2026-10-05T18:00:00-04:00", "timeZone": "America/Toronto" },
+      "end": { "dateTime": "2026-10-05T19:00:00-04:00", "timeZone": "America/Toronto" }
+    },
+    {
+      "id": "def456",
+      "status": "confirmed",
+      "summary": "Swim practice (optional)",
+      "start": { "dateTime": "2026-10-07T06:00:00-04:00" },
+      "end": { "dateTime": "2026-10-07T07:30:00-04:00" }
+    },
+    {
+      "id": "ghi789",
+      "status": "confirmed",
+      "summary": "Grandparents visiting",
+      "start": { "date": "2026-10-10" },
+      "end": { "date": "2026-10-13" }
+    },
+    {
+      "id": "gone1",
+      "status": "cancelled",
+      "start": { "date": "2026-10-11" },
+      "end": { "date": "2026-10-12" }
+    },
+    {
+      "id": "jkl012",
+      "status": "confirmed",
+      "summary": "Parent-teacher interview (parent)",
+      "start": { "dateTime": "2026-10-15T16:00:00-04:00" },
+      "end": { "dateTime": "2026-10-15T16:20:00-04:00" }
+    }
+  ]
+}

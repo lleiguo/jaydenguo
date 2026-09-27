@@ -3,7 +3,17 @@
 // under a per-row data key, and `wrapped_dek` is that key wrapped by Cloud
 // KMS. The web service can write these rows but can't decrypt them.
 import { sql } from "drizzle-orm";
-import { boolean, check, customType, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  customType,
+  index,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
 
@@ -21,6 +31,9 @@ export const credentials = pgTable(
     username: text("username"),
     // Google scopes granted so far (scopes are requested only when needed).
     scopes: text("scopes").array(),
+    // Non-secret facts about the account, e.g. its Google calendars (id and
+    // name), so the web app can offer them without the token.
+    meta: jsonb("meta").notNull().default({}),
     ciphertext: bytea("ciphertext").notNull(),
     wrappedDek: bytea("wrapped_dek").notNull(),
     keyVersion: text("key_version").notNull(),

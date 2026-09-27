@@ -33,6 +33,29 @@ region script failed on macOS for an unrelated reason (no `timeout`
 command) and has been fixed; its output only adds Cloud Scheduler, which
 is created in M1.5.
 
+## SP-4: calendar feeds for TeamSnap, Spordle and Veracross (M1.7, 2026-09-27, provisional)
+
+**Owner mapping (O-6):** soccer uses TeamSnap, hockey uses Spordle. The
+owner hasn't looked for the subscription links yet.
+
+**Found so far:**
+| Source | Feed? | Decision |
+|---|---|---|
+| TeamSnap | Yes: every team schedule has a calendar subscription (iCal) link. | ICS, generic `ical` adapter. |
+| Spordle | Likely: the Spordle app has calendar synchronisation on teams with a Premium subscription (app 1.5.1+), and the Spordle account site has a calendar. Whether a plain iCal link is exposed isn't confirmed. | ICS if a link exists; otherwise a `spordle` login adapter (Playwright), decided when the owner checks. |
+| Veracross | Parent portals usually offer a calendar subscription link for the school calendar. The daily timetable needs scraping either way. | Checked in M4 (SP-5/M4.2); the `ical` adapter already handles the calendar feed. |
+
+**How the owner checks:** TeamSnap → the team → Schedule → Sync/Export
+calendar → copy the link. Spordle → the team → Schedule → the calendar sync
+icon (or My Account → Calendar) → copy the subscription link. Paste each
+link only into the site's Accounts page (TeamSnap/Spordle → "Add private
+calendar link"), never into chat or the repo.
+
+**Adapter:** `src/adapters/ical/` expands recurring events (RRULE, EXDATE,
+moved occurrences) in the feed's own time zone, drops `STATUS:CANCELLED`
+events so sync marks them cancelled, and keeps all-day events as dates.
+Fixture tests in `tests/unit/adapter-ical.test.ts`.
+
 ## Other findings during M0
 
 - **Firebase Hosting only forwards one cookie.** When Firebase Hosting

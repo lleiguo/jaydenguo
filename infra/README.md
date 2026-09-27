@@ -16,6 +16,8 @@ allowed fallback (spec F-11, NFR-1a).
 | `storage.tf`           | Backup bucket with a 1-year retention policy                                                          |
 | `logging.tf`           | Regional log bucket; the global `_Default` sink is disabled                                           |
 | `budget.tf`            | Monthly budget alert at 50/90/100%                                                                    |
+| `scheduler.tf`         | Daily Cloud Scheduler trigger that runs `sync all` early morning in the home time zone                |
+| `alerts.tf`            | Email to the owner when a source fails to sync three times in a row                                   |
 | `firebase.tf`          | Firebase Hosting in front of Cloud Run, custom domain and TLS                                         |
 | `github_deploy.tf`     | Workload Identity Federation so GitHub Actions deploys without keys                                   |
 
@@ -131,7 +133,10 @@ picker at the top).
    in your git-ignored `.env.local` as `GOOGLE_CLIENT_ID` and
    `GOOGLE_CLIENT_SECRET`. Optional: without them, local runs sign in with
    the dev shortcut at `/auth/dev`.
-7. **Apply** so Cloud Run gets the new settings:
+7. **Apply** so Cloud Run gets the new settings. First add your home time
+   zone to `prod.tfvars`, e.g. `home_time_zone = "America/Toronto"` (it
+   stays out of the public repo). The first apply also creates the daily
+   sync trigger and the sync-failure email alert.
    `cd infra && terraform apply -var-file=prod.tfvars`.
 8. Check your Google account has 2-step verification on (spec NFR-2):
    <https://myaccount.google.com/signinoptions/twosv>.
