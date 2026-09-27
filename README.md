@@ -16,15 +16,20 @@ pnpm db:migrate
 pnpm dev                                    # http://localhost:3000
 ```
 
+Sign in at <http://localhost:3000/auth/dev> (a shortcut that exists only in
+`pnpm dev`), or with Google after adding the local OAuth client to
+`.env.local` (see `infra/README.md`, "Google sign-in").
+
 ## Checks
 
-| Command                                              | What it runs                                                        |
-| ---------------------------------------------------- | ------------------------------------------------------------------- |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check` | Static checks                                                       |
-| `pnpm test`                                          | Unit tests                                                          |
-| `pnpm test:int`                                      | Integration tests against `DATABASE_URL`                            |
-| `pnpm build`                                         | Next.js standalone build and the worker bundle (`dist/worker.mjs`)  |
-| `pnpm test:e2e`                                      | Browser tests against the production build (run `pnpm build` first) |
+| Command                                              | What it runs                                                          |
+| ---------------------------------------------------- | --------------------------------------------------------------------- |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check` | Static checks                                                         |
+| `pnpm test`                                          | Unit tests                                                            |
+| `pnpm test:int`                                      | Integration tests against `DATABASE_URL`                              |
+| `pnpm build`                                         | Next.js standalone build and the worker bundle (`dist/worker.mjs`)    |
+| `pnpm test:e2e`                                      | Browser tests against the production build (run `pnpm build` first)   |
+| `pnpm check:build`                                   | Confirms the dev sign-in shortcut is absent from the production build |
 
 ## Worker jobs
 

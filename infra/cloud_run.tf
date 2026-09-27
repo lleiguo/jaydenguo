@@ -1,4 +1,10 @@
 locals {
+  web_secret_env = {
+    AUTH_SECRET          = "auth-secret"
+    GOOGLE_CLIENT_ID     = "google-oauth-client-id"
+    GOOGLE_CLIENT_SECRET = "google-oauth-client-secret"
+  }
+
   db_env = {
     INSTANCE_CONNECTION_NAME = google_sql_database_instance.hub.connection_name
     DB_NAME                  = google_sql_database.hub.name
@@ -36,13 +42,30 @@ resource "google_cloud_run_v2_service" "web" {
 
       dynamic "env" {
         for_each = merge(local.db_env, {
-          DB_IAM_USER = local.web_db_user
-          WORKER_JOB  = google_cloud_run_v2_job.worker.id
-          KMS_KEY     = google_kms_crypto_key.credentials.id
+          DB_IAM_USER    = local.web_db_user
+          WORKER_JOB     = google_cloud_run_v2_job.worker.id
+          KMS_KEY        = google_kms_crypto_key.credentials.id
+          APP_URL        = "https://${var.domain}"
+          ALLOWED_EMAILS = join(",", var.allowed_emails)
         })
         content {
           name  = env.key
           value = env.value
+        }
+      }
+
+      # Sign-in secrets (plan M1.1). Each secret needs a version before the
+      # first apply that includes this block; see infra/README.md step 7.
+      dynamic "env" {
+        for_each = local.web_secret_env
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.app[env.value].secret_id
+              version = "latest"
+            }
+          }
         }
       }
 

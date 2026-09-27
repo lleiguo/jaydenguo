@@ -20,6 +20,12 @@ variable "domain" {
   default     = "jaydenguo.com"
 }
 
+variable "allowed_emails" {
+  description = "Google accounts allowed to sign in (spec AUTH-1): the owner only."
+  type        = list(string)
+  default     = ["lleiguo@gmail.com"]
+}
+
 variable "github_repository" {
   description = "owner/name of the GitHub repo allowed to deploy."
   type        = string

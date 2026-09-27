@@ -43,6 +43,8 @@ jobs:
       - run: pnpm test
       - run: pnpm test:int
       - run: pnpm build
+      - name: No dev sign-in shortcut in the production build
+        run: pnpm check:build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - name: Dependency audit

@@ -1,7 +1,7 @@
 import { Connector, AuthTypes, IpAddressTypes } from "@google-cloud/cloud-sql-connector";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import * as schema from "../../../db/schema";
+import * as schema from "@db/schema";
 
 export type PoolHandle = {
   pool: pg.Pool;
