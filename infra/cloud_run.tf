@@ -52,6 +52,7 @@ resource "google_cloud_run_v2_service" "web" {
           KMS_KEY        = google_kms_crypto_key.credentials.id
           APP_URL        = "https://${var.domain}"
           ALLOWED_EMAILS = join(",", var.allowed_emails)
+          HOME_TIME_ZONE = var.home_time_zone
         })
         content {
           name  = env.key
@@ -125,9 +126,10 @@ resource "google_cloud_run_v2_job" "worker" {
 
         dynamic "env" {
           for_each = merge(local.db_env, {
-            DB_IAM_USER = local.worker_db_user
-            WEB_DB_USER = local.web_db_user
-            KMS_KEY     = google_kms_crypto_key.credentials.id
+            DB_IAM_USER    = local.worker_db_user
+            WEB_DB_USER    = local.web_db_user
+            KMS_KEY        = google_kms_crypto_key.credentials.id
+            HOME_TIME_ZONE = var.home_time_zone
           })
           content {
             name  = env.key

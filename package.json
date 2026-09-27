@@ -19,13 +19,15 @@
     "db:up": "docker compose up -d --wait db",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/worker/main.ts migrate",
-    "job": "tsx src/worker/main.ts"
+    "job": "tsx src/worker/main.ts",
+    "smoke": "tsx src/worker/main.ts smoke"
   },
   "dependencies": {
     "@google-cloud/cloud-sql-connector": "^1.12.0",
     "@google-cloud/kms": "^6.2.0",
     "@google-cloud/run": "^4.1.0",
     "drizzle-orm": "^0.45.3",
+    "ical.js": "^2.2.1",
     "next": "16.3.6",
     "openid-client": "^6.8.8",
     "pg": "^8.23.0",
@@ -44,6 +46,7 @@
     "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "fast-check": "^4.10.2",
     "jose": "^6.2.12",
     "prettier": "^3.9.9",
     "tailwindcss": "^4",

@@ -13,6 +13,8 @@ const accounts = [
   // Data-source Google accounts, one per Playwright project.
   "calendar-desktop@example.test",
   "calendar-phone@example.test",
+  "household-desktop@example.test",
+  "household-phone@example.test",
 ];
 
 type Pending = {
@@ -25,16 +27,81 @@ type Pending = {
   scope: string;
 };
 
-// Calendar feeds for the iCal adapter and "Test connection".
-const FEEDS: Record<string, string> = {
-  "team.ics": ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//test//EN", "END:VCALENDAR", ""].join("\r\n"),
+// Calendar data served to the adapters, dated relative to today so the
+// calendar always has something upcoming. Names and places are made up.
+const day = (offset: number, hour: number) => {
+  const d = new Date();
+  d.setUTCHours(hour, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + offset);
+  return d;
 };
+const icsTime = (d: Date) =>
+  d
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
+
+function teamFeed(): string {
+  const events = [
+    ["practice-1", "Practice", day(1, 1), day(1, 2)],
+    ["game-1", "Game vs Red Rockets", day(3, 18), day(3, 19)],
+    ["game-2", "Game vs Green Giants", day(8, 18), day(8, 19)],
+  ] as const;
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//test//EN",
+    ...events.flatMap(([uid, title, start, end]) => [
+      "BEGIN:VEVENT",
+      `UID:${uid}@example.test`,
+      `DTSTAMP:${icsTime(new Date())}`,
+      `DTSTART:${icsTime(start)}`,
+      `DTEND:${icsTime(end)}`,
+      `SUMMARY:${title}`,
+      "LOCATION:Maple Park Field 3",
+      "END:VEVENT",
+    ]),
+    "END:VCALENDAR",
+    "",
+  ].join("\r\n");
+}
+
+const FEEDS: Record<string, () => string> = { "team.ics": teamFeed };
+
+const CALENDARS = [
+  { id: "primary-test@example.test", summary: "Personal", primary: true },
+  { id: "family-test@group.calendar.example.test", summary: "Family" },
+];
+
+function familyEvents() {
+  return [
+    {
+      id: "fam-1",
+      summary: "Swim practice",
+      start: { dateTime: day(2, 14).toISOString() },
+      end: { dateTime: day(2, 15).toISOString() },
+    },
+    {
+      id: "fam-2",
+      summary: "Math class",
+      start: { dateTime: day(4, 23).toISOString() },
+      end: { dateTime: day(5, 0).toISOString() },
+    },
+    { id: "fam-3", status: "cancelled", start: { date: "2020-01-01" }, end: { date: "2020-01-02" } },
+  ];
+}
 
 async function main() {
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const jwk = { ...(await exportJWK(publicKey)), kid: "test", alg: "RS256", use: "sig" };
   const codes = new Map<string, Pending>();
   const refreshTokens = new Set<string>();
+  const accessTokens = new Set<string>();
+  const newAccessToken = () => {
+    const t = randomUUID();
+    accessTokens.add(t);
+    return t;
+  };
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", issuer);
@@ -60,7 +127,17 @@ async function main() {
 
     if (url.pathname.startsWith("/ical/")) {
       const feed = FEEDS[url.pathname.slice("/ical/".length)];
-      return feed ? send(200, feed, "text/calendar") : send(404, "gone", "text/plain");
+      return feed ? send(200, feed(), "text/calendar") : send(404, "gone", "text/plain");
+    }
+
+    // A sliver of the Google Calendar API.
+    if (url.pathname.startsWith("/calendar/v3/")) {
+      const token = (req.headers.authorization ?? "").replace(/^Bearer /, "");
+      if (!accessTokens.has(token)) return send(401, { error: "unauthenticated" });
+      if (url.pathname === "/calendar/v3/users/me/calendarList") return send(200, { items: CALENDARS });
+      const m = url.pathname.match(/^\/calendar\/v3\/calendars\/([^/]+)\/events$/);
+      if (m && decodeURIComponent(m[1]) === CALENDARS[1].id) return send(200, { items: familyEvents() });
+      return send(404, { error: "not found" });
     }
 
     const readForm = async () => {
@@ -111,7 +188,7 @@ async function main() {
       const form = await readForm();
       if (form.get("grant_type") === "refresh_token") {
         return refreshTokens.has(form.get("refresh_token") ?? "")
-          ? send(200, { access_token: randomUUID(), token_type: "Bearer", expires_in: 300 })
+          ? send(200, { access_token: newAccessToken(), token_type: "Bearer", expires_in: 300 })
           : send(400, { error: "invalid_grant" });
       }
       const pending = codes.get(form.get("code") ?? "");
@@ -132,7 +209,7 @@ async function main() {
       const refreshToken = pending.offline ? `refresh-${randomUUID()}` : undefined;
       if (refreshToken) refreshTokens.add(refreshToken);
       return send(200, {
-        access_token: randomUUID(),
+        access_token: newAccessToken(),
         token_type: "Bearer",
         expires_in: 300,
         id_token: idToken,

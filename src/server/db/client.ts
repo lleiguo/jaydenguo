@@ -51,6 +51,9 @@ export function createDb(pool: pg.Pool) {
 }
 
 export type Db = ReturnType<typeof createDb>;
+// A transaction handle; most helpers accept either.
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+export type DbOrTx = Db | Tx;
 
 function requireEnv(name: string): string {
   const value = process.env[name];

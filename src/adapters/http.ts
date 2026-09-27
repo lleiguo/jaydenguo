@@ -3,7 +3,8 @@
 // same host.
 
 export const USER_AGENT = "FamilyHub/1.0 (private family calendar; one request at a time)";
-const MIN_GAP_MS = 2000;
+// Tests set FETCH_MIN_GAP_MS=0; production always uses the default.
+const minGap = () => Number(process.env.FETCH_MIN_GAP_MS ?? 2000);
 const lastRequestAt = new Map<string, number>();
 
 export class FetchError extends Error {
@@ -24,7 +25,7 @@ export function normaliseFeedUrl(url: string): URL {
 }
 
 export async function politeFetch(url: URL, init: RequestInit = {}, timeoutMs = 30_000): Promise<Response> {
-  const wait = (lastRequestAt.get(url.host) ?? 0) + MIN_GAP_MS - Date.now();
+  const wait = (lastRequestAt.get(url.host) ?? 0) + minGap() - Date.now();
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   lastRequestAt.set(url.host, Date.now());
   try {

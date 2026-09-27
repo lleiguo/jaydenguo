@@ -73,3 +73,26 @@ variable "worker_image" {
   type        = string
   default     = "us-docker.pkg.dev/cloudrun/container/job"
 }
+
+variable "home_time_zone" {
+  description = "Home time zone (spec CAL-9, O-4), e.g. America/Toronto. Set in prod.tfvars; the daily sync runs early morning here."
+  type        = string
+}
+
+variable "daily_sync_schedule" {
+  description = "Cron schedule for the daily sync of every source, in home_time_zone (SYNC-1)."
+  type        = string
+  default     = "0 5 * * *"
+}
+
+variable "scheduler_region" {
+  description = "Cloud Scheduler region. Empty means var.region; Montréal is the fallback if Toronto isn't offered (F-11)."
+  type        = string
+  default     = ""
+}
+
+variable "alert_email" {
+  description = "Where sync-failure alerts go (SYNC-4). Empty means the first allowed email."
+  type        = string
+  default     = ""
+}

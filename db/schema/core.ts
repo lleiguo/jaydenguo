@@ -24,6 +24,9 @@ export const sources = pgTable("sources", {
   credentialId: uuid("credential_id").references(() => credentials.id),
   // Adapter settings that aren't secret, e.g. which Google calendar.
   config: jsonb("config").notNull().default({}),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  // Three in a row sends the owner an email (SYNC-4).
+  consecutiveFailures: integer("consecutive_failures").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

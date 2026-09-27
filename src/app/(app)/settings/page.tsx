@@ -2,13 +2,23 @@ import { listSessions } from "@/server/auth/session";
 import { requirePageSession } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { SignOutEverywhere } from "@/components/sign-out-everywhere";
+import { TimeZoneSetting } from "@/components/time-zone-setting";
+import { getHomeTimeZone } from "@/server/settings";
 
 export default async function SettingsPage() {
   const session = await requirePageSession();
-  const devices = await listSessions(await getDb(), session);
+  const db = await getDb();
+  const devices = await listSessions(db, session);
+  const homeTimeZone = await getHomeTimeZone(db);
   return (
     <main className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">Settings</h1>
+      <section aria-labelledby="general" className="flex flex-col gap-3">
+        <h2 id="general" className="font-semibold">
+          General
+        </h2>
+        <TimeZoneSetting initial={homeTimeZone} />
+      </section>
       <section aria-labelledby="account" className="flex flex-col gap-3">
         <h2 id="account" className="font-semibold">
           Account

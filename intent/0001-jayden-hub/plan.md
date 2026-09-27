@@ -183,6 +183,25 @@ Claude Code. They are rough and will be revised after each milestone.
 - M1.3: "Test connection" and removing a Google grant need the plaintext,
   so the web app starts them as worker jobs (`credential:test`,
   `credential:remove`). The job launcher from M1.5 was built here for that.
+- M1.4: accepted clashes are stored per pair of events in `conflicts`
+  (spec §7.1 puts `accept_clash` on the override), because accepting one
+  clash shouldn't hide a new clash with a third event. Detected clashes are
+  computed, not stored. Manual repeating events are stored as a series and
+  written out as ordinary event rows through the same upsert engine.
+- M1.4: a sync only cancels missing events that start inside the window
+  the adapter fetched (e.g. from 30 days ago), so past events a feed stops
+  listing stay as history instead of turning "cancelled".
+- M1.5: "sync all" runs sources one after another in one job execution,
+  each with its own lock, 10-minute budget and error handling, rather than
+  one execution per source. One broken site still can't block the others.
+- M1.5: the SYNC-4 email is a Cloud Monitoring log-match alert on the
+  worker's `sync_failed_repeatedly` log line (`infra/alerts.tf`), so no
+  mail service or Gmail scope is needed.
+- M1.6: the Google account's calendar list is saved (names and IDs only)
+  when Google is connected, so the Sources page can offer it without the
+  web app ever using the refresh token.
+- M1.7: SP-4 is provisional (see spikes.md): TeamSnap is ICS; Spordle is
+  ICS if the owner finds a link, else a login adapter is added then.
 
 **S1 exit:** the owner uses the calendar for about a week. Fix list triaged
 before M2.
@@ -301,7 +320,7 @@ or his opponents.
 | Milestone | Status |
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
-| M1 Foundation (S1) | in progress. M1.1, M1.2, M1.3 done. |
+| M1 Foundation (S1) | in progress. M1.1–M1.6 done; M1.6 live smoke test and M1.7 (Spordle feed) wait on the owner's links (O-6). |
 | M2 Swimming (S2) | not started |
 | M3 Tennis (S3) | not started |
 | M4 School (S4) | not started |

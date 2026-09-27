@@ -33,6 +33,7 @@ export type CredentialView = {
   label: string;
   username: string | null;
   scopes: string[] | null;
+  meta: unknown;
   status: string;
   updatedAt: string;
   lastUsedAt: string | null;
@@ -48,6 +49,7 @@ const viewColumns = {
   label: credentials.label,
   username: credentials.username,
   scopes: credentials.scopes,
+  meta: credentials.meta,
   status: credentials.status,
   updatedAt: credentials.updatedAt,
   lastUsedAt: credentials.lastUsedAt,
