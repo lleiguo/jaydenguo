@@ -1,0 +1,364 @@
+"use client";
+
+import "@fullcalendar/react/skeleton.css";
+import "@fullcalendar/react/themes/classic/theme.css";
+import "@fullcalendar/react/themes/classic/palette.css";
+import FullCalendar, { type CalendarRef, type EventDropInfo, type EventInput } from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/react/daygrid";
+import interactionPlugin from "@fullcalendar/react/interaction";
+import listPlugin from "@fullcalendar/react/list";
+import classicThemePlugin from "@fullcalendar/react/themes/classic";
+import timeGridPlugin from "@fullcalendar/react/timegrid";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CATEGORIES } from "@/domain/constants";
+import type { CalendarPayload, ClashView, EventView, Undo } from "@/lib/calendar-types";
+import { call } from "./api";
+import { CATEGORY_INFO } from "./categories";
+import { EventDetail } from "./event-detail";
+import { EventForm } from "./event-form";
+import { usePersistentFilters, type Filters } from "./filters";
+import { Modal } from "./modal";
+import { announceChange, useLiveUpdates } from "./use-live-updates";
+import { UndoToast, nextToastId, type Toast } from "./undo-toast";
+
+// The combined calendar (plan M1.8-M1.11).
+
+type Range = { from: string; to: string };
+type Clash = ClashView & { other?: EventView };
+
+function isVisible(e: EventView, f: Filters): boolean {
+  // Closure banners stay visible even when School is hidden (CAL-3a).
+  if (e.category === "school_closure") return true;
+  const layer = CATEGORY_INFO[e.category].layer;
+  if (layer === "school" && !f.school) return false;
+  if (layer === "activities" && !f.activities) return false;
+  if (f.hiddenCategories.includes(e.category)) return false;
+  if (e.source && f.hiddenSources.includes(e.source.id)) return false;
+  return true;
+}
+
+export function CalendarApp({ initialView, initialDate }: { initialView?: string; initialDate?: string }) {
+  const calRef = useRef<CalendarRef>(null);
+  const [mounted, setMounted] = useState(false);
+  const [range, setRange] = useState<Range | null>(null);
+  const [data, setData] = useState<CalendarPayload | null>(null);
+  const [filters, setFilters] = usePersistentFilters();
+  const [selected, setSelected] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EventView | "new" | null>(null);
+  const [series, setSeries] = useState<Parameters<typeof EventForm>[0]["series"]>();
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), []);
+
+  const load = useCallback(async (r: Range) => {
+    const res = await fetch(
+      `/api/v1/events?from=${encodeURIComponent(r.from)}&to=${encodeURIComponent(r.to)}`,
+    );
+    if (res.ok) setData(await res.json());
+  }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (range) void load(range);
+  }, [range, load]);
+  const reload = useCallback(() => {
+    if (range) void load(range);
+  }, [range, load]);
+  useLiveUpdates(data?.cursor ?? null, reload);
+
+  const byId = useMemo(() => new Map((data?.events ?? []).map((e) => [e.id, e])), [data]);
+  const clashesOf = useMemo(() => {
+    const m = new Map<string, Clash[]>();
+    for (const c of data?.clashes ?? []) {
+      for (const [self, other] of [
+        [c.a, c.b],
+        [c.b, c.a],
+      ]) {
+        m.set(self, [...(m.get(self) ?? []), { ...c, other: byId.get(other) }]);
+      }
+    }
+    return m;
+  }, [data, byId]);
+
+  const sources = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of data?.events ?? []) if (e.source) m.set(e.source.id, e.source.name);
+    return [...m];
+  }, [data]);
+
+  const fcEvents: EventInput[] = useMemo(() => {
+    if (!data) return [];
+    const out: EventInput[] = [];
+    for (const e of data.events) {
+      if (e.status === "cancelled" && e.source === null) continue;
+      if (!isVisible(e, filters)) continue;
+      const open = (clashesOf.get(e.id) ?? []).filter((c) => !c.acceptedId);
+      const hiddenClash = open.some((c) => c.other && !isVisible(c.other, filters));
+      const visibleClash = open.some((c) => !c.other || isVisible(c.other, filters));
+      out.push({
+        id: e.id,
+        title: e.title,
+        start: e.start,
+        end: e.end,
+        allDay: e.allDay,
+        editable: e.status === "active" && !e.deletedAt,
+        className: [
+          "hub-ev",
+          `cat-${e.category}`,
+          open.length ? "hub-clash" : "",
+          e.override?.skip ? "hub-skipped" : "",
+          e.status === "cancelled" ? "hub-cancelled" : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
+        extendedProps: { view: e, clash: visibleClash ? "visible" : hiddenClash ? "hidden" : null },
+      });
+    }
+    for (const d of data.closures) {
+      const next = new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+      out.push({ start: d, end: next, allDay: true, display: "background", className: "hub-closure-bg" });
+    }
+    return out;
+  }, [data, filters, clashesOf]);
+
+  const done = useCallback(
+    (message: string, undo?: Undo) => {
+      setSelected(null);
+      setEditing(null);
+      setSeries(undefined);
+      setToast({ message, undo, id: nextToastId() });
+      reload();
+      announceChange();
+    },
+    [reload],
+  );
+
+  // CON-3: drag and drop (mouse, or long-press on touch) saves a move.
+  const onDrop = async (info: Pick<EventDropInfo, "event" | "oldEvent" | "revert">) => {
+    const { event, oldEvent } = info;
+    if (event.allDay !== oldEvent.allDay || !event.start) {
+      info.revert();
+      setToast({ message: "Use Move to… to change between all-day and timed.", id: nextToastId() });
+      return;
+    }
+    const end =
+      event.end ??
+      new Date(event.start.getTime() + ((oldEvent.end?.getTime() ?? 0) - (oldEvent.start?.getTime() ?? 0)));
+    try {
+      const res = await call<{ undo: Undo }>(`/api/v1/events/${event.id}/move`, "POST", {
+        start: event.start,
+        end,
+      });
+      done(`Moved ${event.title}.`, res.undo);
+    } catch (err) {
+      info.revert();
+      setToast({ message: (err as Error).message, id: nextToastId() });
+    }
+  };
+
+  const openEdit = async (e: EventView) => {
+    if (e.seriesId) setSeries(await call(`/api/v1/series/${e.seriesId}`, "GET"));
+    setEditing(e);
+    setSelected(null);
+  };
+
+  const selectedEvent = selected ? byId.get(selected) : undefined;
+  const openClashes = (data?.clashes ?? []).filter((c) => !c.acceptedId).length;
+  const narrow = typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* CAL-3a layer chips, always visible above the calendar. */}
+        {(["school", "activities"] as const).map((layer) => (
+          <button
+            key={layer}
+            aria-pressed={filters[layer]}
+            onClick={() => setFilters({ ...filters, [layer]: !filters[layer] })}
+            className={`rounded-full border px-3 py-1 text-sm ${filters[layer] ? "border-blue-700 bg-blue-700 text-white" : ""}`}
+          >
+            {layer === "school" ? "🏫 School" : "⚽ Activities"}
+          </button>
+        ))}
+        <button
+          className="rounded-full border px-3 py-1 text-sm"
+          aria-expanded={showFilters}
+          onClick={() => setShowFilters((v) => !v)}
+        >
+          Filters
+        </button>
+        <button
+          className="ml-auto rounded-md bg-blue-700 px-3 py-1 text-sm text-white"
+          onClick={() => setEditing("new")}
+        >
+          + Add event
+        </button>
+        {openClashes > 0 && (
+          <a href="/clashes" className="text-sm font-medium text-red-700 underline dark:text-red-400">
+            ⚠ {openClashes} clash{openClashes === 1 ? "" : "es"} in view
+          </a>
+        )}
+      </div>
+
+      {showFilters && (
+        <fieldset className="flex flex-col gap-2 rounded border p-2 text-sm">
+          <legend className="px-1">Show</legend>
+          <div className="flex flex-wrap gap-3">
+            {CATEGORIES.map((c) => (
+              <label key={c} className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={!filters.hiddenCategories.includes(c)}
+                  onChange={(ev) =>
+                    setFilters({
+                      ...filters,
+                      hiddenCategories: ev.target.checked
+                        ? filters.hiddenCategories.filter((x) => x !== c)
+                        : [...filters.hiddenCategories, c],
+                    })
+                  }
+                />
+                {CATEGORY_INFO[c].icon} {CATEGORY_INFO[c].label}
+              </label>
+            ))}
+          </div>
+          {sources.length > 0 && (
+            <div className="flex flex-wrap gap-3">
+              {sources.map(([id, name]) => (
+                <label key={id} className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={!filters.hiddenSources.includes(id)}
+                    onChange={(ev) =>
+                      setFilters({
+                        ...filters,
+                        hiddenSources: ev.target.checked
+                          ? filters.hiddenSources.filter((x) => x !== id)
+                          : [...filters.hiddenSources, id],
+                      })
+                    }
+                  />
+                  {name}
+                </label>
+              ))}
+            </div>
+          )}
+        </fieldset>
+      )}
+
+      <div data-testid="calendar" className="hub-cal min-h-[60vh] p-1">
+        {mounted && data !== undefined && (
+          <FullCalendar
+            ref={calRef}
+            plugins={[classicThemePlugin, dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+            initialView={initialView ?? (narrow ? "listWeek" : "timeGridWeek")}
+            initialDate={initialDate}
+            timeZone={data?.homeTimeZone ?? "local"}
+            headerToolbar={{
+              start: "prev,next today",
+              center: "title",
+              end: "timeGridDay,timeGridWeek,dayGridMonth,listWeek",
+            }}
+            buttons={{
+              timeGridDay: { text: "Day" },
+              timeGridWeek: { text: "Week" },
+              dayGridMonth: { text: "Month" },
+              listWeek: { text: "Agenda" },
+              today: { text: "Today" },
+            }}
+            height="auto"
+            nowIndicator
+            editable
+            eventDurationEditable
+            eventLongPressDelay={400}
+            slotMinTime="06:00:00"
+            slotMaxTime="22:00:00"
+            dayMaxEvents
+            events={fcEvents}
+            datesSet={(arg) => {
+              const next = { from: arg.start.toISOString(), to: arg.end.toISOString() };
+              setRange((r) => (r?.from === next.from && r?.to === next.to ? r : next));
+            }}
+            eventClick={(arg) => {
+              arg.jsEvent.preventDefault();
+              if (arg.event.id) setSelected(arg.event.id);
+            }}
+            eventDrop={onDrop}
+            eventResize={(info) => onDrop(info)}
+            eventContent={(arg) => {
+              const e = arg.event.extendedProps.view as EventView | undefined;
+              if (!e) return null;
+              const clash = arg.event.extendedProps.clash as string | null;
+              const info = CATEGORY_INFO[e.category];
+              return (
+                <div
+                  className="hub-ev-body"
+                  data-testid="cal-event"
+                  data-event-id={e.id}
+                  data-clash={clash ?? "none"}
+                >
+                  <span role="img" aria-label={info.label}>
+                    {info.icon}
+                  </span>
+                  {clash && (
+                    <span
+                      role="img"
+                      aria-label={clash === "hidden" ? "clash with a hidden event" : "clash"}
+                      title={clash === "hidden" ? "Clash with a hidden event" : "Clash"}
+                    >
+                      ⚠
+                    </span>
+                  )}
+                  {arg.timeText && <span>{arg.timeText}</span>}
+                  <span className="hub-title">{e.title}</span>
+                  {e.override?.sourceChangedAt && <span title="Source changed since you moved this">↻</span>}
+                  {e.schoolClosed && <span title="School closed">🚫</span>}
+                </div>
+              );
+            }}
+          />
+        )}
+      </div>
+
+      {selectedEvent && data && (
+        <Modal title={selectedEvent.title} onClose={() => setSelected(null)}>
+          <EventDetail
+            event={selectedEvent}
+            clashes={clashesOf.get(selectedEvent.id) ?? []}
+            tz={data.homeTimeZone}
+            onAction={done}
+            onEdit={() => openEdit(selectedEvent)}
+          />
+        </Modal>
+      )}
+      {editing && data && (
+        <Modal
+          title={editing === "new" ? "Add event" : series ? "Edit repeating event" : "Edit event"}
+          onClose={() => {
+            setEditing(null);
+            setSeries(undefined);
+          }}
+        >
+          <EventForm
+            tz={data.homeTimeZone}
+            event={editing === "new" || series ? undefined : editing}
+            series={series}
+            defaultDate={range?.from.slice(0, 10)}
+            onSaved={(m) => done(m)}
+          />
+        </Modal>
+      )}
+      <UndoToast
+        toast={toast}
+        onDone={(undone) => {
+          setToast(null);
+          if (undone) {
+            reload();
+            announceChange();
+          }
+        }}
+      />
+    </div>
+  );
+}

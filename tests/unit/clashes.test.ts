@@ -1,0 +1,113 @@
+import { describe, expect, it } from "vitest";
+import { detectClashes, type Buffers, type ClashEvent, type Place } from "@/domain/clashes";
+
+// Every rule in spec CON-1, plus CAL-7 closures (plan M1.9).
+const tz = "America/Toronto";
+let n = 0;
+function ev(start: string, end: string, extra: Partial<ClashEvent> = {}): ClashEvent {
+  return {
+    id: `e${String(++n).padStart(3, "0")}`,
+    category: "soccer",
+    attendance: "required",
+    start: new Date(start),
+    end: new Date(end),
+    allDay: false,
+    locationId: null,
+    locationName: null,
+    ...extra,
+  };
+}
+const run = (events: ClashEvent[], places: Place[] = [], buffers: Buffers = new Map()) =>
+  detectClashes({ events, places, buffers, homeTimeZone: tz });
+
+describe("detectClashes", () => {
+  it("flags overlapping events that both need Jayden", () => {
+    const a = ev("2026-10-05T21:00:00Z", "2026-10-05T22:30:00Z");
+    const b = ev("2026-10-05T22:00:00Z", "2026-10-05T23:00:00Z", { category: "tennis" });
+    expect(run([a, b])).toEqual([{ a: a.id, b: b.id, kind: "overlap", gapMin: 0, bufferMin: 15 }]);
+  });
+
+  it("uses the 15-minute default travel buffer between back-to-back events", () => {
+    const a = ev("2026-10-05T21:00:00Z", "2026-10-05T22:00:00Z");
+    const b = ev("2026-10-05T22:10:00Z", "2026-10-05T23:00:00Z");
+    expect(run([a, b])).toMatchObject([{ kind: "travel", gapMin: 10, bufferMin: 15 }]);
+    const c = ev("2026-10-06T21:00:00Z", "2026-10-06T22:00:00Z");
+    const d = ev("2026-10-06T22:15:00Z", "2026-10-06T23:00:00Z");
+    expect(run([c, d])).toEqual([]);
+  });
+
+  it("uses the travel time set between two places, and none within one place", () => {
+    const places: Place[] = [
+      { id: "club", match: ["tennis club"] },
+      { id: "pool", match: ["aquatic centre"] },
+    ];
+    const buffers: Buffers = new Map([["club|pool", 30]]);
+    const a = ev("2026-10-05T21:00:00Z", "2026-10-05T22:00:00Z", {
+      locationName: "Maple Tennis Club, court 2",
+    });
+    const b = ev("2026-10-05T22:20:00Z", "2026-10-05T23:00:00Z", { locationName: "Cedar Aquatic Centre" });
+    expect(run([a, b], places, buffers)).toMatchObject([{ kind: "travel", gapMin: 20, bufferMin: 30 }]);
+    const c = ev("2026-10-06T21:00:00Z", "2026-10-06T22:00:00Z", { locationId: "club" });
+    const d = ev("2026-10-06T22:00:00Z", "2026-10-06T23:00:00Z", { locationId: "club" });
+    expect(run([c, d], places, buffers)).toEqual([]);
+  });
+
+  it("never counts optional or parent-only events", () => {
+    const a = ev("2026-10-05T21:00:00Z", "2026-10-05T22:00:00Z");
+    const b = ev("2026-10-05T21:00:00Z", "2026-10-05T22:00:00Z", { attendance: "optional" });
+    const c = ev("2026-10-05T21:00:00Z", "2026-10-05T22:00:00Z", { attendance: "parent_only" });
+    expect(run([a, b, c])).toEqual([]);
+  });
+
+  it("school classes clash with activities on school days but not on closure days", () => {
+    const cls = ev("2026-10-05T19:00:00Z", "2026-10-05T20:00:00Z", { category: "school_class" });
+    const swim = ev("2026-10-05T19:30:00Z", "2026-10-05T20:30:00Z", { category: "swimming" });
+    expect(run([cls, swim])).toHaveLength(1);
+
+    const closure = ev("2026-10-05T00:00:00Z", "2026-10-06T00:00:00Z", {
+      category: "school_closure",
+      allDay: true,
+    });
+    expect(run([cls, swim, closure])).toEqual([]);
+  });
+
+  it("classes don't clash with each other, and all-day events never clash", () => {
+    const c1 = ev("2026-10-05T13:00:00Z", "2026-10-05T14:00:00Z", { category: "school_class" });
+    const c2 = ev("2026-10-05T14:00:00Z", "2026-10-05T15:00:00Z", { category: "school_class" });
+    const tourney = ev("2026-10-05T00:00:00Z", "2026-10-07T00:00:00Z", { allDay: true, category: "tennis" });
+    expect(run([c1, c2, tourney])).toEqual([]);
+  });
+
+  it("finds every pair when three events overlap", () => {
+    const a = ev("2026-10-05T21:00:00Z", "2026-10-05T23:00:00Z");
+    const b = ev("2026-10-05T21:30:00Z", "2026-10-05T22:00:00Z");
+    const c = ev("2026-10-05T21:45:00Z", "2026-10-05T22:30:00Z");
+    expect(
+      run([c, a, b])
+        .map((x) => `${x.a}-${x.b}`)
+        .sort(),
+    ).toEqual([`${a.id}-${b.id}`, `${a.id}-${c.id}`, `${b.id}-${c.id}`].sort());
+  });
+
+  it("runs over two years of events in under 200 ms (NFR-4)", () => {
+    const events: ClashEvent[] = [];
+    const start = Date.UTC(2026, 0, 1);
+    // ~10 events a day for two years.
+    for (let day = 0; day < 730; day++) {
+      for (let i = 0; i < 10; i++) {
+        const s = start + day * 86_400_000 + (8 + i * 1.3) * 3_600_000;
+        events.push(
+          ev(new Date(s).toISOString(), new Date(s + 5_400_000).toISOString(), {
+            category: i % 3 ? "soccer" : "school_class",
+          }),
+        );
+      }
+    }
+    detectClashes({ events: events.slice(0, 100), places: [], buffers: new Map(), homeTimeZone: tz }); // warm up
+    const t0 = performance.now();
+    const clashes = detectClashes({ events, places: [], buffers: new Map(), homeTimeZone: tz });
+    const ms = performance.now() - t0;
+    expect(clashes.length).toBeGreaterThan(0);
+    expect(ms).toBeLessThan(200);
+  });
+});

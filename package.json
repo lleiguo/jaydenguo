@@ -20,9 +20,11 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/worker/main.ts migrate",
     "job": "tsx src/worker/main.ts",
-    "smoke": "tsx src/worker/main.ts smoke"
+    "smoke": "tsx src/worker/main.ts smoke",
+    "seed": "tsx src/worker/main.ts seed"
   },
   "dependencies": {
+    "@fullcalendar/react": "^7.1.0",
     "@google-cloud/cloud-sql-connector": "^1.12.0",
     "@google-cloud/kms": "^6.2.0",
     "@google-cloud/run": "^4.1.0",
@@ -33,6 +35,7 @@
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "temporal-polyfill": "^1.0.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {

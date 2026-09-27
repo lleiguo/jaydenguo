@@ -25,6 +25,7 @@ describe("contentSecurityPolicy", () => {
     const csp = contentSecurityPolicy("n", true);
     expect(csp).toContain("'unsafe-eval'");
     expect(csp).toContain("ws:");
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
   });
 
   it("uses a fresh nonce every time", () => {

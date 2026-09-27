@@ -202,6 +202,18 @@ Claude Code. They are rough and will be revised after each milestone.
   web app ever using the refresh token.
 - M1.7: SP-4 is provisional (see spikes.md): TeamSnap is ICS; Spordle is
   ICS if the owner finds a link, else a login adapter is added then.
+- M1.8: FullCalendar is v7 (current at build time). It ships plain CSS files
+  instead of injecting styles, so it runs under the nonce-only CSP with no
+  exceptions (an e2e test checks for violations). The calendar area keeps
+  FullCalendar's light theme in dark mode.
+- M1.8: all-day events never clash (tournaments, closures, reminders), and
+  school classes don't clash with each other.
+- M1.10: undo works for 10 s through an "undo" instruction returned by each
+  action; overrides remember the override they replaced, so undoing a second
+  move restores the first. The touch drag test sends real touch events
+  (long-press, then drag) through the Chrome DevTools Protocol.
+- M1.11: browsers poll every 8 s rather than 10 s, so the worst case,
+  including reloading the data, stays under CAL-8's 10 seconds.
 
 **S1 exit:** the owner uses the calendar for about a week. Fix list triaged
 before M2.
@@ -320,7 +332,7 @@ or his opponents.
 | Milestone | Status |
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
-| M1 Foundation (S1) | in progress. M1.1–M1.6 done; M1.6 live smoke test and M1.7 (Spordle feed) wait on the owner's links (O-6). |
+| M1 Foundation (S1) | in progress. M1.1–M1.11 done; M1.6 live smoke test and M1.7 (Spordle feed) wait on the owner's links (O-6). |
 | M2 Swimming (S2) | not started |
 | M3 Tennis (S3) | not started |
 | M4 School (S4) | not started |

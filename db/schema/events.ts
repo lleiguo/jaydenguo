@@ -155,6 +155,8 @@ export const eventOverrides = pgTable(
     sourceChangedAt: ts("source_changed_at"),
     clearedAt: ts("cleared_at"),
     clearedBy: text("cleared_by"),
+    // The override this one replaced; undo brings it back.
+    replacesId: uuid("replaces_id"),
   },
   (t) => [
     uniqueIndex("event_overrides_active_uq")

@@ -225,7 +225,9 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
       aria-labelledby="add-source"
       onSubmit={async (e) => {
         e.preventDefault();
-        const f = new FormData(e.currentTarget);
+        // Keep the form: React clears currentTarget once the handler awaits.
+        const form = e.currentTarget;
+        const f = new FormData(form);
         const { rules, errors } = textToRules(String(f.get("rules") ?? ""));
         if (errors.length) return setError(errors.join(" "));
         const res = await fetch("/api/v1/sources", {
@@ -242,7 +244,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
         if (!res.ok)
           return setError((await res.json().catch(() => ({}))).error ?? "Couldn't add the source.");
         setError(null);
-        e.currentTarget.reset();
+        form.reset();
         onAdded();
       }}
     >

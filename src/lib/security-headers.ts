@@ -14,12 +14,14 @@ export function securityHeaders() {
 
 // No 'unsafe-inline' for scripts or styles: Next.js puts the nonce on its
 // own tags, and 'strict-dynamic' lets those scripts load their chunks.
-// Development needs 'unsafe-eval' (React debugging) and a websocket for HMR.
+// Development needs 'unsafe-eval' (React debugging), a websocket for HMR and
+// inline styles (dev-mode CSS is injected as <style> tags); production has
+// none of these.
 export function contentSecurityPolicy(nonce: string, isDev: boolean): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
-    `style-src 'self' 'nonce-${nonce}'`,
+    isDev ? "style-src 'self' 'unsafe-inline'" : `style-src 'self' 'nonce-${nonce}'`,
     "img-src 'self' data: blob:",
     "font-src 'self'",
     `connect-src 'self'${isDev ? " ws:" : ""}`,

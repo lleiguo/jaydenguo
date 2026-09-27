@@ -5,6 +5,7 @@ import { SyncError, type AdapterContext } from "../adapters/types";
 import { parseMapping } from "../domain/categories";
 import type { Db } from "../server/db/client";
 import type { Logger } from "../server/log";
+import { extendAllSeries } from "../server/calendar/mutations";
 import { getHomeTimeZone } from "../server/settings";
 import { syncRecords } from "../server/sync/apply";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
@@ -178,6 +179,8 @@ export async function syncJob(args: string[], ctx: JobContext) {
       : [target];
   const results: Record<string, SyncOutcome["status"]> = {};
   for (const id of ids) results[id] = (await syncSource(db, id, trigger, ctx.log)).status;
+  // The daily run also keeps open-ended repeating events written out ahead.
+  if (target === "all") ctx.log("series extended", { series: await extendAllSeries(db) });
   ctx.log("sync job done", { results });
 }
 
