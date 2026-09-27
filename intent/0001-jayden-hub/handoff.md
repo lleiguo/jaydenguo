@@ -10,9 +10,7 @@ deploys, and the migration would run.
 
 ## Starting state checked
 - `origin/main` has "m2/3-pages" (#16), so M2's code is in.
-- **Not confirmed:** the owner's M2 live check (Commit Swimming login on
-  Accounts, a source on Sources, Refresh on /swimming, meets on the
-  calendar). Ask before M3 merges.
+- The owner's M2 live check passed (2026-09-27).
 - Still open from M1: M1.6 live smoke and the M1.7 Spordle decision (O-6
   feed links), and the M1.13 restore test (`infra/bootstrap/restore-test.sh`).
 
@@ -114,7 +112,8 @@ deploys, and the migration would run.
 4. **M3.7 edits:** add or correct a score or time (`src/server/tennis/mutations.ts`
    like `swim/mutations.ts`, "Use the site's result", "source disagrees"
    flag). e2e: an edit survives the next sync.
-5. **M3.6 explanation from Claude on Vertex:** waiting on O-8 (below).
+5. **M3.6 explanation from Claude on Vertex:** unblocked (O-8 answered
+   below). Load the claude-api skill before writing it.
 
 ## Where the build departed from the plan
 All recorded in plan.md "Build notes (M3)":
@@ -150,20 +149,27 @@ All recorded in plan.md "Build notes (M3)":
   `pnpm test:e2e`. These passed: format, lint, typecheck, unit (94),
   integration (29).
 
-## Open owner decisions
-- **M2 live check:** done, and did it pass?
-- **O-8 (Claude on Vertex) for M3.6:** is it enabled, and in which region?
-  If Claude isn't served from a Canadian region, sending the computed
-  match numbers to a US region needs the owner's OK (Canada-only data
-  decision). Otherwise ship M3.1–M3.5 and M3.7 and leave M3.6.
-- **O-5 (Tennis Canada login):** not needed for public pages. Is it worth
-  a signed-in look (the owner signs in, read-only) to see whether upcoming
-  entries show before draws are published? If they do, add an optional
-  sign-in (the `/user` form POST) to the adapter.
-- **Which profile:** the source needs his public profile link, pasted on
-  the Sources page when M3.3 lands. The link isn't a secret, but it isn't
-  written into the repo.
-- **Crawl size:** up to 30 opponents and 150 requests per run (about
-  5 minutes at 2 s apart). Adjust if the owner prefers a lighter touch.
-- robots.txt disallows crawlers on profile and head-to-head pages. This is
+## Owner decisions (answered 2026-09-27)
+- **M2 live check:** passed. M2 is done (plan §9).
+- **O-8, Claude on Vertex for M3.6:** enabled. The owner accepts sending
+  the computed match numbers (never raw pages or profiles) to a region
+  outside Canada if Claude isn't served in one. At M3.6, pick the region
+  and model from what the project offers, and add the worker's Vertex IAM
+  in Terraform (apply it from the branch before merging).
+- **O-5, signed-in look:** wanted. Still to do: the owner signs in to
+  tc.tournamentsoftware.com themselves, in the Claude desktop app's
+  browser pane (as for SP-3), and Claude reads pages only. The questions:
+  do upcoming entries show before the draw is published, and does
+  anything else differ from the public pages? A cloud session can't do
+  this: it has no browser pane, and the password must never go in chat. If
+  entries do show, add an optional sign-in to the adapter (the `/user`
+  form POST) using the login entered on the Accounts page, whose "Tennis
+  Canada tournaments" option then stays.
+- **Crawl size:** up to 30 opponents and 150 requests per run is OK.
+- **robots.txt:** noted by the owner; covered by F-1.
+
+## Still open
+- The profile link is pasted on the Sources page once M3.3 lands.
+- Still open from M1: M1.6 live smoke and M1.7 (O-6 feed links), and the
+  M1.13 restore test.
   covered by the accepted F-1 risk, but worth knowing.

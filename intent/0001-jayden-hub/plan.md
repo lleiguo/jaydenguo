@@ -302,7 +302,12 @@ before M2.
   source is set up with his public profile link (`config.profileUrl`)
   instead of a stored login. O-5 (the Tennis Canada login) is only needed
   if signed-in pages turn out to show entries before draws are published
-  (open owner decision).
+  (open owner decision). **Decided 2026-09-27:** the owner wants that
+  signed-in look done (see handoff.md).
+- M3.6: **decided 2026-09-27:** Claude is enabled on Vertex, and the owner
+  accepts sending the computed match numbers (no raw pages or profiles) to
+  a region outside Canada if Claude isn't served in one. Storage stays in
+  Canada.
 - M3.2: the schema has `tennis_players`, `tennis_tournaments`,
   `tennis_draws` (his draws only: position, seed, next match),
   `tennis_matches` (generic two-sided matches, so opponents' one-hop
@@ -415,7 +420,7 @@ or his opponents.
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
-| M2 Swimming (S2) | built and merged 2026-09-27 (M2.1–M2.7, PRs #14–#16). Owner's live check not yet confirmed. SP-3 page map in spikes.md. |
+| M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
 | M3 Tennis (S3) | **in progress.** M3.1 (SP-2) done 2026-09-27: page map in spikes.md, scrubbed fixtures, live probe. M3.2 schema and migration written, not merged. M3.3 adapter partly built (crawl and normalise work against the fake site; database writes, sync wiring, Sources page and tests still to do). M3.4–M3.7 not started. See [handoff.md](handoff.md). |
 | M4 School (S4) | not started |
 | M5 Extras (S5) | not started |
