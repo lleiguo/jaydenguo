@@ -309,12 +309,22 @@ function CredentialForm(props: {
       <label className="flex flex-col">
         {secretLabel}
         {/* Write-only (CRED-4): never pre-filled, and blank keeps the stored value. */}
+        {/* Passwords are masked while typed; a link is shown so it can be
+            checked after pasting. Neither is ever shown again once saved. */}
         <input
           name="secret"
-          type="password"
-          autoComplete="new-password"
+          type={props.kind === "password" ? "password" : "text"}
+          inputMode={props.kind === "password" ? undefined : "url"}
+          autoComplete={props.kind === "password" ? "new-password" : "off"}
+          spellCheck={false}
           required={!editing}
-          placeholder={editing ? "•••• (leave blank to keep)" : undefined}
+          placeholder={
+            editing
+              ? "•••• (leave blank to keep)"
+              : props.kind === "secret_url"
+                ? "webcal://… or https://…"
+                : undefined
+          }
           className="rounded border px-2 py-1"
         />
       </label>

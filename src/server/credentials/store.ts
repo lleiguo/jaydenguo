@@ -81,13 +81,21 @@ export async function getCredential(db: Db, id: string): Promise<CredentialView>
   return toView(row);
 }
 
+// A calendar feed link as the sites hand them out: webcal://, webcals://,
+// https:// or http://. Whitespace from copy and paste (line breaks inside a
+// long link) is removed.
 const feedUrl = z
   .string()
-  .trim()
-  .max(2000)
-  .refine(
-    (v) => /^(https|webcal):\/\/[^\s]+$/i.test(v) || /^http:\/\/(127\.0\.0\.1|localhost)[:/][^\s]*$/.test(v),
-    "must be an https:// or webcal:// link",
+  .transform((v) => v.replace(/\s+/g, ""))
+  .pipe(
+    z
+      .string()
+      .min(1, "Paste the calendar link.")
+      .max(2000, "That link is too long.")
+      .refine(
+        (v) => /^(https?|webcals?):\/\/[^/\s]+/i.test(v),
+        "That isn't a calendar link. It should start with webcal:// or https://.",
+      ),
   );
 
 export const createCredentialInput = z.discriminatedUnion("kind", [

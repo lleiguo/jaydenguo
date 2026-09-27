@@ -132,3 +132,21 @@ test("the credentials API refuses bad input and has no secret field", async ({ c
     expect(Object.keys(c)).not.toContain("wrappedDek");
   }
 });
+
+test("a link that isn't a calendar link is refused with a reason, and the link is visible while typing", async ({
+  page,
+  context,
+}) => {
+  await signInAs(context, OWNER);
+  await page.goto("/accounts");
+  const spordle = page.getByRole("region", { name: "Spordle" });
+  await spordle.getByRole("button", { name: "Add private calendar link" }).click();
+  const field = spordle.getByLabel("Calendar link");
+  await expect(field).toHaveAttribute("type", "text");
+  await spordle.getByLabel("Name").fill("Hockey");
+  await field.fill("page.example.test/team/42");
+  await spordle.getByRole("button", { name: "Save" }).click();
+  await expect(
+    spordle.getByText("That isn't a calendar link. It should start with webcal:// or https://."),
+  ).toBeVisible();
+});

@@ -16,9 +16,9 @@ export class FetchError extends Error {
   }
 }
 
-// webcal:// is https:// with a different name.
+// webcal:// (and webcals://) is https:// with a different name.
 export function normaliseFeedUrl(url: string): URL {
-  const u = new URL(url.trim().replace(/^webcal:\/\//i, "https://"));
+  const u = new URL(url.replace(/\s+/g, "").replace(/^webcals?:\/\//i, "https://"));
   if (u.protocol !== "https:" && u.protocol !== "http:")
     throw new FetchError("Only web links can be fetched");
   return u;
