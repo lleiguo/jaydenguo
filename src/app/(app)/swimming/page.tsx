@@ -2,7 +2,7 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { sources } from "@db/schema";
 import { AddResultForm } from "@/components/swim/add-result-form";
-import { RefreshButton } from "@/components/swim/refresh-button";
+import { RefreshButton } from "@/components/sport/refresh-button";
 import { eventLabel, formatSwimTime } from "@/domain/swim";
 import { COURSE_LABEL } from "@/domain/swim-constants";
 import { getDb } from "@/server/db";
@@ -21,7 +21,7 @@ export default async function SwimmingPage() {
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-xl font-semibold">🏊 Swimming</h1>
-        <RefreshButton sourceIds={commit.map((s) => s.id)} />
+        <RefreshButton sourceIds={commit.map((s) => s.id)} site="Commit Swimming" what="meets and results" />
       </div>
 
       <section aria-labelledby="upcoming" className="flex flex-col gap-2">

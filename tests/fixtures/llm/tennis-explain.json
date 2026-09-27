@@ -1,0 +1,47 @@
+{
+  "recorded": false,
+  "note": "Hand-written placeholder in the shape of a Claude response: Vertex refused the recording call with a quota error (2026-09-27). Re-record with RECORD_LLM=1 VERTEX_PROJECT=<project> pnpm test:int tests/integration/tennis-explain.test.ts once Claude quota is granted.",
+  "promptVersion": "tennis-explain-1",
+  "inputsHash": "8ab5703d88f7a9bd3428bee4c905099ccfe3c7ee20be71b95e231dedd896f7b2",
+  "inputs": {
+    "winProbabilityPercent": 30,
+    "fromRatingsAlonePercent": 30,
+    "adjustmentsLogOdds": {
+      "headToHead": 0,
+      "recentForm": -0.02,
+      "marginOfVictory": 0.04
+    },
+    "confidence": "low",
+    "likelyScoreBand": "More likely a loss; a third set is possible",
+    "player": {
+      "rating": 1553,
+      "ratingDeviation": 79,
+      "ratedMatches": 43,
+      "last10": {
+        "wins": 8,
+        "losses": 2
+      },
+      "gamesWonPercent": 78
+    },
+    "opponent": {
+      "rating": 1747,
+      "ratingDeviation": 253,
+      "ratedMatches": 2,
+      "last10": {
+        "wins": 2,
+        "losses": 0
+      },
+      "gamesWonPercent": 60
+    },
+    "headToHead": {
+      "wins": 0,
+      "losses": 0
+    }
+  },
+  "response": {
+    "text": "This estimate gives him a 30% chance of winning. His opponent's rating is about 190 points higher, but it rests on only two rated matches, so it is very uncertain, while his own rating is well established from 43 matches. They haven't played each other before. His recent form is strong (8 wins in his last 10, winning 78% of games), which nudges the estimate only slightly. Confidence is low because so little is known about his opponent; a close match that goes to a third set is quite possible.",
+    "model": "claude-opus-5",
+    "inputTokens": null,
+    "outputTokens": null
+  }
+}

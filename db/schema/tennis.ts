@@ -197,3 +197,23 @@ export const tennisMatchRevisions = pgTable(
   },
   (t) => [index("tennis_match_revisions_match_idx").on(t.matchId, t.changedAt)],
 );
+
+// Claude's plain-language explanation of a prediction (TEN-6, plan M3.6),
+// written from the computed numbers only and stored so each set of numbers
+// is explained once. `inputs` is exactly what was sent: numbers, no names.
+export const tennisExplanations = pgTable(
+  "tennis_explanations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // sha256 of the prompt version and the inputs.
+    inputsHash: text("inputs_hash").notNull(),
+    inputs: jsonb("inputs").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    model: text("model").notNull(),
+    text: text("text").notNull(),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("tennis_explanations_hash_uq").on(t.inputsHash)],
+);

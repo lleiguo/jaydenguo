@@ -102,3 +102,9 @@ variable "alert_email" {
   type        = string
   default     = ""
 }
+
+variable "claude_region" {
+  description = "Vertex AI location for Claude calls (plan M3.6). \"global\" lets Google route the call; the owner accepted processing outside Canada (nothing is stored there)."
+  type        = string
+  default     = "global"
+}

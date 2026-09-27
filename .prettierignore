@@ -3,3 +3,4 @@ db/migrations
 intent
 .next
 dist
+tests/fixtures/tennis-tc

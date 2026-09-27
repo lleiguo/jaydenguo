@@ -295,7 +295,19 @@ before M2.
 | M3.6 | Prediction explanation from Claude (Vertex), generated only from the computed numbers. Prompt and version stored. | TEN-6 | A snapshot test with recorded LLM responses. |
 | M3.7 | Manual score and time edits, with the "source disagrees" flag. | TEN-8, SYNC-6 | e2e test: an edit survives the next sync. |
 
-**Build notes (M3):**
+**Build notes (M3; see [handoff.md](handoff.md)):**
+- M3.1: every page TEN-2..7 needs is public and server-rendered (spikes.md
+  SP-2), so the `tennis-tc` adapter reads them over plain HTTP with an HTML
+  parser (`node-html-parser`), not Chromium, and without signing in. The
+  source is set up with his public profile link (`config.profileUrl`)
+  instead of a stored login. O-5 (the Tennis Canada login) is only needed
+  if signed-in pages turn out to show entries before draws are published
+  (open owner decision). **Decided 2026-09-27:** the owner wants that
+  signed-in look done (see handoff.md).
+- M3.6: **decided 2026-09-27:** Claude is enabled on Vertex, and the owner
+  accepts sending the computed match numbers (no raw pages or profiles) to
+  a region outside Canada if Claude isn't served in one. Storage stays in
+  Canada.
 - M3.2: the schema has `tennis_players`, `tennis_tournaments`,
   `tennis_draws` (his draws only: position, seed, next match),
   `tennis_matches` (generic two-sided matches, so opponents' one-hop
@@ -303,8 +315,54 @@ before M2.
   Ratings aren't stored (spec §7.1 lists `rating`, `rating_rd`); they'll be
   computed from the matches, like PBs in M2. Players are keyed by the
   Tennis Canada member number. No ranking column: the site shows none for
-  his age group (SP-2). Merged on its own (`m3/2-schema`) ahead of the
-  adapter, which is still in progress.
+  his age group (SP-2). Split out onto `m3/2-schema` (with a migrations
+  test for the match rules) so it merges ahead of the adapter.
+- M3.3: a match's external ID is tournament + draw + the two sides' member
+  numbers, so the same match read from both players' profiles is stored
+  once. Only his matches can be cancelled by a sync; opponents' matches and
+  tournaments never are, because not every opponent is read every run. The
+  crawl reads his profile and every year, overviews of tournaments from the
+  last 30 days, the draws of tournaments from the last 10 days, then up to
+  30 opponents (next opponents first, then the last 12 months), capped at
+  150 requests per run.
+- M3.3: the calendar gets his tournaments (all-day, multi-day) and his
+  matches with a published start time (one hour), including a next match
+  whose opponent is still "winner of A vs B".
+- M3.3: a match the owner typed in is linked to the site's copy (same
+  day, opponent matched by name, ignoring case and accents); the row then
+  points at the site's players, with the owner's score flipped if the site
+  lists the sides the other way round. The Sources page takes the profile
+  link for `tennis_tc` (no account). Tests pin "today" to the fixture's day
+  with `TENNIS_TC_NOW`, honoured only with a loopback `TENNIS_TC_BASE_URL`.
+- M3.4: pages `/tennis` (next matches with predictions; tournaments in
+  progress, upcoming, past), `/tennis/tournaments/[id]`,
+  `/tennis/players/[key]` (key = member number), `/tennis/results`
+  (`?season=`), `/tennis/accuracy`, all read from
+  `src/server/tennis/load.ts` and served under `/api/v1/tennis/*`.
+  Head-to-head and form count singles only. Seasons are calendar years,
+  as the site groups them. His rows from several sources count as one
+  player. No seed data: the pages need a source (or the fake site).
+- M3.5: Glicko-2 with monthly rating periods, τ = 0.5, starting at
+  1500/350/0.06; walkovers, doubles and unplayed matches aren't rated.
+  The probability's log-odds move at most ±0.6 for head-to-head (shrunk:
+  0.2 × net wins / (meetings + 3)), last-10 form and share of games won.
+  Confidence is low under 5 rated matches or RD over 200, high from 15
+  matches with RD at most 110. The score band comes from the probability.
+  `scripts/tennis-backtest.ts` prints aggregate calibration only.
+- M3.6: `tennis_explanations` (migration 0008) stores each paragraph with
+  its inputs, prompt version and model; the sync writes them for his next
+  matches after a tennis run (best effort, at most 5 per run) when
+  `VERTEX_PROJECT` is set, and the pages show a stored one only when the
+  numbers still match. Claude gets rounded numbers and no names. Model
+  `claude-opus-5` on the `global` endpoint (Terraform `claude_region`).
+  **Open:** the project has no Claude quota on Vertex yet (429 on
+  2026-09-27), so the snapshot test replays a hand-written stand-in
+  (`tests/fixtures/llm/tennis-explain.json`, `recorded: false`) until it
+  can be recorded with `RECORD_LLM=1`.
+- M3.7: `src/server/tennis/mutations.ts`: add a match, correct the result,
+  score (typed from his side) or start time, use the site's result,
+  delete and restore. Corrections keep the owner's values through syncs
+  and flag disagreements, as in M2.7.
 
 ### M4 (slice S4): School (≈ 6 days)
 | Task | Description | Spec | Done when |
@@ -399,8 +457,8 @@ or his opponents.
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
-| M2 Swimming (S2) | built 2026-09-27 (M2.1–M2.7), awaiting merge and the live smoke test. SP-3 page map in spikes.md. |
-| M3 Tennis (S3) | **in progress.** M3.1 (SP-2) done 2026-09-27. M3.2 schema and migration on `m3/2-schema`, merging ahead of the adapter. M3.3–M3.7 in progress on `claude/m3-tennis-feature-94v4q6`. |
+| M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
+| M3 Tennis (S3) | **built, not merged (2026-09-27).** M3.1–M3.7 done on `claude/m3-tennis-feature-94v4q6`; M3.2 schema on `m3/2-schema` merges first. Still open: M3.3 live smoke test, M3.6 recorded Claude response (no Vertex quota yet), O-5 signed-in look. See [handoff.md](handoff.md). |
 | M4 School (S4) | not started |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |

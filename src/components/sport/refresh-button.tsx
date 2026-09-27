@@ -6,17 +6,26 @@ import { call } from "@/components/calendar/api";
 
 // SYNC-2: "Refresh" on the sport page starts a sync of its source(s). The
 // same one-per-hour limit applies; the Sources page shows progress.
-export function RefreshButton({ sourceIds }: { sourceIds: string[] }) {
+export function RefreshButton({
+  sourceIds,
+  site,
+  what,
+}: {
+  sourceIds: string[];
+  // e.g. "Commit Swimming", and what its source syncs.
+  site: string;
+  what: string;
+}) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   if (!sourceIds.length)
     return (
       <p className="text-sm text-neutral-600 dark:text-neutral-400">
-        Add a Commit Swimming source on the{" "}
+        Add a {site} source on the{" "}
         <a href="/sources" className="underline">
           Sources page
         </a>{" "}
-        to sync meets and results.
+        to sync {what}.
       </p>
     );
   return (
@@ -27,7 +36,7 @@ export function RefreshButton({ sourceIds }: { sourceIds: string[] }) {
         onClick={async () => {
           try {
             for (const id of sourceIds) await call(`/api/v1/sources/${id}/refresh`);
-            setMessage("Refreshing from Commit Swimming. This takes a minute or two.");
+            setMessage(`Refreshing from ${site}. This takes a minute or two.`);
             setTimeout(() => router.refresh(), 90_000);
           } catch (err) {
             setMessage((err as Error).message);

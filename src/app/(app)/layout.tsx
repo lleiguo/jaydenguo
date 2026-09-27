@@ -4,6 +4,7 @@ import { requirePageSession } from "@/server/auth/current";
 
 const NAV = [
   { href: "/", label: "Calendar" },
+  { href: "/tennis", label: "Tennis" },
   { href: "/swimming", label: "Swimming" },
   { href: "/clashes", label: "Clashes" },
   { href: "/sources", label: "Sources" },

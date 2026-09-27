@@ -131,6 +131,9 @@ resource "google_cloud_run_v2_job" "worker" {
             KMS_KEY        = google_kms_crypto_key.credentials.id
             HOME_TIME_ZONE = var.home_time_zone
             BACKUP_BUCKET  = google_storage_bucket.backups.name
+            # Claude on Vertex AI for tennis prediction explanations (plan M3.6).
+            VERTEX_PROJECT       = var.project_id
+            CLAUDE_VERTEX_REGION = var.claude_region
           })
           content {
             name  = env.key

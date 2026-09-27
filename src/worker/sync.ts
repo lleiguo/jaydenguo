@@ -8,6 +8,8 @@ import type { Logger } from "../server/log";
 import { extendAllSeries } from "../server/calendar/mutations";
 import { getHomeTimeZone } from "../server/settings";
 import { syncSwim } from "../server/swim/apply";
+import { syncTennis } from "../server/tennis/apply";
+import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
 import type { JobContext } from "./context";
@@ -131,6 +133,12 @@ async function runLocked(
       counts.changed += swim.changed;
       counts.cancelled += swim.cancelled;
     }
+    if (batch.tennis) {
+      const tennis = await syncTennis(db, sourceId, batch.tennis, { actor: "sync", syncRunId: run.id });
+      counts.added += tennis.added;
+      counts.changed += tennis.changed;
+      counts.cancelled += tennis.cancelled;
+    }
     await db
       .update(syncRuns)
       .set({ status: "succeeded", ...counts, finishedAt: sql`now()` })
@@ -139,6 +147,16 @@ async function runLocked(
       .update(sources)
       .set({ lastSuccessAt: sql`now()`, consecutiveFailures: 0 })
       .where(eq(sources.id, sourceId));
+    // TEN-6: Claude's paragraph for his next matches' predictions. Best
+    // effort, after the run is recorded, so it never fails a sync.
+    if (batch.tennis) {
+      try {
+        const explained = await explainNextMatches(db, claudeExplainer(), log);
+        log("tennis explanations", explained);
+      } catch (err) {
+        log("tennis explanations failed", { error: err }, "WARNING");
+      }
+    }
     log("sync finished", {
       sourceId,
       runId: run.id,
@@ -232,6 +250,15 @@ export async function smokeJob(args: string[], ctx: JobContext) {
         .sort((a, b) => b.swimDate.localeCompare(a.swimDate))
         .slice(0, 5)
         .map((r) => `${r.swimDate} ${r.distance} ${r.stroke} ${r.course} ${r.timeMs ?? "no time"}`),
+    }),
+    ...(batch.tennis && {
+      tennisPlayers: batch.tennis.players.length,
+      tennisTournaments: batch.tennis.tournaments.length,
+      tennisMatches: batch.tennis.matches.length,
+      tennisDraws: batch.tennis.draws.map(
+        (d) =>
+          `${d.drawName ?? d.drawNo}: ${d.nextMatch?.status ?? "none"}${d.position ? ` line ${d.position}` : ""}`,
+      ),
     }),
   });
 }

@@ -57,6 +57,13 @@
       "when": 1790528764918,
       "tag": "0007_tennis",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790530676411,
+      "tag": "0008_tennis_explanations",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import { credentials, sources, syncRuns } from "@db/schema";
+import { profileIdFromLink } from "../adapters/tennis-tc";
 import { parseMapping } from "../domain/categories";
 import { CATEGORIES, ATTENDANCE } from "../domain/constants";
 import type { Db } from "./db/client";
@@ -14,6 +15,7 @@ export const SOURCE_KINDS = {
   google_calendar: { label: "Google Calendar", credentialProvider: "google" },
   ical: { label: "Calendar feed (iCal link)", credentialProvider: null },
   commit_swim: { label: "Commit Swimming", credentialProvider: "commit_swim" },
+  tennis_tc: { label: "Tennis Canada tournaments", credentialProvider: null },
 } as const;
 
 const mappingSchema = z.object({
@@ -30,11 +32,18 @@ const mappingSchema = z.object({
     .optional(),
 });
 
+const configSchema = z.object({
+  calendarId: z.string().min(1).max(300).optional(),
+  // tennis_tc: his public profile link on the tournament site.
+  profileUrl: z.string().trim().min(1).max(300).optional(),
+});
+
 export const createSourceInput = z.object({
-  kind: z.enum(["google_calendar", "ical", "commit_swim"]),
+  kind: z.enum(["google_calendar", "ical", "commit_swim", "tennis_tc"]),
   name: z.string().trim().min(1).max(80),
-  credentialId: z.uuid(),
-  config: z.object({ calendarId: z.string().min(1).max(300).optional() }).default({}),
+  // Not needed for tennis_tc, which reads public pages.
+  credentialId: z.uuid().optional(),
+  config: configSchema.default({}),
   categoryMapping: mappingSchema,
 });
 
@@ -42,7 +51,7 @@ export const updateSourceInput = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   enabled: z.boolean().optional(),
   credentialId: z.uuid().optional(),
-  config: z.object({ calendarId: z.string().min(1).max(300).optional() }).optional(),
+  config: configSchema.optional(),
   categoryMapping: mappingSchema.optional(),
 });
 
@@ -109,6 +118,17 @@ export async function createSource(db: Db, input: z.infer<typeof createSourceInp
   if (input.kind === "google_calendar" && !input.config.calendarId) {
     throw new HttpError(400, "choose a Google calendar");
   }
+  if (input.kind === "tennis_tc") {
+    const profileUrl = input.config.profileUrl;
+    if (!profileIdFromLink(profileUrl))
+      throw new HttpError(400, "paste his profile link from tc.tournamentsoftware.com (…/player-profile/…)");
+    const [row] = await db
+      .insert(sources)
+      .values({ ...input, credentialId: null, config: { profileUrl: profileUrl!.trim() } })
+      .returning({ id: sources.id });
+    return row;
+  }
+  if (!input.credentialId) throw new HttpError(400, "choose an account");
   const [cred] = await db.select().from(credentials).where(eq(credentials.id, input.credentialId));
   if (!cred) throw new HttpError(400, "unknown account");
   const fits =
@@ -123,6 +143,8 @@ export async function createSource(db: Db, input: z.infer<typeof createSourceInp
 }
 
 export async function updateSource(db: Db, id: string, input: z.infer<typeof updateSourceInput>) {
+  if (input.config?.profileUrl !== undefined && !profileIdFromLink(input.config.profileUrl))
+    throw new HttpError(400, "paste his profile link from tc.tournamentsoftware.com (…/player-profile/…)");
   const [row] = await db.update(sources).set(input).where(eq(sources.id, id)).returning({ id: sources.id });
   if (!row) throw new HttpError(404, "not found");
 }

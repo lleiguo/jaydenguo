@@ -56,6 +56,95 @@ moved occurrences) in the feed's own time zone, drops `STATUS:CANCELLED`
 events so sync marks them cancelled, and keeps all-day events as dates.
 Fixture tests in `tests/unit/adapter-ical.test.ts`.
 
+## SP-2: Tennis Canada tournament site (M3.1, 2026-09-27)
+
+**Checked:** `tc.tournamentsoftware.com` from the build environment, signed
+out, reading pages only. The owner allowed the host in the cloud
+environment's network settings. Only page structure (tags, classes, counts)
+was inspected; no page contents went into the transcript or the repo.
+
+**How the site works:** an ASP.NET site whose pages are server-rendered
+HTML. Some parts load as HTML fragments (sent with
+`X-Requested-With: XMLHttpRequest`). No JavaScript is needed to read them,
+so the adapter uses plain HTTP and an HTML parser (`node-html-parser`)
+instead of Chromium. Everything TEN-2..7 needs is **public**: no sign-in
+was needed for any page below. Error pages (e.g. 404) come back with status
+200, so the adapter recognises them by content.
+
+**Page map:**
+| Page | Path | Gives |
+|---|---|---|
+| Player profile | `/player-profile/<guid>` | Name, club/region group, member number (`data-uldata3` on the favourite button) |
+| Profile, Tournaments tab | `/player-profile/<guid>/tournaments` | The years with tournaments (`data-href` per year) |
+| One year of tournaments (fragment) | `/player-profile/<guid>/tournaments/<year>/TournamentsForYear` | Each tournament (ID, name, venue, start date, category tags), each event (`h4.module-divider`) and draw (`h5`, link with `draw=<n>`), and every match he played: both sides, winner (`has-won`), games per set (`ul.points`), round (when shown), date and sometimes time |
+| Tournament overview | `/tournament/<guid>` | Name, entry opens, closing deadline, withdrawal deadline, start and end dates, venue (name, locality, region), category tags |
+| Draw bracket (fragment) | `/tournament/<guid>/Draw/<n>/GetDrawContent` | Knockout rounds (`.bracket-round__item`) in draw order, with round names, players, seeds ("[1]" after the name), scores and scheduled times |
+| Draw match list (fragment) | `/tournament/<guid>/Draw/<n>/GetMatchesContent` | Same matches in schedule order (not bracket order); used for round robin draws |
+| Player in a tournament | `/tournament/<guid>/player/<n>` | Links to that player's profile |
+| Profile by member number | `/player/<org guid>/<base64("base64:<member>")>` | Redirects to the profile |
+
+**Findings:**
+- **Identity:** the member number is the one ID that holds across
+  tournaments. Match rows carry it only in the head-to-head link
+  (`T1P1MemberID`, `T2P1MemberID`, `…P2…` for doubles), so **unplayed
+  matches have no member numbers**, only a per-tournament player number.
+  The adapter maps tournament player numbers to members from played
+  matches, and reads a next opponent's profile through the tournament
+  player page.
+- **Next opponent:** a draw's match list is in schedule order, but the
+  bracket fragment lists rounds in draw order. In a knockout draw (rounds
+  of 8, 4, 2, 1 matches), match k is fed by matches 2k and 2k+1 of the
+  round before, which gives "winner of A vs B" when the slot is empty. The
+  site fills winners into the next round itself. Rookie (U9/U10) events
+  often use **compass draws** (7 bracket rounds of mixed sizes); those only
+  get "first unplayed match".
+- **Scores:** games per set, one `ul.points` per set; no tiebreak points in
+  the markup. Walkovers show as a `match__message` tag. Byes are one-sided
+  matches with a winner and no score.
+- **Dates and times** are printed as "Sun 2026-09-20 12:00 PM" with no time
+  zone. Deadlines on the overview carry the organisation's offset.
+  Scheduled times are read in the home time zone setting.
+- **Only a start date** is on the year pages; multi-day end dates come from
+  the overview page, so the adapter reads overviews only for recent and
+  upcoming tournaments.
+- **No rankings** were shown for his age group; TEN-5's "ranking if shown"
+  stays empty until a profile shows one.
+- **robots.txt** disallows `/player-profile/`, `/player/`, `/head-2-head`
+  and `/ranking/` for crawlers. This is the F-1 risk the owner accepted:
+  pages the owner can see, once a day plus on demand, one request every
+  2 s, a cap per run.
+- **Sign-in** is a plain form POST (`/user`, `Login`, `Password`,
+  anti-forgery token). Not used, because the public pages are enough.
+  Still to check: whether signed-in pages show **upcoming entries before
+  the draw is published** (open owner decision, see handoff.md).
+- **Privacy:** tournament pages carry organisers' phone numbers and
+  addresses, and profiles link to photos. The parsers read whitelisted
+  fields only (names, member numbers, club, results, dates, venue).
+- In this build environment Node's `fetch` ignores `HTTPS_PROXY`; the live
+  probe needs `NODE_USE_ENV_PROXY=1`. Cloud Run has no proxy, so production
+  is unaffected.
+
+**Probe:** `scripts/tennis-tc-probe.ts <profile link>` runs the real crawl
+and prints his last 10 matches and one opponent's last 10. Run on
+2026-09-27 with a 60-request cap, it printed both lists (20 matches;
+output kept outside the repo).
+
+**Fixtures:** `tests/fixtures/tennis-tc/*.html` are real pages (his
+profile, two years of tournaments, two tournament overviews, a compass and
+a knockout draw, a tournament player page, three opponents) with scripts,
+navigation, footers, images and contact links removed. Every name, club,
+venue, city, tournament and event name is replaced with a fake, GUIDs and
+member numbers are remapped, dates are moved 104 weeks earlier (weekdays
+kept), offsets are set to Toronto's, and losing games are nudged by ±1.
+To have a draw in progress, a semi-finalist from another live draw stands
+in for him in the current tournament. A leak check against every replaced
+original string passed before the files were written. `manifest.json`
+holds the fake IDs the fake site (`tests/e2e/support/fake-tc.ts`) serves
+them under.
+
+**Decision:** a `tennis_tc` adapter over plain HTTP, public pages only,
+configured with his profile link (no stored credential for now).
+
 ## SP-3: Commit Swimming (M2.1, 2026-09-27)
 
 **Checked:** the owner signed in to `team.commitswimming.com` in a browser;
