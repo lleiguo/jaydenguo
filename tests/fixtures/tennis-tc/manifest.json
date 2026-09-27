@@ -1,0 +1,24 @@
+{
+  "org": "d6d84bc5-aba2-45f8-ad99-09d1de30e9ae",
+  "self": {
+    "profileId": "5788afea-4eed-4d02-a3b8-e9f8e66187d0",
+    "memberId": "90000001"
+  },
+  "opponents": [
+    {
+      "profileId": "6628158d-20dd-48a2-a586-7388424d79a9",
+      "memberId": "90015838"
+    },
+    {
+      "profileId": "2862c1ea-9ed3-40ba-ae3f-8c303b34e0eb",
+      "memberId": "90023757"
+    },
+    {
+      "profileId": "b829e46d-8e43-40d6-aab6-b7ff742447e5",
+      "memberId": "90419707"
+    }
+  ],
+  "currentTournament": "e05f40df-1ac3-4e95-ac36-b77c64483de5",
+  "pastTournament": "daf078f8-b2b5-45fd-a009-725483a957b4",
+  "nextOpponentTournamentPlayer": "996"
+}

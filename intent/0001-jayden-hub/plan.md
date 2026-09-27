@@ -295,6 +295,33 @@ before M2.
 | M3.6 | Prediction explanation from Claude (Vertex), generated only from the computed numbers. Prompt and version stored. | TEN-6 | A snapshot test with recorded LLM responses. |
 | M3.7 | Manual score and time edits, with the "source disagrees" flag. | TEN-8, SYNC-6 | e2e test: an edit survives the next sync. |
 
+**Build notes (M3, in progress; see [handoff.md](handoff.md)):**
+- M3.1: every page TEN-2..7 needs is public and server-rendered (spikes.md
+  SP-2), so the `tennis-tc` adapter reads them over plain HTTP with an HTML
+  parser (`node-html-parser`), not Chromium, and without signing in. The
+  source is set up with his public profile link (`config.profileUrl`)
+  instead of a stored login. O-5 (the Tennis Canada login) is only needed
+  if signed-in pages turn out to show entries before draws are published
+  (open owner decision).
+- M3.2: the schema has `tennis_players`, `tennis_tournaments`,
+  `tennis_draws` (his draws only: position, seed, next match),
+  `tennis_matches` (generic two-sided matches, so opponents' one-hop
+  matches fit; doubles partners optional) and `tennis_match_revisions`.
+  Ratings aren't stored (spec §7.1 lists `rating`, `rating_rd`); they'll be
+  computed from the matches, like PBs in M2. Players are keyed by the
+  Tennis Canada member number.
+- M3.3: a match's external ID is tournament + draw + the two sides' member
+  numbers, so the same match read from both players' profiles is stored
+  once. Only his matches can be cancelled by a sync; opponents' matches and
+  tournaments never are, because not every opponent is read every run. The
+  crawl reads his profile and every year, overviews of tournaments from the
+  last 30 days, the draws of tournaments from the last 10 days, then up to
+  30 opponents (next opponents first, then the last 12 months), capped at
+  150 requests per run.
+- M3.3: the calendar gets his tournaments (all-day, multi-day) and his
+  matches with a published start time (one hour), including a next match
+  whose opponent is still "winner of A vs B".
+
 ### M4 (slice S4): School (≈ 6 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -388,8 +415,8 @@ or his opponents.
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
-| M2 Swimming (S2) | built 2026-09-27 (M2.1–M2.7), awaiting merge and the live smoke test. SP-3 page map in spikes.md. |
-| M3 Tennis (S3) | not started |
+| M2 Swimming (S2) | built and merged 2026-09-27 (M2.1–M2.7, PRs #14–#16). Owner's live check not yet confirmed. SP-3 page map in spikes.md. |
+| M3 Tennis (S3) | **in progress.** M3.1 (SP-2) done 2026-09-27: page map in spikes.md, scrubbed fixtures, live probe. M3.2 schema and migration written, not merged. M3.3 adapter partly built (crawl and normalise work against the fake site; database writes, sync wiring, Sources page and tests still to do). M3.4–M3.7 not started. See [handoff.md](handoff.md). |
 | M4 School (S4) | not started |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |

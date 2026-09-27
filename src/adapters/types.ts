@@ -1,5 +1,6 @@
 import type { CategoryMapping } from "../domain/categories";
 import type { SwimBatch } from "../domain/swim-upsert";
+import type { TennisBatch } from "../domain/tennis-upsert";
 import type { SourceRecord, SyncWindow } from "../domain/upsert";
 
 // The adapter contract (plan §2): fetch raw data, then normalise it into
@@ -29,6 +30,8 @@ export type NormalisedBatch = {
   warnings: string[];
   // Swim meets, entries and results (commit_swim), applied after the events.
   swim?: SwimBatch;
+  // Tennis players, tournaments, draws and matches (tennis_tc), likewise.
+  tennis?: TennisBatch;
 };
 
 export interface Adapter<Raw = unknown> {
