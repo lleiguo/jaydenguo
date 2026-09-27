@@ -3,6 +3,7 @@
 import { runMigrations } from "../server/db/migrate";
 import type { JobContext } from "./context";
 import { removeCredentialJob, rotateKeysJob, testCredentialJob } from "./credentials";
+import { seedJob } from "./seed";
 import { smokeJob, syncJob } from "./sync";
 
 export type { JobContext } from "./context";
@@ -35,6 +36,10 @@ export const jobs: Record<string, Job> = {
   smoke: {
     description: "Live check of one source without saving: smoke <source-id>",
     run: smokeJob,
+  },
+  seed: {
+    description: "Load a fake season for local development (refuses to run on Cloud Run)",
+    run: seedJob,
   },
   "rotate-keys": {
     description: "Re-wrap every credential data key with the current KMS key version",

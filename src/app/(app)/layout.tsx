@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ClashBadge } from "@/components/clash-badge";
 import { requirePageSession } from "@/server/auth/current";
 
 const NAV = [
@@ -6,6 +7,7 @@ const NAV = [
   { href: "/clashes", label: "Clashes" },
   { href: "/sources", label: "Sources" },
   { href: "/accounts", label: "Accounts" },
+  { href: "/deleted", label: "Deleted" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -23,6 +25,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               className="whitespace-nowrap rounded px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800"
             >
               {item.label}
+              {item.href === "/clashes" && <ClashBadge />}
             </Link>
           ))}
         </nav>

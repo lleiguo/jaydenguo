@@ -27,3 +27,99 @@ body {
     Roboto,
     sans-serif;
 }
+
+/* Calendar categories (CAL-1): each has a colour and an icon, so they can be
+   told apart without colour. Pale fill, dark text and a strong left edge
+   keep contrast at WCAG AA in both colour schemes (NFR-9). */
+:root {
+  --cat-tennis: #9a6700;
+  --cat-swimming: #0b5cad;
+  --cat-soccer: #1a7f37;
+  --cat-hockey: #57606a;
+  --cat-math: #8250df;
+  --cat-chinese: #cf222e;
+  --cat-fitness: #bc4c00;
+  --cat-school_class: #0969da;
+  --cat-school_closure: #6e7781;
+  --cat-other: #6e7781;
+  --clash: #d1242f;
+}
+
+.hub-ev {
+  --cat: var(--cat-other);
+  border-left: 4px solid var(--cat) !important;
+  background: color-mix(in srgb, var(--cat) 14%, var(--background)) !important;
+  color: var(--foreground) !important;
+}
+.hub-ev * {
+  color: var(--foreground) !important;
+}
+.hub-ev.cat-tennis {
+  --cat: var(--cat-tennis);
+}
+.hub-ev.cat-swimming {
+  --cat: var(--cat-swimming);
+}
+.hub-ev.cat-soccer {
+  --cat: var(--cat-soccer);
+}
+.hub-ev.cat-hockey {
+  --cat: var(--cat-hockey);
+}
+.hub-ev.cat-math {
+  --cat: var(--cat-math);
+}
+.hub-ev.cat-chinese {
+  --cat: var(--cat-chinese);
+}
+.hub-ev.cat-fitness {
+  --cat: var(--cat-fitness);
+}
+.hub-ev.cat-school_class {
+  --cat: var(--cat-school_class);
+}
+.hub-ev.cat-school_closure {
+  --cat: var(--cat-school_closure);
+}
+
+/* CON-2: clashing events get a red outline and a warning icon everywhere. */
+.hub-ev.hub-clash {
+  outline: 2px solid var(--clash);
+  outline-offset: -2px;
+}
+.hub-ev.hub-skipped,
+.hub-ev.hub-cancelled {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+.hub-closure-bg {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cat-school_closure) 12%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+}
+.hub-ev-body {
+  display: flex;
+  gap: 0.25rem;
+  align-items: baseline;
+  overflow: hidden;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  padding: 1px 2px;
+}
+.hub-ev-body .hub-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The calendar grid uses FullCalendar's light theme, so the calendar area
+   keeps the light palette in dark mode too. */
+.hub-cal {
+  --background: #ffffff;
+  --foreground: #171717;
+  color-scheme: light;
+  background: var(--background);
+  color: var(--foreground);
+  border-radius: 0.5rem;
+}
