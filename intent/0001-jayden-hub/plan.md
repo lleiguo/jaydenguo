@@ -167,6 +167,22 @@ Claude Code. They are rough and will be revised after each milestone.
   `auth-secret`), so a database copy can't be replayed as a cookie. The
   proxy checks the session in Postgres on every request, so "sign out
   everywhere" takes effect immediately.
+- M1.2: the worker service account can also *encrypt* (not only decrypt),
+  because the `rotate-keys` job re-wraps data keys with the current KMS key
+  version. The web service still can't decrypt. ESLint blocks web code from
+  importing the decrypt function or worker modules.
+- M1.2: CRED-5 is enforced twice: fields with secret-looking names are
+  redacted, and every decrypted value is registered with the logger and
+  scrubbed from any log line. The "sync log contains no secret" test runs a
+  real worker job; it is extended to sync runs in M1.5.
+- M1.3: a credential isn't tied to one source (spec §7.1 has
+  `credential.source_id`); instead `sources.credential_id` points at it,
+  because one Google grant serves several sources (Calendar now; Gmail,
+  Classroom, Drive later). One credential per Google account; reconnecting
+  replaces the token.
+- M1.3: "Test connection" and removing a Google grant need the plaintext,
+  so the web app starts them as worker jobs (`credential:test`,
+  `credential:remove`). The job launcher from M1.5 was built here for that.
 
 **S1 exit:** the owner uses the calendar for about a week. Fix list triaged
 before M2.
@@ -285,7 +301,7 @@ or his opponents.
 | Milestone | Status |
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
-| M1 Foundation (S1) | in progress. M1.1 done. |
+| M1 Foundation (S1) | in progress. M1.1, M1.2, M1.3 done. |
 | M2 Swimming (S2) | not started |
 | M3 Tennis (S3) | not started |
 | M4 School (S4) | not started |
