@@ -123,3 +123,98 @@ body {
   color: var(--foreground);
   border-radius: 0.5rem;
 }
+
+/* Swim progression chart (SWM-4, SWM-5). Palette validated for colour-blind
+   separation in both schemes; the forecast is also dashed, and every value is
+   in the table under the chart. */
+.swim-chart {
+  --chart-surface: #fcfcfb;
+  --chart-grid: #e5e4e0;
+  --chart-text: #52514e;
+  --chart-swims: #2a78d6;
+  --chart-pb: #eb6834;
+  --chart-forecast: #1baf7a;
+}
+@media (prefers-color-scheme: dark) {
+  .swim-chart {
+    --chart-surface: #1a1a19;
+    --chart-grid: #3a3a37;
+    --chart-text: #c3c2b7;
+    --chart-swims: #3987e5;
+    --chart-pb: #d95926;
+    --chart-forecast: #199e70;
+  }
+}
+.swim-chart svg {
+  background: var(--chart-surface);
+}
+.swim-chart .swim-grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+.swim-chart .swim-axis {
+  fill: var(--chart-text);
+  font-size: 12px;
+}
+.swim-chart .swim-today {
+  stroke: var(--chart-text);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+.swim-chart .swim-dot {
+  fill: var(--chart-swims);
+  stroke: var(--chart-surface);
+  stroke-width: 2;
+}
+.swim-chart .swim-dot-pb {
+  stroke: var(--chart-pb);
+  stroke-width: 2.5;
+}
+.swim-chart .swim-dot:focus-visible {
+  outline: none;
+  stroke: var(--foreground);
+  stroke-width: 3;
+}
+.swim-chart .swim-pb {
+  fill: none;
+  stroke: var(--chart-pb);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.swim-chart .swim-forecast {
+  fill: none;
+  stroke: var(--chart-forecast);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+}
+.swim-chart .swim-forecast-dot {
+  fill: var(--chart-forecast);
+  stroke: var(--chart-surface);
+  stroke-width: 2;
+}
+.swim-chart .swim-range {
+  stroke: var(--chart-forecast);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.swim-chart .swim-hit {
+  fill: transparent;
+}
+.swim-chart .swim-crosshair {
+  stroke: var(--chart-text);
+  stroke-width: 1;
+}
+.swim-chart .swim-tip {
+  fill: var(--background);
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+.swim-chart .swim-tip-text {
+  fill: var(--chart-text);
+  font-size: 12px;
+}
+.swim-chart .swim-tip-value {
+  fill: var(--foreground);
+  font-weight: 600;
+  font-size: 13px;
+}

@@ -5,7 +5,10 @@ import { addDays, localDate, weekday, zonedToUtc } from "../domain/time";
 import type { SourceRecord } from "../domain/upsert";
 import { createSeries } from "../server/calendar/mutations";
 import { getHomeTimeZone } from "../server/settings";
+import { syncSwim } from "../server/swim/apply";
 import { syncRecords } from "../server/sync/apply";
+import type { Stroke } from "../domain/swim-constants";
+import type { SwimMeetRecord, SwimResultRecord } from "../domain/swim-upsert";
 import type { JobContext } from "./context";
 
 // `pnpm seed` (plan M1.14, spec §5.2): a realistic fake season so the app
@@ -234,6 +237,81 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     weekdays: [0],
     intervalWeeks: 2,
   });
+
+  // Swimming (SWM): a year of made-up meets with steadily faster times, one
+  // long course meet (kept apart from short course), and an upcoming meet.
+  const swim = await source("Swim club (sample)", "commit_swim", "swimming");
+  const meets: SwimMeetRecord[] = [];
+  const results: SwimResultRecord[] = [];
+  const base: [number, Stroke, number][] = [
+    [50, "free", 46000],
+    [50, "back", 54000],
+    [50, "breast", 60000],
+    [100, "im", 118000],
+    [200, "im", 255000],
+  ];
+  const meetNames = [
+    "Autumn Splash",
+    "Winter Invitational",
+    "Spring Sprint",
+    "Development Meet",
+    "Summer Open",
+  ];
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(today, -400 + i * 60);
+    const course = i === 5 ? "LCM" : "SCM";
+    const externalId = `seed-meet-${i}`;
+    meets.push({
+      externalId,
+      name: `${meetNames[i % meetNames.length]} (sample)`,
+      course,
+      startDate: date,
+      endDate: date,
+      venue: "Birch Aquatic Centre",
+      city: "Springfield",
+      signup: "yes",
+      sourceUrl: null,
+      entries: null,
+    });
+    base.forEach(([distance, stroke, ms], j) => {
+      if ((i + j) % 4 === 3) return;
+      // About 1.5% faster each meet, with some off days; long course is slower.
+      const wobble = [0, 0.012, -0.004, 0.018, -0.002, 0.006, 0][(i + j) % 7];
+      const time = ms * Math.pow(0.985, i) * (1 + wobble) * (course === "LCM" ? 1.04 : 1);
+      results.push({
+        externalId: `seed-${i}-${distance}-${stroke}`,
+        meetExternalId: externalId,
+        swimDate: date,
+        distance,
+        stroke,
+        course,
+        timeMs: Math.round(time / 10) * 10,
+        place: 1 + ((i * 7 + j * 3) % 12),
+        heat: 1 + (j % 4),
+        lane: 1 + ((i + j) % 8),
+        stage: "Final",
+        dqReason: null,
+        splits: [],
+      });
+    });
+  }
+  const next = addDays(today, 21);
+  meets.push({
+    externalId: "seed-meet-next",
+    name: "Fall Classic (sample)",
+    course: "SCM",
+    startDate: next,
+    endDate: addDays(next, 1),
+    venue: "Birch Aquatic Centre",
+    city: "Springfield",
+    signup: "yes",
+    sourceUrl: null,
+    entries: [
+      { distance: 200, stroke: "im", course: "SCM", seedTimeMs: 232000 },
+      { distance: 50, stroke: "free", course: "SCM", seedTimeMs: 42100 },
+    ],
+  });
+  await syncSwim(db, swim, { meets, results, window }, { actor: "seed" });
 
   ctx.log("seeded", { weeks: WEEKS, from: monday });
 }

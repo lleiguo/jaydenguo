@@ -16,7 +16,7 @@ pnpm db:up                                  # Postgres 16 in Docker
 cp .env.example .env.local
 export DATABASE_URL=postgres://hub:hub@localhost:5432/hub
 pnpm db:migrate
-pnpm seed                                   # a made-up season with a few clashes
+pnpm seed                                   # a made-up season: clashes, swim meets and results
 pnpm dev                                    # http://localhost:3000
 ```
 

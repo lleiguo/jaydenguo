@@ -17,6 +17,17 @@ export default async function globalSetup() {
     await pool.query(`delete from event_overrides where event_id in (${inTestWeeks})`);
     await pool.query(`delete from event_revisions where event_id in (${inTestWeeks})`);
     await pool.query(`delete from events where id in (${inTestWeeks})`);
+    // Swimming tests sync the same fixture into fresh sources; start with no
+    // swim data so PBs aren't shared with an earlier run's copies.
+    const swimEvents = `select e.id from events e join sources s on s.id = e.source_id where s.kind = 'commit_swim'`;
+    await pool.query(`delete from event_overrides where event_id in (${swimEvents})`);
+    await pool.query(`delete from event_revisions where event_id in (${swimEvents})`);
+    await pool.query(`delete from conflicts where event_a in (${swimEvents}) or event_b in (${swimEvents})`);
+    await pool.query(`delete from events where id in (${swimEvents})`);
+    await pool.query("delete from swim_result_revisions");
+    await pool.query("delete from swim_entries");
+    await pool.query("delete from swim_results");
+    await pool.query("delete from swim_meets");
   } finally {
     await pool.end();
   }
