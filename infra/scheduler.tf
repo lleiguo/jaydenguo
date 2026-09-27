@@ -1,4 +1,4 @@
-# Daily triggers (plan M1.5, spec SYNC-1). Cloud Scheduler starts an
+# Daily triggers (plan M1.5 and M1.13, spec SYNC-1, NFR-3). Cloud Scheduler starts an
 # execution of the worker job with the job name as an argument override,
 # using the Cloud Run Admin API. The scheduler stores no personal data.
 locals {
@@ -10,6 +10,11 @@ locals {
       description = "Sync every enabled source (SYNC-1)"
       schedule    = var.daily_sync_schedule
       args        = ["sync", "all", "scheduled"]
+    }
+    "nightly-backup" = {
+      description = "Export the database to the backup bucket (NFR-3)"
+      schedule    = var.daily_backup_schedule
+      args        = ["backup"]
     }
   }
 }

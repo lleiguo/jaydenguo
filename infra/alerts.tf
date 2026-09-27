@@ -44,3 +44,30 @@ resource "google_monitoring_alert_policy" "sync_failing" {
 
   notification_channels = [google_monitoring_notification_channel.owner_email.id]
 }
+
+# NFR-3: a failed nightly export emails the owner.
+resource "google_monitoring_alert_policy" "backup_failed" {
+  display_name = "The nightly database backup failed"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "backup job failed"
+    condition_matched_log {
+      filter = "resource.type=\"cloud_run_job\" AND jsonPayload.message=\"job failed\" AND jsonPayload.job=\"backup\""
+    }
+  }
+
+  alert_strategy {
+    notification_rate_limit {
+      period = "3600s"
+    }
+    auto_close = "86400s"
+  }
+
+  documentation {
+    content   = "Last night's export didn't finish. See the worker job's logs in Cloud Run, then run it by hand: gcloud run jobs execute worker --region ${var.region} --args=backup"
+    mime_type = "text/markdown"
+  }
+
+  notification_channels = [google_monitoring_notification_channel.owner_email.id]
+}

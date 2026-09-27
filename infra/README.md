@@ -141,6 +141,46 @@ picker at the top).
 8. Check your Google account has 2-step verification on (spec NFR-2):
    <https://myaccount.google.com/signinoptions/twosv>.
 
+## Backups and restore (M1.13, spec NFR-3)
+
+Two layers keep the data safe:
+
+- Cloud SQL's own daily backups (14 kept) and point-in-time restore
+  (7 days), both in Toronto.
+- A nightly export (`backup` worker job, 03:30 home time) to
+  `gs://<project-id>-backups/sql/`, which can't be deleted for a year.
+  A failed export emails you.
+
+**Test a restore once before go-live** (and after big schema changes):
+
+1. `infra/bootstrap/restore-test.sh <project-id>` creates a throwaway
+   instance `hub-restore-test`, and imports the newest export into it.
+   (Run the `backup` job first if there's no export yet:
+   `gcloud run jobs execute worker --region northamerica-northeast2 --args=backup --wait`.)
+2. In the Console, open **SQL** → `hub` → **Cloud SQL Studio** (database
+   `hub`, user `postgres`), and run:
+
+   ```sql
+   select 'events' t, count(*) from events union all
+   select 'event_revisions', count(*) from event_revisions union all
+   select 'sources', count(*) from sources union all
+   select 'credentials', count(*) from credentials union all
+   select 'sync_runs', count(*) from sync_runs;
+   ```
+
+   Do the same on `hub-restore-test` (set its `postgres` password first:
+   `gcloud sql users set-password postgres --instance hub-restore-test --prompt-for-password`).
+   The counts should match, allowing for anything synced since the export.
+
+3. Delete the scratch instance:
+   `infra/bootstrap/restore-test.sh <project-id> northamerica-northeast2 --delete`.
+
+**Restoring for real:** to undo a recent mistake, use point-in-time restore
+to a new instance (Console → SQL → `hub` → Backups → Point-in-time recovery),
+check it, then point Cloud Run at it (`INSTANCE_CONNECTION_NAME` in
+`cloud_run.tf`). For anything older than 7 days, import a nightly export into
+a new instance as in the test above.
+
 ## Day to day
 
 - Code deploys go through GitHub Actions only. Terraform ignores image changes.

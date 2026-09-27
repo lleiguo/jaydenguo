@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
+import { ServiceWorker } from "@/components/service-worker";
 import "./globals.css";
 
 // Neutral title and no personal details: the login page must not reveal
@@ -7,11 +8,14 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Family hub",
   robots: { index: false, follow: false, nocache: true },
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Family hub", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#1d4ed8",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
@@ -20,7 +24,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   await headers();
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <ServiceWorker />
+      </body>
     </html>
   );
 }

@@ -214,6 +214,18 @@ Claude Code. They are rough and will be revised after each milestone.
   (long-press, then drag) through the Chrome DevTools Protocol.
 - M1.11: browsers poll every 8 s rather than 10 s, so the worst case,
   including reloading the data, stays under CAL-8's 10 seconds.
+- M1.12: Lighthouse no longer has a PWA category, so the e2e suite checks
+  the install criteria directly (manifest fields, 192/512 and maskable
+  icons, Apple touch icon, a service worker that controls the page, an
+  offline page) and that no page or API response is cached.
+- M1.13: the export is started by the `backup` worker job through the Cloud
+  SQL Admin API with a custom role (`cloudsql.instances.export`, `.get`),
+  and a failed export emails the owner. The restore test needs the owner's
+  project: `infra/bootstrap/restore-test.sh` and the runbook in
+  `infra/README.md`.
+- M1.14: a fresh clone reached a running app with seed data in 14 s on a
+  machine with a warm pnpm store (2026-09-27); a cold install adds the
+  download time of `pnpm install`.
 
 **S1 exit:** the owner uses the calendar for about a week. Fix list triaged
 before M2.
@@ -332,7 +344,7 @@ or his opponents.
 | Milestone | Status |
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
-| M1 Foundation (S1) | in progress. M1.1–M1.11 done; M1.6 live smoke test and M1.7 (Spordle feed) wait on the owner's links (O-6). |
+| M1 Foundation (S1) | built and tested locally (M1.1–M1.14). Waiting on the owner: O-3 (Google OAuth) and `terraform apply` before merging, O-6 feed links for the M1.6 live smoke test and M1.7 (Spordle), and the M1.13 restore test. |
 | M2 Swimming (S2) | not started |
 | M3 Tennis (S3) | not started |
 | M4 School (S4) | not started |
