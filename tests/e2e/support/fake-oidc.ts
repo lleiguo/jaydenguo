@@ -7,14 +7,34 @@ import { SignJWT, exportJWK, generateKeyPair } from "jose";
 
 import { FAKE_OIDC_PORT } from "./fake-oidc-port";
 const issuer = `http://127.0.0.1:${FAKE_OIDC_PORT}`;
-const accounts = ["owner@example.test", "intruder@example.test"];
+const accounts = [
+  "owner@example.test",
+  "intruder@example.test",
+  // Data-source Google accounts, one per Playwright project.
+  "calendar-desktop@example.test",
+  "calendar-phone@example.test",
+];
 
-type Pending = { email: string; clientId: string; nonce: string; challenge: string; redirectUri: string };
+type Pending = {
+  email: string;
+  clientId: string;
+  nonce: string;
+  challenge: string;
+  redirectUri: string;
+  offline: boolean;
+  scope: string;
+};
+
+// Calendar feeds for the iCal adapter and "Test connection".
+const FEEDS: Record<string, string> = {
+  "team.ics": ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//test//EN", "END:VCALENDAR", ""].join("\r\n"),
+};
 
 async function main() {
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const jwk = { ...(await exportJWK(publicKey)), kid: "test", alg: "RS256", use: "sig" };
   const codes = new Map<string, Pending>();
+  const refreshTokens = new Set<string>();
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", issuer);
@@ -29,6 +49,7 @@ async function main() {
         authorization_endpoint: `${issuer}/authorize`,
         token_endpoint: `${issuer}/token`,
         jwks_uri: `${issuer}/jwks`,
+        revocation_endpoint: `${issuer}/revoke`,
         response_types_supported: ["code"],
         subject_types_supported: ["public"],
         id_token_signing_alg_values_supported: ["RS256"],
@@ -36,6 +57,22 @@ async function main() {
       });
     }
     if (url.pathname === "/jwks") return send(200, { keys: [jwk] });
+
+    if (url.pathname.startsWith("/ical/")) {
+      const feed = FEEDS[url.pathname.slice("/ical/".length)];
+      return feed ? send(200, feed, "text/calendar") : send(404, "gone", "text/plain");
+    }
+
+    const readForm = async () => {
+      let raw = "";
+      for await (const chunk of req) raw += chunk;
+      return new URLSearchParams(raw);
+    };
+
+    if (url.pathname === "/revoke" && req.method === "POST") {
+      const token = (await readForm()).get("token") ?? "";
+      return send(refreshTokens.delete(token) ? 200 : 400, {});
+    }
 
     if (url.pathname === "/authorize") {
       const p = url.searchParams;
@@ -60,6 +97,8 @@ async function main() {
         nonce: p.get("nonce")!,
         challenge: p.get("code_challenge")!,
         redirectUri: p.get("redirect_uri")!,
+        offline: p.get("access_type") === "offline",
+        scope: p.get("scope") ?? "",
       });
       const back = new URL(p.get("redirect_uri")!);
       back.searchParams.set("code", code);
@@ -69,9 +108,12 @@ async function main() {
     }
 
     if (url.pathname === "/token" && req.method === "POST") {
-      let raw = "";
-      for await (const chunk of req) raw += chunk;
-      const form = new URLSearchParams(raw);
+      const form = await readForm();
+      if (form.get("grant_type") === "refresh_token") {
+        return refreshTokens.has(form.get("refresh_token") ?? "")
+          ? send(200, { access_token: randomUUID(), token_type: "Bearer", expires_in: 300 })
+          : send(400, { error: "invalid_grant" });
+      }
       const pending = codes.get(form.get("code") ?? "");
       codes.delete(form.get("code") ?? "");
       const verifier = form.get("code_verifier") ?? "";
@@ -87,11 +129,15 @@ async function main() {
         .setIssuedAt()
         .setExpirationTime("5m")
         .sign(privateKey);
+      const refreshToken = pending.offline ? `refresh-${randomUUID()}` : undefined;
+      if (refreshToken) refreshTokens.add(refreshToken);
       return send(200, {
         access_token: randomUUID(),
         token_type: "Bearer",
         expires_in: 300,
         id_token: idToken,
+        refresh_token: refreshToken,
+        scope: pending.scope,
       });
     }
 
