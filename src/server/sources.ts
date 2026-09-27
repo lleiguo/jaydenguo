@@ -13,6 +13,7 @@ import { STALE_RUN_MS, minGapMs } from "./sync/policy";
 export const SOURCE_KINDS = {
   google_calendar: { label: "Google Calendar", credentialProvider: "google" },
   ical: { label: "Calendar feed (iCal link)", credentialProvider: null },
+  commit_swim: { label: "Commit Swimming", credentialProvider: "commit_swim" },
 } as const;
 
 const mappingSchema = z.object({
@@ -30,7 +31,7 @@ const mappingSchema = z.object({
 });
 
 export const createSourceInput = z.object({
-  kind: z.enum(["google_calendar", "ical"]),
+  kind: z.enum(["google_calendar", "ical", "commit_swim"]),
   name: z.string().trim().min(1).max(80),
   credentialId: z.uuid(),
   config: z.object({ calendarId: z.string().min(1).max(300).optional() }).default({}),
@@ -110,10 +111,13 @@ export async function createSource(db: Db, input: z.infer<typeof createSourceInp
   }
   const [cred] = await db.select().from(credentials).where(eq(credentials.id, input.credentialId));
   if (!cred) throw new HttpError(400, "unknown account");
-  const needsGoogle = input.kind === "google_calendar";
-  if (needsGoogle !== (cred.provider === "google") || (!needsGoogle && cred.kind !== "secret_url")) {
-    throw new HttpError(400, "that account can't be used for this kind of source");
-  }
+  const fits =
+    input.kind === "google_calendar"
+      ? cred.provider === "google"
+      : input.kind === "commit_swim"
+        ? cred.provider === "commit_swim" && cred.kind === "password"
+        : cred.kind === "secret_url";
+  if (!fits) throw new HttpError(400, "that account can't be used for this kind of source");
   const [row] = await db.insert(sources).values(input).returning({ id: sources.id });
   return row;
 }

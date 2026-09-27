@@ -1,3 +1,4 @@
+import { commitSwimAdapter } from "./commit-swim";
 import { googleCalendarAdapter } from "./google-calendar";
 import { icalAdapter } from "./ical";
 import type { Adapter } from "./types";
@@ -6,6 +7,7 @@ import type { Adapter } from "./types";
 export const adapters: Record<string, Adapter<never>> = {
   google_calendar: googleCalendarAdapter as Adapter<never>,
   ical: icalAdapter as Adapter<never>,
+  commit_swim: commitSwimAdapter as Adapter<never>,
 };
 
 export function adapterFor(kind: string): Adapter<unknown> {

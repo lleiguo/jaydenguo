@@ -21,7 +21,7 @@ type Run = {
 };
 type Source = {
   id: string;
-  kind: "google_calendar" | "ical";
+  kind: Kind;
   name: string;
   enabled: boolean;
   credentialLabel: string | null;
@@ -37,6 +37,23 @@ type Credential = {
   provider: string;
   label: string;
   meta: { calendars?: { id: string; summary: string; primary: boolean }[] };
+};
+
+type Kind = "google_calendar" | "ical" | "commit_swim";
+const KIND_LABEL: Record<Kind, string> = {
+  google_calendar: "Google Calendar",
+  ical: "Calendar feed",
+  commit_swim: "Commit Swimming",
+};
+const ACCOUNT_NOUN: Record<Kind, [string, string]> = {
+  google_calendar: ["a Google account", "Google account"],
+  ical: ["a private calendar link", "Calendar link"],
+  commit_swim: ["a Commit Swimming login", "Commit Swimming login"],
+};
+const DEFAULT_CATEGORY: Record<Kind, string> = {
+  google_calendar: "other",
+  ical: "soccer",
+  commit_swim: "swimming",
 };
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : "never");
@@ -137,8 +154,8 @@ function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => vo
         </span>
       </div>
       <div className="text-neutral-600 dark:text-neutral-400">
-        {s.kind === "google_calendar" ? "Google Calendar" : "Calendar feed"} ·{" "}
-        {s.credentialLabel ?? "no account"} · default category {label(s.categoryMapping.default)}
+        {KIND_LABEL[s.kind] ?? s.kind} · {s.credentialLabel ?? "no account"} · default category{" "}
+        {label(s.categoryMapping.default)}
       </div>
       {failed && s.lastRun?.errorMessage && (
         <p className="text-red-700 dark:text-red-400" data-testid="source-error">
@@ -210,11 +227,15 @@ function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => vo
 }
 
 function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => void }) {
-  const [kind, setKind] = useState<"google_calendar" | "ical">("ical");
+  const [kind, setKind] = useState<Kind>("ical");
   const [credentialId, setCredentialId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const usable = creds.filter((c) =>
-    kind === "google_calendar" ? c.provider === "google" : c.kind === "secret_url",
+    kind === "google_calendar"
+      ? c.provider === "google"
+      : kind === "commit_swim"
+        ? c.provider === "commit_swim" && c.kind === "password"
+        : c.kind === "secret_url",
   );
   const cred = usable.find((c) => c.id === credentialId) ?? usable[0];
   const calendars = cred?.meta?.calendars ?? [];
@@ -260,6 +281,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
         >
           <option value="ical">Calendar feed (TeamSnap, Spordle, other iCal link)</option>
           <option value="google_calendar">Google Calendar</option>
+          <option value="commit_swim">Commit Swimming (meets and results)</option>
         </select>
       </label>
       <label className="flex flex-col">
@@ -268,7 +290,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
       </label>
       {usable.length === 0 ? (
         <p>
-          First add {kind === "google_calendar" ? "a Google account" : "a private calendar link"} on the{" "}
+          First add {ACCOUNT_NOUN[kind][0]} on the{" "}
           <a className="underline" href="/accounts">
             Accounts page
           </a>
@@ -276,7 +298,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
         </p>
       ) : (
         <label className="flex flex-col">
-          {kind === "google_calendar" ? "Google account" : "Calendar link"}
+          {ACCOUNT_NOUN[kind][1]}
           <select
             value={cred?.id}
             onChange={(e) => setCredentialId(e.target.value)}
@@ -308,7 +330,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
         <select
           key={kind}
           name="category"
-          defaultValue={kind === "google_calendar" ? "other" : "soccer"}
+          defaultValue={DEFAULT_CATEGORY[kind]}
           className="rounded border px-2 py-1"
         >
           {CATEGORIES.map((c) => (

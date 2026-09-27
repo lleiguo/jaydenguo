@@ -241,6 +241,32 @@ before M2.
 | M2.6 | Forecast: robust fit (exponential decay to an asymptote), 6/12-month projection with a range, guardrails (≥ 4 results over ≥ 6 months, never faster than the asymptote), "Estimate" label. | SWM-5, §6.2 | Unit tests on synthetic series. A backtest on his history is reported in the PR. |
 | M2.7 | Manual add or correct of results, with the "source disagrees" flag. | SWM-7, SYNC-6 | e2e test: a correction survives the next sync. |
 
+**Build notes (M2):**
+- M2.2: PBs aren't stored (spec §7.1 lists `is_pb`); they're computed from
+  the results (`src/domain/swim.ts`), so a correction can't leave a stale
+  PB flag. Each result row holds the values the site shows, the source's
+  latest version (`source_values`), and `corrected_at`; every change is
+  written to `swim_result_revisions`.
+- M2.3: Commit Swimming has no HTML pages to scrape; its data comes over
+  Meteor's websocket. The adapter signs in with Playwright
+  (`playwright-core`, pinned to the worker image's version) and runs an
+  extractor inside the page that calls the site's own read methods and
+  returns only whitelisted fields for one swimmer (spikes.md SP-3).
+- M2.3: Commit doesn't show practices to parents, so SWM-1 practices come
+  from the household calendar or manual repeating events. Meets he
+  declined are left out; invitations he hasn't answered appear as
+  optional all-day events ("Not signed up yet"). Team events with a
+  sign-up (team practices, socials) go on the calendar, not the meet list.
+- M2.3: a swim the owner typed in by hand is linked to the source's copy
+  when it arrives (same date, distance, stroke and course), instead of
+  appearing twice. Blanks the owner left (place, heat, lane, meet) are
+  filled; the owner's time stays.
+- M2.3: tests run the real adapter (Chromium, sign-in, extractor) against a
+  local fake of the site (`tests/e2e/support/fake-commit.ts`), which also
+  serves another family's swimmer to prove none of it is kept.
+  `COMMIT_SWIM_BASE_URL` points the adapter at it and only accepts loopback
+  addresses. "Test connection" signs in to Commit Swimming.
+
 ### M3 (slice S3): Tennis (≈ 8 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
