@@ -22,7 +22,11 @@ export function api<P = Record<string, never>>(handler: (ctx: ApiContext<P>) => 
     } catch (err) {
       if (err instanceof HttpError) return Response.json({ error: err.message }, { status: err.status });
       if (err instanceof z.ZodError) {
-        return Response.json({ error: "invalid request", issues: z.flattenError(err) }, { status: 400 });
+        // The first problem, in words the page can show as is.
+        const first = err.issues[0];
+        const message =
+          first?.message && !first.message.startsWith("Invalid") ? first.message : "invalid request";
+        return Response.json({ error: message, issues: z.flattenError(err) }, { status: 400 });
       }
       console.error(JSON.stringify({ severity: "ERROR", message: "api error", error: String(err) }));
       return Response.json({ error: "internal error" }, { status: 500 });
