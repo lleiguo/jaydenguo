@@ -56,7 +56,7 @@ test.describe("tennis", () => {
 
   test("a tennis source is added with his profile link and syncs (M3.3)", async ({ page, context }) => {
     const name = `Tennis ${Date.now()}`;
-    await page.goto("/sources");
+    await page.goto("/settings/sources");
     const form = page.getByRole("form", { name: "Add a source" });
     await form.getByLabel("Type").selectOption("tennis_tc");
     await form.getByLabel("Name", { exact: true }).fill(name);

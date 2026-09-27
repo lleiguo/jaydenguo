@@ -462,3 +462,10 @@ or his opponents.
 | M4 School (S4) | not started |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |
+
+Between M3 and M4 (2026-09-27): Sources, Accounts, Clashes and Deleted
+moved under Settings as tabs (`/settings/sources` and so on); the old
+paths redirect (307). The main menu is Calendar, Tennis, Swimming and
+Settings, with the open-clash count on Settings and on its Clashes tab.
+The Google connect flow (`/accounts/google/*`) keeps its path, since the
+redirect URI is registered with Google.

@@ -194,7 +194,7 @@ test("manual events: add a repeating one in the form, delete one, restore it (CA
   await page.getByRole("dialog", { name: title }).getByRole("button", { name: "Delete" }).click();
   await expect(calEvent(page, title)).toHaveCount(1);
 
-  await page.goto("/deleted");
+  await page.goto("/settings/deleted");
   await page
     .getByRole("listitem")
     .filter({ hasText: title })
@@ -226,8 +226,11 @@ test("clashes show a badge and a list, and can be accepted (CON-2, CON-4)", asyn
     end: `${day}T05:30:00.000Z`,
   });
 
+  // The old address still works (it moved under Settings).
   await page.goto("/clashes");
-  const badge = page.getByTestId("clash-badge");
+  await expect(page).toHaveURL(/\/settings\/clashes$/);
+  const badge = page.getByRole("navigation", { name: "Main" }).getByTestId("clash-badge");
+  await expect(page.getByRole("navigation", { name: "Settings" }).getByTestId("clash-badge")).toBeVisible();
   await expect(badge).toBeVisible();
   const row = page
     .getByTestId("clash")

@@ -16,6 +16,6 @@ export async function GET(request: NextRequest) {
     console.error(
       JSON.stringify({ severity: "WARNING", message: "google connect failed", error: String(err) }),
     );
-    return NextResponse.redirect(new URL("/accounts?error=google", appUrl()), 303);
+    return NextResponse.redirect(new URL("/settings/accounts?error=google", appUrl()), 303);
   }
 }

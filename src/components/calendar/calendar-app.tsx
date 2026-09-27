@@ -195,7 +195,10 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
           + Add event
         </button>
         {openClashes > 0 && (
-          <a href="/clashes" className="text-sm font-medium text-red-700 underline dark:text-red-400">
+          <a
+            href="/settings/clashes"
+            className="text-sm font-medium text-red-700 underline dark:text-red-400"
+          >
             ⚠ {openClashes} clash{openClashes === 1 ? "" : "es"} in view
           </a>
         )}

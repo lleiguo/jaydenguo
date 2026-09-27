@@ -22,7 +22,7 @@ export function RefreshButton({
     return (
       <p className="text-sm text-neutral-600 dark:text-neutral-400">
         Add a {site} source on the{" "}
-        <a href="/sources" className="underline">
+        <a href="/settings/sources" className="underline">
           Sources page
         </a>{" "}
         to sync {what}.

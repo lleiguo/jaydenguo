@@ -314,7 +314,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
       ) : usable.length === 0 ? (
         <p>
           First add {ACCOUNT_NOUN[kind][0]} on the{" "}
-          <a className="underline" href="/accounts">
+          <a className="underline" href="/settings/accounts">
             Accounts page
           </a>
           .
