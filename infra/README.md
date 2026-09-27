@@ -90,19 +90,18 @@ picker at the top).
    - User support email: your address.
    - Audience: **External**.
    - Contact information: your address. Agree to the policy, **Create**.
-2. **Scopes.** Google Auth Platform → **Data access** → **Add or remove
-   scopes**. Tick `openid` and `.../auth/userinfo.email`. The calendar scope
-   only appears in the list once the Calendar API is enabled, so under
-   **Manually add scopes** paste the full address
-   `https://www.googleapis.com/auth/calendar.readonly` (the household
-   calendar, M1.6) and click **Add to table**. **Update**, then **Save**.
-   (Alternatively `gcloud services enable calendar-json.googleapis.com`
-   first, then tick it in the list.)
+   - Under **Branding**, leave the logo, home page, privacy policy and
+     terms links empty. Any of them makes Google want to verify the brand,
+     which needs a public home page; this site has none (spec AUTH-3).
+2. **Scopes.** Google Auth Platform → **Data access**: only `openid` and
+   `.../auth/userinfo.email` (both non-sensitive). Don't add the calendar
+   scope here. The site asks for it when you connect Google on the
+   Accounts page, and an unverified app may do that (spec F-6).
 3. **Publish.** Google Auth Platform → **Audience** → **Publish app** →
    **Confirm**. The status becomes "In production". Don't submit for
-   verification: this is an unverified personal app (spec F-6). The first
-   time you connect the calendar, Google shows "Google hasn't verified this
-   app"; click **Advanced** → **Go to Family hub (unsafe)**. It's your own app.
+   verification. The first time you connect the calendar, Google shows
+   "Google hasn't verified this app"; click **Advanced** → **Go to Family
+   hub (unsafe)**. It's your own app, limited to 100 users.
 4. **Production client.** Google Auth Platform → **Clients** → **Create
    client**.
    - Application type: **Web application**. Name: `hub-prod`.
