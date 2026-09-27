@@ -34,7 +34,7 @@ async function main() {
 
 main()
   .catch((err: unknown) => {
-    log("job failed", { error: err }, "ERROR");
+    log("job failed", { job: process.argv[2], error: err }, "ERROR");
     process.exitCode = 1;
   })
   // A Cloud Run job only finishes when the process exits. Exit explicitly so

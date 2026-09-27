@@ -1,6 +1,7 @@
 // Worker job registry. Cloud Run jobs run the same image with the job name
 // as the argument, e.g. `node worker.js migrate` (plan M0.7).
 import { runMigrations } from "../server/db/migrate";
+import { backupJob } from "./backup";
 import type { JobContext } from "./context";
 import { removeCredentialJob, rotateKeysJob, testCredentialJob } from "./credentials";
 import { seedJob } from "./seed";
@@ -36,6 +37,10 @@ export const jobs: Record<string, Job> = {
   smoke: {
     description: "Live check of one source without saving: smoke <source-id>",
     run: smokeJob,
+  },
+  backup: {
+    description: "Export the database to the backup bucket (nightly)",
+    run: backupJob,
   },
   seed: {
     description: "Load a fake season for local development (refuses to run on Cloud Run)",

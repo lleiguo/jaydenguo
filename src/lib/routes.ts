@@ -9,6 +9,7 @@ const PUBLIC_EXACT = new Set([
   "/robots.txt",
   "/manifest.webmanifest",
   "/sw.js",
+  "/offline.html",
   "/favicon.ico",
 ]);
 const PUBLIC_PREFIXES = ["/_next/static/", "/icons/"];

@@ -28,3 +28,18 @@ resource "google_storage_bucket_iam_member" "sql_export" {
   role   = "roles/storage.objectCreator"
   member = "serviceAccount:${google_sql_database_instance.hub.service_account_email_address}"
 }
+
+# The worker's nightly `backup` job asks Cloud SQL to export (plan M1.13).
+# A custom role keeps this to exactly the permissions it needs.
+resource "google_project_iam_custom_role" "sql_exporter" {
+  role_id     = "hubSqlExporter"
+  title       = "Hub SQL exporter"
+  description = "Start Cloud SQL exports and read their progress."
+  permissions = ["cloudsql.instances.export", "cloudsql.instances.get"]
+}
+
+resource "google_project_iam_member" "worker_sql_export" {
+  project = var.project_id
+  role    = google_project_iam_custom_role.sql_exporter.id
+  member  = google_service_account.worker.member
+}

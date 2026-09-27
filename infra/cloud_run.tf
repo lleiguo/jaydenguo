@@ -130,6 +130,7 @@ resource "google_cloud_run_v2_job" "worker" {
             WEB_DB_USER    = local.web_db_user
             KMS_KEY        = google_kms_crypto_key.credentials.id
             HOME_TIME_ZONE = var.home_time_zone
+            BACKUP_BUCKET  = google_storage_bucket.backups.name
           })
           content {
             name  = env.key

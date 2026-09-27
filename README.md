@@ -5,7 +5,10 @@ A private hub for Jayden's schedule, sports results and school work. See
 
 ## Run it locally
 
-Requirements: Node.js 22+, pnpm (`corepack enable`), Docker.
+Requirements: Node.js 22+, pnpm (`corepack enable`), Docker. (No Docker?
+Any local PostgreSQL 16 works: point `DATABASE_URL` at it instead of running
+`pnpm db:up`.) A fresh clone reaches a running app with sample data in a
+few minutes, most of it `pnpm install`.
 
 ```bash
 pnpm install
@@ -39,4 +42,7 @@ Background work runs as jobs of one worker program, locally and on Cloud Run:
 ```bash
 pnpm job help        # list jobs
 pnpm job migrate     # apply database migrations
+pnpm job sync all    # sync every enabled source now
+pnpm smoke <id>      # live check of one source, saves nothing
+pnpm seed            # sample data for local development
 ```

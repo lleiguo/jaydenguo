@@ -85,6 +85,12 @@ variable "daily_sync_schedule" {
   default     = "0 5 * * *"
 }
 
+variable "daily_backup_schedule" {
+  description = "Cron schedule for the nightly database export (NFR-3), in home_time_zone."
+  type        = string
+  default     = "30 3 * * *"
+}
+
 variable "scheduler_region" {
   description = "Cloud Scheduler region. Empty means var.region; Montréal is the fallback if Toronto isn't offered (F-11)."
   type        = string
