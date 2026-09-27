@@ -50,4 +50,38 @@ describe("migrations", () => {
       ]),
     ).rejects.toThrow();
   });
+
+  it("enforces the tennis match rules", async () => {
+    const source = await pool.query<{ id: string }>(
+      "insert into sources (kind, name) values ('tennis_tc', 'test') returning id",
+    );
+    const sourceId = source.rows[0].id;
+    const player = (member: string) =>
+      pool
+        .query<{ id: string }>(
+          "insert into tennis_players (source_id, member_id, name) values ($1, $2, 'Test player') returning id",
+          [sourceId, member],
+        )
+        .then((r) => r.rows[0].id);
+    const a = await player("900001");
+    const b = await player("900002");
+    await expect(player("900001")).rejects.toThrow();
+
+    const match = (side1: string, side2: string, extra: { winner?: number; externalId?: string } = {}) =>
+      pool.query(
+        `insert into tennis_matches (source_id, external_id, match_date, side1_player_id, side2_player_id, winner, outcome, origin)
+         values ($1, $2, '2024-09-28', $3, $4, $5, 'played', 'source')`,
+        [sourceId, extra.externalId ?? null, side1, side2, extra.winner ?? null],
+      );
+    await expect(match(a, a)).rejects.toThrow();
+    await expect(match(a, b, { winner: 3 })).rejects.toThrow();
+    await match(a, b, { winner: 1, externalId: "t1:1:900001:900002" });
+    await expect(match(b, a, { externalId: "t1:1:900001:900002" })).rejects.toThrow();
+
+    const { rows } = await pool.query<{ can_write: boolean }>(
+      "select has_table_privilege($1, 'public.tennis_matches', 'INSERT') as can_write",
+      [webRole],
+    );
+    expect(rows[0].can_write).toBe(true);
+  });
 });

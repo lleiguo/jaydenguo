@@ -295,6 +295,17 @@ before M2.
 | M3.6 | Prediction explanation from Claude (Vertex), generated only from the computed numbers. Prompt and version stored. | TEN-6 | A snapshot test with recorded LLM responses. |
 | M3.7 | Manual score and time edits, with the "source disagrees" flag. | TEN-8, SYNC-6 | e2e test: an edit survives the next sync. |
 
+**Build notes (M3):**
+- M3.2: the schema has `tennis_players`, `tennis_tournaments`,
+  `tennis_draws` (his draws only: position, seed, next match),
+  `tennis_matches` (generic two-sided matches, so opponents' one-hop
+  matches fit; doubles partners optional) and `tennis_match_revisions`.
+  Ratings aren't stored (spec §7.1 lists `rating`, `rating_rd`); they'll be
+  computed from the matches, like PBs in M2. Players are keyed by the
+  Tennis Canada member number. No ranking column: the site shows none for
+  his age group (SP-2). Merged on its own (`m3/2-schema`) ahead of the
+  adapter, which is still in progress.
+
 ### M4 (slice S4): School (≈ 6 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -389,7 +400,7 @@ or his opponents.
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
 | M2 Swimming (S2) | built 2026-09-27 (M2.1–M2.7), awaiting merge and the live smoke test. SP-3 page map in spikes.md. |
-| M3 Tennis (S3) | not started |
+| M3 Tennis (S3) | **in progress.** M3.1 (SP-2) done 2026-09-27. M3.2 schema and migration on `m3/2-schema`, merging ahead of the adapter. M3.3–M3.7 in progress on `claude/m3-tennis-feature-94v4q6`. |
 | M4 School (S4) | not started |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |

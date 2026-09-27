@@ -50,6 +50,13 @@
       "when": 1790514966386,
       "tag": "0006_swimming",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790528764918,
+      "tag": "0007_tennis",
+      "breakpoints": true
     }
   ]
 }
