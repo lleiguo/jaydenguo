@@ -1,4 +1,5 @@
 import type { CategoryMapping } from "../domain/categories";
+import type { SwimBatch } from "../domain/swim-upsert";
 import type { SourceRecord, SyncWindow } from "../domain/upsert";
 
 // The adapter contract (plan §2): fetch raw data, then normalise it into
@@ -22,7 +23,13 @@ export type AdapterContext = {
   homeTimeZone: string;
 };
 
-export type NormalisedBatch = { records: SourceRecord[]; window: SyncWindow; warnings: string[] };
+export type NormalisedBatch = {
+  records: SourceRecord[];
+  window: SyncWindow;
+  warnings: string[];
+  // Swim meets, entries and results (commit_swim), applied after the events.
+  swim?: SwimBatch;
+};
 
 export interface Adapter<Raw = unknown> {
   kind: string;

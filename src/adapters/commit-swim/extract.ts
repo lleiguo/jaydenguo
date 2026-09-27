@@ -62,6 +62,8 @@ export type CommitSwim = {
 export type CommitSplit = { resultId: string; leg: number; distance: number; time: number | null };
 
 export type CommitRaw = {
+  // The team's pages on the site, for "open in Commit" links.
+  siteUrl: string;
   signups: CommitSignup[];
   meets: CommitResultMeet[];
   swims: CommitSwim[];
@@ -216,6 +218,7 @@ export async function extractInPage(args: ExtractArgs): Promise<ExtractResult> {
       city: str(m.city),
     }));
 
-  return { ok: true, raw: { signups, meets, swims, splits } };
+  const siteUrl = `${w.location.origin}/app/${superTeamId}`;
+  return { ok: true, raw: { siteUrl, signups, meets, swims, splits } };
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }

@@ -1,7 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import * as client from "openid-client";
 import { auditLog, credentials } from "@db/schema";
+import { testCommitLogin } from "../adapters/commit-swim";
 import { normaliseFeedUrl, politeFetch, FetchError } from "../adapters/http";
+import { SyncError } from "../adapters/types";
 import { googleConfig } from "../server/auth/oidc";
 import { aadFor } from "../server/credentials/aad";
 import { open, rewrap } from "../server/crypto/envelope";
@@ -59,9 +61,14 @@ export async function checkCredential(cred: OpenedCredential): Promise<string | 
       await client.refreshTokenGrant(await googleConfig(), cred.secret);
       return null;
     }
+    if (cred.kind === "password" && cred.provider === "commit_swim") {
+      if (!cred.username) return "Add the Commit Swimming email address.";
+      await testCommitLogin(cred.username, cred.secret);
+      return null;
+    }
     return `There's no automatic test for ${cred.provider} logins yet. It will be checked on the next sync.`;
   } catch (err) {
-    if (err instanceof FetchError) return err.message;
+    if (err instanceof FetchError || err instanceof SyncError) return err.message;
     if (err instanceof client.ResponseBodyError && err.error === "invalid_grant") {
       return "Google access was revoked or expired. Reconnect the Google account.";
     }

@@ -7,6 +7,7 @@ import type { Db } from "../server/db/client";
 import type { Logger } from "../server/log";
 import { extendAllSeries } from "../server/calendar/mutations";
 import { getHomeTimeZone } from "../server/settings";
+import { syncSwim } from "../server/swim/apply";
 import { syncRecords } from "../server/sync/apply";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
 import type { JobContext } from "./context";
@@ -123,9 +124,16 @@ async function runLocked(
       actor: "sync",
       syncRunId: run.id,
     });
+    const counts = { ...plan.counts };
+    if (batch.swim) {
+      const swim = await syncSwim(db, sourceId, batch.swim, { actor: "sync", syncRunId: run.id });
+      counts.added += swim.added;
+      counts.changed += swim.changed;
+      counts.cancelled += swim.cancelled;
+    }
     await db
       .update(syncRuns)
-      .set({ status: "succeeded", ...plan.counts, finishedAt: sql`now()` })
+      .set({ status: "succeeded", ...counts, finishedAt: sql`now()` })
       .where(eq(syncRuns.id, run.id));
     await db
       .update(sources)
@@ -134,11 +142,11 @@ async function runLocked(
     log("sync finished", {
       sourceId,
       runId: run.id,
-      ...plan.counts,
+      ...counts,
       warnings: batch.warnings,
       duplicates: plan.duplicates.length,
     });
-    return { status: "succeeded", ...plan.counts };
+    return { status: "succeeded", ...counts };
   } catch (err) {
     const message =
       err instanceof SyncError
@@ -217,5 +225,13 @@ export async function smokeJob(args: string[], ctx: JobContext) {
     records: batch.records.length,
     warnings: batch.warnings,
     upcoming,
+    ...(batch.swim && {
+      swimMeets: batch.swim.meets.length,
+      swimResults: batch.swim.results.length,
+      latestSwims: [...batch.swim.results]
+        .sort((a, b) => b.swimDate.localeCompare(a.swimDate))
+        .slice(0, 5)
+        .map((r) => `${r.swimDate} ${r.distance} ${r.stroke} ${r.course} ${r.timeMs ?? "no time"}`),
+    }),
   });
 }
