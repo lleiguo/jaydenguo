@@ -56,6 +56,73 @@ moved occurrences) in the feed's own time zone, drops `STATUS:CANCELLED`
 events so sync marks them cancelled, and keeps all-day events as dates.
 Fixture tests in `tests/unit/adapter-ical.test.ts`.
 
+## SP-3: Commit Swimming (M2.1, 2026-09-27)
+
+**Checked:** the owner signed in to `team.commitswimming.com` in a browser;
+Claude read the parent pages and the data behind them (read-only; nothing
+was changed in the account).
+
+**How the site works:** a Meteor 2.15 single-page app. Pages load their data
+over one DDP websocket (`/sockjs`), not REST or HTML, so the adapter reads the
+same method results the pages do. Sign-in is Meteor accounts-password
+(`Meteor.loginWithPassword`, with an optional 2FA code). URLs are
+`/app/<team id>/…`; the team ID comes from the landing URL after sign-in.
+
+**Page map (parent account):**
+| Page | Route | Data (Meteor method or collection) |
+|---|---|---|
+| Dashboard | `/app/<team>/dashboard` | Subscriptions fill `users` (the athlete has `parentIds` = the parent's user ID, `roles: ["athlete"]`), `REventsStatic` (static events: distance, stroke, course, gender), `SuperTeams` (`accountId`) |
+| Meet sign-ups | `/app/<team>/meets` | `getUpcomingMeetsForParent(team, page, perPage, null)` and `getPastMeetsForParent(…)` → `{meets, total, totalPages}`. Each meet: title, start/end (midnight in `meetTimezone`), course, venue, `invitedAthleteIds`, `commitments[]` (yes/no per athlete), `events[]` with `activeEntries[]` (athlete ID, optional `seedTime`) |
+| Results, "My Team" | `/app/<team>/results/my-team` | Team leaderboards (other swimmers); not used |
+| Results, "My Meets" | `/app/<team>/results/my-meets` | Team meet list; not used |
+| One athlete's results | (component, no page of its own for parents) | `oneAthleteResultsPartialAccountAgnostic({athleteId, accountId, flatStartOnly, sortOrder, maxResults})` → `{results, events, splits, meets}`: every swim with `raceTime`/`seedTime` in **centiseconds**, place, heat, lane, `dqReason`, `staticEventId`; splits per leg; result meets with name, dates, course, city |
+| Calendar | `/app/<team>/calendar` | `getMeetsForCalendar`, `getProgramsForCalendar`, `getScheduledPracticesForCalendar({…, parentView: true})` |
+
+**Findings:**
+- Jayden's history: 13 result meets, 41 swims, 32 splits, all short course
+  metres (SCM); 19 meet sign-ups (8 with entries). Four 200 IM swims found.
+- **Practices aren't published to parents:** the calendar's practice call
+  returned nothing for the next 4 weeks. SWM-1 therefore uses the household
+  calendar or manual repeating events (as the spec allows); the adapter
+  doesn't fetch practices.
+- **Duplicate uploads:** one weekend meet appears as three result meets with
+  the same name and dates, each holding the same swims. The adapter merges
+  result meets with the same name and dates, and drops a swim that repeats
+  another's date, event and time.
+- **Dates:** swim and result-meet dates are calendar dates stored at
+  00:00 UTC (the site's own UI shows them a day early in time zones west of UTC; the
+  sign-up dates confirm the UTC date is right). Sign-up meets run from
+  midnight to midnight in `meetTimezone` (missing on older meets).
+- **Splits** are per leg and add up to the race time. Some swims carry
+  placeholder splits (null, 0, or the whole time on the last leg); the
+  adapter drops a swim's splits unless every leg has a time and they add up.
+- **Seed times** appear on some entries (`activeEntries[].seedTime`) and on
+  results (`seedTime`); entries can have `suppressSeed`.
+- **Team events:** sign-ups also include practices-with-sign-up, socials and
+  team photos (no events list). They go on the calendar under swimming but
+  not in the meet list.
+- **Privacy:** the site sends the browser a lot about other families
+  (names, addresses, medical notes, other swimmers' athlete IDs and
+  commitments). The adapter's in-page extractor
+  (`src/adapters/commit-swim/extract.ts`) returns only whitelisted fields
+  for one athlete, so none of that reaches our worker, logs or database.
+- The site offers a private calendar subscription link (`getCalendarToken`).
+  Not used: meets come from the methods above with more detail, and the link
+  would be one more secret.
+- No public API or export was found (F-1).
+
+**Fixture:** `tests/fixtures/commit-swim/athlete.json` is the extractor's
+output with every name, venue, city and ID replaced, dates moved 104 weeks
+earlier (weekdays kept), the time zone changed to America/Toronto, and
+every time scaled with per-swim noise (duplicates kept identical). Places,
+heats and lanes are random. It keeps the real shape: duplicate uploads,
+placeholder splits, missing time zones, team events.
+
+**Decision:** a `commit_swim` adapter that signs in with Playwright
+(Chromium from the worker image; `playwright-core` pinned to the image's
+version), waits for the dashboard's data, and runs the extractor in the
+page. Three method calls per sync plus paging, 2 s apart.
+
 ## Other findings during M0
 
 - **Firebase Hosting only forwards one cookie.** When Firebase Hosting

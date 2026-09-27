@@ -345,7 +345,7 @@ or his opponents.
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
-| M2 Swimming (S2) | not started |
+| M2 Swimming (S2) | in progress. M2.1 (SP-3) done 2026-09-27: page map in spikes.md, scrubbed fixture saved. |
 | M3 Tennis (S3) | not started |
 | M4 School (S4) | not started |
 | M5 Extras (S5) | not started |
