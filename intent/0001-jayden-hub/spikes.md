@@ -90,7 +90,7 @@ same method results the pages do. Sign-in is Meteor accounts-password
   result meets with the same name and dates, and drops a swim that repeats
   another's date, event and time.
 - **Dates:** swim and result-meet dates are calendar dates stored at
-  00:00 UTC (the site's own UI shows them a day early in Pacific time; the
+  00:00 UTC (the site's own UI shows them a day early in time zones west of UTC; the
   sign-up dates confirm the UTC date is right). Sign-up meets run from
   midnight to midnight in `meetTimezone` (missing on older meets).
 - **Splits** are per leg and add up to the race time. Some swims carry
