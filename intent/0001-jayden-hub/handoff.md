@@ -33,12 +33,13 @@ deploys, and the migration would run.
     outside the repo).
 
 ## In progress (committed, unfinished)
-- **M3.2 schema:** `db/schema/tennis.ts`, `src/domain/tennis-constants.ts`,
-  exported from `db/schema/index.ts`; migration `db/migrations/0007_tennis.sql`
-  was generated with `pnpm db:generate --name tennis`. The integration
-  suite (which runs every migration) passes. Not reviewed or merged yet.
-  If the schema changes before merge, delete 0007 (and its entry in
-  `db/migrations/meta`) and generate it again rather than adding a 0008.
+- **M3.2 schema:** split out onto `m3/2-schema` (from `main`, 2026-09-27)
+  with the migrations test extended for the match rules; that branch is
+  merged back into this one. Open its PR against `main` and merge it
+  first: it's schema only, so deploying it just runs migration 0007. If
+  the schema changes before that merge, delete 0007 (and its entry in
+  `db/migrations/meta`) and generate it again on `m3/2-schema` rather than
+  adding a 0008. After it merges, any change is a new migration.
 - **M3.3 adapter, partly built:**
   - Done and checked by hand against the fake site:
     `src/adapters/tennis-tc/index.ts` (HTTP client with cookie jar,
