@@ -86,6 +86,63 @@ test.describe("tennis", () => {
     );
   });
 
+  test("entry settings save on the source, and entries show what needs the owner (TEN-9, TEN-10)", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("/sources");
+    const card = page
+      .getByTestId("source")
+      .filter({ has: page.getByRole("button", { name: "Tournament entries" }) });
+    await card.last().getByRole("button", { name: "Tournament entries" }).click();
+    const form = page.getByRole("form", { name: "Tournament entry settings" });
+    await form.getByLabel("Home postal code").fill("A1A 1A1");
+    await form.getByLabel("Longest drive (minutes)").fill("90");
+    await form.getByRole("button", { name: "Save" }).click();
+    await expect(form).toBeHidden();
+    const { sources } = await apiSend(context, "GET", "/api/v1/sources");
+    const saved = sources.find((s: { id: string }) => s.id === sourceId);
+    // Saving the entry settings keeps his profile link.
+    expect(saved.config).toMatchObject({
+      profileUrl: expect.stringContaining("/player-profile/"),
+      entry: { homePostalCode: "A1A 1A1", maxDriveMinutes: 90 },
+    });
+
+    // What the Thursday and Friday jobs would have written (they're tested
+    // against the fake site in tests/integration/tennis-entries.test.ts).
+    const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+    const base = `http://127.0.0.1:${FAKE_TC_PORT}`;
+    try {
+      const row = (id: string, name: string, status: string, reserve: number | null) =>
+        pool.query(
+          `insert into tennis_entries (source_id, tournament_external_id, tournament_name, start_date, end_date,
+             event_no, event_name, drive_minutes, status, reserve_position, tournament_url, entry_url)
+           values ($1, $2, $3, '2024-10-05', '2024-10-06', '6', 'U9 Orange Boys', 40, $4, $5, $6, $7)`,
+          [sourceId, id, name, status, reserve, `${base}/tournament/${id}`, `${base}/individual-entry/${id}`],
+        );
+      await row("e2e-found", "Entry Found Open", "found", null);
+      await row("e2e-pay", "Entry Pay Classic", "payment_needed", null);
+      await row("e2e-reserve", "Entry Reserve Cup", "reserve", 2);
+    } finally {
+      await pool.end();
+    }
+    await page.goto("/tennis");
+    const entries = page.getByTestId("entry");
+    const found = entries.filter({ hasText: "Entry Found Open" });
+    await expect(found).toContainText("⚠ Not entered yet");
+    await expect(found.getByRole("link", { name: "Enter on the site →" })).toHaveAttribute(
+      "href",
+      `${base}/individual-entry/e2e-found`,
+    );
+    const pay = entries.filter({ hasText: "Entry Pay Classic" });
+    await expect(pay).toContainText("Entered, payment needed");
+    await expect(pay.getByRole("link", { name: "Pay on the site →" })).toBeVisible();
+    const reserve = entries.filter({ hasText: "Entry Reserve Cup" });
+    await expect(reserve).toContainText("Reserve list (2)");
+    await expect(reserve).toContainText("U9 Orange Boys · 40 min drive");
+    await expect(reserve.getByRole("link", { name: /on the site/ })).toHaveCount(0);
+  });
+
   test("the tennis page shows his next match with a prediction, and his tournaments (TEN-2, TEN-3, TEN-6)", async ({
     page,
   }) => {
@@ -103,6 +160,11 @@ test.describe("tennis", () => {
     await expect(prediction).toContainText(/Sam wins: \d+%/);
     await expect(prediction).toContainText("Estimate, not a certainty · confidence low");
     await expect(prediction).toContainText(/Why: Ratings \d+ ± \d+ vs \d+ ± \d+/);
+    // TEN-11: the opponent's level and head-to-head, and no score band.
+    await expect(prediction.getByTestId("opponent-level")).toContainText(
+      /\d+ tournaments? and \d+–\d+ in the last 12 months · head-to-head \d+–\d+/,
+    );
+    await expect(prediction).not.toContainText(/straight sets|Likely a/);
 
     const inProgress = page.getByRole("region", { name: "In progress" });
     await expect(inProgress.getByTestId("tournament")).toContainText("In the draw · 1–0");

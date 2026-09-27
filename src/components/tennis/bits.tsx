@@ -103,7 +103,9 @@ export function DrawLine({ draw }: { draw: DrawView }) {
 
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 
-// TEN-6: the estimate, its confidence, the likely score band and the why.
+// TEN-6: the win estimate, its confidence and the why, with the
+// opponent's level and head-to-head (TEN-11). No score band: the owner
+// asked for the win % only (2026-09-27).
 export function PredictionBox({
   p,
   selfName,
@@ -124,7 +126,12 @@ export function PredictionBox({
         </span>
         <span className={muted}>Estimate, not a certainty · confidence {p.confidence}</span>
       </div>
-      <div>{p.band}</div>
+      <div data-testid="opponent-level">
+        {p.opponentName}: {p.opponentLevel.tournaments}{" "}
+        {p.opponentLevel.tournaments === 1 ? "tournament" : "tournaments"} and {p.opponentLevel.lastYear.wins}
+        –{p.opponentLevel.lastYear.losses} in the last 12 months · head-to-head {p.headToHead.wins}–
+        {p.headToHead.losses}
+      </div>
       <div className={muted}>Why: {p.why}</div>
       {explanation && <p data-testid="explanation">{explanation}</p>}
       <Link href="/tennis/accuracy" className={`self-start underline ${muted}`}>

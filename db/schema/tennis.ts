@@ -22,7 +22,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { MATCH_OUTCOMES } from "../../src/domain/tennis-constants";
+import { ENTRY_STATUSES, MATCH_OUTCOMES } from "../../src/domain/tennis-constants";
 import { sources, syncRuns } from "./core";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true });
@@ -216,4 +216,53 @@ export const tennisExplanations = pgTable(
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("tennis_explanations_hash_uq").on(t.inputsHash)],
+);
+
+// Tournament entries (TEN-9..11): events the Thursday job found for him,
+// whether he's entered, and where the Friday acceptance list puts him. One
+// row per tournament and event. Only tournament facts and his own status
+// are kept; other players on entry lists aren't stored.
+export const tennisEntries = pgTable(
+  "tennis_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => sources.id),
+    tournamentExternalId: text("tournament_external_id").notNull(),
+    tournamentName: text("tournament_name").notNull(),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    venue: text("venue"),
+    city: text("city"),
+    region: text("region"),
+    entryDeadline: date("entry_deadline"),
+    eventNo: text("event_no").notNull(),
+    eventName: text("event_name").notNull(),
+    // Driving time from home, and whether it's an estimate (no route found).
+    driveMinutes: integer("drive_minutes"),
+    driveEstimated: boolean("drive_estimated").notNull().default(false),
+    status: text("status").notNull().default("found"),
+    reservePosition: integer("reserve_position"),
+    // A plain-language line for the page, e.g. why it wasn't entered.
+    note: text("note"),
+    // His number in this tournament, once an entry list shows him.
+    tournamentPlayerId: text("tournament_player_id"),
+    tournamentUrl: text("tournament_url").notNull(),
+    entryUrl: text("entry_url"),
+    enteredAt: ts("entered_at"),
+    listCheckedAt: ts("list_checked_at"),
+    // The draw watch: when his draw was first seen, and when a full sync
+    // after that succeeded (the watch stops then).
+    drawSeenAt: ts("draw_seen_at"),
+    drawSyncedAt: ts("draw_synced_at"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("tennis_entries_source_event_uq").on(t.sourceId, t.tournamentExternalId, t.eventNo),
+    index("tennis_entries_start_idx").on(t.startDate),
+    check("tennis_entries_status_chk", sql`${t.status} in (${inList(ENTRY_STATUSES)})`),
+    check("tennis_entries_dates_chk", sql`${t.endDate} >= ${t.startDate}`),
+  ],
 );

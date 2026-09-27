@@ -2,6 +2,7 @@ import { FetchError, politeFetch } from "../http";
 import { SyncError, type Adapter, type AdapterContext } from "../types";
 import { addDays, localDate } from "../../domain/time";
 import { drawView } from "../../domain/tennis-draw";
+import { parseEventPage } from "./entry-parse";
 import { normaliseTennis, toDrawRounds } from "./normalise";
 import {
   isErrorPage,
@@ -88,11 +89,15 @@ export type TcRaw = {
   opponents: TcOpponent[];
   // Tournament player numbers of opponents read through a draw.
   tournamentPlayers: { tournamentId: string; tournamentPlayerId: string; memberId: string }[];
+  // His own tournament player numbers, from entry lists (TEN-10): before
+  // he's played a match there, nothing else links him to his draw line.
+  selfTournamentPlayers?: { tournamentId: string; tournamentPlayerId: string }[];
   truncated: boolean;
   requests: number;
 };
 
-class Budget extends Error {}
+// Thrown when a run has used its request cap.
+export class Budget extends Error {}
 
 export class TcClient {
   private cookies = new Map<string, string>();
@@ -104,14 +109,20 @@ export class TcClient {
 
   // Returns the page and the URL it ended on, or null for the site's error
   // pages (which come back as 200).
-  async get(path: string, opts: { xhr?: boolean } = {}): Promise<{ html: string; url: string } | null> {
+  async get(
+    path: string,
+    opts: { xhr?: boolean; form?: Record<string, string> } = {},
+  ): Promise<{ html: string; url: string } | null> {
     if (this.requests >= this.max) throw new Budget();
     this.requests++;
     let res: Response;
     try {
       res = await politeFetch(new URL(path, this.base), {
+        method: opts.form ? "POST" : "GET",
+        body: opts.form ? new URLSearchParams(opts.form).toString() : undefined,
         headers: {
           accept: "text/html",
+          ...(opts.form ? { "content-type": "application/x-www-form-urlencoded" } : {}),
           ...(opts.xhr ? { "x-requested-with": "XMLHttpRequest" } : {}),
           ...(this.cookies.size ? { cookie: [...this.cookies].map(([k, v]) => `${k}=${v}`).join("; ") } : {}),
         },
@@ -154,6 +165,7 @@ export async function fetchTennis(ctx: AdapterContext): Promise<TcRaw> {
     draws: [],
     opponents: [],
     tournamentPlayers: [],
+    selfTournamentPlayers: [],
     truncated: false,
     requests: 0,
   };
@@ -180,6 +192,34 @@ export async function fetchTennis(ctx: AdapterContext): Promise<TcRaw> {
   const org = orgCode([profile.html, tab?.html ?? ""]);
 
   try {
+    // 1b. Tournaments he's entered that his profile doesn't show yet (no
+    //     match played there): their draws come from the event page.
+    for (const e of ctx.tennisEntries ?? []) {
+      if (e.endDate < addDays(today, -CURRENT_DAYS)) continue;
+      if (e.tournamentPlayerId)
+        raw.selfTournamentPlayers!.push({
+          tournamentId: e.tournamentId,
+          tournamentPlayerId: e.tournamentPlayerId,
+        });
+      const known = raw.tournaments.find((t) => t.id === e.tournamentId);
+      if (known?.draws.length) continue;
+      const page = await client.get(`/sport/event.aspx?id=${e.tournamentId}&event=${e.eventNo}`);
+      const draws = page ? parseEventPage(page.html).draws : [];
+      const summary: TcTournamentSummary = known ?? {
+        id: e.tournamentId,
+        name: e.name,
+        venue: null,
+        startDate: e.startDate,
+        categories: [],
+        matches: [],
+        draws: [],
+      };
+      summary.draws.push(
+        ...draws.map((d) => ({ drawNo: d.drawNo, eventName: e.eventName, drawName: d.name })),
+      );
+      if (!known) raw.tournaments.push(summary);
+    }
+
     // 2. Tournaments in progress or coming up: dates and venue, and the
     //    draws he's in (for his next match).
     const recent = raw.tournaments.filter((t) => !t.startDate || t.startDate >= addDays(today, -DETAIL_DAYS));
@@ -263,7 +303,10 @@ type Wanted = { memberId: string | null; tournamentId: string | null; tournament
 
 // Who to read one hop out, most useful first: his next opponents (for the
 // prediction), then everyone he's played, most recent first.
-export function opponentQueue(raw: Pick<TcRaw, "self" | "tournaments" | "draws">, today: string): Wanted[] {
+export function opponentQueue(
+  raw: Pick<TcRaw, "self" | "tournaments" | "draws" | "selfTournamentPlayers">,
+  today: string,
+): Wanted[] {
   const out: Wanted[] = [];
   const seen = new Set<string>();
   const add = (w: Wanted) => {
@@ -283,6 +326,7 @@ export function opponentQueue(raw: Pick<TcRaw, "self" | "tournaments" | "draws">
       ),
     ),
   );
+  for (const x of raw.selfTournamentPlayers ?? []) selfTps.add(`${x.tournamentId}:${x.tournamentPlayerId}`);
   for (const d of raw.draws) {
     const tps = new Set(
       [...selfTps].filter((k) => k.startsWith(`${d.tournamentId}:`)).map((k) => k.split(":")[1]),

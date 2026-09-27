@@ -85,6 +85,24 @@ variable "daily_sync_schedule" {
   default     = "0 5 * * *"
 }
 
+variable "tennis_enter_schedule" {
+  description = "Cron schedule for finding and entering tournaments (TEN-9), in home_time_zone. Entries open Thursday mornings."
+  type        = string
+  default     = "0 12 * * 4"
+}
+
+variable "tennis_acceptance_schedule" {
+  description = "Cron schedule for reading acceptance lists (TEN-10), in home_time_zone. Lists come out Friday mornings."
+  type        = string
+  default     = "0 10 * * 5"
+}
+
+variable "tennis_draw_watch_schedule" {
+  description = "Cron schedule for the hourly draw watch (TEN-11), in home_time_zone. Draws come out Monday; Tuesday and Wednesday catch late ones. Runs with nothing to watch make no requests."
+  type        = string
+  default     = "0 7-21 * * 1-3"
+}
+
 variable "daily_backup_schedule" {
   description = "Cron schedule for the nightly database export (NFR-3), in home_time_zone."
   type        = string

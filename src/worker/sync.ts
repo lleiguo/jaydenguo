@@ -9,6 +9,8 @@ import { extendAllSeries } from "../server/calendar/mutations";
 import { getHomeTimeZone } from "../server/settings";
 import { syncSwim } from "../server/swim/apply";
 import { syncTennis } from "../server/tennis/apply";
+import { syncEntries } from "../server/tennis/entries";
+import { localDate } from "../domain/time";
 import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
@@ -109,6 +111,7 @@ async function runLocked(
       ? await openCredential(db, source.credentialId, `sync:${source.name}`)
       : null;
     const adapter = adapterFor(source.kind);
+    const homeTimeZone = await getHomeTimeZone(db);
     const ctx: AdapterContext = {
       source: {
         id: source.id,
@@ -118,7 +121,11 @@ async function runLocked(
       },
       credential,
       now: now(),
-      homeTimeZone: await getHomeTimeZone(db),
+      homeTimeZone,
+      // Tournaments he's entered (TEN-9..11), so their draws are read early.
+      ...(source.kind === "tennis_tc" && {
+        tennisEntries: await syncEntries(db, source.id, localDate(now(), homeTimeZone)),
+      }),
     };
     const raw = await withTimeout(adapter.fetchRaw(ctx), SOURCE_TIMEOUT_MS);
     const batch = adapter.normalise(raw, ctx);

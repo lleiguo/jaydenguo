@@ -1,4 +1,4 @@
-# Daily triggers (plan M1.5 and M1.13, spec SYNC-1, NFR-3). Cloud Scheduler starts an
+# Scheduled triggers (plan M1.5, M1.13 and M3b; spec SYNC-1, NFR-3, TEN-9..11). Cloud Scheduler starts an
 # execution of the worker job with the job name as an argument override,
 # using the Cloud Run Admin API. The scheduler stores no personal data.
 locals {
@@ -10,6 +10,21 @@ locals {
       description = "Sync every enabled source (SYNC-1)"
       schedule    = var.daily_sync_schedule
       args        = ["sync", "all", "scheduled"]
+    }
+    "tennis-enter" = {
+      description = "Find tournaments open for entry near home (TEN-9)"
+      schedule    = var.tennis_enter_schedule
+      args        = ["tennis:enter"]
+    }
+    "tennis-acceptance" = {
+      description = "Read tournament acceptance lists (TEN-10)"
+      schedule    = var.tennis_acceptance_schedule
+      args        = ["tennis:acceptance"]
+    }
+    "tennis-draw-watch" = {
+      description = "Look for his draws, hourly on draw days (TEN-11)"
+      schedule    = var.tennis_draw_watch_schedule
+      args        = ["tennis:draw-watch"]
     }
     "nightly-backup" = {
       description = "Export the database to the backup bucket (NFR-3)"

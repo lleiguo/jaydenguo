@@ -364,6 +364,46 @@ before M2.
   delete and restore. Corrections keep the owner's values through syncs
   and flag disagreements, as in M2.7.
 
+### M3b: Tournament entries (≈ 3 days; added 2026-09-27)
+The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
+| Task | Description | Spec | Done when |
+|---|---|---|---|
+| M3b.1 | SP-7: the public tournament search, event lists and entry lists; the signed-in entry form. | TEN-9, TEN-10, F-1 | Page map in spikes.md. **Public part done; signed-in part open** (needs the owner). |
+| M3b.2 | Schema: `tennis_entries` (migration 0009). | §7.1 | Migration merged. |
+| M3b.3 | `tennis:enter` (Thursday noon): search, pick his event, drive time, one per weekend, enter or list with the link. | TEN-9 | Integration test against the fake site. |
+| M3b.4 | `tennis:acceptance` (Friday 10:00): main draw or reserve list and place. | TEN-10 | Integration test. |
+| M3b.5 | `tennis:draw-watch` (hourly, Mon–Wed 07:00–21:00): find his draw, then the full sync; the sync reads entered tournaments before his profile lists them. Opponent level on the next-match card; no score band. | TEN-11, TEN-3, TEN-6 | Integration test: draw found → sync → watch stops; nothing to watch → no requests. e2e for the card. |
+| M3b.6 | Registrar: enter him on the site with the stored Tennis Canada login (the Accounts page option kept for this), and tell "entered" from "payment needed". | TEN-9, CRED-2 | **Open:** after the signed-in part of SP-7. Until then every entry is left to the owner with the link. |
+| M3b.7 | Terraform: three Cloud Scheduler jobs, the Routes API, `ROUTES_PROJECT` and Service Usage Consumer for the worker. | TEN-9..11 | `terraform validate`; applied before the code merges. |
+
+**Build notes (M3b, 2026-09-27):**
+- Everything but entering is read from **public** pages (spikes.md SP-7):
+  the search (`/find/tournament/DoSearch`, "Online entry open", Rookie,
+  postal code and radius), `/sport/events.aspx` and `/sport/event.aspx`
+  (entry list with "Maindraw" / "Reserve list N", draws once out). Same
+  politeness as the sync: 2 s apart, a cap per run (150 / 60 / 40).
+- The entry form (`/individual-entry/<id>`) needs a sign-in, so it isn't
+  mapped yet. `src/server/tennis/entries.ts` takes a `Registrar`; the
+  worker passes `manualRegistrar`, which leaves every entry as "found"
+  with the site's entry link on the Tennis page.
+- Settings live in the Tennis Canada source's config (`config.entry`:
+  home postal code, longest drive, event words), edited from its card on
+  the Sources page. Config updates now merge instead of replacing.
+- Drive time: Google Routes API with the worker's service account
+  (`ROUTES_PROJECT`), cached per trip. Without it, the search radius is
+  about 1 km per minute of the limit, rounded down to the site's options.
+- The sync is given his active entries (`AdapterContext.tennisEntries`):
+  it reads their event pages for draws and uses his tournament player
+  number from the entry list, so a fresh draw finds him before he's
+  played a match there. His entered tournaments reach the calendar.
+- The draw watch runs the full sync (not a lighter one) so opponents and
+  predictions come with it; SYNC-5's hourly limit still applies, so a
+  watch right after another run waits for the next hour.
+- Fixed on the way: a typed-in match linked to another source's players
+  made that other source's sync fail (`src/server/tennis/apply.ts`).
+- Entry fixtures (`tests/fixtures/tennis-tc/entries/`) are hand-built
+  from the real markup with invented names, not recorded pages.
+
 ### M4 (slice S4): School (≈ 6 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -439,6 +479,7 @@ or his opponents.
 | SYNC-1..6 | M1.4, M1.5, M2.7, M3.7 |
 | SRC-1..10 | M1.6, M1.7, M2.3, M3.3, M4.2, M4.3, M5.2, M5.8 |
 | TEN-1..8 | M3.1–M3.7 |
+| TEN-9..11 | M3b.1–M3b.7 |
 | SWM-1..7 | M2.1–M2.7 |
 | ACT-1..2 | M1.6, M1.9, M1.10 |
 | SCH-1..5 | M4.1–M4.4 |
@@ -459,6 +500,7 @@ or his opponents.
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
 | M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
 | M3 Tennis (S3) | **built, not merged (2026-09-27).** M3.1–M3.7 done on `claude/m3-tennis-feature-94v4q6`; M3.2 schema on `m3/2-schema` merges first. Still open: M3.3 live smoke test, M3.6 recorded Claude response (no Vertex quota yet), O-5 signed-in look. See [handoff.md](handoff.md). |
+| M3b Tournament entries | **built 2026-09-27 on `m3b/tournament-entries`, not merged.** Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
 | M4 School (S4) | not started |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |

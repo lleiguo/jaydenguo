@@ -181,4 +181,25 @@ describe("Tennis Canada sync", () => {
     expect(linked).toMatchObject({ sourceId: id, externalId: source.externalId, origin: "manual" });
     expect(linked.tournamentId).toBe(source.tournamentId);
   }, 60_000);
+
+  it("syncs a second source while a typed-in match points at another source's players", async () => {
+    const first = await newSource();
+    await syncSource(db, first, "manual", log, now);
+    const [me] = await db
+      .select()
+      .from(tennisPlayers)
+      .where(and(eq(tennisPlayers.sourceId, first), eq(tennisPlayers.isSelf, true)));
+    const [typed] = await db.insert(tennisPlayers).values({ name: "Typed Opponent" }).returning();
+    await db.insert(tennisMatches).values({
+      matchDate: "2024-09-01",
+      side1: me.id,
+      side2: typed.id,
+      winner: 1,
+      sets: [[4, 1]],
+      outcome: "played",
+      origin: "manual",
+    });
+    const second = await newSource();
+    expect(await syncSource(db, second, "manual", log, now)).toMatchObject({ status: "succeeded" });
+  });
 });

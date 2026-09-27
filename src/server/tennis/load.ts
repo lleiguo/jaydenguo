@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { tennisTestNow } from "../../adapters/tennis-tc";
 import { tennisDraws, tennisMatches, tennisPlayers, tennisTournaments } from "@db/schema";
 import {
+  level,
   form,
   headToHead,
   isSingles,
@@ -337,7 +338,13 @@ function modelOf(data: TennisData) {
 }
 
 const models = new WeakMap<TennisData, Model>();
-export type PredictionView = Prediction & { why: string; opponentKey: string; opponentName: string };
+export type PredictionView = Prediction & {
+  why: string;
+  opponentKey: string;
+  opponentName: string;
+  // TEN-11: the opponent's last 12 months.
+  opponentLevel: { tournaments: number; lastYear: { wins: number; losses: number } };
+};
 
 export function predictAgainst(data: TennisData, opponentKey: string): PredictionView | null {
   if (!data.self || data.selfKeys.has(opponentKey)) return null;
@@ -354,6 +361,7 @@ export function predictAgainst(data: TennisData, opponentKey: string): Predictio
     why: whyLine(p, [data.self.name.split(" ")[0], name.split(" ")[0]]),
     opponentKey,
     opponentName: name,
+    opponentLevel: level(data.matches, opponentKey, data.today),
   };
 }
 

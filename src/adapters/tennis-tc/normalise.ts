@@ -65,6 +65,8 @@ export function normaliseTennis(raw: TcRaw, ctx: AdapterContext): NormalisedBatc
   for (const o of raw.opponents) learn(o.tournaments);
   for (const x of raw.tournamentPlayers)
     tpMember.set(`${x.tournamentId}:${x.tournamentPlayerId}`, x.memberId);
+  for (const x of raw.selfTournamentPlayers ?? [])
+    tpMember.set(`${x.tournamentId}:${x.tournamentPlayerId}`, selfId);
   const memberOf = (
     tournamentId: string | null,
     p: { memberId: string | null; tournamentPlayerId: string | null },

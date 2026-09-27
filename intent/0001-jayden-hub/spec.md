@@ -124,9 +124,12 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 | TEN-3 | Draw and next opponent. | When a draw is published, the page shows his position in the draw and his next opponent (or "winner of A vs B"), with scheduled match times when the site publishes them. |
 | TEN-4 | Head-to-head. | For each opponent: every past meeting found on the source, with date, event, round and score. The summary is the W–L record. |
 | TEN-5 | Opponent form. | The opponent's last 10 matches (result, score, opponent), their win rate over the last 12 months, and their ranking if shown. |
-| TEN-6 | Match prediction. | A win probability for Jayden and a likely score band. The confidence (low, medium, high) depends on how much data there is. A "why" line lists the inputs (ratings, head-to-head, recent form). Labelled "Estimate, not a certainty". Method in §6.1. |
+| TEN-6 | Match prediction. | A win probability for Jayden. The confidence (low, medium, high) depends on how much data there is. A "why" line lists the inputs (ratings, head-to-head, recent form). Labelled "Estimate, not a certainty". Method in §6.1. **Changed 2026-09-27:** the owner wants the win % only, so the page no longer shows a likely score band. |
 | TEN-7 | Results history. | All his matches, with a filter by season and a running W–L. |
 | TEN-8 | Real-time edits. | The owner can enter or correct a score or a match time, and it shows at once. A manual correction is never overwritten by a sync. It is flagged if the source disagrees. |
+| TEN-9 | Find and enter tournaments. | Every Thursday at noon (entries open Thursday mornings), the app searches the tournament site for Rookie tournaments open for online entry near home, picks his event in each (by default: name has "orange", prefers "U9", never girls' or doubles events; editable on the Sources page) and keeps those within the drive limit (default 2 h, from a routing service; without one, a straight-line radius that errs on the near side). Never two tournaments on overlapping dates, nor one overlapping a tournament he's already in; the closest wins. It enters him where it can. Anything it can't finish (not entered, or payment needed) shows on the Tennis page with the site's entry link, so the owner can finish and pay. A tournament he's already on the list for (entered by hand) is recorded, not entered again. The home postal code (set on the Sources page, never in the repository) is sent only to the tournament site's search and, with the venue's public address, to the routing service. |
+| TEN-10 | Acceptance list. | Every Friday at 10:00, for each tournament he's entered in (or that was found for him), the app reads the event's entry list and records "main draw" or "reserve list (place)". Dropping off the list shows as "not on the entry list any more". |
+| TEN-11 | Draw watch and opponent level. | From Monday morning (draws come out the Monday before a weekend tournament), every hour until his draw is out (Monday to Wednesday, 07:00–21:00), the app checks the tournaments of the coming week. Once his draw is out, it runs the full tennis sync: his match schedule and next opponent (TEN-3), the opponent's profile one hop out, and a win % (TEN-6). The next-match card shows the opponent's level: tournaments and W–L in the last 12 months, and the head-to-head. A run with nothing to watch makes no requests. |
 
 ### 3.6 Swimming (SWM)
 | ID | Requirement | Acceptance criteria |
@@ -405,6 +408,7 @@ for any service that isn't available in Toronto.
 | `conflict` | id, event_a, event_b, detected_at, resolved_at, resolution |
 | `tennis_player` | id, external_id, name, club, rating, rating_rd |
 | `tennis_tournament` / `tennis_match` | tournament, draw, round, players, score, winner, scheduled_at, source, manual_correction |
+| `tennis_entry` | tournament, event, dates, venue, drive minutes, status (found, entered, payment_needed, main_draw, reserve, withdrawn, skipped), reserve place, his tournament player number, draw seen/synced (TEN-9..11) |
 | `swim_meet` / `swim_entry` / `swim_result` | meet, course, event (distance+stroke), seed_time, time_ms, splits, place, is_pb, manual_correction |
 | `school_period` | date, period, course, room, teacher |
 | `classroom_item` | course, title, due_at, state, grade, max_points, link |

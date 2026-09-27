@@ -244,3 +244,39 @@ page. Three method calls per sync plus paging, 2 s apart.
   at connect time (F-6). `infra/README.md` has the exact steps.
 - **Secret Manager values:** pasting into `--data-file=-` and pressing Enter
   stores a trailing newline; use `read -rs V && printf '%s' "$V" | …`.
+
+## SP-7: tournament search, entry lists and entering (M3b.1, 2026-09-27, public part done)
+
+**Checked:** `tc.tournamentsoftware.com` signed out, from the owner's Mac,
+page structure only (tags, classes, counts, labels of the site's own
+filters). No names from entry lists went into the transcript or the repo.
+About 40 requests, 2 s apart.
+
+**Page map (public):**
+| Page | Path | Gives |
+|---|---|---|
+| Tournament search (fragment, POST, `X-Requested-With`) | `/find/tournament/DoSearch` | 20 results a page (`Page=n`): ID, name, venue, start and end (`time[datetime]`), category tags, and an "Online Entry" button while entry is open. Filters: `TournamentExtendedFilter.StatusFilterID=2` (online entry open), `TournamentExtendedFilter.TournamentCategoryIDList[0]=7207` (Rookie), `TournamentFilter.PostalCode` + `TournamentFilter.Distance` (km: 5…1000), `TournamentFilter.DateFilterType=0`. No anti-forgery token needed. |
+| Event list | `/sport/events.aspx?id=<t>` | Every event: `event.aspx?id=<t>&event=<n>` and its name. Names vary by organiser: "U10 (Orange Ball)", "U9 Orange Boys", "RT 9 - 12 (Green)". |
+| Event page | `/sport/event.aspx?id=<t>&event=<n>` | Once draws are made, a `table.ruler` of draws (`draw.aspx?id=<t>&draw=<n>`, size, type). Always a `table.ruler` captioned "Entries (n)": per row, a status cell ("Maindraw", class `green elt1`; "Reserve list N", class `orange elt9998`), the player link (`player.aspx?id=<t>&player=<tournament player number>`) and seed. Before the acceptance list the rows have no status. |
+| Tournament overview | `/tournament/<t>` | As SP-2, plus the entry link `/individual-entry/<t>`. |
+| Entry form | `/individual-entry/<t>` | **Redirects to `/user/login`** when signed out. |
+
+**Findings:**
+- Acceptance lists and draws are public, so TEN-10 and TEN-11 need no
+  login. His row is found by name (word order and case don't matter),
+  then by his tournament player number once known.
+- Rookie events are for U10 and younger; U9 orange events sit in Rookie
+  tournaments, so the search filters on it.
+- The search's distance is straight-line km from a postal code; drive
+  time comes from a routing service (Google Routes API).
+
+**Still to do (needs the owner):** the signed-in entry flow. The owner
+signs in on the site in the Claude desktop app's browser pane (as for
+SP-3); Claude reads the entry form's structure only and submits nothing.
+Questions: which fields and steps the form has for one event, whether a
+Rookie entry is free or goes to a payment step, and what the page shows
+once an entry is in but unpaid. Then M3b.6 builds the registrar with the
+stored login.
+
+**Fixtures:** `tests/fixtures/tennis-tc/entries/*.html` are hand-built
+from these structures with invented names and IDs (not recorded pages).

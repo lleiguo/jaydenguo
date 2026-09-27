@@ -36,6 +36,7 @@ export default async function globalSetup() {
       `delete from conflicts where event_a in (${tennisEvents}) or event_b in (${tennisEvents})`,
     );
     await pool.query(`delete from events where id in (${tennisEvents})`);
+    await pool.query("delete from tennis_entries");
     await pool.query("delete from tennis_match_revisions");
     await pool.query("delete from tennis_matches");
     await pool.query("delete from tennis_draws");

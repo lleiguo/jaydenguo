@@ -57,9 +57,28 @@ function routes(): Map<string, string> {
       `/player-profile/${next.profileId}/tournaments/2024/TournamentsForYear`,
       "opponent-next-year-current.html",
     ],
+    // Tournament entries (SP-7): search, event lists, overviews, event pages.
+    ["/find/tournament/DoSearch", "entries/search.html"],
+    [`/sport/events.aspx?id=${ENTRY_FIXTURE.a}`, "entries/events-a.html"],
+    [`/sport/events.aspx?id=${ENTRY_FIXTURE.b}`, "entries/events-b.html"],
+    [`/sport/events.aspx?id=${ENTRY_FIXTURE.c}`, "entries/events-c.html"],
+    [`/tournament/${ENTRY_FIXTURE.a}`, "entries/tournament-a.html"],
+    [`/tournament/${ENTRY_FIXTURE.b}`, "entries/tournament-b.html"],
+    [`/sport/event.aspx?id=${ENTRY_FIXTURE.a}&event=6`, "entries/event-a6.html"],
+    [`/sport/event.aspx?id=${f.currentTournament}&event=13`, "entries/event-current.html"],
   ]);
   return new Map([...r].map(([k, v]) => [k.toLowerCase(), v]));
 }
+
+// The hand-built entry pages' tournaments: A has his event (U9 Orange Boys,
+// event 6), B clashes with A and is farther, C has no orange event.
+export const ENTRY_FIXTURE = {
+  a: "a0000000-0000-4000-8000-00000000000a",
+  b: "b0000000-0000-4000-8000-00000000000b",
+  c: "c0000000-0000-4000-8000-00000000000c",
+  // His tournament player number in the fixture's current tournament.
+  selfCurrentTp: "1021",
+};
 
 type Options = {
   // Replace a page's HTML (e.g. a changed score) for one test.
@@ -78,7 +97,8 @@ export function createFakeTc(opts: Options = {}): Server {
   );
   return createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
-    const path = url.pathname.toLowerCase();
+    // The old /sport/*.aspx pages are told apart by their query string.
+    const path = (url.pathname + (url.pathname.endsWith(".aspx") ? url.search : "")).toLowerCase();
     opts.requests?.push(url.pathname);
     const to = redirects.get(path);
     if (to) {
