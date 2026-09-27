@@ -32,7 +32,7 @@ same commit as the code (see [../README.md](../README.md)).
 | Area | Choice |
 |---|---|
 | Runtime | Node.js 22 LTS, TypeScript (strict), pnpm |
-| Web | Next.js (App Router) in `output: standalone` mode, Auth.js v5 |
+| Web | Next.js (App Router) in `output: standalone` mode. Own Google OpenID Connect sign-in (`openid-client`), `__session` cookie, Postgres sessions (F-14 option A) |
 | API | Route handlers under `/api/v1/*`. zod schemas generate the OpenAPI document (`/api/v1/openapi.json`). |
 | Database | PostgreSQL 16. Drizzle ORM with versioned SQL migrations (drizzle-kit). |
 | UI | FullCalendar (standard), Recharts, Tailwind CSS, PWA manifest and service worker |
@@ -139,7 +139,7 @@ Claude Code. They are rough and will be revised after each milestone.
 ### M1 (slice S1): Foundation (≈ 12 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
-| M1.1 | Google sign-in with an allow-list (owner only). Implementation depends on the F-14 decision: A = own OpenID Connect sign-in with a single `__session` cookie and Postgres sessions; B = Auth.js behind a load balancer. All responses send `Cache-Control: private, no-store` (Firebase Hosting is a CDN). Middleware guards every page and `/api/v1/*`. "Sign out everywhere". Login rate limit. Dev-only login shortcut, with a CI check that it's absent from the production build. | AUTH-1..4, NFR-2 | An e2e test proves that a non-allow-listed account and an anonymous request are refused on every route (route list generated, not hand-written). |
+| M1.1 | Google sign-in with an allow-list (owner only): own OpenID Connect flow (authorization code + PKCE; state and verifier kept server-side against a pre-login session), a single `__session` cookie (HttpOnly, Secure, SameSite=Lax) holding a random session ID, sessions table in Postgres with expiry and revocation (F-14 option A). All responses send `Cache-Control: private, no-store` (Firebase Hosting is a CDN). Middleware guards every page and `/api/v1/*`. "Sign out everywhere". Login rate limit. Dev-only login shortcut, with a CI check that it's absent from the production build. | AUTH-1..4, NFR-2 | An e2e test proves that a non-allow-listed account and an anonymous request are refused on every route (route list generated, not hand-written). |
 | M1.2 | Crypto module: envelope encryption (AES-256-GCM data keys wrapped by KMS; a local key in dev). `key_version`. Rotation command. Log redaction helper. | CRED-3, CRED-5, §7.3 | Unit tests. An integration test proves a sync log contains no secret. The rotation test re-wraps all keys. |
 | M1.3 | Connected accounts page and API. Write-only secret fields, "Test connection", remove (deletes ciphertext and revokes OAuth), audit log entries. Google OAuth connect flow with scopes requested only when needed. | CRED-1,2,4,6,7 | e2e test: add, test, update and remove a credential. The API has no route that returns a secret. |
 | M1.4 | Schema for events, overrides, revisions, locations and conflicts. Upsert engine (insert, update with revision, mark cancelled, respect overrides and manual corrections, "source changed" flag). | CAL-6, CON-5, SYNC-3 | Property tests: running twice gives no changes; overrides are never lost; nothing is hard-deleted. |

@@ -22,9 +22,17 @@ terraform {
 provider "google" {
   project = var.project_id
   region  = var.region
+  # Bill API quota to this project. Required by APIs such as Billing Budgets
+  # when Terraform runs with a person's own gcloud credentials.
+  user_project_override = true
+  billing_project       = var.project_id
 }
 
 provider "google-beta" {
   project = var.project_id
   region  = var.region
+  # Bill API quota to this project. Required by APIs such as Billing Budgets
+  # when Terraform runs with a person's own gcloud credentials.
+  user_project_override = true
+  billing_project       = var.project_id
 }

@@ -3,6 +3,7 @@ data "google_project" "this" {}
 # One alert budget for the whole project (spec NFR-7). A separate AI budget
 # is added in M5 once the Vertex AI billing service is confirmed (SP-6).
 resource "google_billing_budget" "project" {
+  count           = var.create_budget ? 1 : 0
   billing_account = var.billing_account_id
   display_name    = "hub monthly"
 
@@ -29,6 +30,13 @@ resource "google_billing_budget" "project" {
   threshold_rules {
     threshold_percent = 1.0
     spend_basis       = "FORECASTED_SPEND"
+  }
+
+  lifecycle {
+    precondition {
+      condition     = var.billing_account_id != ""
+      error_message = "Set billing_account_id, or set create_budget = false."
+    }
   }
 
   depends_on = [google_project_service.enabled]

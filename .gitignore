@@ -48,6 +48,5 @@ next-env.d.ts
 
 # terraform
 /infra/.terraform/
-/infra/.terraform.lock.hcl
 /infra/*.tfvars
 !/infra/example.tfvars

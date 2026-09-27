@@ -7,12 +7,12 @@ import { createDb, createPool } from "./client";
 // user read/write access. The same function runs locally, in CI and in
 // production (as the `migrate` worker job, which owns the schema).
 export async function runMigrations(migrationsFolder = defaultFolder(), webDbUser = process.env.WEB_DB_USER) {
-  const pool = await createPool();
+  const { pool, close } = await createPool();
   try {
     await migrate(createDb(pool), { migrationsFolder });
     if (webDbUser) await grantWebAccess(pool, webDbUser);
   } finally {
-    await pool.end();
+    await close();
   }
 }
 

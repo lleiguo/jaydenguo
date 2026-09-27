@@ -24,8 +24,14 @@ project yet.
 in step 4 of `infra/README.md`. The first `terraform apply` is the final
 check: it fails on any resource the region doesn't offer.
 
-**Result:** open until the owner runs the script. If a service is missing,
-switch that service (or `var.region`) to Montréal and update this note.
+**Result (2026-09-26):** the owner's first `terraform apply` in
+`northamerica-northeast2` succeeded. So Toronto offers every resource in
+`infra/`: Cloud Run service and job, Cloud SQL PG16 with in-region backups,
+KMS, Secret Manager replica, Artifact Registry, Storage, regional log bucket,
+and Firebase Hosting rewrites to Cloud Run (the F-14 region question). The
+region script failed on macOS for an unrelated reason (no `timeout`
+command) and has been fixed; its output only adds Cloud Scheduler, which
+is created in M1.5.
 
 ## Other findings during M0
 
