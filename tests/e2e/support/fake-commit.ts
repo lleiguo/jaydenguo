@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { CommitRaw } from "../../../src/adapters/commit-swim/extract";
+import { FAKE_COMMIT_PORT } from "./fake-commit-port";
 
 // A stand-in for team.commitswimming.com (SP-3) for integration and e2e
 // tests: a sign-in page and a team dashboard whose `window.Meteor` answers
@@ -8,7 +9,6 @@ import type { CommitRaw } from "../../../src/adapters/commit-swim/extract";
 // family's swimmer is mixed in, to prove the extractor only returns ours.
 // Loopback only, like the fake Google server.
 
-export const FAKE_COMMIT_PORT = Number(process.env.FAKE_COMMIT_PORT ?? 4466);
 export const FAKE_COMMIT_LOGIN = { username: "parent@example.test", password: "fixture-password" };
 export const OTHER_FAMILY_NAME = "Otherkid Private";
 

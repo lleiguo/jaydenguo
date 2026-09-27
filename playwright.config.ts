@@ -1,6 +1,7 @@
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { APP_URL, AUTH_SECRET, E2E_PORT, OWNER, PROJECTS, soleOwner } from "./tests/e2e/support/env";
+import { FAKE_COMMIT_PORT } from "./tests/e2e/support/fake-commit-port";
 import { FAKE_OIDC_PORT } from "./tests/e2e/support/fake-oidc-port";
 
 // Cloud sessions ship a pre-installed Chromium; CI installs its own.
@@ -26,6 +27,12 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
+      // Stands in for Commit Swimming (tests/e2e/support/fake-commit.ts).
+      command: "pnpm exec tsx tests/e2e/support/fake-commit.ts",
+      url: `http://127.0.0.1:${FAKE_COMMIT_PORT}/sign-in`,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       command: `PORT=${E2E_PORT} HOSTNAME=127.0.0.1 node .next/standalone/server.js`,
       url: `${APP_URL}/api/healthz`,
       reuseExistingServer: !process.env.CI,
@@ -40,6 +47,7 @@ export default defineConfig({
         GOOGLE_API_BASE: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
         // Jobs the site starts run as local processes of the built worker.
         WORKER_COMMAND: `node ${path.resolve("dist/worker.mjs")}`,
+        COMMIT_SWIM_BASE_URL: `http://127.0.0.1:${FAKE_COMMIT_PORT}`,
       },
     },
   ],

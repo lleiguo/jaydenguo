@@ -266,6 +266,23 @@ before M2.
   serves another family's swimmer to prove none of it is kept.
   `COMMIT_SWIM_BASE_URL` points the adapter at it and only accepts loopback
   addresses. "Test connection" signs in to Commit Swimming.
+- M2.4: the swimming pages are server-rendered from the same read models
+  as `/api/v1/swim/*` (spec §1.1), so a future app gets the same data.
+  "Refresh" on the page starts the Commit Swimming sync (SYNC-2).
+- M2.5: the progression chart is a small hand-drawn SVG component instead
+  of Recharts: it renders on the server, sets no inline styles (the strict
+  CSP stays clean without client-only rendering), and adds no dependency.
+  Faster times are higher; the PB line steps; every value is also in the
+  table under it; keyboard focus shows each swim's details.
+- M2.6: the forecast fits against time since his first swim in the event,
+  not age: for this curve the two give the same fit, so no birth date is
+  stored. It fits every timed swim with a robust (Huber) loss rather than
+  only the PB points, so the estimate is of a typical swim, not a best.
+  The range is 90% of the residual spread, corrected for small samples and
+  widened the further past the data it reaches. `scripts/swim-backtest.ts`
+  reports aggregate errors only (the repository is public).
+- M2.7: a correction can be undone ("Use Commit's time"), which returns
+  the row to the source's values. Results are soft-deleted.
 
 ### M3 (slice S3): Tennis (≈ 8 days)
 | Task | Description | Spec | Done when |
@@ -371,7 +388,7 @@ or his opponents.
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
-| M2 Swimming (S2) | in progress. M2.1 (SP-3) done 2026-09-27: page map in spikes.md, scrubbed fixture saved. |
+| M2 Swimming (S2) | built 2026-09-27 (M2.1–M2.7), awaiting merge and the live smoke test. SP-3 page map in spikes.md. |
 | M3 Tennis (S3) | not started |
 | M4 School (S4) | not started |
 | M5 Extras (S5) | not started |
