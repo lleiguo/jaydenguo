@@ -7,11 +7,11 @@ import { apiSend } from "./api";
 // Times are in the default home time zone, America/Toronto.
 
 export function isolatedWeek(testIndex: number, project: string): string {
-  // Mondays from 2028-01-03, one per test and project (five each), all
+  // Mondays from 2027-12-20, one per test and project (six each), all
   // before the March daylight-saving change and within the two years that
   // repeating events are written out.
-  if (testIndex > 4) throw new Error("add more isolated weeks");
-  const base = Date.UTC(2028, 0, 3) + ((project === "phone" ? 5 : 0) + testIndex) * 7 * 86_400_000;
+  if (testIndex > 5) throw new Error("add more isolated weeks");
+  const base = Date.UTC(2027, 11, 20) + ((project === "phone" ? 6 : 0) + testIndex) * 7 * 86_400_000;
   return new Date(base).toISOString().slice(0, 10);
 }
 
@@ -21,7 +21,7 @@ export const RUN = Date.now().toString(36);
 export const addDays = (date: string, n: number) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
-// Toronto is UTC-5 in winter (the isolated weeks are January-March 2028).
+// Toronto is UTC-5 in winter (the isolated weeks are December 2027-March 2028).
 export const toronto = (date: string, hhmm: string) => new Date(`${date}T${hhmm}:00-05:00`).toISOString();
 
 export async function addEvent(
