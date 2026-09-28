@@ -70,6 +70,10 @@ export const swimEntries = pgTable(
     stroke: text("stroke").notNull(),
     course: text("course").notNull(),
     seedTimeMs: integer("seed_time_ms"),
+    // Which day of the meet (1 = first) and the session's start, "HH:MM" in
+    // the meet's local time, when the source says.
+    meetDay: integer("meet_day"),
+    sessionStart: text("session_start"),
     // withdrawn: the source stopped listing the entry.
     status: text("status").notNull().default("active"),
     createdAt: ts("created_at").notNull().defaultNow(),

@@ -242,22 +242,37 @@ export async function signIn(
 }
 
 type Child = { name: string; scheduleUrl: string };
+const DAILY_SCHEDULE_LINK = 'a[href*="/student/"][href*="/daily-schedule"]';
 
 async function findStudent(page: Page, portal: string, firstName: string | null): Promise<string> {
   if (!onPortal(page.url(), portal) || new URL(page.url()).pathname !== new URL(portal).pathname)
     await page.goto(portal, { waitUntil: "domcontentloaded" });
   // "My Children" is drawn by the page's scripts after it loads.
-  await page.waitForSelector('a[href$="/daily-schedule"]').catch(() => {
-    throw new SyncError("Signed in to Veracross, but no student's Daily Schedule is listed.");
-  });
-  const children: Child[] = await page.$$eval('a[href$="/daily-schedule"]', (links) => {
+  // The links may sit in a menu that's hidden until hovered: present is enough.
+  const listed = await page
+    .waitForSelector(DAILY_SCHEDULE_LINK, { state: "attached" })
+    .then(() => true)
+    .catch(() => false);
+  if (!listed) {
+    // Where it looked, with numbers hidden, so the next fix isn't a guess.
+    const path = new URL(page.url()).pathname.replace(/\d+/g, "N");
+    const studentLinks = await page.locator('a[href*="/student/"]').count();
+    throw new SyncError(
+      `Signed in to Veracross, but no student's Daily Schedule is listed (page ${path}, ${studentLinks} student links).`,
+    );
+  }
+  const children: Child[] = await page.$$eval(DAILY_SCHEDULE_LINK, (links) => {
     const out: { name: string; scheduleUrl: string }[] = [];
     for (const a of links as HTMLAnchorElement[]) {
       let box: Element | null = a;
       while (box && box.querySelectorAll(".vx-child-name").length === 0) box = box.parentElement;
       const names = box ? box.querySelectorAll(".vx-child-name") : [];
       const name = names.length === 1 ? (names[0].textContent ?? "").trim() : "";
-      if (!out.some((c) => c.scheduleUrl === a.href)) out.push({ name, scheduleUrl: a.href });
+      const scheduleUrl = a.href.split("?")[0];
+      // The same child can appear twice (menu and page); keep the named one.
+      const seen = out.find((c) => c.scheduleUrl === scheduleUrl);
+      if (!seen) out.push({ name, scheduleUrl });
+      else if (!seen.name) seen.name = name;
     }
     return out;
   });

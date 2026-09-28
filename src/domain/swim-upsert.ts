@@ -10,7 +10,14 @@ import type { Course, Stroke } from "./swim-constants";
 
 export type SwimSplit = { distance: number; ms: number };
 
-export type SwimEntryRecord = { distance: number; stroke: Stroke; course: Course; seedTimeMs: number | null };
+export type SwimEntryRecord = {
+  distance: number;
+  stroke: Stroke;
+  course: Course;
+  seedTimeMs: number | null;
+  meetDay: number | null;
+  sessionStart: string | null; // "HH:MM", meet local time
+};
 
 export type SwimMeetRecord = {
   externalId: string;

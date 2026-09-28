@@ -1,5 +1,12 @@
 import { categorise } from "../../domain/categories";
-import { eventLabel, normaliseCourse, normaliseStroke, formatSwimTime } from "../../domain/swim";
+import {
+  eventLabel,
+  formatSwimTime,
+  normaliseCourse,
+  normaliseStroke,
+  sessionDate,
+  sessionTime,
+} from "../../domain/swim";
 import type { Course } from "../../domain/swim-constants";
 import type { SwimEntryRecord, SwimMeetRecord, SwimResultRecord, SwimSplit } from "../../domain/swim-upsert";
 import { addDays, isValidTimeZone, localDate } from "../../domain/time";
@@ -32,7 +39,14 @@ function entryRecords(s: CommitSignup, fallbackCourse: Course | null, warnings: 
       warnings.push(`An entry at "${s.title}" had an unknown event and was skipped.`);
       continue;
     }
-    out.push({ distance: e.distance, stroke, course, seedTimeMs: cs(e.seedTime) });
+    out.push({
+      distance: e.distance,
+      stroke,
+      course,
+      seedTimeMs: cs(e.seedTime),
+      meetDay: e.day && e.day > 0 ? e.day : null,
+      sessionStart: sessionTime(e.sessionStart),
+    });
   }
   return out;
 }
@@ -224,13 +238,23 @@ export function normaliseCommit(raw: CommitRaw, ctx: AdapterContext): Normalised
     const entries = (m.entries ?? []).map(
       (e) => `${eventLabel(e)}${e.seedTimeMs ? ` (seed ${formatSwimTime(e.seedTimeMs)})` : ""}`,
     );
+    const sessions = [
+      ...new Set(
+        (m.entries ?? []).flatMap((e) =>
+          e.sessionStart ? [`${sessionDate(m.startDate, e.meetDay)} ${e.sessionStart}`] : [],
+        ),
+      ),
+    ].sort();
     pushEvent(
       m.externalId,
       m.name,
       m.startDate,
       m.endDate,
       m.externalId.startsWith("result:") ? "yes" : m.signup,
-      entries.length ? [`Entered: ${entries.join(", ")}`] : [],
+      [
+        ...(entries.length ? [`Entered: ${entries.join(", ")}`] : []),
+        ...(sessions.length ? [`Session${sessions.length > 1 ? "s" : ""}: ${sessions.join(", ")}`] : []),
+      ],
       [m.venue, m.city].filter(Boolean).join(", ") || null,
       m.sourceUrl ?? meetsUrl,
     );

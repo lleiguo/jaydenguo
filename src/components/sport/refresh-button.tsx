@@ -4,21 +4,22 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { call } from "@/components/calendar/api";
 
-// SYNC-2: "Refresh" on the sport page starts a sync of its source(s). The
-// same one-per-hour limit applies; the Sources page shows progress.
+// SYNC-2: "Refresh" on the sport page starts a sync of its source(s), and
+// on the calendar of every source ("all"). The same one-per-hour limit
+// applies; the Sources page shows progress.
 export function RefreshButton({
   sourceIds,
   site,
   what,
 }: {
-  sourceIds: string[];
+  sourceIds: string[] | "all";
   // e.g. "Commit Swimming", and what its source syncs.
   site: string;
   what: string;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
-  if (!sourceIds.length)
+  if (sourceIds !== "all" && !sourceIds.length)
     return (
       <p className="text-sm text-neutral-600 dark:text-neutral-400">
         Add a {site} source on the{" "}
@@ -35,7 +36,8 @@ export function RefreshButton({
         className="rounded border px-3 py-1"
         onClick={async () => {
           try {
-            for (const id of sourceIds) await call(`/api/v1/sources/${id}/refresh`);
+            if (sourceIds === "all") await call("/api/v1/sources/refresh-all");
+            else for (const id of sourceIds) await call(`/api/v1/sources/${id}/refresh`);
             setMessage(`Refreshing from ${site}. This takes a minute or two.`);
             setTimeout(() => router.refresh(), 90_000);
           } catch (err) {

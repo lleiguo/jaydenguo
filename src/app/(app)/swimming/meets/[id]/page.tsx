@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { AddResultForm } from "@/components/swim/add-result-form";
 import { ResultsTable } from "@/components/swim/results-table";
-import { eventLabel, formatSwimTime } from "@/domain/swim";
+import { eventLabel, formatSession, formatSwimTime } from "@/domain/swim";
 import { getDb } from "@/server/db";
 import { loadMeet } from "@/server/swim/load";
 import { localDate } from "@/domain/time";
@@ -48,6 +48,7 @@ export default async function MeetPage({ params }: PageProps<"/swimming/meets/[i
               <li key={e.key}>
                 {eventLabel(e)}
                 {e.seedTimeMs ? ` · seed ${formatSwimTime(e.seedTimeMs)}` : " · no seed time"}
+                {e.session && ` · session ${formatSession(e.session)}`}
               </li>
             ))}
           </ul>

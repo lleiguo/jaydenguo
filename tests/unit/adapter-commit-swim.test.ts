@@ -50,11 +50,12 @@ describe("Commit Swimming adapter (SRC-6, SWM-1..3)", () => {
     expect(meet("result:rm024")).toMatchObject({ startDate: "2022-11-20", entries: null, signup: null });
   });
 
-  it("reads entries with seed times in ms", () => {
+  it("reads entries with seed times in ms and session start times", () => {
+    const session = { meetDay: 1, sessionStart: "16:30" };
     expect(meet("signup:su009")?.entries).toEqual([
-      { distance: 200, stroke: "im", course: "SCM", seedTimeMs: 265100 },
-      { distance: 50, stroke: "back", course: "SCM", seedTimeMs: null },
-      { distance: 100, stroke: "free", course: "SCM", seedTimeMs: 134730 },
+      { distance: 200, stroke: "im", course: "SCM", seedTimeMs: 265100, ...session },
+      { distance: 50, stroke: "back", course: "SCM", seedTimeMs: null, ...session },
+      { distance: 100, stroke: "free", course: "SCM", seedTimeMs: 134730, ...session },
     ]);
   });
 
@@ -101,7 +102,7 @@ describe("Commit Swimming adapter (SRC-6, SWM-1..3)", () => {
     });
     const entered = batch.records.find((r) => r.externalId === "signup:su009")!;
     expect(entered.notes).toBe(
-      "Entered: 200 IM SCM (seed 4:25.10), 50 Back SCM, 100 Free SCM (seed 2:14.73)",
+      "Entered: 200 IM SCM (seed 4:25.10), 50 Back SCM, 100 Free SCM (seed 2:14.73)\nSession: 2024-04-28 16:30",
     );
     const team = batch.records.find((r) => r.externalId === "signup:su002")!;
     expect(team).toMatchObject({ title: "Team Event 2", allDay: true, category: "swimming" });

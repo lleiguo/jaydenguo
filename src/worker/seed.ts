@@ -307,8 +307,8 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     signup: "yes",
     sourceUrl: null,
     entries: [
-      { distance: 200, stroke: "im", course: "SCM", seedTimeMs: 232000 },
-      { distance: 50, stroke: "free", course: "SCM", seedTimeMs: 42100 },
+      { distance: 200, stroke: "im", course: "SCM", seedTimeMs: 232000, meetDay: 1, sessionStart: "08:30" },
+      { distance: 50, stroke: "free", course: "SCM", seedTimeMs: 42100, meetDay: 2, sessionStart: "16:00" },
     ],
   });
   await syncSwim(db, swim, { meets, results, window }, { actor: "seed" });
