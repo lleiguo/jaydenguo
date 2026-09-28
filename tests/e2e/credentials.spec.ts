@@ -118,6 +118,51 @@ test("a Google account can be connected, tested and removed (revoked)", async ({
   await expect.poll(async () => (await credentialRows(label)).length, { timeout: 30_000 }).toBe(0);
 });
 
+test("a school account can be connected for Classroom and its classes are counted (SP-5)", async ({
+  page,
+  context,
+}, testInfo) => {
+  const account = `school-${testInfo.project.name}@example.test`;
+  await signInAs(context, OWNER);
+  await page.goto("/settings/accounts");
+  await page
+    .getByRole("region", { name: "Google" })
+    .getByRole("link", { name: "Connect school account (Classroom)" })
+    .click();
+  await page.getByRole("link", { name: account }).click();
+  await expect(page).toHaveURL(/\/settings\/accounts$/);
+
+  const label = `Google (${account})`;
+  await expect(card(page, label)).toContainText("Classroom: 3 active classes readable");
+  const [row] = await credentialRows(label);
+  expect(row.scopes).toEqual(
+    expect.arrayContaining([
+      "https://www.googleapis.com/auth/classroom.courses.readonly",
+      "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+    ]),
+  );
+  expect(row.scopes).not.toContain("https://www.googleapis.com/auth/calendar.readonly");
+  // Only a count is kept: no class names.
+  expect(JSON.stringify(row.meta)).not.toContain("Science");
+
+  await card(page, label).getByRole("button", { name: "Test connection" }).click();
+  await expect(page.getByText(`${label}: connection works.`)).toBeVisible({ timeout: 30_000 });
+
+  page.once("dialog", (d) => d.accept());
+  await card(page, label).getByRole("button", { name: "Remove" }).click();
+  await expect.poll(async () => (await credentialRows(label)).length, { timeout: 30_000 }).toBe(0);
+});
+
+test("a school admin's refusal is shown with Google's error code (F-5)", async ({ page, context }) => {
+  await signInAs(context, OWNER);
+  await page.goto("/settings/accounts");
+  await page.getByRole("link", { name: "Connect school account (Classroom)" }).click();
+  await page.getByRole("link", { name: "blocked-school@example.test" }).click();
+  await expect(page).toHaveURL(/error=google&reason=admin_policy_enforced/);
+  await expect(page.getByRole("status")).toHaveText("Google refused the connection (admin_policy_enforced).");
+  expect(await credentialRows("Google (blocked-school@example.test)")).toHaveLength(0);
+});
+
 test("the credentials API refuses bad input and has no secret field", async ({ context }) => {
   await signInAs(context, OWNER);
   const bad = await context.request.post("/api/v1/credentials", {

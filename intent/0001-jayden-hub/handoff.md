@@ -66,7 +66,7 @@ and [spikes.md](spikes.md) SP-4.
    highlighted, upcoming due dates in the agenda, grades per course with a
    trend. Needs new tables (e.g. courses, assignments, submissions or
    grades): edit `db/schema/`, then `pnpm db:generate --name school`.
-   The next migration is 0009.
+   The next migration is 0010 (M3b took 0009).
 4. **M4.4 links and layer:** every school item links back to Classroom or
    Veracross (SCH-5); homework due dates and school events sit in the
    School layer (CAL-3a). e2e test.

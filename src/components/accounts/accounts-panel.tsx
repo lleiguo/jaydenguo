@@ -6,6 +6,11 @@ import { useCallback, useEffect, useState } from "react";
 // the API never returns them, and the page shows only "••••" and the date
 // they were last changed.
 
+// Shape of `meta.classroom` (src/adapters/classroom/api.ts).
+type ClassroomProbe =
+  | { ok: true; checkedAt: string; courses: number }
+  | { ok: false; checkedAt: string; status: number | null; reason: string };
+
 type Credential = {
   id: string;
   kind: "oauth" | "password" | "secret_url";
@@ -13,6 +18,7 @@ type Credential = {
   label: string;
   username: string | null;
   scopes: string[] | null;
+  meta: { classroom?: ClassroomProbe } | null;
   status: string;
   updatedAt: string;
   lastUsedAt: string | null;
@@ -114,12 +120,18 @@ export function AccountsPanel() {
         {google.map((c) => (
           <CredentialRow key={c.id} c={c} onTest={() => test(c)} onRemove={() => remove(c)} onSaved={load} />
         ))}
-        <a
-          className="self-start rounded-md border px-3 py-2 text-sm"
-          href="/accounts/google/connect?feature=calendar"
-        >
-          {google.length ? "Reconnect Google" : "Connect Google account"}
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a className="rounded-md border px-3 py-2 text-sm" href="/accounts/google/connect?feature=calendar">
+            {google.length ? "Reconnect Google" : "Connect Google account"}
+          </a>
+          {/* Jayden's school account (SRC-8): pick it in Google's account chooser. */}
+          <a
+            className="rounded-md border px-3 py-2 text-sm"
+            href="/accounts/google/connect?feature=classroom"
+          >
+            Connect school account (Classroom)
+          </a>
+        </div>
       </ProviderSection>
 
       {PROVIDERS.map((p) => {
@@ -195,6 +207,14 @@ function CredentialRow(props: {
           ` · last test ${fmt(c.lastTestAt)}: ${c.lastTestOk ? "worked" : (c.lastError ?? "not available")}`}
         {c.status === "removing" && " · removing…"}
       </div>
+      {c.meta?.classroom && (
+        <div className={c.meta.classroom.ok ? "" : "text-red-700 dark:text-red-400"}>
+          {c.meta.classroom.ok
+            ? `Classroom: ${c.meta.classroom.courses} active ${c.meta.classroom.courses === 1 ? "class" : "classes"} readable`
+            : `Classroom refused: ${c.meta.classroom.reason}`}{" "}
+          (checked {fmt(c.meta.classroom.checkedAt)})
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         <button className="rounded border px-2 py-1" onClick={props.onTest}>
           Test connection

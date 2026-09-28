@@ -412,6 +412,17 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
 | M4.3 | Classroom adapter (API), or the chosen fallback (guardian emails via EML, or manual). | SRC-8, SCH-3, SCH-4 | Homework with states. Missing and due-in-24 h items highlighted. Grades with a per-course trend. |
 | M4.4 | School links back to the source systems; school layer wired into the School toggle. | SCH-5, CAL-3a | e2e test. |
 
+**Build notes (M4, 2026-09-27):**
+- M4.1: the spike runs on the live site, not a script. "Connect school
+  account (Classroom)" on the Accounts page asks for the two Classroom
+  scopes with Google's account chooser (every Google connect now shows
+  it), stores the grant as its own credential, and records whether his
+  class list can be read, or Google's exact refusal (spikes.md SP-5).
+  `classroom.googleapis.com` is enabled in Terraform. The e2e fake
+  Google (`tests/e2e/support/fake-oidc.ts`) serves a sliver of the
+  Classroom API and has a school account whose admin blocks the app.
+- The next migration is 0010 (M3b took 0009).
+
 ### M5 (slice S5): Extras (≈ 10 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -500,8 +511,8 @@ or his opponents.
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
 | M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
 | M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
-| M3b Tournament entries | **built 2026-09-27 on `m3b/tournament-entries`, not merged.** Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
-| M4 School (S4) | not started. Start from [handoff.md](handoff.md). |
+| M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
+| M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |
 
