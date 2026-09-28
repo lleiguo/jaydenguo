@@ -538,3 +538,10 @@ paths redirect (307). The main menu is Calendar, Tennis, Swimming and
 Settings, with the open-clash count on Settings and on its Clashes tab.
 The Google connect flow (`/accounts/google/*`) keeps its path, since the
 redirect URI is registered with Google.
+
+CI (2026-09-28): the checks run once per change. A PR run leaves a
+`ci-tree-<git tree>` marker when everything passes; the run on `main`
+after the merge skips the checks when the merged files are the same, and
+runs them in full otherwise. Deploy caches Docker layers in the registry
+(`cache:web`, `cache:worker`), Chromium is cached per lockfile, and types
+are checked by `pnpm typecheck` only (`next build` skips them).
