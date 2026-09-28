@@ -718,3 +718,10 @@ tournament near home in the next 28 days, open or closed (the search's
 `TournamentFilter.StartDate`/`EndDate`), read each event's entry list,
 and record the ones he's on with main draw or reserve status. The
 acceptance job's request cap is 100 (was 60).
+
+Whose event (owner, 2026-09-28): a parent's own appointment on the family
+calendar (e.g. Lei's dentist) shouldn't clash with Jayden's day. The event
+detail has a "Jayden's attendance" menu on every event. For events from a
+source or a series it's saved on the override (`event_overrides.attendance`,
+migration 0015; the next is 0016), so it survives syncs, and "Use the
+source's time" keeps it. Events added here change directly.

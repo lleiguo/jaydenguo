@@ -1,0 +1,2 @@
+ALTER TABLE "event_overrides" ADD COLUMN "attendance" text;--> statement-breakpoint
+ALTER TABLE "event_overrides" ADD CONSTRAINT "event_overrides_attendance_chk" CHECK ("event_overrides"."attendance" in ('required', 'optional', 'parent_only'));

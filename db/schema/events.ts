@@ -147,6 +147,9 @@ export const eventOverrides = pgTable(
     newEndUtc: ts("new_end_utc"),
     // "Skip this one": Jayden won't attend.
     skip: boolean("skip").notNull().default(false),
+    // Whose event it is, when the owner says otherwise than the source
+    // (e.g. a parent's dentist on the family calendar is "parent_only").
+    attendance: text("attendance"),
     createdBy: text("created_by").notNull(),
     createdAt: ts("created_at").notNull().defaultNow(),
     // The source's version when the override was made, and when the source
@@ -162,6 +165,7 @@ export const eventOverrides = pgTable(
     uniqueIndex("event_overrides_active_uq")
       .on(t.eventId)
       .where(sql`${t.clearedAt} is null`),
+    check("event_overrides_attendance_chk", sql`${t.attendance} in (${inList(ATTENDANCE)})`),
   ],
 );
 

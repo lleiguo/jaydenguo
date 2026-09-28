@@ -24,6 +24,8 @@ export type EventView = {
   override: {
     id: string;
     skip: boolean;
+    // Whose event it is, when the owner changed it from the source's.
+    attendance: Attendance | null;
     moved: boolean;
     originalStart: string;
     originalEnd: string;

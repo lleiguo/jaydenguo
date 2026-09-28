@@ -85,7 +85,7 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 ### 3.2 Clash detection and resolution (CON)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| CON-1 | Two events clash when both need Jayden and their times overlap by more than 15 minutes. | Back-to-back events and overlaps of 15 min or less don't clash (owner, 2026-09-28; replaces the travel buffers). Events marked `optional` or `parent-only` never clash. School class periods clash with activities on school days, but not on closure days. |
+| CON-1 | Two events clash when both need Jayden and their times overlap by more than 15 minutes. | Back-to-back events and overlaps of 15 min or less don't clash (owner, 2026-09-28; replaces the travel buffers). Events marked `optional` or `parent-only` never clash; the owner can mark any event, including one from a source, e.g. a parent's own appointment on the family calendar. School class periods clash with activities on school days, but not on closure days. |
 | CON-2 | Clashes are highlighted everywhere. | Clashing events get a red outline and a warning icon in every view. A "Clashes" badge shows how many upcoming clashes there are (next 60 days). A clash list page shows each pair. |
 | CON-3 | Drag and drop to resolve. | Dragging an event to a new time or day saves a local override, re-runs clash detection straight away, and clears the highlight if the clash is gone. Undo is available for 10 s. Works with touch on phones (long-press to drag). |
 | CON-4 | Other ways to resolve: "skip this one" (Jayden won't attend) and "accept clash" (for example, leaving early). | Both clear the highlight. Both are recorded with who did it and when, and can be undone. |
