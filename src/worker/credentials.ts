@@ -1,9 +1,10 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import * as client from "openid-client";
-import { auditLog, credentials } from "@db/schema";
+import { auditLog, credentials, sources } from "@db/schema";
 import { CLASSROOM_SCOPES, probeClassroom } from "../adapters/classroom/api";
 import { testCommitLogin } from "../adapters/commit-swim";
 import { googleAccessToken } from "../adapters/google-calendar";
+import { testVeracrossLogin } from "../adapters/veracross";
 import { normaliseFeedUrl, politeFetch, FetchError } from "../adapters/http";
 import { SyncError } from "../adapters/types";
 import { googleConfig } from "../server/auth/oidc";
@@ -48,7 +49,12 @@ export async function openCredential(
 
 // Checks a login or link without running a sync. Returns a plain-language
 // problem, or null when it works.
-export async function checkCredential(cred: OpenedCredential): Promise<string | null> {
+// `veracrossPortal`: a Veracross login is tested against the portal link of
+// a source that uses it (the login page is per school).
+export async function checkCredential(
+  cred: OpenedCredential,
+  veracrossPortal?: string,
+): Promise<string | null> {
   try {
     if (cred.kind === "secret_url") {
       const res = await politeFetch(normaliseFeedUrl(cred.secret));
@@ -68,6 +74,11 @@ export async function checkCredential(cred: OpenedCredential): Promise<string | 
       await testCommitLogin(cred.username, cred.secret);
       return null;
     }
+    if (cred.kind === "password" && cred.provider === "veracross") {
+      if (!cred.username) return "Add the Veracross username.";
+      await testVeracrossLogin(veracrossPortal, cred.username, cred.secret);
+      return null;
+    }
     return `There's no automatic test for ${cred.provider} logins yet. It will be checked on the next sync.`;
   } catch (err) {
     if (err instanceof FetchError || err instanceof SyncError) return err.message;
@@ -82,7 +93,14 @@ export async function testCredentialJob(args: string[], ctx: JobContext) {
   const db = await ctx.db();
   const id = args[0];
   const cred = await openCredential(db, id, "test");
-  let problem = await checkCredential(cred);
+  const [portalSource] = await db
+    .select({ config: sources.config })
+    .from(sources)
+    .where(and(eq(sources.credentialId, id), eq(sources.kind, "veracross")));
+  let problem = await checkCredential(
+    cred,
+    (portalSource?.config as { portalUrl?: string } | undefined)?.portalUrl,
+  );
   if (problem === null) problem = await checkClassroom(db, cred);
   const untested = problem?.startsWith("There's no automatic test");
   await db
