@@ -79,7 +79,7 @@ describe("tennis tournament entries", () => {
     selfRow = "";
     const s = await newSource();
     const result = await runEnter(ctx(), s, { drive, registrar: manualRegistrar });
-    expect(result).toEqual({ found: 2, entered: 0, left: 1, skipped: 1 });
+    expect(result).toEqual({ listed: 0, found: 2, entered: 0, left: 1, skipped: 1 });
     const rows = await entriesOf(s.id);
     expect(rows.map((r) => [r.tournamentExternalId, r.eventName, r.status, r.driveMinutes])).toEqual([
       [ENTRY_FIXTURE.b, "U10 Orange", "skipped", 100],
@@ -106,6 +106,7 @@ describe("tennis tournament entries", () => {
     const paying: Registrar = { enter: async () => ({ result: "payment_needed" }) };
     const farOnly = async (_f: string, to: string) => (to.includes("Faraway") ? 150 : 30);
     expect(await runEnter(ctx(), s, { drive: farOnly, registrar: paying })).toEqual({
+      listed: 0,
       found: 1,
       entered: 1,
       left: 0,
@@ -147,6 +148,28 @@ describe("tennis tournament entries", () => {
     await runAcceptance(ctx(), s);
     const [gone] = (await entriesOf(s.id)).filter((r) => r.tournamentExternalId === ENTRY_FIXTURE.a);
     expect(gone.status).toBe("withdrawn");
+  });
+
+  it("finds a tournament he's on the entry list for that the app never entered him in", async () => {
+    // Entered by hand, e.g. before these jobs ran; entry may be closed now.
+    selfRow = `<tr><td class="green elt1">Maindraw</td><td><a href="player.aspx?id=${ENTRY_FIXTURE.a}&amp;player=77">Sam Fixture</a></td><td></td></tr>`;
+    const s = await newSource();
+    expect(await runAcceptance(ctx(), s)).toMatchObject({ listed: 1 });
+    const rows = await entriesOf(s.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      tournamentExternalId: ENTRY_FIXTURE.a,
+      eventNo: "6",
+      eventName: "U9 Orange Boys",
+      status: "main_draw",
+      tournamentPlayerId: "77",
+      startDate: "2024-10-05",
+      endDate: "2024-10-06",
+      city: "Nearby",
+    });
+    // Once it's followed, the list check owns it: no second row.
+    await runAcceptance(ctx(), s);
+    expect(await entriesOf(s.id)).toHaveLength(1);
   });
 
   it("the sync reads tournaments he's entered before his profile shows them", async () => {
