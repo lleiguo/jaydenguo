@@ -320,6 +320,25 @@ stored login.
 **Fixtures:** `tests/fixtures/tennis-tc/entries/*.html` are hand-built
 from these structures with invented names and IDs (not recorded pages).
 
+**Signed-in part, first look (2026-09-28):** the owner shared a
+screenshot of a finished entry's "My entry" page (structure recorded here
+only; its personal details are not). What it shows:
+- A status badge ("Entered") and an entry number (`E` + digits).
+- Sections filled in from the signed-in player's profile: Personal (name,
+  birthdate with age, gender, email), Address (postal code, city,
+  province, country, phone) and Sport (club, member ID). So an entry
+  mostly means choosing events and confirming; the personal details come
+  from the account.
+- Events: one row per event entered (e.g. "U10 (Orange Ball)") with a
+  "Withdraw" button.
+- No payment line on this page for this entry.
+
+Still open for M3b.6: the steps of the form itself before submitting (event
+choice, any terms or waiver box, whether a payment step follows), and what
+"My entry" shows when a fee is still unpaid. The next time the owner
+enters a tournament, screenshots of each step before the final submit
+would answer it; nothing needs to be submitted for the look.
+
 ## SP-5: Classroom access with Jayden's school account (M4.1, 2026-09-27, waiting on the owner)
 
 **Built for the test:** the Accounts page has "Connect school account
