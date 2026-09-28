@@ -4,6 +4,7 @@ locals {
     "artifactregistry.googleapis.com",
     "billingbudgets.googleapis.com",
     "calendar-json.googleapis.com", # household calendar (SRC-1)
+    "classroom.googleapis.com",     # homework and grades (SRC-8)
     "cloudkms.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "cloudscheduler.googleapis.com",

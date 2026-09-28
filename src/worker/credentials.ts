@@ -1,7 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import * as client from "openid-client";
 import { auditLog, credentials } from "@db/schema";
+import { CLASSROOM_SCOPES, probeClassroom } from "../adapters/classroom/api";
 import { testCommitLogin } from "../adapters/commit-swim";
+import { googleAccessToken } from "../adapters/google-calendar";
 import { normaliseFeedUrl, politeFetch, FetchError } from "../adapters/http";
 import { SyncError } from "../adapters/types";
 import { googleConfig } from "../server/auth/oidc";
@@ -80,13 +82,36 @@ export async function testCredentialJob(args: string[], ctx: JobContext) {
   const db = await ctx.db();
   const id = args[0];
   const cred = await openCredential(db, id, "test");
-  const problem = await checkCredential(cred);
+  let problem = await checkCredential(cred);
+  if (problem === null) problem = await checkClassroom(db, cred);
   const untested = problem?.startsWith("There's no automatic test");
   await db
     .update(credentials)
     .set({ lastTestAt: sql`now()`, lastTestOk: untested ? null : problem === null, lastError: problem })
     .where(eq(credentials.id, id));
   ctx.log("credential tested", { credentialId: id, ok: problem === null });
+}
+
+// A school account connected for Classroom (plan M4.1, SP-5): read its
+// course list again and keep the answer, or the school's refusal, on the
+// credential for the Accounts page.
+async function checkClassroom(db: Db, cred: OpenedCredential): Promise<string | null> {
+  if (cred.kind !== "oauth" || cred.provider !== "google") return null;
+  const [row] = await db
+    .select({ scopes: credentials.scopes, meta: credentials.meta })
+    .from(credentials)
+    .where(eq(credentials.id, cred.id));
+  if (!row?.scopes?.some((s) => CLASSROOM_SCOPES.includes(s))) return null;
+  try {
+    const classroom = await probeClassroom(await googleAccessToken(cred.secret));
+    await db
+      .update(credentials)
+      .set({ meta: { ...(row.meta as Record<string, unknown>), classroom } })
+      .where(eq(credentials.id, cred.id));
+    return classroom.ok ? null : `Classroom refused: ${classroom.reason}`;
+  } catch (err) {
+    return err instanceof SyncError ? err.message : "The Classroom test failed. Try again later.";
+  }
 }
 
 // Finishes CRED-6 "Remove" for OAuth grants: revoke at Google, then delete

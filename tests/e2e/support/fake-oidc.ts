@@ -15,7 +15,13 @@ const accounts = [
   "calendar-phone@example.test",
   "household-desktop@example.test",
   "household-phone@example.test",
+  // School accounts for Classroom (plan M4.1): one per project, and one whose
+  // school admin blocks the app, as Google does for many student accounts.
+  "school-desktop@example.test",
+  "school-phone@example.test",
+  "blocked-school@example.test",
 ];
+const BLOCKED = "blocked-school@example.test";
 
 type Pending = {
   email: string;
@@ -91,15 +97,23 @@ function familyEvents() {
   ];
 }
 
+// A sliver of the Classroom API: made-up classes.
+const COURSES = [
+  { id: "c-100", name: "Science 5", courseState: "ACTIVE" },
+  { id: "c-200", name: "Math 5", courseState: "ACTIVE" },
+  { id: "c-300", name: "French 5", courseState: "ACTIVE" },
+];
+
 async function main() {
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const jwk = { ...(await exportJWK(publicKey)), kid: "test", alg: "RS256", use: "sig" };
   const codes = new Map<string, Pending>();
-  const refreshTokens = new Set<string>();
-  const accessTokens = new Set<string>();
-  const newAccessToken = () => {
+  // Token → the account it was granted for.
+  const refreshTokens = new Map<string, string>();
+  const accessTokens = new Map<string, string>();
+  const newAccessToken = (email: string) => {
     const t = randomUUID();
-    accessTokens.add(t);
+    accessTokens.set(t, email);
     return t;
   };
 
@@ -128,6 +142,17 @@ async function main() {
     if (url.pathname.startsWith("/ical/")) {
       const feed = FEEDS[url.pathname.slice("/ical/".length)];
       return feed ? send(200, feed(), "text/calendar") : send(404, "gone", "text/plain");
+    }
+
+    if (url.pathname === "/v1/courses") {
+      const email = accessTokens.get((req.headers.authorization ?? "").replace(/^Bearer /, ""));
+      if (!email) return send(401, { error: { code: 401, status: "UNAUTHENTICATED", message: "no token" } });
+      if (!email.startsWith("school-")) {
+        return send(403, {
+          error: { code: 403, status: "PERMISSION_DENIED", message: "The caller does not have permission" },
+        });
+      }
+      return send(200, { courses: COURSES });
     }
 
     // A sliver of the Google Calendar API.
@@ -167,6 +192,13 @@ async function main() {
           .join("<br>");
         return send(200, `<!doctype html><title>Choose an account</title>${buttons}`, "text/html");
       }
+      const back = new URL(p.get("redirect_uri")!);
+      back.searchParams.set("state", p.get("state") ?? "");
+      if (chosen === BLOCKED) {
+        back.searchParams.set("error", "admin_policy_enforced");
+        res.writeHead(303, { location: back.href });
+        return res.end();
+      }
       const code = randomUUID();
       codes.set(code, {
         email: chosen,
@@ -177,9 +209,7 @@ async function main() {
         offline: p.get("access_type") === "offline",
         scope: p.get("scope") ?? "",
       });
-      const back = new URL(p.get("redirect_uri")!);
       back.searchParams.set("code", code);
-      back.searchParams.set("state", p.get("state") ?? "");
       res.writeHead(303, { location: back.href });
       return res.end();
     }
@@ -187,8 +217,9 @@ async function main() {
     if (url.pathname === "/token" && req.method === "POST") {
       const form = await readForm();
       if (form.get("grant_type") === "refresh_token") {
-        return refreshTokens.has(form.get("refresh_token") ?? "")
-          ? send(200, { access_token: newAccessToken(), token_type: "Bearer", expires_in: 300 })
+        const email = refreshTokens.get(form.get("refresh_token") ?? "");
+        return email
+          ? send(200, { access_token: newAccessToken(email), token_type: "Bearer", expires_in: 300 })
           : send(400, { error: "invalid_grant" });
       }
       const pending = codes.get(form.get("code") ?? "");
@@ -207,9 +238,9 @@ async function main() {
         .setExpirationTime("5m")
         .sign(privateKey);
       const refreshToken = pending.offline ? `refresh-${randomUUID()}` : undefined;
-      if (refreshToken) refreshTokens.add(refreshToken);
+      if (refreshToken) refreshTokens.set(refreshToken, pending.email);
       return send(200, {
-        access_token: newAccessToken(),
+        access_token: newAccessToken(pending.email),
         token_type: "Bearer",
         expires_in: 300,
         id_token: idToken,

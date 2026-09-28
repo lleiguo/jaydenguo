@@ -280,3 +280,38 @@ stored login.
 
 **Fixtures:** `tests/fixtures/tennis-tc/entries/*.html` are hand-built
 from these structures with invented names and IDs (not recorded pages).
+
+## SP-5: Classroom access with Jayden's school account (M4.1, 2026-09-27, waiting on the owner)
+
+**Built for the test:** the Accounts page has "Connect school account
+(Classroom)". It asks Google for `classroom.courses.readonly` and
+`classroom.coursework.me.readonly` (his classes, his coursework, his
+submissions and returned grades) with the account chooser shown, so the
+owner can pick Jayden's school account while signed in as himself. The
+grant is stored as a separate Google credential, like any other
+(CRED-2). Straight after consent the site reads his active class list and
+keeps only a count, or Google's refusal word for word, on the credential
+(`meta.classroom`); "Test connection" reads it again. If Google refuses
+before a grant exists (the school blocks the app), the page shows
+Google's error code, e.g. `admin_policy_enforced`. The project needs
+`classroom.googleapis.com` enabled (`infra/apis.tf`).
+
+**What to expect:** Google Workspace for Education treats users marked
+under 18 differently: by default they can't grant access to third-party
+apps the school's admin hasn't set as trusted, and Google shows an
+"Access blocked" page (error 400, `admin_policy_enforced` or similar)
+instead of the consent screen. If that happens, the blocked page's error
+code goes into this section, and the owner picks a fallback (spec F-5):
+1. ask the school's IT to trust the app by its OAuth client ID;
+2. Classroom guardian email summaries, parsed from Gmail (needs M5's
+   Gmail adapter);
+3. manual entry.
+If consent works, Google shows the unverified-app warning first (F-6);
+continue through "Advanced".
+
+**How the owner runs it:** after the M4.1 PR is deployed and Terraform is
+applied, open Settings → Accounts → "Connect school account (Classroom)",
+choose Jayden's school account (or "Use another account"), and consent.
+Jayden's password is typed only on Google's page, never in chat.
+
+**Result:** not run yet.
