@@ -8,6 +8,7 @@ import { seedJob } from "./seed";
 import { smokeJob, syncJob } from "./sync";
 import { tennisAcceptanceJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
 import { videoReviewJob } from "./video/review";
+import { calendarCopyJob } from "./calendar-copy";
 
 export type { JobContext } from "./context";
 export type Job = { description: string; run: (args: string[], ctx: JobContext) => Promise<void> };
@@ -55,6 +56,10 @@ export const jobs: Record<string, Job> = {
   "video:review": {
     description: "Fetch a linked video and review it (debate or one model): video:review <id>",
     run: (args, ctx) => videoReviewJob(args, ctx),
+  },
+  "calendar:copy": {
+    description: "Copy the calendar to the Jayden (hub) Google Calendar: calendar:copy [delete]",
+    run: calendarCopyJob,
   },
   backup: {
     description: "Export the database to the backup bucket (nightly)",
