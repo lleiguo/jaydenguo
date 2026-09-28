@@ -140,13 +140,13 @@ export async function extractFrames(clip: string, dir: string, times: number[]):
 export type PreparedMedia = {
   clip: Buffer;
   durationSec: number;
-  // Seconds from the start of the original video, for the frame labels.
+  // Where the clip starts in the original video, in seconds.
   offsetSec: number;
   frames: Frame[];
 };
 
-// Everything both models need. Frame times are relative to the clip; the
-// labels add the segment's start so they match the original video.
+// Everything both models need. Frame times count from the clip's start,
+// like the times Gemini cites and the playback copy (intent 0003, PLAY-6).
 export async function prepareMedia(
   src: string,
   dir: string,
@@ -160,7 +160,7 @@ export async function prepareMedia(
   let frames: Frame[] = [];
   if (wantFrames) {
     const times = chooseFrameTimes(clipDuration, await motionSamples(clipFile));
-    frames = (await extractFrames(clipFile, dir, times)).map((f) => ({ ...f, atSec: f.atSec + range.start }));
+    frames = await extractFrames(clipFile, dir, times);
   }
   return { clip: await readFile(clipFile), durationSec: clipDuration, offsetSec: range.start, frames };
 }

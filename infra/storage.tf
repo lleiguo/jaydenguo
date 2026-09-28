@@ -43,3 +43,29 @@ resource "google_project_iam_member" "worker_sql_export" {
   role    = google_project_iam_custom_role.sql_exporter.id
   member  = google_service_account.worker.member
 }
+
+# Playback copies of reviewed video clips (intent 0003, PLAY-1, PLAY-2).
+# Private, in Canada, and without retention or soft delete, so the owner's
+# "Delete video" is final (PLAY-7). The worker saves copies; the web service
+# streams and deletes them.
+resource "google_storage_bucket" "media" {
+  name                        = "${var.project_id}-media"
+  location                    = var.region
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+  storage_class               = "STANDARD"
+
+  soft_delete_policy {
+    retention_duration_seconds = 0
+  }
+}
+
+resource "google_storage_bucket_iam_member" "media" {
+  for_each = {
+    web    = google_service_account.web.member
+    worker = google_service_account.worker.member
+  }
+  bucket = google_storage_bucket.media.name
+  role   = "roles/storage.objectUser"
+  member = each.value
+}

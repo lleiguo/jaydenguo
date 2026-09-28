@@ -24,6 +24,7 @@ import { LlmError, type StructuredModel } from "../../server/llm/types";
 import { registerSecret } from "../../server/log";
 import { runDebate, type Models } from "../../server/video/debate";
 import { fakeModels } from "../../server/video/fake";
+import { mediaStore, playbackKey, type MediaStore } from "../../server/video/media-store";
 import { PROMPT_VERSION } from "../../server/video/prompts";
 import { DRIVE_SCOPE, PHOTOS_SCOPE } from "../../server/video/store";
 import type { JobContext } from "../context";
@@ -33,7 +34,8 @@ import { MediaError, prepareMedia } from "./media";
 // The review job (plan M5.2-M5.5, spec VID-2, VID-5): `video:review <id>`.
 // Fetches the video through the owner's Google account into a temp folder,
 // prepares it, runs the debate (or one model), stores every round as it
-// finishes, and always deletes the temp folder, whether it worked or not.
+// finishes, keeps the clip as a playback copy if the review worked (intent
+// 0003), and always deletes the temp folder, whether it worked or not.
 
 // How long the owner has to pick in Google Photos.
 const PICK_TIMEOUT_MS = () => Number(process.env.PHOTOS_PICK_TIMEOUT_MS ?? 15 * 60_000);
@@ -42,6 +44,7 @@ export type ReviewDeps = {
   models?: () => Models;
   accessToken?: (db: Db, scope: string) => Promise<string>;
   sleep?: (ms: number) => Promise<void>;
+  media?: () => MediaStore | null;
 };
 
 // Vertex AI in production; stand-ins when VIDEO_LLM=fake (never on Cloud Run).
@@ -109,6 +112,7 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
   const sleep = deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   const token = deps.accessToken ?? defaultAccessToken;
   const models = deps.models ?? defaultModels;
+  const store = (deps.media ?? mediaStore)();
 
   const [row] = await db.select().from(videoReviews).where(eq(videoReviews.id, id));
   if (!row || row.deletedAt) return ctx.log("video review not found", { id }, "WARNING");
@@ -206,6 +210,8 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
         },
       },
     );
+    // 4. The playback copy (PLAY-1). The review stands without it.
+    const playback = store ? await savePlayback(store, id, media.clip, ctx) : null;
     await set({
       status: "done",
       progress: null,
@@ -213,8 +219,10 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       combinedReview: result.combined,
       costUsd: result.costUsd,
       finishedAt: new Date(),
+      playbackKey: playback,
+      playbackBytes: playback ? media.clip.length : null,
     });
-    ctx.log("video review done", { id, mode, costUsd: result.costUsd });
+    ctx.log("video review done", { id, mode, costUsd: result.costUsd, playback: !!playback });
   } catch (err) {
     const message = failureMessage(err);
     const cost = await db
@@ -230,7 +238,18 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
     });
     ctx.log("video review failed", { id, error: err }, "WARNING");
   } finally {
-    // VID-2: nothing is kept after the review.
+    // Nothing else is kept after the review (VID-2, intent 0003).
     await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function savePlayback(store: MediaStore, id: string, clip: Buffer, ctx: JobContext) {
+  const key = playbackKey(id);
+  try {
+    await store.put(key, clip, "video/mp4");
+    return key;
+  } catch (err) {
+    ctx.log("playback copy not saved", { id, error: err }, "WARNING");
+    return null;
   }
 }

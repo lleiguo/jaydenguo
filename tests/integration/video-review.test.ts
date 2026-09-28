@@ -1,5 +1,5 @@
 import { createServer, type Server } from "node:http";
-import { readdir } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
 import { eq } from "drizzle-orm";
@@ -10,10 +10,15 @@ import { runMigrations } from "@/server/db/migrate";
 import type { JobLauncher } from "@/server/jobs/launcher";
 import { createLogger } from "@/server/log";
 import { fakeModels } from "@/server/video/fake";
+import { localMediaStore, playbackKey, type MediaStore } from "@/server/video/media-store";
 import {
   createVideoReview,
+  deletePlayback,
+  deleteVideoReview,
   getVideoReview,
   listVideoReviews,
+  playbackOf,
+  restoreVideoReview,
   retryVideoReview,
   scoreboard,
   setReviewMode,
@@ -259,5 +264,75 @@ describe("video reviews", () => {
     await retryVideoReview(db, id, launcher);
     expect(started).toEqual([["video:review", id]]);
     expect((await getVideoReview(db, id))!.status).toBe("queued");
+  });
+
+  // Intent 0003: a playback copy of the reviewed clip.
+  describe("playback copy", () => {
+    let dir: string;
+    let store: MediaStore;
+    const DRIVE = "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view";
+    beforeAll(async () => {
+      dir = await mkdtemp(`${tmpdir()}/media-`);
+      store = localMediaStore(dir);
+    });
+    afterAll(async () => {
+      await rm(dir, { recursive: true, force: true });
+    });
+
+    it("keeps the clip when the review works (PLAY-1), until the owner deletes it (PLAY-7)", async () => {
+      const id = await saved({ url: DRIVE });
+      await videoReviewJob([id], ctx(), deps({ media: () => store }));
+      const r = (await getVideoReview(db, id))!;
+      expect(r.status).toBe("done");
+      expect(r.hasPlayback).toBe(true);
+      const size = await store.size(playbackKey(id));
+      expect(size).toBeGreaterThan(1000);
+      const [row] = await db.select().from(videoReviews).where(eq(videoReviews.id, id));
+      expect(row.playbackBytes).toBe(size);
+
+      // A deleted review keeps its copy for a restore, but doesn't serve it.
+      await deleteVideoReview(db, id);
+      expect(await playbackOf(db, id)).toBeNull();
+      await restoreVideoReview(db, id);
+      expect(await playbackOf(db, id)).toBe(playbackKey(id));
+
+      await deletePlayback(db, store, id);
+      expect(await store.size(playbackKey(id))).toBeNull();
+      const after = (await getVideoReview(db, id))!;
+      expect(after.hasPlayback).toBe(false);
+      expect(after.combinedReview).not.toBeNull();
+      await expect(deletePlayback(db, store, id)).rejects.toMatchObject({ status: 404 });
+    });
+
+    it("keeps nothing when the review fails", async () => {
+      const models = fakeModels();
+      const broken = {
+        ...models,
+        gemini: {
+          ...models.gemini,
+          call: async () => {
+            throw new Error("boom");
+          },
+        },
+      };
+      const id = await saved({ url: DRIVE });
+      await videoReviewJob([id], ctx(), deps({ models: () => broken, media: () => store }));
+      expect((await getVideoReview(db, id))!.status).toBe("failed");
+      expect(await store.size(playbackKey(id))).toBeNull();
+    });
+
+    it("finishes the review when the copy can't be saved", async () => {
+      const failing: MediaStore = {
+        ...store,
+        put: async () => {
+          throw new Error("bucket unavailable");
+        },
+      };
+      const id = await saved({ url: DRIVE });
+      await videoReviewJob([id], ctx(), deps({ media: () => failing }));
+      const r = (await getVideoReview(db, id))!;
+      expect(r.status).toBe("done");
+      expect(r.hasPlayback).toBe(false);
+    });
   });
 });

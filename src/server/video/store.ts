@@ -15,6 +15,7 @@ import type { Db, DbOrTx } from "../db/client";
 import { HttpError } from "../errors";
 import type { JobLauncher } from "../jobs/launcher";
 import type { Verdict } from "./debate";
+import type { MediaStore } from "./media-store";
 
 // Video reviews for the web app (plan M5.2, M5.6; spec VID-1..5). The web
 // app saves the link and starts the worker job; the worker fetches the
@@ -221,6 +222,8 @@ export type VideoReviewDetail = VideoReviewSummary & {
   costUsd: number | null;
   votedAt: string | null;
   finishedAt: string | null;
+  // A playback copy is kept (intent 0003, PLAY-1).
+  hasPlayback: boolean;
   rounds: {
     round: string;
     model: ReviewModel;
@@ -253,6 +256,7 @@ export async function getVideoReview(db: DbOrTx, id: string): Promise<VideoRevie
     costUsd: row.costUsd,
     votedAt: row.votedAt?.toISOString() ?? null,
     finishedAt: row.finishedAt?.toISOString() ?? null,
+    hasPlayback: row.playbackKey !== null,
     rounds: rounds.map((r) => ({
       round: r.round,
       model: r.model as ReviewModel,
@@ -285,6 +289,26 @@ export async function restoreVideoReview(db: Db, id: string) {
     .where(and(eq(videoReviews.id, id), isNotNull(videoReviews.deletedAt)))
     .returning({ id: videoReviews.id });
   if (!row) throw new HttpError(404, "not found");
+}
+
+// PLAY-2: the playback copy's key, for a review that isn't deleted.
+export async function playbackOf(db: DbOrTx, id: string): Promise<string | null> {
+  const [row] = await db
+    .select({ key: videoReviews.playbackKey })
+    .from(videoReviews)
+    .where(and(eq(videoReviews.id, id), isNull(videoReviews.deletedAt)));
+  return row?.key ?? null;
+}
+
+// PLAY-7: the copy goes for good; the review stays.
+export async function deletePlayback(db: Db, store: MediaStore, id: string) {
+  const key = await playbackOf(db, id);
+  if (!key) throw new HttpError(404, "not found");
+  await store.delete(key);
+  await db
+    .update(videoReviews)
+    .set({ playbackKey: null, playbackBytes: null })
+    .where(eq(videoReviews.id, id));
 }
 
 export const voteInput = z.object({ vote: z.enum(REVIEW_MODELS) });

@@ -1,7 +1,7 @@
 // Technique reviews of linked videos (plan M5.2-M5.6, spec VID-1..5, §6.3).
-// Only the link, the owner's note and the models' output are kept; the
-// video itself is fetched into a temp folder for one review and deleted
-// (VID-2). Reviews are soft-deleted (VID-4) and the parent's vote is written
+// The link, the owner's note and the models' output are kept, plus a small
+// playback copy of the reviewed clip (intent 0003, PLAY-1); everything else
+// the job fetches or makes goes into a temp folder and is deleted. Reviews are soft-deleted (VID-4) and the parent's vote is written
 // once (VID-3d).
 import { sql } from "drizzle-orm";
 import {
@@ -57,6 +57,10 @@ export const videoReviews = pgTable(
     // File name or title shown in the history, when the source gives one.
     mediaName: text("media_name"),
     durationSec: real("duration_sec"),
+    // The playback copy's object name in the media store, or null when there
+    // is none (older reviews, or deleted by the owner: PLAY-7).
+    playbackKey: text("playback_key"),
+    playbackBytes: integer("playback_bytes"),
     promptVersion: text("prompt_version"),
     // { winner: "gemini" | "claude" | null, margin, tie, totals, selfScores }
     verdict: jsonb("verdict"),

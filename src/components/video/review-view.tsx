@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { call } from "@/components/calendar/api";
 import { MODEL_LABEL, REVIEW_MODELS, SPORT_LABEL, type ReviewModel } from "@/domain/video-constants";
+import { timelinePoints } from "@/domain/review-timeline";
 import { formatClockTime } from "@/domain/video-links";
 import type { Verdict } from "@/server/video/debate";
 import {
@@ -16,6 +17,7 @@ import {
 } from "@/server/video/prompts";
 import type { VideoReviewDetail } from "@/server/video/store";
 import { inProgress, STATUS_LABEL, statusTone } from "./history";
+import { JumpTo, PlaybackProvider, ReviewPlayer, usePlayback, usePlayer } from "./review-player";
 
 const muted = "text-neutral-600 dark:text-neutral-400";
 const card = "rounded-md border border-neutral-200 p-3 dark:border-neutral-800";
@@ -33,6 +35,10 @@ export function ReviewView({ initial }: { initial: VideoReviewDetail }) {
   const [r, setR] = useState(initial);
   const [message, setMessage] = useState<string | null>(null);
   const running = inProgress(r.status);
+  const advice = r.status === "done" ? (r.combinedReview as Combined | Review | null) : null;
+  const points = useMemo(() => (advice ? timelinePoints(advice) : []), [advice]);
+  const playback = usePlayback(points);
+  const hasPlayer = r.status === "done" && r.hasPlayback;
 
   // VID-5: progress while the job runs.
   useEffect(() => {
@@ -52,145 +58,161 @@ export function ReviewView({ initial }: { initial: VideoReviewDetail }) {
       : null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">
-          {SPORT_LABEL[r.sport]} · {r.filmedOn}
-        </h1>
-        {r.note && <p>{r.note}</p>}
-        <p className={`text-sm ${muted}`}>
-          <span data-testid="review-status" className={statusTone(r.status)}>
-            {STATUS_LABEL[r.status] ?? r.status}
-          </span>
-          {r.mediaName && ` · ${r.mediaName}`}
-          {segment && ` · part ${segment}`}
-          {r.url && (
-            <>
+    <PlaybackProvider playback={hasPlayer ? playback : null}>
+      <div className="flex flex-col gap-4">
+        <header className="flex flex-col gap-1">
+          <h1 className="text-xl font-semibold">
+            {SPORT_LABEL[r.sport]} · {r.filmedOn}
+          </h1>
+          {r.note && <p>{r.note}</p>}
+          <p className={`text-sm ${muted}`}>
+            <span data-testid="review-status" className={statusTone(r.status)}>
+              {STATUS_LABEL[r.status] ?? r.status}
+            </span>
+            {r.mediaName && ` · ${r.mediaName}`}
+            {segment && ` · part ${segment}`}
+            {r.url && (
+              <>
+                {" · "}
+                <a href={r.url} target="_blank" rel="noreferrer noopener" className="underline">
+                  open the video
+                </a>
+              </>
+            )}
+          </p>
+        </header>
+
+        {running && (
+          <section className={`${card} flex flex-col gap-2`} aria-live="polite">
+            {r.status === "picking" && r.pickerUri ? (
+              <>
+                <p>Pick one video in Google Photos. This page carries on by itself once you have.</p>
+                <a
+                  href={r.pickerUri}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="self-start rounded-md border bg-neutral-900 px-4 py-2 text-white dark:bg-white dark:text-neutral-900"
+                >
+                  Open Google Photos
+                </a>
+                <p className={`text-xs ${muted}`}>
+                  Use the same Google account that&apos;s connected to this site.
+                </p>
+              </>
+            ) : (
+              <p>{r.progress ?? "Starting"}…</p>
+            )}
+            <p className={`text-xs ${muted}`}>A two-model review takes about five minutes.</p>
+          </section>
+        )}
+
+        {r.status === "saved" && (
+          <p className={card}>
+            YouTube videos can&apos;t be reviewed by the site (YouTube doesn&apos;t allow it). The link and
+            your note are saved. To get a review, keep the original in Google Photos or Drive and add it from
+            there.
+          </p>
+        )}
+
+        {r.status === "failed" && (
+          <section className={`${card} flex flex-col gap-2`}>
+            <p className="text-red-700 dark:text-red-400">{r.errorMessage ?? "The review failed."}</p>
+            <button
+              type="button"
+              className="self-start rounded border px-3 py-1"
+              onClick={async () => {
+                try {
+                  await call(`/api/v1/videos/${r.id}/retry`);
+                  const res = await fetch(`/api/v1/videos/${r.id}`);
+                  if (res.ok) setR((await res.json()) as VideoReviewDetail);
+                } catch (err) {
+                  setMessage((err as Error).message);
+                }
+              }}
+            >
+              Try again
+            </button>
+          </section>
+        )}
+
+        {r.status === "done" && (
+          <>
+            <p className={`text-sm ${muted}`}>AI feedback to help you, not a coach&apos;s assessment.</p>
+            {hasPlayer && (
+              <ReviewPlayer
+                reviewId={r.id}
+                playback={playback}
+                points={points}
+                durationSec={r.durationSec}
+                segmentStart={r.segmentStart}
+                onDeleted={() => setR({ ...r, hasPlayback: false })}
+              />
+            )}
+            {r.verdict && <VerdictBox v={r.verdict} />}
+            <CombinedReview
+              title={
+                r.verdict
+                  ? "The advice"
+                  : `${MODEL_LABEL[r.mode === "claude" ? "claude" : "gemini"]}'s review`
+              }
+              review={r.combinedReview as Combined | Review}
+              follow
+            />
+            {r.verdict && (
+              <Vote
+                r={r}
+                onVoted={(vote) => setR({ ...r, parentVote: vote, votedAt: new Date().toISOString() })}
+              />
+            )}
+            {r.verdict && (
+              <details className={card}>
+                <summary className="cursor-pointer font-medium">
+                  Both reviews, the judges&apos; scores and the replies
+                </summary>
+                <div className="mt-3 flex flex-col gap-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {REVIEW_MODELS.map((m) => {
+                      const rv = reviewOf(m);
+                      return rv ? (
+                        <CombinedReview key={m} title={`${MODEL_LABEL[m]}'s review`} review={rv} small />
+                      ) : null;
+                    })}
+                  </div>
+                  <ScoresTable r={r} />
+                  <Critiques r={r} />
+                  <Rebuttals r={r} />
+                </div>
+              </details>
+            )}
+            <p className={`text-xs ${muted}`}>
+              {r.rounds.length} model calls
+              {r.costUsd !== null && ` · about $${r.costUsd.toFixed(2)}`}
               {" · "}
-              <a href={r.url} target="_blank" rel="noreferrer noopener" className="underline">
-                open the video
-              </a>
-            </>
-          )}
-        </p>
-      </header>
+              {[...new Set(r.rounds.map((x) => x.modelVersion))].join(", ")}
+              {r.promptVersion && ` · prompts ${r.promptVersion}`}
+            </p>
+          </>
+        )}
 
-      {running && (
-        <section className={`${card} flex flex-col gap-2`} aria-live="polite">
-          {r.status === "picking" && r.pickerUri ? (
-            <>
-              <p>Pick one video in Google Photos. This page carries on by itself once you have.</p>
-              <a
-                href={r.pickerUri}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="self-start rounded-md border bg-neutral-900 px-4 py-2 text-white dark:bg-white dark:text-neutral-900"
-              >
-                Open Google Photos
-              </a>
-              <p className={`text-xs ${muted}`}>
-                Use the same Google account that&apos;s connected to this site.
-              </p>
-            </>
-          ) : (
-            <p>{r.progress ?? "Starting"}…</p>
-          )}
-          <p className={`text-xs ${muted}`}>A two-model review takes about five minutes.</p>
-        </section>
-      )}
-
-      {r.status === "saved" && (
-        <p className={card}>
-          YouTube videos can&apos;t be reviewed by the site (YouTube doesn&apos;t allow it). The link and your
-          note are saved. To get a review, keep the original in Google Photos or Drive and add it from there.
-        </p>
-      )}
-
-      {r.status === "failed" && (
-        <section className={`${card} flex flex-col gap-2`}>
-          <p className="text-red-700 dark:text-red-400">{r.errorMessage ?? "The review failed."}</p>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
           <button
             type="button"
-            className="self-start rounded border px-3 py-1"
+            className="rounded border px-3 py-1"
             onClick={async () => {
               try {
-                await call(`/api/v1/videos/${r.id}/retry`);
-                const res = await fetch(`/api/v1/videos/${r.id}`);
-                if (res.ok) setR((await res.json()) as VideoReviewDetail);
+                await call(`/api/v1/videos/${r.id}`, "DELETE");
+                router.push(`/videos?sport=${r.sport}`);
               } catch (err) {
                 setMessage((err as Error).message);
               }
             }}
           >
-            Try again
+            Delete
           </button>
-        </section>
-      )}
-
-      {r.status === "done" && (
-        <>
-          <p className={`text-sm ${muted}`}>AI feedback to help you, not a coach&apos;s assessment.</p>
-          {r.verdict && <VerdictBox v={r.verdict} />}
-          <CombinedReview
-            title={
-              r.verdict ? "The advice" : `${MODEL_LABEL[r.mode === "claude" ? "claude" : "gemini"]}'s review`
-            }
-            review={r.combinedReview as Combined | Review}
-          />
-          {r.verdict && (
-            <Vote
-              r={r}
-              onVoted={(vote) => setR({ ...r, parentVote: vote, votedAt: new Date().toISOString() })}
-            />
-          )}
-          {r.verdict && (
-            <details className={card}>
-              <summary className="cursor-pointer font-medium">
-                Both reviews, the judges&apos; scores and the replies
-              </summary>
-              <div className="mt-3 flex flex-col gap-4">
-                <div className="grid gap-3 md:grid-cols-2">
-                  {REVIEW_MODELS.map((m) => {
-                    const rv = reviewOf(m);
-                    return rv ? (
-                      <CombinedReview key={m} title={`${MODEL_LABEL[m]}'s review`} review={rv} small />
-                    ) : null;
-                  })}
-                </div>
-                <ScoresTable r={r} />
-                <Critiques r={r} />
-                <Rebuttals r={r} />
-              </div>
-            </details>
-          )}
-          <p className={`text-xs ${muted}`}>
-            {r.rounds.length} model calls
-            {r.costUsd !== null && ` · about $${r.costUsd.toFixed(2)}`}
-            {" · "}
-            {[...new Set(r.rounds.map((x) => x.modelVersion))].join(", ")}
-            {r.promptVersion && ` · prompts ${r.promptVersion}`}
-          </p>
-        </>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <button
-          type="button"
-          className="rounded border px-3 py-1"
-          onClick={async () => {
-            try {
-              await call(`/api/v1/videos/${r.id}`, "DELETE");
-              router.push(`/videos?sport=${r.sport}`);
-            } catch (err) {
-              setMessage((err as Error).message);
-            }
-          }}
-        >
-          Delete
-        </button>
-        <span aria-live="polite">{message}</span>
+          <span aria-live="polite">{message}</span>
+        </div>
       </div>
-    </div>
+    </PlaybackProvider>
   );
 }
 
@@ -210,14 +232,31 @@ function VerdictBox({ v }: { v: Verdict }) {
   );
 }
 
-function PointList({ points, ranked }: { points: Point[]; ranked?: boolean }) {
+// `follow` (the advice only): the point at the video's current time is
+// highlighted (intent 0003, PLAY-5). Keys match timelinePoints.
+function PointList({
+  points,
+  ranked,
+  section,
+  follow,
+}: {
+  points: Point[];
+  ranked?: boolean;
+  section: "good" | "fix";
+  follow?: boolean;
+}) {
+  const player = usePlayer();
   const List = ranked ? "ol" : "ul";
   return (
     <List className={`flex flex-col gap-2 pl-5 ${ranked ? "list-decimal" : "list-disc"}`}>
       {points.map((p, i) => (
-        <li key={i}>
+        <li
+          key={i}
+          data-active={follow && player?.activeKey === `${section}-${i}` ? "" : undefined}
+          className="rounded data-[active]:bg-yellow-100 dark:data-[active]:bg-yellow-950"
+        >
           <span className="font-medium">{p.text}</span>
-          {p.at && <span className={muted}> (at {p.at})</span>}
+          {p.at && <JumpTo at={p.at} />}
           {p.status && (
             <span
               className={`ml-2 rounded px-1.5 py-0.5 text-xs ${p.status === "agreed" ? "bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200" : "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"}`}
@@ -241,10 +280,12 @@ function CombinedReview({
   title,
   review,
   small,
+  follow,
 }: {
   title: string;
   review: Combined | Review;
   small?: boolean;
+  follow?: boolean;
 }) {
   const H = small ? "h3" : "h2";
   return (
@@ -253,11 +294,11 @@ function CombinedReview({
       <p>{review.summary}</p>
       <div>
         <h4 className="font-medium">What&apos;s good</h4>
-        <PointList points={review.good} />
+        <PointList points={review.good} section="good" follow={follow} />
       </div>
       <div>
         <h4 className="font-medium">What to fix, most important first</h4>
-        <PointList points={review.fix} ranked />
+        <PointList points={review.fix} section="fix" ranked follow={follow} />
       </div>
       <div>
         <h4 className="font-medium">Drills</h4>
@@ -423,7 +464,7 @@ function Rebuttals({ r }: { r: VideoReviewDetail }) {
               <li key={i}>
                 <span className="font-medium">{p.response === "concede" ? "Concedes" : "Defends"}</span> “
                 {p.point}”: {p.argument}
-                {p.at && <span className={muted}> (at {p.at})</span>}
+                {p.at && <JumpTo at={p.at} />}
               </li>
             ))}
           </ul>
