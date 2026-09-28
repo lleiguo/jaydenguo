@@ -17,11 +17,24 @@ export type AdapterSource = {
 
 export type AdapterCredential = { kind: string; provider: string; username: string | null; secret: string };
 
+// A tournament he's entered (tennis_tc, TEN-9..11): the sync reads its
+// draws even before his profile lists it.
+export type TennisEntryHint = {
+  tournamentId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  eventNo: string;
+  eventName: string;
+  tournamentPlayerId: string | null;
+};
+
 export type AdapterContext = {
   source: AdapterSource;
   credential: AdapterCredential | null;
   now: Date;
   homeTimeZone: string;
+  tennisEntries?: TennisEntryHint[];
 };
 
 export type NormalisedBatch = {

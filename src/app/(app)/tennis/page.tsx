@@ -7,6 +7,7 @@ import { formatRecord } from "@/domain/tennis";
 import { getDb } from "@/server/db";
 import { listTournaments, predictAgainst, type TournamentView } from "@/server/tennis/load";
 import { explanationsFor } from "@/server/tennis/explain";
+import { listEntries, type EntryView } from "@/server/tennis/entries";
 
 // Tennis (TEN-2, TEN-3, TEN-6): his next matches with a prediction, and
 // tournaments in progress, coming up and past.
@@ -20,7 +21,10 @@ export default async function TennisPage() {
   const predictions = nextMatches.map((n) =>
     n.draw.opponentKey ? predictAgainst(data, n.draw.opponentKey) : null,
   );
-  const explanations = await explanationsFor(db, predictions);
+  const [explanations, entries] = await Promise.all([
+    explanationsFor(db, predictions),
+    listEntries(db, data.today),
+  ]);
   return (
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -64,6 +68,8 @@ export default async function TennisPage() {
           </ul>
         </section>
       )}
+
+      <Entries entries={entries} />
 
       <TournamentList id="in-progress" title="In progress" list={inProgress} empty={null} />
       <TournamentList
@@ -128,5 +134,82 @@ function TournamentCard({ t }: { t: TournamentView }) {
       </div>
       {t.events.length > 0 && <div>{t.events.join(", ")}</div>}
     </li>
+  );
+}
+
+// TEN-9, TEN-10: tournaments found for him on Thursdays, and where each
+// stands after Friday's acceptance list. Anything the app couldn't finish
+// (not entered yet, payment) links to the site for the owner.
+function entryLine(e: EntryView): { text: string; action: string | null } {
+  switch (e.status) {
+    case "found":
+      return { text: "Not entered yet", action: "Enter on the site" };
+    case "payment_needed":
+      return { text: "Entered, payment needed", action: "Pay on the site" };
+    case "entered":
+      return { text: "Entered · acceptance list comes out Friday", action: null };
+    case "main_draw":
+      return { text: e.drawSyncedAt ? "Main draw · draw is out" : "Main draw", action: null };
+    case "reserve":
+      return { text: `Reserve list${e.reservePosition ? ` (${e.reservePosition})` : ""}`, action: null };
+    case "withdrawn":
+      return { text: "Not on the entry list any more", action: null };
+    default:
+      return { text: "Not entered", action: null };
+  }
+}
+
+function Entries({ entries }: { entries: EntryView[] }) {
+  if (!entries.length) return null;
+  return (
+    <section aria-labelledby="entries" className="flex flex-col gap-2">
+      <h2 id="entries" className="text-lg font-semibold">
+        Tournament entries
+      </h2>
+      <ul className="flex flex-col gap-2">
+        {entries.map((e) => {
+          const { text, action } = entryLine(e);
+          const needsYou = action !== null;
+          return (
+            <li
+              key={e.id}
+              data-testid="entry"
+              data-status={e.status}
+              className={`flex flex-col gap-1 rounded-lg border p-3 text-sm ${needsYou ? "border-amber-600" : "border-neutral-200 dark:border-neutral-800"}`}
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <a
+                  href={e.tournamentUrl}
+                  className="text-base font-semibold underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {e.tournamentName}
+                </a>
+                <span className="tabular-nums">{dates(e.startDate, e.endDate)}</span>
+              </div>
+              <div className={muted}>
+                {e.eventName}
+                {[e.venue, e.city].some(Boolean) && ` · ${[e.venue, e.city].filter(Boolean).join(", ")}`}
+                {e.driveMinutes !== null && ` · ${e.driveMinutes} min drive`}
+                {e.entryDeadline && ` · entries close ${e.entryDeadline}`}
+              </div>
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className={needsYou ? "font-medium text-amber-800 dark:text-amber-300" : "font-medium"}>
+                  {needsYou && "⚠ "}
+                  {text}
+                </span>
+                {action && e.entryUrl && (
+                  <a href={e.entryUrl} target="_blank" rel="noreferrer" className="underline">
+                    {action} →
+                  </a>
+                )}
+              </div>
+              {e.note && <div className={muted}>{e.note}</div>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

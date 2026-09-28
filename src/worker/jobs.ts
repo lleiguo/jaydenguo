@@ -6,6 +6,7 @@ import type { JobContext } from "./context";
 import { removeCredentialJob, rotateKeysJob, testCredentialJob } from "./credentials";
 import { seedJob } from "./seed";
 import { smokeJob, syncJob } from "./sync";
+import { tennisAcceptanceJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
 
 export type { JobContext } from "./context";
 export type Job = { description: string; run: (args: string[], ctx: JobContext) => Promise<void> };
@@ -37,6 +38,18 @@ export const jobs: Record<string, Job> = {
   smoke: {
     description: "Live check of one source without saving: smoke <source-id>",
     run: smokeJob,
+  },
+  "tennis:enter": {
+    description: "Find tournaments open for entry near home and enter him (Thursday)",
+    run: tennisEnterJob,
+  },
+  "tennis:acceptance": {
+    description: "Read acceptance lists: main draw or reserve (Friday)",
+    run: tennisAcceptanceJob,
+  },
+  "tennis:draw-watch": {
+    description: "Look for his draws this week; sync once out (hourly on draw days)",
+    run: tennisDrawWatchJob,
   },
   backup: {
     description: "Export the database to the backup bucket (nightly)",

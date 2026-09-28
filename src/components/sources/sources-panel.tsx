@@ -25,11 +25,19 @@ type Source = {
   name: string;
   enabled: boolean;
   credentialLabel: string | null;
+  config: { entry?: EntrySettings } | null;
   categoryMapping: { default: string; rules?: { match: string; category?: string; attendance?: string }[] };
   lastSuccessAt: string | null;
   lastRun: Run | null;
   running: boolean;
   nextRefreshAt: string | null;
+};
+type EntrySettings = {
+  homePostalCode?: string;
+  maxDriveMinutes?: number;
+  include?: string;
+  prefer?: string;
+  exclude?: string;
 };
 type Credential = {
   id: string;
@@ -142,6 +150,7 @@ export function SourcesPanel() {
 
 function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => void; onToggle: () => void }) {
   const [runs, setRuns] = useState<Run[] | null>(null);
+  const [entryOpen, setEntryOpen] = useState(false);
   const failed = s.lastRun?.status === "failed";
   const status = s.running ? "Syncing…" : failed ? "Failed" : s.lastRun ? "OK" : "Not synced yet";
   const tooSoon = !!s.nextRefreshAt && new Date(s.nextRefreshAt) > new Date();
@@ -185,6 +194,15 @@ function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => vo
         <button className="rounded border px-2 py-1" onClick={onToggle}>
           {s.enabled ? "Switch off" : "Switch on"}
         </button>
+        {s.kind === "tennis_tc" && (
+          <button
+            className="rounded border px-2 py-1"
+            aria-expanded={entryOpen}
+            onClick={() => setEntryOpen(!entryOpen)}
+          >
+            Tournament entries
+          </button>
+        )}
         <button
           className="rounded border px-2 py-1"
           aria-expanded={runs !== null}
@@ -197,6 +215,7 @@ function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => vo
           History
         </button>
       </div>
+      {entryOpen && <EntryForm s={s} onSaved={() => setEntryOpen(false)} />}
       {runs && (
         <table className="mt-2 w-full text-left text-xs">
           <caption className="sr-only">Run history for {s.name}</caption>
@@ -229,6 +248,84 @@ function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => vo
         </table>
       )}
     </li>
+  );
+}
+
+// Tournament entries (TEN-9): where home is, how far he'll travel and which
+// events are his. The Thursday job needs the postal code; the rest have
+// defaults.
+function EntryForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
+  const e = s.config?.entry ?? {};
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      aria-label="Tournament entry settings"
+      className="mt-2 flex flex-col gap-2 rounded border border-dashed p-2"
+      onSubmit={async (ev) => {
+        ev.preventDefault();
+        const f = new FormData(ev.currentTarget);
+        const entry = {
+          homePostalCode: String(f.get("homePostalCode") ?? "").trim() || undefined,
+          maxDriveMinutes: Number(f.get("maxDriveMinutes")) || undefined,
+          include: String(f.get("include") ?? "").trim() || undefined,
+          prefer: String(f.get("prefer") ?? "").trim(),
+          exclude: String(f.get("exclude") ?? "").trim(),
+        };
+        const res = await fetch(`/api/v1/sources/${s.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ config: { entry } }),
+        });
+        if (!res.ok) return setError((await res.json().catch(() => ({}))).error ?? "Couldn't save.");
+        setError(null);
+        onSaved();
+      }}
+    >
+      <p className="text-neutral-600 dark:text-neutral-400">
+        Thursdays at noon the app looks for Rookie tournaments open for entry near home and picks his event;
+        Fridays at 10:00 it reads the acceptance lists; on draw days it checks for his draw every hour.
+      </p>
+      <label className="flex flex-col">
+        Home postal code
+        <input
+          name="homePostalCode"
+          required
+          defaultValue={e.homePostalCode ?? ""}
+          autoComplete="postal-code"
+          className="rounded border px-2 py-1"
+          placeholder="A1A 1A1"
+        />
+      </label>
+      <label className="flex flex-col">
+        Longest drive (minutes)
+        <input
+          name="maxDriveMinutes"
+          type="number"
+          min={15}
+          max={600}
+          defaultValue={e.maxDriveMinutes ?? 120}
+          className="rounded border px-2 py-1"
+        />
+      </label>
+      <label className="flex flex-col">
+        Event name has one of (comma-separated)
+        <input name="include" defaultValue={e.include ?? "orange"} className="rounded border px-2 py-1" />
+      </label>
+      <label className="flex flex-col">
+        If several fit, prefer
+        <input name="prefer" defaultValue={e.prefer ?? "u9"} className="rounded border px-2 py-1" />
+      </label>
+      <label className="flex flex-col">
+        Never events with
+        <input
+          name="exclude"
+          defaultValue={e.exclude ?? "girl, women, double, mixed"}
+          className="rounded border px-2 py-1"
+        />
+      </label>
+      {error && <p className="text-red-700 dark:text-red-400">{error}</p>}
+      <button className="self-start rounded border px-2 py-1">Save</button>
+    </form>
   );
 }
 

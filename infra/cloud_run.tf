@@ -134,6 +134,8 @@ resource "google_cloud_run_v2_job" "worker" {
             # Claude on Vertex AI for tennis prediction explanations (plan M3.6).
             VERTEX_PROJECT       = var.project_id
             CLAUDE_VERTEX_REGION = var.claude_region
+            # Routes API for drive times to tournaments (TEN-9).
+            ROUTES_PROJECT = var.project_id
           })
           content {
             name  = env.key

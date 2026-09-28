@@ -128,6 +128,22 @@ export function form<M extends TennisMatch>(matches: M[], key: string, today: st
   };
 }
 
+// TEN-11: how experienced a player is, for the next-match card: the
+// tournaments and decided singles matches found for them over the 12
+// months before `today` (one hop, so only as complete as their profile).
+export function level<M extends TennisMatch>(matches: M[], key: string, today: string) {
+  const f = form(matches, key, today);
+  const yearAgo = `${Number(today.slice(0, 4)) - 1}${today.slice(4)}`;
+  const tournaments = new Set(
+    matches
+      .filter(
+        (m) => sideOf(m, key) !== null && m.matchDate > yearAgo && m.matchDate <= today && m.tournamentId,
+      )
+      .map((m) => m.tournamentId),
+  );
+  return { tournaments: tournaments.size, lastYear: f.lastYear };
+}
+
 // TEN-7: seasons are calendar years, as the tournament site groups them.
 export const seasonOf = (date: string) => Number(date.slice(0, 4));
 

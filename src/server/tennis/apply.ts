@@ -313,6 +313,18 @@ export async function syncTennis(
         sql`${tennisMatches.sourceId} = ${sourceId} or (${tennisMatches.sourceId} is null and ${tennisMatches.origin} = 'manual')`,
       );
     const tournamentExternal = (id: string) => externalByTournamentId.get(id) ?? `manual:${id}`;
+    // A typed-in match can point at another source's players (linked to
+    // that source's copy); read those players too, for their keys.
+    const foreign = [
+      ...new Set(
+        rows
+          .flatMap((r) => [r.side1, r.side2, r.side1Partner, r.side2Partner])
+          .filter((id): id is string => !!id && !playerById.has(id)),
+      ),
+    ];
+    if (foreign.length)
+      for (const p of await tx.select().from(tennisPlayers).where(inArray(tennisPlayers.id, foreign)))
+        playerById.set(p.id, p);
     const stored: StoredMatch[] = rows.map((r) => ({
       id: r.id,
       externalId: r.externalId,

@@ -36,6 +36,22 @@ const configSchema = z.object({
   calendarId: z.string().min(1).max(300).optional(),
   // tennis_tc: his public profile link on the tournament site.
   profileUrl: z.string().trim().min(1).max(300).optional(),
+  // tennis_tc: tournament entries (TEN-9). The home postal code is sent to
+  // the tournament site's search and, with the venue, to the routing
+  // service for drive times; it's never shown outside the Sources page.
+  entry: z
+    .object({
+      homePostalCode: z
+        .string()
+        .trim()
+        .regex(/^[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d$/, "a Canadian postal code, e.g. A1A 1A1")
+        .optional(),
+      maxDriveMinutes: z.number().int().min(15).max(600).optional(),
+      include: z.string().trim().max(200).optional(),
+      prefer: z.string().trim().max(200).optional(),
+      exclude: z.string().trim().max(200).optional(),
+    })
+    .optional(),
 });
 
 export const createSourceInput = z.object({
@@ -145,8 +161,16 @@ export async function createSource(db: Db, input: z.infer<typeof createSourceInp
 export async function updateSource(db: Db, id: string, input: z.infer<typeof updateSourceInput>) {
   if (input.config?.profileUrl !== undefined && !profileIdFromLink(input.config.profileUrl))
     throw new HttpError(400, "paste his profile link from tc.tournamentsoftware.com (…/player-profile/…)");
-  const [row] = await db.update(sources).set(input).where(eq(sources.id, id)).returning({ id: sources.id });
-  if (!row) throw new HttpError(404, "not found");
+  // Config is merged, so saving one setting keeps the others.
+  const [current] = await db.select({ config: sources.config }).from(sources).where(eq(sources.id, id));
+  if (!current) throw new HttpError(404, "not found");
+  const config = input.config
+    ? { ...((current.config ?? {}) as Record<string, unknown>), ...input.config }
+    : undefined;
+  await db
+    .update(sources)
+    .set({ ...input, ...(config && { config }) })
+    .where(eq(sources.id, id));
 }
 
 export async function sourceRuns(db: Db, id: string): Promise<RunView[]> {

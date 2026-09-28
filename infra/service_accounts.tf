@@ -52,3 +52,11 @@ resource "google_project_iam_member" "worker_vertex" {
   role    = "roles/aiplatform.user"
   member  = google_service_account.worker.member
 }
+
+# Worker calls the Routes API for drive times to tournaments (TEN-9),
+# billed to this project through X-Goog-User-Project.
+resource "google_project_iam_member" "worker_routes" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageConsumer"
+  member  = google_service_account.worker.member
+}
