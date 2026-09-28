@@ -3,6 +3,7 @@ locals {
     "aiplatform.googleapis.com",
     "artifactregistry.googleapis.com",
     "billingbudgets.googleapis.com",
+    "bigquery.googleapis.com",      # reading the billing export (intent 0002)
     "calendar-json.googleapis.com", # household calendar (SRC-1)
     "classroom.googleapis.com",     # homework and grades (SRC-8)
     "cloudkms.googleapis.com",

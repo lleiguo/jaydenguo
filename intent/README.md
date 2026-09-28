@@ -16,3 +16,4 @@ Rules:
 | # | Change | Intent | Spec | Plan |
 |---|---|---|---|---|
 | 0001 | [Jayden hub](0001-jayden-hub/) | approved 2026-09-26 | approved 2026-09-26 | approved 2026-09-26; M0 done |
+| 0002 | [Costs dashboard](0002-costs-dashboard/) | approved 2026-09-28 (chat) | draft 2026-09-28 | draft 2026-09-28; built, not merged |

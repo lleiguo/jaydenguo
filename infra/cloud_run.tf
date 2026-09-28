@@ -53,6 +53,11 @@ resource "google_cloud_run_v2_service" "web" {
           APP_URL        = "https://${var.domain}"
           ALLOWED_EMAILS = join(",", var.allowed_emails)
           HOME_TIME_ZONE = var.home_time_zone
+          # The Costs page (intent 0002): the export's table and the budgets.
+          BILLING_EXPORT_TABLE = var.billing_export_table
+          MONTHLY_BUDGET       = tostring(var.monthly_budget)
+          AI_MONTHLY_BUDGET    = tostring(var.ai_monthly_budget)
+          BUDGET_CURRENCY      = var.budget_currency
         })
         content {
           name  = env.key
@@ -137,6 +142,9 @@ resource "google_cloud_run_v2_job" "worker" {
             # Gemini on Vertex AI for video reviews (plan M5.1, SP-6).
             GEMINI_MODEL         = var.gemini_model
             GEMINI_VERTEX_REGION = var.gemini_region
+            # Reading the billing export for the Costs page (intent 0002).
+            BILLING_EXPORT_TABLE = var.billing_export_table
+            BILLING_PROJECT      = var.project_id
             # Routes API for drive times to tournaments (TEN-9).
             ROUTES_PROJECT = var.project_id
           })

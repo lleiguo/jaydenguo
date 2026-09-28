@@ -8,6 +8,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -33,6 +34,8 @@ export const emailMessages = pgTable(
     subject: text("subject").notNull(),
     suggestions: integer("suggestions").notNull().default(0),
     model: text("model"),
+    // What reading this email cost, estimated from tokens (COST-4).
+    costUsd: numeric("cost_usd", { precision: 10, scale: 4, mode: "number" }),
     promptVersion: text("prompt_version"),
     readAt: ts("read_at").notNull().defaultNow(),
   },
