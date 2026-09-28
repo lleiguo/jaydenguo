@@ -99,7 +99,7 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 | SYNC-2 | On-demand sync for all sources or a single source. | A "Refresh" button on the sources page and on each sport page starts a sync. Progress is shown live. Most sources finish in under 2 minutes. A second refresh of the same source while one is running is ignored. |
 | SYNC-3 | Syncs never duplicate events and are safe to re-run. | Each source event has a stable external ID. Running a sync twice in a row changes nothing the second time. |
 | SYNC-4 | Failures are visible. | A failed source shows a red status with the error in plain language, e.g. "Login failed: check your Tennis Canada password". Three failures in a row send an email to the owner. |
-| SYNC-5 | Syncs are polite to source sites. | At most one run per source per hour (on-demand included). At least 2 s between page requests. One user-agent that identifies the app. |
+| SYNC-5 | Syncs are polite to source sites. | At most one successful run per source per hour (on-demand included); after a failed run it may run again straight away (owner, 2026-09-28). At least 2 s between page requests. One user-agent that identifies the app. |
 | SYNC-6 | Every source can also be filled in by hand. | If a source can't be synced, the owner can still add its events, results and matches manually in the same format. |
 
 ### 3.4 Sources and integrations (SRC)

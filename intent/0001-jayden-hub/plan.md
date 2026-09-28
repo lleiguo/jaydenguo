@@ -580,6 +580,12 @@ sends (migration 0011; the next is 0012), and upcoming meets show the
 session date and time. The PB table lists the newest PB first within each
 course.
 
+Refresh (owner, 2026-09-28): only a successful run starts the hour's wait
+(SYNC-5), so a failing source can be retried at once; the advisory lock
+still stops overlapping runs. A refused refresh says why on its own source
+card, with the next possible time in local time, and an open History
+follows new runs.
+
 CI (2026-09-28): the checks run once per change. A PR run leaves a
 `ci-tree-<git tree>` marker when everything passes; the run on `main`
 after the merge skips the checks when the merged files are the same, and

@@ -124,8 +124,18 @@ export async function listSources(db: Db) {
         .orderBy(syncRuns.sourceId, desc(syncRuns.startedAt))
     : [];
   const lastBySource = new Map(lastRuns.map((r) => [r.sourceId, r]));
+  // SYNC-5: only a successful run starts the hour's wait (owner, 2026-09-28).
+  const lastOks = ids.length
+    ? await db
+        .selectDistinctOn([syncRuns.sourceId], { sourceId: syncRuns.sourceId, startedAt: syncRuns.startedAt })
+        .from(syncRuns)
+        .where(and(inArray(syncRuns.sourceId, ids), eq(syncRuns.status, "succeeded")))
+        .orderBy(syncRuns.sourceId, desc(syncRuns.startedAt))
+    : [];
+  const lastOkBySource = new Map(lastOks.map((r) => [r.sourceId, r.startedAt]));
   return rows.map(({ source: s, credentialLabel }) => {
     const last = lastBySource.get(s.id);
+    const lastOk = lastOkBySource.get(s.id);
     return {
       id: s.id,
       kind: s.kind,
@@ -139,7 +149,7 @@ export async function listSources(db: Db) {
       consecutiveFailures: s.consecutiveFailures,
       lastRun: last ? runView(last) : null,
       running: !!last && last.status === "running" && Date.now() - last.startedAt.getTime() < STALE_RUN_MS,
-      nextRefreshAt: last ? new Date(last.startedAt.getTime() + minGapMs()).toISOString() : null,
+      nextRefreshAt: lastOk ? new Date(lastOk.getTime() + minGapMs()).toISOString() : null,
     };
   });
 }
@@ -225,9 +235,16 @@ export async function requestRefresh(db: Db, id: string, launcher: JobLauncher):
   if (last?.status === "running" && Date.now() - last.startedAt.getTime() < STALE_RUN_MS) {
     throw new HttpError(409, "A refresh is already running.");
   }
-  if (last && Date.now() - last.startedAt.getTime() < minGapMs()) {
-    const next = new Date(last.startedAt.getTime() + minGapMs());
-    throw new HttpError(429, `Synced recently. The next refresh is possible after ${next.toISOString()}.`);
+  // Only a successful run starts the hour's wait, so a failing source can be
+  // retried straight away.
+  const [lastOk] = await db
+    .select({ startedAt: syncRuns.startedAt })
+    .from(syncRuns)
+    .where(and(eq(syncRuns.sourceId, id), eq(syncRuns.status, "succeeded")))
+    .orderBy(desc(syncRuns.startedAt))
+    .limit(1);
+  if (lastOk && Date.now() - lastOk.startedAt.getTime() < minGapMs()) {
+    throw new HttpError(429, "Synced recently. Each source refreshes at most once an hour.");
   }
   await launcher.start(["sync", id, "manual"]);
 }
