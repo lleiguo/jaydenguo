@@ -11,6 +11,7 @@ import classicThemePlugin from "@fullcalendar/react/themes/classic";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORIES } from "@/domain/constants";
+import { schoolBlocks } from "@/domain/school-blocks";
 import type { CalendarPayload, ClashView, EventView, Undo } from "@/lib/calendar-types";
 import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
@@ -48,6 +49,8 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
   const [series, setSeries] = useState<Parameters<typeof EventForm>[0]["series"]>();
   const [toast, setToast] = useState<Toast | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  // SCH-1: school days show one "School" block until tapped (per visit).
+  const [expandedSchool, setExpandedSchool] = useState<ReadonlySet<string>>(new Set());
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
@@ -87,15 +90,43 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
     return [...m];
   }, [data]);
 
+  const shown = useMemo(
+    () =>
+      (data?.events ?? []).filter(
+        (e) => !(e.status === "cancelled" && e.source === null) && isVisible(e, filters),
+      ),
+    [data, filters],
+  );
+  const blocks = useMemo(() => (data ? schoolBlocks(shown, data.homeTimeZone) : []), [shown, data]);
+
   const fcEvents: EventInput[] = useMemo(() => {
     if (!data) return [];
     const out: EventInput[] = [];
-    for (const e of data.events) {
-      if (e.status === "cancelled" && e.source === null) continue;
-      if (!isVisible(e, filters)) continue;
-      const open = (clashesOf.get(e.id) ?? []).filter((c) => !c.acceptedId);
-      const hiddenClash = open.some((c) => c.other && !isVisible(c.other, filters));
-      const visibleClash = open.some((c) => !c.other || isVisible(c.other, filters));
+    // Open clashes of some events, split by whether the other side is shown.
+    const clashState = (ids: string[]) => {
+      const open = ids.flatMap((id) => clashesOf.get(id) ?? []).filter((c) => !c.acceptedId);
+      const visible = open.some((c) => !c.other || isVisible(c.other, filters));
+      const hidden = open.some((c) => c.other && !isVisible(c.other, filters));
+      return { open: open.length > 0, clash: visible ? "visible" : hidden ? "hidden" : null };
+    };
+    const folded = new Set<string>();
+    for (const b of blocks) {
+      if (expandedSchool.has(b.date)) continue;
+      for (const c of b.classes) folded.add(c.id);
+      const { open, clash } = clashState(b.classes.map((c) => c.id));
+      out.push({
+        id: `school:${b.date}`,
+        title: "School",
+        start: b.start,
+        end: b.end,
+        editable: false,
+        className: ["hub-ev", "cat-school_class", open ? "hub-clash" : ""].filter(Boolean).join(" "),
+        extendedProps: { schoolBlock: { date: b.date, count: b.classes.length }, clash },
+      });
+    }
+    for (const e of shown) {
+      if (folded.has(e.id)) continue;
+      const { open, clash } = clashState([e.id]);
       out.push({
         id: e.id,
         title: e.title,
@@ -106,13 +137,13 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
         className: [
           "hub-ev",
           `cat-${e.category}`,
-          open.length ? "hub-clash" : "",
+          open ? "hub-clash" : "",
           e.override?.skip ? "hub-skipped" : "",
           e.status === "cancelled" ? "hub-cancelled" : "",
         ]
           .filter(Boolean)
           .join(" "),
-        extendedProps: { view: e, clash: visibleClash ? "visible" : hiddenClash ? "hidden" : null },
+        extendedProps: { view: e, clash },
       });
     }
     for (const d of data.closures) {
@@ -120,7 +151,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
       out.push({ start: d, end: next, allDay: true, display: "background", className: "hub-closure-bg" });
     }
     return out;
-  }, [data, filters, clashesOf]);
+  }, [data, filters, clashesOf, shown, blocks, expandedSchool]);
 
   const done = useCallback(
     (message: string, undo?: Undo) => {
@@ -188,6 +219,14 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
         >
           Filters
         </button>
+        {blocks.some((b) => expandedSchool.has(b.date)) && (
+          <button
+            className="rounded-full border px-3 py-1 text-sm"
+            onClick={() => setExpandedSchool(new Set())}
+          >
+            Collapse school
+          </button>
+        )}
         <button
           className="ml-auto rounded-md bg-blue-700 px-3 py-1 text-sm text-white"
           onClick={() => setEditing("new")}
@@ -285,14 +324,45 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
             }}
             eventClick={(arg) => {
               arg.jsEvent.preventDefault();
-              if (arg.event.id) setSelected(arg.event.id);
+              const block = arg.event.extendedProps.schoolBlock as { date: string } | undefined;
+              if (block) setExpandedSchool((s) => new Set(s).add(block.date));
+              else if (arg.event.id) setSelected(arg.event.id);
             }}
             eventDrop={onDrop}
             eventResize={(info) => onDrop(info)}
             eventContent={(arg) => {
+              const clash = arg.event.extendedProps.clash as string | null;
+              const clashMark = clash && (
+                <span
+                  role="img"
+                  aria-label={clash === "hidden" ? "clash with a hidden event" : "clash"}
+                  title={clash === "hidden" ? "Clash with a hidden event" : "Clash"}
+                >
+                  ⚠
+                </span>
+              );
+              const block = arg.event.extendedProps.schoolBlock as
+                { date: string; count: number } | undefined;
+              if (block) {
+                return (
+                  <div
+                    className="hub-ev-body"
+                    data-testid="school-block"
+                    data-date={block.date}
+                    data-clash={clash ?? "none"}
+                    title="Show the classes"
+                  >
+                    <span role="img" aria-label="School">
+                      🏫
+                    </span>
+                    {clashMark}
+                    {arg.timeText && <span>{arg.timeText}</span>}
+                    <span className="hub-title">School · {block.count} classes</span>
+                  </div>
+                );
+              }
               const e = arg.event.extendedProps.view as EventView | undefined;
               if (!e) return null;
-              const clash = arg.event.extendedProps.clash as string | null;
               const info = CATEGORY_INFO[e.category];
               return (
                 <div
@@ -304,15 +374,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
                   <span role="img" aria-label={info.label}>
                     {info.icon}
                   </span>
-                  {clash && (
-                    <span
-                      role="img"
-                      aria-label={clash === "hidden" ? "clash with a hidden event" : "clash"}
-                      title={clash === "hidden" ? "Clash with a hidden event" : "Clash"}
-                    >
-                      ⚠
-                    </span>
-                  )}
+                  {clashMark}
                   {arg.timeText && <span>{arg.timeText}</span>}
                   <span className="hub-title">{e.title}</span>
                   {e.override?.sourceChangedAt && <span title="Source changed since you moved this">↻</span>}

@@ -138,6 +138,56 @@ test("School and Activities chips hide layers, closures stay, and hidden clashes
   await expect(calEvent(page, `Class block ${RUN}`)).toBeVisible();
 });
 
+test("a school day's classes fold into one School block that expands and collapses (SCH-1)", async ({
+  page,
+  context,
+}, info) => {
+  const monday = isolatedWeek(5, info.project.name);
+  const tue = addDays(monday, 1);
+  const periods = [
+    ["08:30", "09:20"],
+    ["09:30", "10:20"],
+    ["13:00", "14:00"],
+  ];
+  for (const [i, [from, to]] of periods.entries()) {
+    await addEvent(context, {
+      title: `Period ${i + 1} ${RUN}`,
+      category: "school_class",
+      start: toronto(tue, from),
+      end: toronto(tue, to),
+    });
+  }
+  await addEvent(context, {
+    title: `Orthodontist ${RUN}`,
+    category: "other",
+    start: toronto(tue, "13:30"),
+    end: toronto(tue, "14:30"),
+  });
+  await openWeek(page, monday);
+
+  // Collapsed by default: one block, carrying the clash of the class inside.
+  const block = page.getByTestId("school-block").filter({ hasText: "School · 3 classes" });
+  await expect(block).toHaveCount(1);
+  await expect(block).toHaveAttribute("data-date", tue);
+  await expect(block).toHaveAttribute("data-clash", "visible");
+  await expect(calEvent(page, `Period 1 ${RUN}`)).toHaveCount(0);
+
+  await block.click();
+  await expect(page.getByTestId("school-block")).toHaveCount(0);
+  for (const i of [1, 2, 3]) await expect(calEvent(page, `Period ${i} ${RUN}`)).toBeVisible();
+  await expect(calEvent(page, `Period 3 ${RUN}`)).toHaveAttribute("data-clash", "visible");
+
+  await page.getByRole("button", { name: "Collapse school" }).click();
+  await expect(block).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Collapse school" })).toHaveCount(0);
+
+  // Hiding the School layer hides the block too (CAL-3a).
+  await page.getByRole("button", { name: "🏫 School" }).click();
+  await expect(page.getByTestId("school-block")).toHaveCount(0);
+  await expect(calEvent(page, `Orthodontist ${RUN}`)).toHaveAttribute("data-clash", "hidden");
+  await page.getByRole("button", { name: "🏫 School" }).click();
+});
+
 test("a repeating event keeps its local time across the daylight-saving change (CAL-5, CAL-9)", async ({
   page,
   context,

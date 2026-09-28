@@ -422,6 +422,14 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   Google (`tests/e2e/support/fake-oidc.ts`) serves a sliver of the
   Classroom API and has a school account whose admin blocks the app.
 - The next migration is 0010 (M3b took 0009).
+- M4.2, first part (SCH-1 collapse, no Veracross needed): on a day with
+  two or more timed classes, the calendar shows one "School · N classes"
+  block from the first class's start to the last one's end
+  (`src/domain/school-blocks.ts`). Tapping it expands that day; "Collapse
+  school" folds every day back. Expansion lasts for the visit only. The
+  block carries the clash marker of any class inside it, and hides with
+  the School chip. A single class stays as it is. The e2e calendar weeks
+  now start on 2027-12-20, six per project.
 
 ### M5 (slice S5): Extras (≈ 10 days)
 | Task | Description | Spec | Done when |
@@ -512,7 +520,7 @@ or his opponents.
 | M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
 | M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
 | M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
-| M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). |
+| M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks collapse and expand (`m4/2-school-blocks`); the Veracross timetable, "Today at school" card and calendar feed wait on the owner's Veracross login. |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |
 
