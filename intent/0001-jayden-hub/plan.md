@@ -551,6 +551,29 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
 - The next migration is 0013 (M5 took 0012 for `video_reviews` and
   `video_review_rounds`).
 
+- M5.8 email suggestions: source kind `gmail` ("Coach and club emails")
+  with the owner's Google account (feature `gmail`, `gmail.readonly`, a
+  restricted scope: fine for the unverified personal app, F-6; button on
+  the Accounts page) and an allow-list of senders (`*@club.ca` for a whole
+  domain) and Gmail labels, edited when the source is added. The search
+  only asks Gmail for those (last 14 days, at most 50), and every message
+  is checked against the list again (EML-1). The sync adds no calendar
+  records and uses an empty window, so it never cancels anything; each new
+  email goes to Claude (`src/server/email/extract.ts`, structured output)
+  with the home time zone and the next 60 days' events labelled E1…, and
+  comes back as new / change / cancel suggestions with a word-for-word
+  quote and per-field confidence (EML-2). Only the sender, subject and the
+  suggestions are stored (`email_messages`, `email_suggestions`, migration
+  0013); the text is not (§7.2). Each email is read once; if Claude isn't
+  available the run fails in words and the emails are read next time.
+  Settings → Suggestions (badge with the count) lists them: fields can be
+  corrected, "guess"/"implied" marks low-confidence fields, and approving
+  a new one adds an event under the email source with the Gmail link as
+  its source link (EML-3); a change moves the event it's about and a
+  cancellation skips it, both as overrides (CON-3/4), so no source is
+  written. `EMAIL_LLM=fake` stands in for Claude locally and in tests.
+  The next migration is 0014.
+
 ### M6: Go-live hardening (≈ 2 days; can run after M1 and again after M5)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -628,7 +651,7 @@ or his opponents.
 | M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
 | M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
 | M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks, closures from the public key dates page, and the Veracross timetable with the "Today at school" card are built; Veracross sign-in codes are entered once on the Accounts page and remembered. M4.3 (homework and grades) deferred by the owner; M4.4 links are done for Veracross and the key dates page. |
-| M5 Extras (S5) | **started 2026-09-28.** M5.1: SP-6 done except the real-clip run (Claude quota still 0, owner step); AI budget in Terraform, not applied. M5.2–M5.6 built on `m5/2-video-review` (not merged): intake, media prep, clients, debate, review page and scoreboard. Needs before use: Terraform apply (Drive and Photos Picker APIs, AI budget), Claude quota for debate mode, connect Drive and Photos. M5.7 waits on the owner's clips. |
+| M5 Extras (S5) | **started 2026-09-28.** M5.1: SP-6 done except the real-clip run (Claude quota still 0, owner step); AI budget in Terraform, not applied. M5.2–M5.6 built on `m5/2-video-review` (not merged): intake, media prep, clients, debate, review page and scoreboard. Needs before use: Terraform apply (Drive and Photos Picker APIs, AI budget), Claude quota for debate mode, connect Drive and Photos. M5.7 waits on the owner's clips. M5.8 built on `m5/3-email-suggestions` (stacked, not merged); needs the Claude quota and a Gmail source to be useful. |
 | M6 Go-live hardening | not started |
 
 Between M3 and M4 (2026-09-27): Sources, Accounts, Clashes and Deleted

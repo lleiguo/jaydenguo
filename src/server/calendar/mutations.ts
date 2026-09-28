@@ -79,11 +79,19 @@ const fieldsOf = (e: typeof events.$inferSelect) => ({
 
 const isSingleManual = (e: typeof events.$inferSelect) => !e.sourceId && !e.seriesId;
 
-export async function createEvent(db: Db, actor: Actor, input: z.infer<typeof eventInput>) {
+// `origin` is for events added from another place, e.g. an approved email
+// suggestion (EML-3): its source and a link back.
+export async function createEvent(
+  db: Db,
+  actor: Actor,
+  input: z.infer<typeof eventInput>,
+  origin?: { sourceId: string; externalId: string; sourceUrl: string | null },
+) {
   return db.transaction(async (tx) => {
     const [e] = await tx
       .insert(events)
       .values({
+        ...origin,
         title: input.title,
         category: input.category,
         attendance: input.attendance,

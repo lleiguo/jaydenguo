@@ -11,6 +11,7 @@ locals {
     "drive.googleapis.com", # video reviews from Drive links (VID-2)
     "firebase.googleapis.com",
     "firebasehosting.googleapis.com",
+    "gmail.googleapis.com", # coach and club emails (SRC-4)
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "logging.googleapis.com",

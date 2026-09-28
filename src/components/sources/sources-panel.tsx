@@ -45,9 +45,17 @@ type Credential = {
   provider: string;
   label: string;
   meta: { calendars?: { id: string; summary: string; primary: boolean }[] };
+  scopes: string[] | null;
 };
 
-type Kind = "google_calendar" | "ical" | "commit_swim" | "tennis_tc" | "school_dates" | "veracross";
+const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const splitList = (v: FormDataEntryValue | null) =>
+  String(v ?? "")
+    .split(/[,\n]/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+type Kind = "google_calendar" | "ical" | "commit_swim" | "tennis_tc" | "school_dates" | "veracross" | "gmail";
 const KIND_LABEL: Record<Kind, string> = {
   google_calendar: "Google Calendar",
   ical: "Calendar feed",
@@ -55,6 +63,7 @@ const KIND_LABEL: Record<Kind, string> = {
   tennis_tc: "Tennis Canada tournaments",
   school_dates: "School key dates",
   veracross: "Veracross",
+  gmail: "Coach and club emails",
 };
 // Kinds that read public pages and need no account.
 const NO_ACCOUNT: Kind[] = ["tennis_tc", "school_dates"];
@@ -65,6 +74,7 @@ const ACCOUNT_NOUN: Record<Kind, [string, string]> = {
   tennis_tc: ["", ""],
   school_dates: ["", ""],
   veracross: ["a Veracross login", "Veracross login"],
+  gmail: ["a Google account with Gmail access", "Google account"],
 };
 const DEFAULT_CATEGORY: Record<Kind, string> = {
   google_calendar: "other",
@@ -73,6 +83,7 @@ const DEFAULT_CATEGORY: Record<Kind, string> = {
   tennis_tc: "tennis",
   school_dates: "school_class",
   veracross: "school_class",
+  gmail: "other",
 };
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : "never");
@@ -202,6 +213,19 @@ function SourceCard({
         {NO_ACCOUNT.includes(s.kind) ? "public pages" : (s.credentialLabel ?? "no account")} · default
         category {label(s.categoryMapping.default)}
       </div>
+      {s.kind === "gmail" && (
+        <div className="text-neutral-600 dark:text-neutral-400">
+          Reads only:{" "}
+          {[
+            ...((s.config as { senders?: string[] }).senders ?? []),
+            ...((s.config as { labels?: string[] }).labels ?? []).map((l) => `label ${l}`),
+          ].join(", ")}{" "}
+          ·{" "}
+          <a href="/settings/suggestions" className="underline">
+            suggestions
+          </a>
+        </div>
+      )}
       {failed && s.lastRun?.errorMessage && (
         <p className="text-red-700 dark:text-red-400" data-testid="source-error">
           {s.lastRun.errorMessage}
@@ -373,11 +397,13 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
   const [credentialId, setCredentialId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const usable = creds.filter((c) =>
-    kind === "google_calendar"
-      ? c.provider === "google"
-      : kind === "commit_swim" || kind === "veracross"
-        ? c.provider === kind && c.kind === "password"
-        : c.kind === "secret_url",
+    kind === "gmail"
+      ? c.provider === "google" && !!c.scopes?.includes(GMAIL_SCOPE)
+      : kind === "google_calendar"
+        ? c.provider === "google"
+        : kind === "commit_swim" || kind === "veracross"
+          ? c.provider === kind && c.kind === "password"
+          : c.kind === "secret_url",
   );
   const cred = usable.find((c) => c.id === credentialId) ?? usable[0];
   const calendars = cred?.meta?.calendars ?? [];
@@ -412,7 +438,9 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
                           portalUrl: f.get("portalUrl"),
                           studentFirstName: f.get("studentFirstName") || undefined,
                         }
-                      : {},
+                      : kind === "gmail"
+                        ? { senders: splitList(f.get("senders")), labels: splitList(f.get("labels")) }
+                        : {},
             categoryMapping: { default: f.get("category"), rules },
           }),
         });
@@ -439,6 +467,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
           <option value="tennis_tc">Tennis Canada (draws, matches and results)</option>
           <option value="school_dates">School key dates (public web page)</option>
           <option value="veracross">Veracross (daily schedule)</option>
+          <option value="gmail">Coach and club emails (Gmail, suggestions to approve)</option>
         </select>
       </label>
       <label className="flex flex-col">
@@ -496,6 +525,27 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
             ))}
           </select>
         </label>
+      )}
+      {kind === "gmail" && (
+        <>
+          <label className="flex flex-col">
+            Senders to read (one per line; *@club.ca for a whole club)
+            <textarea
+              name="senders"
+              rows={3}
+              className="rounded border px-2 py-1 font-mono text-xs"
+              placeholder={"*@teamsnap.com\ncoach@club.ca"}
+            />
+          </label>
+          <label className="flex flex-col">
+            Gmail labels to read (comma-separated)
+            <input name="labels" className="rounded border px-2 py-1" placeholder="e.g. Jayden" />
+          </label>
+          <p className="text-neutral-600 dark:text-neutral-400">
+            Only these emails are read. Each becomes suggestions you approve or reject; nothing is added to
+            the calendar by itself.
+          </p>
+        </>
       )}
       {kind === "veracross" && (
         <>

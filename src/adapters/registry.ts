@@ -1,4 +1,5 @@
 import { commitSwimAdapter } from "./commit-swim";
+import { gmailAdapter } from "./gmail";
 import { googleCalendarAdapter } from "./google-calendar";
 import { icalAdapter } from "./ical";
 import { schoolDatesAdapter } from "./school-dates";
@@ -14,6 +15,7 @@ export const adapters: Record<string, Adapter<never>> = {
   tennis_tc: tennisTcAdapter as Adapter<never>,
   school_dates: schoolDatesAdapter as Adapter<never>,
   veracross: veracrossAdapter as Adapter<never>,
+  gmail: gmailAdapter as Adapter<never>,
 };
 
 export function adapterFor(kind: string): Adapter<unknown> {
