@@ -15,6 +15,7 @@ import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
 import type { JobContext } from "./context";
+import { workerBrowserSession } from "./browser-session";
 import { openCredential } from "./credentials";
 
 // Runs one source's sync (spec §5.1, SYNC-1..5): lock, fetch, normalise,
@@ -123,6 +124,11 @@ async function runLocked(
       now: now(),
       homeTimeZone,
       // Tournaments he's entered (TEN-9..11), so their draws are read early.
+      // Veracross remembers this browser between runs. A sign-in code is only
+      // ever typed through "Test connection" on the Accounts page, so a sync
+      // that meets one stops and says so.
+      ...(source.kind === "veracross" &&
+        source.credentialId && { browserSession: workerBrowserSession(db, source.credentialId, false) }),
       ...(source.kind === "tennis_tc" && {
         tennisEntries: await syncEntries(db, source.id, localDate(now(), homeTimeZone)),
       }),

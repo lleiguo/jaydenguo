@@ -4,6 +4,7 @@ import { APP_URL, AUTH_SECRET, E2E_PORT, OWNER, PROJECTS, soleOwner } from "./te
 import { FAKE_COMMIT_PORT } from "./tests/e2e/support/fake-commit-port";
 import { FAKE_OIDC_PORT } from "./tests/e2e/support/fake-oidc-port";
 import { FAKE_TC_PORT } from "./tests/e2e/support/fake-tc-port";
+import { FAKE_VERACROSS_PORT } from "./tests/e2e/support/fake-veracross-port";
 
 // Cloud sessions ship a pre-installed Chromium; CI installs its own.
 const executablePath = process.env.PW_CHROMIUM_PATH || undefined;
@@ -40,6 +41,13 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
+      // Stands in for a Veracross parent portal that asks for a sign-in code
+      // (tests/e2e/support/fake-veracross.ts).
+      command: "pnpm exec tsx tests/e2e/support/fake-veracross.ts",
+      url: `http://127.0.0.1:${FAKE_VERACROSS_PORT}/login`,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       command: `PORT=${E2E_PORT} HOSTNAME=127.0.0.1 node .next/standalone/server.js`,
       url: `${APP_URL}/api/healthz`,
       reuseExistingServer: !process.env.CI,
@@ -57,6 +65,7 @@ export default defineConfig({
         WORKER_COMMAND: `node ${path.resolve("dist/worker.mjs")}`,
         COMMIT_SWIM_BASE_URL: `http://127.0.0.1:${FAKE_COMMIT_PORT}`,
         TENNIS_TC_BASE_URL: `http://127.0.0.1:${FAKE_TC_PORT}`,
+        VERACROSS_BASE_URL: `http://127.0.0.1:${FAKE_VERACROSS_PORT}`,
         // The fixture's "today", between his quarter final and semi final.
         TENNIS_TC_NOW: "2024-09-28T16:00:00Z",
         // The fake site needs no politeness gap between requests.

@@ -71,6 +71,13 @@
       "when": 1790547594896,
       "tag": "0009_tennis_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790566429309,
+      "tag": "0010_veracross_sessions",
+      "breakpoints": true
     }
   ]
 }

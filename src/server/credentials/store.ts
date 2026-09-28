@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { auditLog, credentials, sources } from "@db/schema";
+import { auditLog, credentialSessions, credentials, sources } from "@db/schema";
 import { seal } from "../crypto/envelope";
 import { defaultKeyWrapper, type KeyWrapper } from "../crypto/key-wrapper";
 import type { Db } from "../db/client";
 import { HttpError } from "../errors";
-import { aadFor } from "./aad";
+import { aadFor, sessionAadFor } from "./aad";
 import type { JobLauncher } from "../jobs/launcher";
 
 // Web-side credential operations (CRED-1..7). Everything here can seal
@@ -189,6 +189,40 @@ export async function requestTest(db: Db, actor: string, id: string, launcher: J
   if (current.status !== "active") throw new HttpError(409, "credential is being removed");
   await audit(db, actor, "credential.test_requested", id, { provider: current.provider });
   await launcher.start(["credential:test", id]);
+}
+
+// A sign-in code the owner typed while "Test connection" waits for one
+// (Veracross, plan M4.2). Accepted only while the worker is waiting; sealed
+// like any secret and never logged.
+export const signInCodeInput = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9]{4,12}$/, "enter the code as it appears in the email"),
+});
+const CODE_WINDOW_MS = 10 * 60_000;
+
+export async function submitSignInCode(
+  db: Db,
+  actor: string,
+  id: string,
+  code: string,
+  wrapper: KeyWrapper = defaultKeyWrapper(),
+) {
+  const [row] = await db.select({ meta: credentials.meta }).from(credentials).where(eq(credentials.id, id));
+  if (!row) throw new HttpError(404, "not found");
+  const since = (row.meta as { codeRequestedAt?: string }).codeRequestedAt;
+  if (!since || Date.now() - Date.parse(since) > CODE_WINDOW_MS)
+    throw new HttpError(409, "no sign-in is waiting for a code; press Test connection first");
+  const sealed = await seal(wrapper, code, sessionAadFor(id, "code"));
+  await db
+    .insert(credentialSessions)
+    .values({ credentialId: id, kind: "code", ...sealed })
+    .onConflictDoUpdate({
+      target: [credentialSessions.credentialId, credentialSessions.kind],
+      set: { ...sealed, updatedAt: new Date() },
+    });
+  await audit(db, actor, "credential.code", id);
 }
 
 export async function audit(db: Db, actor: string, action: string, target: string, details?: object) {

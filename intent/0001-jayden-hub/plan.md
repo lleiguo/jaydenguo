@@ -451,6 +451,17 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   "Today at school" card above the calendar shows today's periods, or the
   next school day's once today's are over. No migration. Tested against a
   fake portal (`tests/e2e/support/fake-veracross.ts`) with real Chromium.
+- M4.2, sign-in code (2026-09-28): the live portal emails a code to a
+  browser it doesn't know, with a "remember this device" box. The worker
+  now keeps the headless browser's cookies sealed in `credential_sessions`
+  (migration 0010, same envelope as credentials, never in the API, rotated
+  with the keys), so the session and the remembered device carry over
+  between runs. A code is only typed through "Test connection" on the
+  Accounts page: the worker waits up to 8 minutes on the code page, sets
+  `meta.codeRequestedAt` so the page shows a code box, and reads the code
+  the owner types (sealed as a `code` row, deleted once read). It ticks
+  "remember this device" and saves the cookies. A sync that meets the code
+  page doesn't wait; it says to use Test connection.
 
 ### M5 (slice S5): Extras (≈ 10 days)
 | Task | Description | Spec | Done when |

@@ -1,18 +1,19 @@
 import { and, eq, sql } from "drizzle-orm";
 import * as client from "openid-client";
-import { auditLog, credentials, sources } from "@db/schema";
+import { auditLog, credentialSessions, credentials, sources } from "@db/schema";
 import { CLASSROOM_SCOPES, probeClassroom } from "../adapters/classroom/api";
 import { testCommitLogin } from "../adapters/commit-swim";
 import { googleAccessToken } from "../adapters/google-calendar";
 import { testVeracrossLogin } from "../adapters/veracross";
 import { normaliseFeedUrl, politeFetch, FetchError } from "../adapters/http";
-import { SyncError } from "../adapters/types";
+import { SyncError, type BrowserSession } from "../adapters/types";
 import { googleConfig } from "../server/auth/oidc";
 import { aadFor } from "../server/credentials/aad";
 import { open, rewrap } from "../server/crypto/envelope";
 import { defaultKeyWrapper, type KeyWrapper } from "../server/crypto/key-wrapper";
 import type { Db } from "../server/db/client";
 import { registerSecret } from "../server/log";
+import { workerBrowserSession } from "./browser-session";
 import type { JobContext } from "./context";
 
 // Worker-only credential operations: the only code that decrypts (CRED-4).
@@ -49,11 +50,12 @@ export async function openCredential(
 
 // Checks a login or link without running a sync. Returns a plain-language
 // problem, or null when it works.
-// `veracrossPortal`: a Veracross login is tested against the portal link of
-// a source that uses it (the login page is per school).
+// A Veracross login is tested against the portal link of a source that uses
+// it (the login page is per school), with its saved browser session so a
+// sign-in code can be entered once and remembered.
 export async function checkCredential(
   cred: OpenedCredential,
-  veracrossPortal?: string,
+  veracross?: { portalUrl?: string; session?: BrowserSession },
 ): Promise<string | null> {
   try {
     if (cred.kind === "secret_url") {
@@ -76,7 +78,7 @@ export async function checkCredential(
     }
     if (cred.kind === "password" && cred.provider === "veracross") {
       if (!cred.username) return "Add the Veracross username.";
-      await testVeracrossLogin(veracrossPortal, cred.username, cred.secret);
+      await testVeracrossLogin(veracross?.portalUrl, cred.username, cred.secret, veracross?.session);
       return null;
     }
     return `There's no automatic test for ${cred.provider} logins yet. It will be checked on the next sync.`;
@@ -97,10 +99,11 @@ export async function testCredentialJob(args: string[], ctx: JobContext) {
     .select({ config: sources.config })
     .from(sources)
     .where(and(eq(sources.credentialId, id), eq(sources.kind, "veracross")));
-  let problem = await checkCredential(
-    cred,
-    (portalSource?.config as { portalUrl?: string } | undefined)?.portalUrl,
-  );
+  let problem = await checkCredential(cred, {
+    portalUrl: (portalSource?.config as { portalUrl?: string } | undefined)?.portalUrl,
+    // The owner pressed "Test connection", so a sign-in code can be typed.
+    session: workerBrowserSession(db, id, true),
+  });
   if (problem === null) problem = await checkClassroom(db, cred);
   const untested = problem?.startsWith("There's no automatic test");
   await db
@@ -166,6 +169,16 @@ export async function rotateKeysJob(
       .update(credentials)
       .set({ wrappedDek: next.wrappedDek, keyVersion: next.keyVersion })
       .where(eq(credentials.id, row.id));
+  }
+  const extras = await db.select().from(credentialSessions);
+  for (const row of extras) {
+    const next = await rewrap(wrapper, row);
+    await db
+      .update(credentialSessions)
+      .set({ wrappedDek: next.wrappedDek, keyVersion: next.keyVersion })
+      .where(
+        and(eq(credentialSessions.credentialId, row.credentialId), eq(credentialSessions.kind, row.kind)),
+      );
   }
   await db
     .insert(auditLog)
