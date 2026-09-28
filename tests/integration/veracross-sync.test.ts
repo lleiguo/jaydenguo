@@ -195,6 +195,45 @@ describe("Veracross sync", () => {
     delete process.env.SIGNIN_CODE_WAIT_MS;
   }, 120_000);
 
+  it("types the code into one-digit boxes, ticks a styled checkbox and presses Verify", async () => {
+    process.env.SIGNIN_CODE_WAIT_MS = "60000";
+    const site = await fakeSite({ requireCode: true, codePage: "digits" });
+    const { sourceId, credentialId } = await newSourceWithCredential({ studentFirstName: "Kid" });
+    const test = testCredentialJob([credentialId], { log, db: async () => db });
+    await expect
+      .poll(
+        async () =>
+          (
+            (await db.select().from(credentials).where(eq(credentials.id, credentialId)))[0].meta as {
+              codeRequestedAt?: string;
+            }
+          ).codeRequestedAt,
+        { timeout: 30_000 },
+      )
+      .toBeTruthy();
+    await submitSignInCode(db, "owner", credentialId, FAKE_VERACROSS_CODE);
+    await test;
+    const [cred] = await db.select().from(credentials).where(eq(credentials.id, credentialId));
+    expect(cred).toMatchObject({ lastTestOk: true, lastError: null });
+    // Remembered: a fresh session needs no new code.
+    site.expireSessions();
+    expect(await syncSource(db, sourceId, "scheduled", log, now)).toMatchObject({ status: "succeeded" });
+    expect(site.codesSent).toBe(1);
+    await db.update(sources).set({ enabled: false }).where(eq(sources.id, sourceId));
+    delete process.env.SIGNIN_CODE_WAIT_MS;
+  }, 120_000);
+
+  it("names the fields it saw when a code page isn't recognised, before asking for a code", async () => {
+    await fakeSite({ requireCode: true, codePage: "unknown" });
+    const { credentialId } = await newSourceWithCredential({ studentFirstName: "Kid" });
+    await testCredentialJob([credentialId], { log, db: async () => db });
+    const [cred] = await db.select().from(credentials).where(eq(credentials.id, credentialId));
+    expect(cred.lastError).toBe(
+      "Veracross's sign-in code page wasn't recognised, so this sync needs an update (fields seen: text name=a; text name=b).",
+    );
+    expect((cred.meta as { codeRequestedAt?: string }).codeRequestedAt).toBeUndefined();
+  }, 60_000);
+
   it("says so when no code comes in time or the code is wrong", async () => {
     process.env.SIGNIN_CODE_WAIT_MS = "3000";
     await fakeSite({ requireCode: true });

@@ -21,7 +21,36 @@ type Options = {
   // Ask for a code after the password unless the browser was remembered,
   // like the real portal.
   requireCode?: boolean;
+  // How the code page looks: one box marked as a code (default); six
+  // one-digit boxes drawn by script, a styled checkbox and a button Enter
+  // doesn't press; or boxes nothing can make sense of.
+  codePage?: "marked" | "digits" | "unknown";
 };
+
+// Six one-digit boxes, drawn after load; the button posts the joined code.
+const digitsPage = (id: string) =>
+  `<p>Enter the verification code we sent to your email.</p><div id="f"></div><script>
+setTimeout(() => {
+  document.getElementById("f").innerHTML =
+    [1, 2, 3, 4, 5, 6].map((n) => '<input type="text" maxlength="1" aria-label="Digit ' + n + '">').join("") +
+    '<label class="toggle"><input type="checkbox" id="r" style="opacity:0;position:absolute"><span>Trust this device for 30 days</span></label>' +
+    '<button type="button" id="v">Verify</button>';
+  document.getElementById("v").onclick = () => {
+    const form = document.createElement("form");
+    form.method = "post";
+    form.action = "/login/code";
+    const add = (name, value) => {
+      const i = document.createElement("input");
+      i.type = "hidden"; i.name = name; i.value = value; form.append(i);
+    };
+    add("pending", ${JSON.stringify(id)});
+    add("code", [...document.querySelectorAll("#f input[maxlength]")].map((i) => i.value).join(""));
+    if (document.getElementById("r").checked) add("remember", "on");
+    document.body.append(form);
+    form.submit();
+  };
+}, 300);
+</script>`;
 
 export type FakeVeracross = Server & {
   requested: string[];
@@ -108,13 +137,13 @@ export function createFakeVeracross(opts: Options = {}): FakeVeracross {
         const id = crypto.randomUUID();
         pending.add(id);
         codesSent++;
-        return send(
-          200,
-          page(
-            "Verify",
-            `<p>Enter the verification code we sent to your email.</p><form method="post" action="/login/code"><input type="hidden" name="pending" value="${id}"><label>Code <input name="code" autocomplete="one-time-code" inputmode="numeric"></label><label><input type="checkbox" name="remember"> Remember this device</label><button>Verify</button></form>`,
-          ),
-        );
+        const body =
+          opts.codePage === "digits"
+            ? digitsPage(id)
+            : opts.codePage === "unknown"
+              ? `<p>Enter the verification code we sent to your email.</p><input type="text" name="a"><input type="text" name="b">`
+              : `<p>Enter the verification code we sent to your email.</p><form method="post" action="/login/code"><input type="hidden" name="pending" value="${id}"><label>Code <input name="code" autocomplete="one-time-code" inputmode="numeric"></label><label><input type="checkbox" name="remember"> Remember this device</label><button>Verify</button></form>`;
+        return send(200, page("Verify", body));
       }
       return signIn();
     }
