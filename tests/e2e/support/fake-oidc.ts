@@ -2,6 +2,7 @@
 // tests. Its "account chooser" lists test accounts as buttons, like Google's.
 // It checks PKCE and signs ID tokens, so the app's real sign-in code runs.
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { SignJWT, exportJWK, generateKeyPair } from "jose";
 
@@ -138,6 +139,11 @@ async function main() {
       });
     }
     if (url.pathname === "/jwks") return send(200, { keys: [jwk] });
+
+    // A school's public key dates page (M4.2, SCH-2), made up.
+    if (url.pathname === "/school/calendar") {
+      return send(200, readFileSync("tests/fixtures/school-dates/key-dates.html", "utf8"), "text/html");
+    }
 
     if (url.pathname.startsWith("/ical/")) {
       const feed = FEEDS[url.pathname.slice("/ical/".length)];

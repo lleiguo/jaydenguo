@@ -43,7 +43,28 @@ owner hasn't looked for the subscription links yet.
 |---|---|---|
 | TeamSnap | Yes: every team schedule has a calendar subscription (iCal) link. | ICS, generic `ical` adapter. |
 | Spordle | Likely: the Spordle app has calendar synchronisation on teams with a Premium subscription (app 1.5.1+), and the Spordle account site has a calendar. Whether a plain iCal link is exposed isn't confirmed. | ICS if a link exists; otherwise a `spordle` login adapter (Playwright), decided when the owner checks. |
-| Veracross | Parent portals usually offer a calendar subscription link for the school calendar. The daily timetable needs scraping either way. | Checked in M4 (SP-5/M4.2); the `ical` adapter already handles the calendar feed. |
+| Veracross | Parent portals usually offer a calendar subscription link for the school calendar. The daily timetable needs scraping either way. | **M4.2 (2026-09-27): no feed yet.** The school's full calendar sits behind a page passkey on its website; the owner chose to read the public "Key Dates at a Glance" list instead (`school_dates` adapter). Timetable: scrape (below). |
+
+**Veracross, M4.2 (2026-09-27):**
+- The school's website has a public calendar page with a "YYYY-YYYY Key
+  Dates at a Glance" heading and a server-rendered `<ul>`: one `<li>` per
+  date or range, e.g. `<strong>Monday, Dec. 21 - Friday, Jan. 8:
+  </strong>Winter Break (No Classes)`. Dashes are written with and
+  without spaces; month names are abbreviated with or without a dot. The
+  weekdays let the parser check the year. It covers closures, Pro-D days,
+  breaks and first/last days, but not other school events. Some items are
+  for one campus only ("Jr. School Only", "Sr. School Only").
+- The full school calendar and the athletics calendar are behind a page
+  passkey (a password form on the school's site) given out on the Parent
+  Portal. Not used: Claude doesn't enter passkeys, and the owner chose the
+  public list.
+- Parent portal (owner's screenshots): top menu My Children, Family
+  Profile, Attendance, Directories, Menu. Under My Children, each child
+  has Classes & Reports, Daily Schedule, Recent Updates, Upcoming
+  Assignments and Student Files. The timetable is **Daily Schedule**
+  (not mapped yet: needs a signed-in look). Upcoming Assignments and
+  Classes & Reports are a possible F-5 fallback for homework and grades
+  if Classroom is blocked.
 
 **How the owner checks:** TeamSnap → the team → Schedule → Sync/Export
 calendar → copy the link. Spordle → the team → Schedule → the calendar sync
