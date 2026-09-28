@@ -333,11 +333,37 @@ only; its personal details are not). What it shows:
   "Withdraw" button.
 - No payment line on this page for this entry.
 
-Still open for M3b.6: the steps of the form itself before submitting (event
-choice, any terms or waiver box, whether a payment step follows), and what
-"My entry" shows when a fee is still unpaid. The next time the owner
-enters a tournament, screenshots of each step before the final submit
-would answer it; nothing needs to be submitted for the look.
+**Signed-in part, the entry form (2026-09-28):** the owner signed in in
+the desktop app's browser pane (Claude typed nothing) and Claude read one
+open tournament's form (a "Rising Stars" BS10/GS10 event) without choosing,
+ticking or submitting anything.
+- Signed out, `/individual-entry/<t>` redirects to `/user/login`: form
+  `form_login` posting to `/user` with `Login`, `Password`, a hidden
+  `__RequestVerificationToken`, `ReturnUrl`, and the submit button
+  `btnLogin`.
+- Signed in, one page with three numbered sections and one form (`form0`,
+  POST `/online-entry/IndividualEntry/SubmitEntry`, anti-forgery token):
+  1. **My details:** contact and sport details from the account, each with
+     a "Change" link; nothing to fill in. Hidden `TournamentCode` and
+     `OrganizationPerson_Code` (the player).
+  2. **Events:** "filtered by your gender and date of birth"; a select
+     `EventDetails.SelectedEvents[0].EventID` whose options read
+     "<event code> - <ball colour> $<fee>" (here one option, $45.00), value
+     = the event ID. Required: "Please select at least one event."
+  3. **Remarks:** optional `CommentDetails.Comments`.
+  Then "I agree to the tournament regulations" (`DisclaimerAgree`, a
+  YES/NO toggle; the regulations link opens the tournament information),
+  and Submit / Back / Withdraw.
+- **No payment step on the form:** the fee is only in the event's option
+  text. What follows Submit (a payment page, or straight to "My entry" with
+  "Entered") wasn't seen, because nothing was submitted.
+
+**Still open for M3b.6:** what the site shows right after Submit when a
+fee applies, and on "My entry" while it's unpaid. The owner's next real
+entry answers it (a screenshot of the page after Submit). Owner decision
+before building: automatic entry agrees to the regulations and commits
+the fee on his behalf, so it should have a fee limit (enter automatically
+up to $X; above that, leave it for the owner with the link).
 
 ## SP-5: Classroom access with Jayden's school account (M4.1, 2026-09-27, waiting on the owner)
 
