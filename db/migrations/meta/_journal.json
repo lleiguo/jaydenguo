@@ -85,6 +85,27 @@
       "when": 1790571455030,
       "tag": "0011_swim_entry_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790577092658,
+      "tag": "0012_video_reviews",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790579383305,
+      "tag": "0013_email_suggestions",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790579479787,
+      "tag": "0014_calendar_copy",
+      "breakpoints": true
     }
   ]
 }

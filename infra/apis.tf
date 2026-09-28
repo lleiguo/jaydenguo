@@ -8,13 +8,16 @@ locals {
     "cloudkms.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "cloudscheduler.googleapis.com",
+    "drive.googleapis.com", # video reviews from Drive links (VID-2)
     "firebase.googleapis.com",
     "firebasehosting.googleapis.com",
+    "gmail.googleapis.com", # coach and club emails (SRC-4)
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
-    "routes.googleapis.com", # drive times to tournaments (TEN-9)
+    "photospicker.googleapis.com", # video reviews picked in Google Photos (F-4)
+    "routes.googleapis.com",       # drive times to tournaments (TEN-9)
     "run.googleapis.com",
     "secretmanager.googleapis.com",
     "sqladmin.googleapis.com",

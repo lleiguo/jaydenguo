@@ -3,6 +3,7 @@ import { requirePageSession } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { SignOutEverywhere } from "@/components/sign-out-everywhere";
 import { TimeZoneSetting } from "@/components/time-zone-setting";
+import { CalendarCopySetting } from "@/components/calendar-copy-setting";
 import { getHomeTimeZone } from "@/server/settings";
 
 export default async function SettingsPage() {
@@ -20,6 +21,12 @@ export default async function SettingsPage() {
           General
         </h2>
         <TimeZoneSetting initial={homeTimeZone} zones={zones} />
+      </section>
+      <section aria-labelledby="calendar-copy" className="flex flex-col gap-3">
+        <h2 id="calendar-copy" className="font-semibold">
+          Copy to Google Calendar
+        </h2>
+        <CalendarCopySetting />
       </section>
       <section aria-labelledby="account" className="flex flex-col gap-3">
         <h2 id="account" className="font-semibold">

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ClashBadge } from "./clash-badge";
+import { SuggestionBadge } from "./email/suggestion-badge";
 
 const SETTINGS_TABS = [
   { href: "/settings", label: "General" },
   { href: "/settings/sources", label: "Sources" },
   { href: "/settings/accounts", label: "Accounts" },
   { href: "/settings/clashes", label: "Clashes" },
+  { href: "/settings/suggestions", label: "Suggestions" },
   { href: "/settings/deleted", label: "Deleted" },
 ];
 
@@ -36,6 +38,7 @@ export function SettingsTabs() {
           >
             {tab.label}
             {tab.href === "/settings/clashes" && <ClashBadge />}
+            {tab.href === "/settings/suggestions" && <SuggestionBadge />}
           </Link>
         );
       })}

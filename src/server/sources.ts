@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import { credentials, sources, syncRuns } from "@db/schema";
+import { GMAIL_SCOPE } from "../adapters/gmail";
 import { profileIdFromLink } from "../adapters/tennis-tc";
 import { portalFrom } from "../adapters/veracross";
 import { parseMapping } from "../domain/categories";
@@ -50,6 +51,22 @@ const configSchema = z.object({
   // login, which one is his.
   portalUrl: z.string().trim().max(300).optional(),
   studentFirstName: z.string().trim().max(60).optional(),
+  // gmail (EML-1): the only senders and labels read. "*@club.ca" is a
+  // whole domain.
+  senders: z
+    .array(
+      z
+        .string()
+        .trim()
+        .toLowerCase()
+        .regex(
+          /^(\*@[^\s@*]+\.[^\s@*]+|[^\s@*]+@[^\s@*]+\.[^\s@*]+)$/,
+          "a sender is an email address or *@domain",
+        ),
+    )
+    .max(30)
+    .optional(),
+  labels: z.array(z.string().trim().min(1).max(100)).max(20).optional(),
   // tennis_tc: tournament entries (TEN-9). The home postal code is sent to
   // the tournament site's search and, with the venue, to the routing
   // service for drive times; it's never shown outside the Sources page.
@@ -69,7 +86,7 @@ const configSchema = z.object({
 });
 
 export const createSourceInput = z.object({
-  kind: z.enum(["google_calendar", "ical", "commit_swim", "tennis_tc", "school_dates", "veracross"]),
+  kind: z.enum(["google_calendar", "ical", "commit_swim", "tennis_tc", "school_dates", "veracross", "gmail"]),
   name: z.string().trim().min(1).max(80),
   // Not needed for tennis_tc and school_dates, which read public pages.
   credentialId: z.uuid().optional(),
@@ -177,17 +194,21 @@ export async function createSource(db: Db, input: z.infer<typeof createSourceInp
       .returning({ id: sources.id });
     return row;
   }
+  if (input.kind === "gmail" && !input.config.senders?.length && !input.config.labels?.length)
+    throw new HttpError(400, "add at least one sender or Gmail label to read");
   if (input.kind === "veracross" && !portalFrom(input.config.portalUrl))
     throw new HttpError(400, "paste the parent portal link (https://portals.veracross.com/…/parent)");
   if (!input.credentialId) throw new HttpError(400, "choose an account");
   const [cred] = await db.select().from(credentials).where(eq(credentials.id, input.credentialId));
   if (!cred) throw new HttpError(400, "unknown account");
   const fits =
-    input.kind === "google_calendar"
-      ? cred.provider === "google"
-      : input.kind === "commit_swim" || input.kind === "veracross"
-        ? cred.provider === input.kind && cred.kind === "password"
-        : cred.kind === "secret_url";
+    input.kind === "gmail"
+      ? cred.provider === "google" && !!cred.scopes?.includes(GMAIL_SCOPE)
+      : input.kind === "google_calendar"
+        ? cred.provider === "google"
+        : input.kind === "commit_swim" || input.kind === "veracross"
+          ? cred.provider === input.kind && cred.kind === "password"
+          : cred.kind === "secret_url";
   if (!fits) throw new HttpError(400, "that account can't be used for this kind of source");
   const [row] = await db.insert(sources).values(input).returning({ id: sources.id });
   return row;

@@ -66,6 +66,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Video media prep runs ffmpeg in unit, integration and e2e tests.
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck

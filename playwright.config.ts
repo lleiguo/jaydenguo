@@ -61,6 +61,11 @@ export default defineConfig({
         OIDC_ISSUER: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
         GOOGLE_API_BASE: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
         CLASSROOM_API_BASE: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
+        PHOTOS_PICKER_BASE: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
+        // Video reviews run with stand-in models, not Vertex AI.
+        VIDEO_LLM: "fake",
+        // Email suggestions likewise (plan M5.8).
+        EMAIL_LLM: "fake",
         // Jobs the site starts run as local processes of the built worker.
         WORKER_COMMAND: `node ${path.resolve("dist/worker.mjs")}`,
         COMMIT_SWIM_BASE_URL: `http://127.0.0.1:${FAKE_COMMIT_PORT}`,

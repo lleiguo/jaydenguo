@@ -1,0 +1,46 @@
+{
+  "recorded": true,
+  "model": "gemini-3.1-pro-preview",
+  "promptVersion": "video-1-draft",
+  "response": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "{\n  \"replies\": [\n    {\n      \"point\": \"Watches the ball onto the strings\",\n      \"response\": \"concede\",\n      \"argument\": \"You are entirely right. This is a test clip with moving graphics, so there is no athlete, racket, or ball to observe.\",\n      \"at\": null\n    },\n    {\n      \"point\": \"Turn the shoulders sooner\",\n      \"response\": \"concede\",\n      \"argument\": \"I concede this point. There are no shoulders or racket swings to evaluate in this test pattern.\",\n      \"at\": null\n    },\n    {\n      \"point\": \"Finish over the shoulder\",\n      \"response\": \"concede\",\n      \"argument\": \"You are correct. I cannot assess a follow-through because this footage does not contain a tennis player.\",\n      \"at\": null\n    }\n  ]\n}"
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "createTime": "2026-09-28T06:37:04.847780Z",
+    "modelVersion": "gemini-3.1-pro-preview",
+    "responseId": "EAu6aqTfM76bpucPwvej0Ac",
+    "usageMetadata": {
+      "promptTokenCount": 2347,
+      "candidatesTokenCount": 197,
+      "totalTokenCount": 3473,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "VIDEO",
+          "tokenCount": 1584
+        },
+        {
+          "modality": "TEXT",
+          "tokenCount": 763
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 197
+        }
+      ],
+      "thoughtsTokenCount": 929
+    }
+  }
+}

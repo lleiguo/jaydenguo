@@ -1,4 +1,5 @@
 import type { CategoryMapping } from "../domain/categories";
+import type { EmailMessage } from "./gmail";
 import type { SwimBatch } from "../domain/swim-upsert";
 import type { TennisBatch } from "../domain/tennis-upsert";
 import type { SourceRecord, SyncWindow } from "../domain/upsert";
@@ -58,6 +59,8 @@ export type NormalisedBatch = {
   swim?: SwimBatch;
   // Tennis players, tournaments, draws and matches (tennis_tc), likewise.
   tennis?: TennisBatch;
+  // Allow-listed emails (gmail), read into suggestions after the run.
+  emails?: EmailMessage[];
 };
 
 export interface Adapter<Raw = unknown> {
