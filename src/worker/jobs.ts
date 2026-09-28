@@ -9,6 +9,7 @@ import { smokeJob, syncJob } from "./sync";
 import { tennisAcceptanceJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
 import { videoReviewJob } from "./video/review";
 import { calendarCopyJob } from "./calendar-copy";
+import { costsSyncJob } from "./costs";
 
 export type { JobContext } from "./context";
 export type Job = { description: string; run: (args: string[], ctx: JobContext) => Promise<void> };
@@ -60,6 +61,10 @@ export const jobs: Record<string, Job> = {
   "calendar:copy": {
     description: "Copy the calendar to the Jayden (hub) Google Calendar: calendar:copy [delete]",
     run: calendarCopyJob,
+  },
+  "costs:sync": {
+    description: "Read the last 35 days of the Cloud Billing export (daily)",
+    run: costsSyncJob,
   },
   backup: {
     description: "Export the database to the backup bucket (nightly)",

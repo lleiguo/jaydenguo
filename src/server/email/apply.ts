@@ -135,6 +135,7 @@ export async function syncEmails(
           subject: email.subject,
           suggestions: result.suggestions.length,
           model: result.model,
+          costUsd: result.costUsd,
           promptVersion: EMAIL_PROMPT_VERSION,
         })
         .returning({ id: emailMessages.id });

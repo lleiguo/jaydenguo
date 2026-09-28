@@ -150,3 +150,21 @@ variable "gemini_region" {
   type        = string
   default     = "global"
 }
+
+variable "billing_export_dataset" {
+  description = "BigQuery dataset (in this project) that receives the Cloud Billing standard usage cost export, e.g. \"billing\". Empty until the owner turns the export on (intent 0002)."
+  type        = string
+  default     = ""
+}
+
+variable "billing_export_table" {
+  description = "The export's table as project.dataset.table (gcp_billing_export_v1_<account>), once it exists. Empty hides the bill on the Costs page."
+  type        = string
+  default     = ""
+}
+
+variable "costs_sync_schedule" {
+  description = "When the worker reads the billing export (cron, home time zone)."
+  type        = string
+  default     = "30 6 * * *"
+}

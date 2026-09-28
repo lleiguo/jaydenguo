@@ -12,6 +12,7 @@ const SETTINGS_TABS = [
   { href: "/settings/clashes", label: "Clashes" },
   { href: "/settings/suggestions", label: "Suggestions" },
   { href: "/settings/deleted", label: "Deleted" },
+  { href: "/settings/costs", label: "Costs" },
 ];
 
 // Settings sections are separate pages, so each has its own link (the

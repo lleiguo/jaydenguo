@@ -26,6 +26,11 @@ locals {
       schedule    = var.tennis_draw_watch_schedule
       args        = ["tennis:draw-watch"]
     }
+    "costs-sync" = {
+      description = "Read the Cloud Billing export for the Costs page (intent 0002)"
+      schedule    = var.costs_sync_schedule
+      args        = ["costs:sync"]
+    }
     "nightly-backup" = {
       description = "Export the database to the backup bucket (NFR-3)"
       schedule    = var.daily_backup_schedule
