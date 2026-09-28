@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CATEGORIES } from "@/domain/constants";
-import { HOUSEHOLD_RULES } from "@/domain/categories";
+import { HOUSEHOLD_RULES, SCHOOL_DATE_RULES } from "@/domain/categories";
 import { rulesToText, textToRules } from "./rules";
 
 // Sources (ACT-1, SYNC-1, SYNC-2, SYNC-4): what feeds the calendar, how each
@@ -47,26 +47,29 @@ type Credential = {
   meta: { calendars?: { id: string; summary: string; primary: boolean }[] };
 };
 
-type Kind = "google_calendar" | "ical" | "commit_swim" | "tennis_tc";
+type Kind = "google_calendar" | "ical" | "commit_swim" | "tennis_tc" | "school_dates";
 const KIND_LABEL: Record<Kind, string> = {
   google_calendar: "Google Calendar",
   ical: "Calendar feed",
   commit_swim: "Commit Swimming",
   tennis_tc: "Tennis Canada tournaments",
+  school_dates: "School key dates",
 };
 // Kinds that read public pages and need no account.
-const NO_ACCOUNT: Kind[] = ["tennis_tc"];
+const NO_ACCOUNT: Kind[] = ["tennis_tc", "school_dates"];
 const ACCOUNT_NOUN: Record<Kind, [string, string]> = {
   google_calendar: ["a Google account", "Google account"],
   ical: ["a private calendar link", "Calendar link"],
   commit_swim: ["a Commit Swimming login", "Commit Swimming login"],
   tennis_tc: ["", ""],
+  school_dates: ["", ""],
 };
 const DEFAULT_CATEGORY: Record<Kind, string> = {
   google_calendar: "other",
   ical: "soccer",
   commit_swim: "swimming",
   tennis_tc: "tennis",
+  school_dates: "school_class",
 };
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : "never");
@@ -366,7 +369,9 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
                 ? { calendarId: f.get("calendarId") }
                 : kind === "tennis_tc"
                   ? { profileUrl: f.get("profileUrl") }
-                  : {},
+                  : kind === "school_dates"
+                    ? { pageUrl: f.get("pageUrl"), exclude: f.get("exclude") || undefined }
+                    : {},
             categoryMapping: { default: f.get("category"), rules },
           }),
         });
@@ -391,13 +396,31 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
           <option value="google_calendar">Google Calendar</option>
           <option value="commit_swim">Commit Swimming (meets and results)</option>
           <option value="tennis_tc">Tennis Canada (draws, matches and results)</option>
+          <option value="school_dates">School key dates (public web page)</option>
         </select>
       </label>
       <label className="flex flex-col">
         Name
         <input name="name" required className="rounded border px-2 py-1" placeholder="e.g. Soccer team" />
       </label>
-      {kind === "tennis_tc" ? (
+      {kind === "school_dates" ? (
+        <>
+          <label className="flex flex-col">
+            Link of the school&apos;s key dates page
+            <input
+              name="pageUrl"
+              type="url"
+              required
+              className="rounded border px-2 py-1"
+              placeholder="https://…/calendar"
+            />
+          </label>
+          <label className="flex flex-col">
+            Leave out items containing (comma-separated)
+            <input name="exclude" className="rounded border px-2 py-1" placeholder="e.g. Sr. School Only" />
+          </label>
+        </>
+      ) : kind === "tennis_tc" ? (
         <label className="flex flex-col">
           His profile link on tc.tournamentsoftware.com
           <input
@@ -467,7 +490,13 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
           name="rules"
           rows={4}
           className="rounded border px-2 py-1 font-mono text-xs"
-          defaultValue={kind === "google_calendar" ? rulesToText(HOUSEHOLD_RULES) : ""}
+          defaultValue={
+            kind === "google_calendar"
+              ? rulesToText(HOUSEHOLD_RULES)
+              : kind === "school_dates"
+                ? rulesToText(SCHOOL_DATE_RULES)
+                : ""
+          }
         />
       </label>
       {error && <p className="text-red-700 dark:text-red-400">{error}</p>}

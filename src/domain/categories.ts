@@ -38,6 +38,15 @@ export function categorise(
   return { category: category ?? mapping.default, attendance: attendance ?? "required" };
 }
 
+// Suggested rules for a school's key dates page (SCH-2): closures become
+// banners (CAL-7); everything else is a school event.
+export const SCHOOL_DATE_RULES: CategoryMapping["rules"] = [
+  { match: "school closed", category: "school_closure" },
+  { match: "no classes", category: "school_closure" },
+  { match: "non-instructional", category: "school_closure" },
+  { match: "pro-d", category: "school_closure" },
+];
+
 // Suggested rules for a household calendar (spec §12 q4: classes live there).
 export const HOUSEHOLD_RULES: CategoryMapping["rules"] = [
   { match: "tennis", category: "tennis" },

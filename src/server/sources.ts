@@ -16,6 +16,7 @@ export const SOURCE_KINDS = {
   ical: { label: "Calendar feed (iCal link)", credentialProvider: null },
   commit_swim: { label: "Commit Swimming", credentialProvider: "commit_swim" },
   tennis_tc: { label: "Tennis Canada tournaments", credentialProvider: null },
+  school_dates: { label: "School key dates (public page)", credentialProvider: null },
 } as const;
 
 const mappingSchema = z.object({
@@ -36,6 +37,13 @@ const configSchema = z.object({
   calendarId: z.string().min(1).max(300).optional(),
   // tennis_tc: his public profile link on the tournament site.
   profileUrl: z.string().trim().min(1).max(300).optional(),
+  // school_dates: the school's public key dates page, and words that mark
+  // items that aren't his (comma-separated, e.g. "Sr. School Only").
+  pageUrl: z
+    .url({ protocol: /^https?$/ })
+    .max(300)
+    .optional(),
+  exclude: z.string().trim().max(300).optional(),
   // tennis_tc: tournament entries (TEN-9). The home postal code is sent to
   // the tournament site's search and, with the venue, to the routing
   // service for drive times; it's never shown outside the Sources page.
@@ -55,9 +63,9 @@ const configSchema = z.object({
 });
 
 export const createSourceInput = z.object({
-  kind: z.enum(["google_calendar", "ical", "commit_swim", "tennis_tc"]),
+  kind: z.enum(["google_calendar", "ical", "commit_swim", "tennis_tc", "school_dates"]),
   name: z.string().trim().min(1).max(80),
-  // Not needed for tennis_tc, which reads public pages.
+  // Not needed for tennis_tc and school_dates, which read public pages.
   credentialId: z.uuid().optional(),
   config: configSchema.default({}),
   categoryMapping: mappingSchema,
@@ -141,6 +149,15 @@ export async function createSource(db: Db, input: z.infer<typeof createSourceInp
     const [row] = await db
       .insert(sources)
       .values({ ...input, credentialId: null, config: { profileUrl: profileUrl!.trim() } })
+      .returning({ id: sources.id });
+    return row;
+  }
+  if (input.kind === "school_dates") {
+    const { pageUrl, exclude } = input.config;
+    if (!pageUrl) throw new HttpError(400, "paste the link of the school's key dates page");
+    const [row] = await db
+      .insert(sources)
+      .values({ ...input, credentialId: null, config: { pageUrl, ...(exclude && { exclude }) } })
       .returning({ id: sources.id });
     return row;
   }

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { addFeedCredential } from "./support/api";
+import { FAKE_OIDC_PORT } from "./support/fake-oidc-port";
 import { OWNER } from "./support/env";
 import { signInAs } from "./support/session";
 
@@ -43,6 +44,37 @@ test("a feed source syncs on demand, shows its history, and a second refresh is 
   await expect(card.getByRole("table").locator("tbody tr")).toHaveCount(1);
   await expect(card.getByRole("table")).toContainText("succeeded (manual)");
   await expect(card.getByRole("table")).toContainText("3 / 0 / 0");
+});
+
+test("a school's public key dates page becomes school events and closure banners (SCH-2, CAL-7)", async ({
+  page,
+  context,
+}, testInfo) => {
+  const name = `School dates ${testInfo.project.name} ${Date.now()}`;
+  await signInAs(context, OWNER);
+  await page.goto("/settings/sources");
+  const form = page.getByRole("form", { name: "Add a source" });
+  await form.getByLabel("Type").selectOption("school_dates");
+  await form.getByLabel("Name", { exact: true }).fill(name);
+  await form
+    .getByLabel("Link of the school's key dates page")
+    .fill(`http://127.0.0.1:${FAKE_OIDC_PORT}/school/calendar`);
+  await form.getByLabel("Leave out items containing").fill("Sr. School Only, AP Exams");
+  await expect(form.getByLabel("Default category")).toHaveValue("school_class");
+  await expect(form.getByLabel(/^Rules/)).toHaveValue(/school closed = school_closure/);
+  await form.getByRole("button", { name: "Add source" }).click();
+
+  const card = sourceCard(page, name);
+  await card.getByRole("button", { name: "Refresh" }).click();
+  await expect(card).toContainText("9 added, 0 changed, 0 cancelled", { timeout: 30_000 });
+
+  // Winter break: a banner on every day, and the first day back as a school event.
+  await page.goto("/?view=timeGridWeek&date=2030-12-30");
+  await expect(page.locator(".hub-closure-bg").first()).toBeVisible();
+  await page.goto("/?view=timeGridWeek&date=2031-01-06");
+  await expect(
+    page.getByTestId("cal-event").filter({ hasText: "First Day of Classes after Winter Break" }).first(),
+  ).toBeVisible();
 });
 
 test("a failing source shows a red status with the reason in plain language (SYNC-4)", async ({
