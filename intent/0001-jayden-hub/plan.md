@@ -596,6 +596,18 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
 | M6.2 | Go-live checklist (spec §9): restore tested, allow-list, noindex, no secrets in logs, 2-step verification on, budgets active, logs regional. | §9, NFR-1a | All items ticked in the PR. |
 | M6.3 | Runbook in the README: redeploy, rotate keys, reconnect a source, restore a backup, what to do when an adapter breaks. | NFR-8 | Reviewed by the owner. |
 
+**Build notes (M6, 2026-09-28):**
+- M6.1: a manual review of the whole repository and the live project
+  ([security-review.md](security-review.md)); `/security-review` reviews a
+  branch's changes, not a whole codebase. Fixes: Google access tokens are
+  registered with the log redactor where they're minted, and links from
+  source data are shown only if they're `http(s)` (`src/lib/external-href.ts`).
+- M6.2: the checklist is in the same file; items only the owner can check
+  are left unticked.
+- M6.3: "Runbook (production)" in the README: redeploy and roll back,
+  rotate keys and secrets, reconnect a source, restore (points to
+  `infra/README.md`), a broken adapter, and the AI features.
+
 **Total: about 48 engineering days.** S1 is usable on its own after about
 16 days (M0 + M1).
 
@@ -661,13 +673,13 @@ or his opponents.
 | Milestone | Status |
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
-| M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6), M1.13 restore test (owner runs `infra/bootstrap/restore-test.sh`), and the S1 week of use. |
+| M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). M1.13 restore test done by the owner (2026-09-28). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6). |
 | M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
 | M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
 | M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
-| M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks, closures from the public key dates page, and the Veracross timetable with the "Today at school" card are built; Veracross sign-in codes are entered once on the Accounts page and remembered. M4.3 (homework and grades) deferred by the owner; M4.4 links are done for Veracross and the key dates page. |
-| M5 Extras (S5) | **started 2026-09-28.** M5.1: SP-6 done except the real-clip run (Claude quota still 0, owner step); AI budget in Terraform, not applied. M5.2–M5.6 built on `m5/2-video-review` (not merged): intake, media prep, clients, debate, review page and scoreboard. Needs before use: Terraform apply (Drive and Photos Picker APIs, AI budget), Claude quota for debate mode, connect Drive and Photos. M5.7 waits on the owner's clips. M5.8 built on `m5/3-email-suggestions` and M5.9 on `m5/4-calendar-copy` (stacked, not merged). M5.8 needs the Claude quota and a Gmail source to be useful. |
-| M6 Go-live hardening | not started |
+| M4 School (S4) | **deployed 2026-09-28** (PRs #22–#31). M4.1 Classroom connect and check built; the spike itself (consent with his school account) waits on the owner. M4.2 school blocks, key dates, Veracross timetable with sign-in codes: live. M4.3 (homework and grades) deferred by the owner. M4.4 links done. |
+| M5 Extras (S5) | **merged 2026-09-28** (PRs #32–#35; Terraform applied). M5.1–M5.6, M5.8, M5.9 built; video reviews work live in Gemini-only mode. Open: the Claude quota (debate mode, email suggestions, match explanations), M5.7 evaluation with the owner's clips (prompts still `video-1-draft`), SP-6's real-clip run, connecting Gmail and the calendar copy. |
+| M6 Go-live hardening | **done 2026-09-28 except owner items** (`m6/go-live`). M6.1 review in [security-review.md](security-review.md): two fixes, five accepted risks for the owner to confirm. M6.2 checklist there: owner confirms the allow-list's second address, 2-step verification and budgets. M6.3 runbook in the README, for the owner to review. |
 
 Between M3 and M4 (2026-09-27): Sources, Accounts, Clashes and Deleted
 moved under Settings as tabs (`/settings/sources` and so on); the old

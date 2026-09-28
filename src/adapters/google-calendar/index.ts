@@ -3,6 +3,7 @@ import { categorise } from "../../domain/categories";
 import { addDays } from "../../domain/time";
 import type { SourceRecord } from "../../domain/upsert";
 import { googleConfig } from "../../server/auth/oidc";
+import { registerSecret } from "../../server/log";
 import { FetchError, politeFetch } from "../http";
 import { SyncError, type Adapter, type AdapterContext, type NormalisedBatch } from "../types";
 
@@ -31,6 +32,8 @@ export type GoogleCalendarRaw = { items: GoogleEvent[]; timeMin: string; timeMax
 export async function googleAccessToken(refreshToken: string): Promise<string> {
   try {
     const tokens = await client.refreshTokenGrant(await googleConfig(), refreshToken);
+    // CRED-5: an access token is as secret as the grant for its hour.
+    registerSecret(tokens.access_token);
     return tokens.access_token;
   } catch (err) {
     if (err instanceof client.ResponseBodyError && err.error === "invalid_grant") {

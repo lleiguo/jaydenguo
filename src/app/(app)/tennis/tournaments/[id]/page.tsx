@@ -7,6 +7,7 @@ import { formatRecord } from "@/domain/tennis";
 import { getDb } from "@/server/db";
 import { explanationsFor } from "@/server/tennis/explain";
 import { loadTournament, predictAgainst } from "@/server/tennis/load";
+import { externalHref } from "@/lib/external-href";
 
 // TEN-2, TEN-3: one tournament, his draws with his next match, and his
 // matches there.
@@ -35,7 +36,7 @@ export default async function TournamentPage({ params }: PageProps<"/tennis/tour
           {t.sourceUrl && (
             <>
               {" · "}
-              <a href={t.sourceUrl} className="underline" rel="noreferrer" target="_blank">
+              <a href={externalHref(t.sourceUrl)} className="underline" rel="noreferrer" target="_blank">
                 Open on the tournament site
               </a>
             </>

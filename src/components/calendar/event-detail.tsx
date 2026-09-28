@@ -6,6 +6,7 @@ import type { ClashView, EventView, Undo } from "@/lib/calendar-types";
 import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
 import { formatWhen, fromLocalInputs, toLocalInputs } from "./time-format";
+import { externalHref } from "@/lib/external-href";
 
 // Event detail (CAL-4) with the non-drag ways to resolve clashes (NFR-9,
 // CON-3, CON-4): Move to…, Skip, Accept clash, and back to the source time;
@@ -57,10 +58,15 @@ export function EventDetail(props: {
         ) : (
           "Added on this site."
         )}
-        {e.sourceUrl && (
+        {externalHref(e.sourceUrl) && (
           <>
             {" "}
-            <a className="underline" href={e.sourceUrl} target="_blank" rel="noreferrer noopener">
+            <a
+              className="underline"
+              href={externalHref(e.sourceUrl)}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
               Open at the source
             </a>
           </>
