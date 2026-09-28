@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><title>Tennis Canada</title></head><body>
+<!-- Hand-built from the site's structure (spikes.md SP-7); invented values. -->
+<main>
+<h2>Enter online</h2>
+<h3>Sam Fixture</h3>
+<form id="form0" class="js-validation-added" action="/online-entry/IndividualEntry/SubmitEntry" method="post">
+<input name="__RequestVerificationToken" type="hidden" value="fake-form-token">
+<input id="TournamentCode" name="TournamentCode" type="hidden" value="{{TOURNAMENT}}">
+<input id="OrganizationPerson_Code" name="OrganizationPerson_Code" type="hidden" value="person-fixture-1">
+<h4>1 My details</h4>
+<p>Check if your details are correct, and change them if necessary.</p>
+<div>Contact <a href="#">Change</a></div>
+<h4>2 Events</h4>
+<p>Events are filtered by your gender and date of birth.</p>
+<button type="button" aria-label="Close" class="icon-x__trigger"></button>
+<select id="EventDetails_SelectedEvents_0__EventID" name="EventDetails.SelectedEvents[0].EventID">
+<option value="">Select event</option>
+{{OPTIONS}}
+</select>
+<h4>3 Remarks</h4>
+<textarea id="CommentDetails_Comments" name="CommentDetails.Comments"></textarea>
+<p>I agree to <a href="#viewTournamentInformation">the tournament regulations</a>.</p>
+<input id="DisclaimerAgree" name="DisclaimerAgree" type="checkbox" value="true">
+<input name="DisclaimerAgree" type="hidden" value="false">
+<button type="submit">Submit</button>
+<button type="button">Back</button>
+<button type="button" class="btn btn--danger btn--minor withdraw-button">Withdraw</button>
+{{ERRORS}}
+</form>
+</main></body></html>

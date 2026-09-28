@@ -2,7 +2,6 @@ import { tennisTestNow } from "../adapters/tennis-tc";
 import { getHomeTimeZone } from "../server/settings";
 import { routesDriveTimer } from "../server/tennis/drive";
 import {
-  manualRegistrar,
   runAcceptance,
   runDrawWatch,
   runEnter,
@@ -11,6 +10,7 @@ import {
 } from "../server/tennis/entries";
 import type { JobContext } from "./context";
 import { syncSource } from "./sync";
+import { tennisRegistrar } from "./tennis-registrar";
 
 // Worker jobs for tournament entries (TEN-9..11). Cloud Scheduler starts
 // them (infra/scheduler.tf); each runs every enabled Tennis Canada source.
@@ -25,7 +25,8 @@ export async function tennisEnterJob(_args: string[], ctx: JobContext) {
   const ectx = await entryContext(ctx);
   const drive = routesDriveTimer();
   for (const source of await tennisSources(ectx.db)) {
-    const result = await runEnter(ectx, source, { drive, registrar: manualRegistrar });
+    const registrar = await tennisRegistrar(ectx.db, source, ctx.log);
+    const result = await runEnter(ectx, source, { drive, registrar });
     if ("skipped" in result)
       ctx.log("tennis entries skipped", { source: source.name, reason: result.skipped });
   }

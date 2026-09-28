@@ -141,7 +141,7 @@ test.describe("tennis", () => {
       .getByRole("region", { name: "Upcoming tournaments" })
       .getByTestId("upcoming-tournament");
     const pay = upcoming.filter({ hasText: "Entry Pay Classic" });
-    await expect(pay).toContainText("Registered · payment needed");
+    await expect(pay).toContainText("Payment required");
     await expect(pay.getByRole("link", { name: "Pay on the site →" })).toBeVisible();
     const waiting = upcoming.filter({ hasText: "Entry Waiting Open" });
     await expect(waiting).toHaveAttribute("data-status", "registered");

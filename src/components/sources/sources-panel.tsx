@@ -34,6 +34,7 @@ type Source = {
 };
 type EntrySettings = {
   homePostalCode?: string;
+  autoEnter?: boolean;
   maxDriveMinutes?: number;
   include?: string;
   prefer?: string;
@@ -333,6 +334,7 @@ function EntryForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
           include: String(f.get("include") ?? "").trim() || undefined,
           prefer: String(f.get("prefer") ?? "").trim(),
           exclude: String(f.get("exclude") ?? "").trim(),
+          autoEnter: f.get("autoEnter") === "on",
         };
         const res = await fetch(`/api/v1/sources/${s.id}`, {
           method: "PATCH",
@@ -348,6 +350,14 @@ function EntryForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
         Thursdays at noon the app looks for Rookie tournaments open for entry near home and picks his event;
         Fridays at 10:00 it reads the acceptance lists; on draw days it checks for his draw every hour.
       </p>
+      <label className="flex items-start gap-2">
+        <input name="autoEnter" type="checkbox" defaultChecked={e.autoEnter !== false} className="mt-1" />
+        <span>
+          Enter him on the site automatically, with the Tennis Canada login on the Accounts page. Entries
+          where the site asks for payment show as &quot;Payment required&quot; on the Tennis page for you to
+          pay.
+        </span>
+      </label>
       <label className="flex flex-col">
         Home postal code
         <input

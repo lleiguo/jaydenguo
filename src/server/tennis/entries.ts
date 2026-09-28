@@ -68,8 +68,8 @@ export type Registrar = {
   }): Promise<{ result: "entered" | "payment_needed" | "unavailable"; note?: string }>;
 };
 
-// Until the signed-in entry form is mapped (spikes.md SP-7, open), every
-// entry is left to the owner.
+// Leaves every entry to the owner (automatic entry switched off). The
+// worker's registrar uses the site's entry form (src/worker/tennis-registrar.ts).
 export const manualRegistrar: Registrar = { enter: async () => ({ result: "unavailable" }) };
 
 export type EntrySettings = { postalCode: string | null; prefs: EntryPrefs };

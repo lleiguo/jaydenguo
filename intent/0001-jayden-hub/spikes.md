@@ -358,12 +358,13 @@ ticking or submitting anything.
   text. What follows Submit (a payment page, or straight to "My entry" with
   "Entered") wasn't seen, because nothing was submitted.
 
-**Still open for M3b.6:** what the site shows right after Submit when a
-fee applies, and on "My entry" while it's unpaid. The owner's next real
-entry answers it (a screenshot of the page after Submit). Owner decision
-before building: automatic entry agrees to the regulations and commits
-the fee on his behalf, so it should have a fee limit (enter automatically
-up to $X; above that, leave it for the owner with the link).
+**Decided (owner, 2026-09-28):** submit entries automatically; where the
+site requires payment during registration, flag them "Payment required"
+for the owner. Built in M3b.6. The page after Submit when a fee is due
+hasn't been seen yet, so the registrar recognises payment generously (a
+pay button or address, or unpaid wording) and flags anything it can't read
+for the owner instead of calling it entered. The first real paid entry is
+worth a look to tighten this.
 
 ## SP-5: Classroom access with Jayden's school account (M4.1, 2026-09-27, waiting on the owner)
 
