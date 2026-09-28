@@ -6,9 +6,10 @@ import {
   parseEventKey,
   personalBests,
   progression,
+  sessionDate,
   type SwimEvent,
 } from "../../domain/swim";
-import type { Course, Stroke } from "../../domain/swim-constants";
+import { COURSES, type Course, type Stroke } from "../../domain/swim-constants";
 import { forecast, type Forecast } from "../../domain/swim-forecast";
 import type { SwimResultValues, SwimSplit } from "../../domain/swim-upsert";
 import { localDate } from "../../domain/time";
@@ -54,7 +55,14 @@ export type MeetView = {
   signup: "yes" | "no" | null;
   sourceUrl: string | null;
   manual: boolean;
-  entries: (SwimEvent & { key: string; seedTimeMs: number | null })[];
+  entries: (SwimEvent & {
+    key: string;
+    seedTimeMs: number | null;
+    // When his session starts, if the source says: its date and "HH:MM".
+    session: { date: string; time: string } | null;
+  })[];
+  // His sessions at this meet, soonest first (SWM-2 date and time).
+  sessions: { date: string; time: string }[];
   swims: number;
   pbs: number;
 };
@@ -116,6 +124,20 @@ export async function listMeets(
   ]);
   const views: MeetView[] = meets.map((m) => {
     const mine = results.filter((r) => r.meetId === m.id);
+    const meetEntries = entries
+      .filter((e) => e.meetId === m.id)
+      .map((e) => {
+        const ev = { distance: e.distance, stroke: e.stroke as Stroke, course: e.course as Course };
+        const session = e.sessionStart
+          ? { date: sessionDate(m.startDate, e.meetDay), time: e.sessionStart }
+          : null;
+        return { ...ev, key: eventKey(ev), seedTimeMs: e.seedTimeMs, session };
+      });
+    const sessions = new Map(
+      meetEntries.flatMap((e) =>
+        e.session ? [[`${e.session.date} ${e.session.time}`, e.session] as const] : [],
+      ),
+    );
     return {
       id: m.id,
       name: m.name,
@@ -127,12 +149,8 @@ export async function listMeets(
       signup: m.signup as MeetView["signup"],
       sourceUrl: m.sourceUrl,
       manual: m.sourceId === null,
-      entries: entries
-        .filter((e) => e.meetId === m.id)
-        .map((e) => {
-          const ev = { distance: e.distance, stroke: e.stroke as Stroke, course: e.course as Course };
-          return { ...ev, key: eventKey(ev), seedTimeMs: e.seedTimeMs };
-        }),
+      entries: meetEntries,
+      sessions: [...sessions].sort(([a], [b]) => a.localeCompare(b)).map(([, s]) => s),
       swims: mine.length,
       pbs: mine.filter((r) => r.isPb).length,
     };
@@ -154,15 +172,20 @@ export async function loadMeet(db: DbOrTx, id: string) {
   return { meet, results };
 }
 
+// SWM-6: per course, the newest PB first (owner, 2026-09-28).
 export async function loadPersonalBests(db: DbOrTx) {
   const results = await allResults(db);
   const byId = new Map(results.map((r) => [r.id, r]));
-  return personalBests(results).map((pb) => ({
-    ...pb,
-    meetId: byId.get(pb.resultId)?.meetId ?? null,
-    meetName: byId.get(pb.resultId)?.meetName ?? null,
-    swims: results.filter((r) => r.key === pb.key && r.timeMs != null).length,
-  }));
+  return personalBests(results)
+    .map((pb) => ({
+      ...pb,
+      meetId: byId.get(pb.resultId)?.meetId ?? null,
+      meetName: byId.get(pb.resultId)?.meetName ?? null,
+      swims: results.filter((r) => r.key === pb.key && r.timeMs != null).length,
+    }))
+    .sort(
+      (a, b) => COURSES.indexOf(a.course) - COURSES.indexOf(b.course) || b.swimDate.localeCompare(a.swimDate),
+    );
 }
 
 export type EventDetail = {

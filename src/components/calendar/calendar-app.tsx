@@ -12,6 +12,7 @@ import timeGridPlugin from "@fullcalendar/react/timegrid";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORIES } from "@/domain/constants";
 import { schoolBlocks } from "@/domain/school-blocks";
+import { RefreshButton } from "@/components/sport/refresh-button";
 import type { CalendarPayload, ClashView, EventView, Undo } from "@/lib/calendar-types";
 import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
@@ -227,12 +228,15 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
             Collapse school
           </button>
         )}
-        <button
-          className="ml-auto rounded-md bg-blue-700 px-3 py-1 text-sm text-white"
-          onClick={() => setEditing("new")}
-        >
-          + Add event
-        </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <RefreshButton sourceIds="all" site="all sources" what="the calendar" />
+          <button
+            className="rounded-md bg-blue-700 px-3 py-1 text-sm text-white"
+            onClick={() => setEditing("new")}
+          >
+            + Add event
+          </button>
+        </div>
         {openClashes > 0 && (
           <a
             href="/settings/clashes"

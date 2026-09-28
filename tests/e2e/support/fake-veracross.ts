@@ -167,7 +167,8 @@ export function createFakeVeracross(opts: Options = {}): FakeVeracross {
         const kids = [OTHER_STUDENT, OUR_STUDENT]
           .map(
             (k) =>
-              `<div class="child"><h4 class="vx-child-name">${k.name}</h4><a href="/${SCHOOL}/parent/student/${k.id}/overview">Classes &amp; Reports</a><a href="/${SCHOOL}/parent/student/${k.id}/daily-schedule">Daily Schedule</a></div>`,
+              // In a "My Children" menu that stays hidden until hovered, as on the real portal home.
+              `<div class="vx-hover-menu" style="display:none"><h4 class="vx-child-name">${k.name}</h4><a href="/${SCHOOL}/parent/student/${k.id}/overview">Classes &amp; Reports</a><a href="/${SCHOOL}/parent/student/${k.id}/daily-schedule">Daily Schedule</a></div>`,
           )
           .join("");
         return send(

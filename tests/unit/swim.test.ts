@@ -3,12 +3,15 @@ import {
   annotatePbs,
   eventKey,
   formatChange,
+  formatSession,
   formatSwimTime,
   normaliseStroke,
   parseEventKey,
   parseSwimTime,
   personalBests,
   progression,
+  sessionDate,
+  sessionTime,
   type SwimForStats,
 } from "@/domain/swim";
 
@@ -128,5 +131,25 @@ describe("courses are never mixed (SWM-4, M2.5)", () => {
       { swimDate: "2025-02-10", timeMs: 42000 },
       { swimDate: "2025-04-10", timeMs: 41000 },
     ]);
+  });
+});
+
+describe("session times (SWM-2)", () => {
+  it("reads Commit Swimming's session starts as 24-hour times", () => {
+    expect(sessionTime("08:50AM")).toBe("08:50");
+    expect(sessionTime("04:30PM")).toBe("16:30");
+    expect(sessionTime("12:15PM")).toBe("12:15");
+    expect(sessionTime("12:05 am")).toBe("00:05");
+    expect(sessionTime("17:45")).toBe("17:45");
+    expect(sessionTime("13:00PM")).toBeNull();
+    expect(sessionTime("TBD")).toBeNull();
+    expect(sessionTime(null)).toBeNull();
+  });
+
+  it("puts a session on its day of the meet", () => {
+    expect(sessionDate("2024-04-27", 1)).toBe("2024-04-27");
+    expect(sessionDate("2024-04-27", 2)).toBe("2024-04-28");
+    expect(sessionDate("2024-04-27", null)).toBe("2024-04-27");
+    expect(formatSession({ date: "2024-04-28", time: "16:30" })).toBe("Sun 2024-04-28 16:30");
   });
 });

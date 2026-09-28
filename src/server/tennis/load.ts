@@ -79,6 +79,9 @@ export type TournamentView = {
   categories: string[];
   sourceUrl: string | null;
   manual: boolean;
+  // Ties it to its entry row (tennis_entries), for synced tournaments.
+  sourceId: string | null;
+  externalId: string | null;
   when: "upcoming" | "in_progress" | "past";
   // TEN-2: the draws he's in and where his entry stands.
   draws: DrawView[];
@@ -230,6 +233,8 @@ export async function loadTennis(db: DbOrTx): Promise<TennisData> {
         categories: t.categories,
         sourceUrl: t.sourceUrl,
         manual: t.sourceId === null,
+        sourceId: t.sourceId,
+        externalId: t.externalId,
         when,
         draws,
         events,

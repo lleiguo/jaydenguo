@@ -466,7 +466,7 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   resume: SP-5's result (Classroom connect with his school account) is
   still unreported. The fallback is Veracross, now signed in: each child
   has "Upcoming Assignments" and "Classes & Reports", and each Daily
-  Schedule period has an `assignments` table. The next migration is 0011.
+  Schedule period has an `assignments` table. The next migration is 0012.
 
 ### M5 (slice S5): Extras (≈ 10 days)
 | Task | Description | Spec | Done when |
@@ -567,6 +567,18 @@ paths redirect (307). The main menu is Calendar, Tennis, Swimming and
 Settings, with the open-clash count on Settings and on its Clashes tab.
 The Google connect flow (`/accounts/google/*`) keeps its path, since the
 redirect URI is registered with Google.
+
+Page fixes (owner, 2026-09-28): the calendar has a Refresh button next to
+"+ Add event" that syncs every source (SYNC-2; new events arrive through
+the live updates). Tennis "Upcoming tournaments" is a table (tournament,
+date, venue, status, opponent and time, prediction) that includes every
+tournament he's registered for from `tennis_entries`, before the
+acceptance list or draw is out (status: registered, main draw, reserve
+list (place)); "Found for him" keeps only the ones he isn't registered
+for. Swim entries keep the meet day and session start Commit Swimming
+sends (migration 0011; the next is 0012), and upcoming meets show the
+session date and time. The PB table lists the newest PB first within each
+course.
 
 CI (2026-09-28): the checks run once per change. A PR run leaves a
 `ci-tree-<git tree>` marker when everything passes; the run on `main`

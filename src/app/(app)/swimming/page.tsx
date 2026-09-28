@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { sources } from "@db/schema";
 import { AddResultForm } from "@/components/swim/add-result-form";
 import { RefreshButton } from "@/components/sport/refresh-button";
-import { eventLabel, formatSwimTime } from "@/domain/swim";
+import { eventLabel, formatSession, formatSwimTime } from "@/domain/swim";
 import { COURSE_LABEL } from "@/domain/swim-constants";
 import { getDb } from "@/server/db";
 import { listMeets, loadPersonalBests, type MeetView } from "@/server/swim/load";
@@ -139,6 +139,11 @@ function MeetCard({ m }: { m: MeetView }) {
         {[m.course, m.venue, m.city].filter(Boolean).join(" · ")}
         {m.signup === null && !m.manual && " · not signed up yet"}
       </div>
+      {m.sessions.length > 0 && m.swims === 0 && (
+        <div data-testid="sessions">
+          {m.sessions.length === 1 ? "Session" : "Sessions"}: {m.sessions.map(formatSession).join(", ")}
+        </div>
+      )}
       {m.entries.length > 0 && m.swims === 0 && (
         <div>
           Entered:{" "}

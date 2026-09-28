@@ -101,7 +101,7 @@ export function DrawLine({ draw }: { draw: DrawView }) {
   );
 }
 
-const pct = (p: number) => `${Math.round(p * 100)}%`;
+export const pct = (p: number) => `${Math.round(p * 100)}%`;
 
 // TEN-6: the win estimate, its confidence and the why, with the
 // opponent's level and head-to-head (TEN-11). No score band: the owner

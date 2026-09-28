@@ -1,3 +1,4 @@
+import { addDays } from "./time";
 import { COURSES, STROKES, STROKE_LABEL, type Course, type Stroke } from "./swim-constants";
 
 // Swimming maths that pages and the API share (SWM-3..6): event keys, time
@@ -80,6 +81,35 @@ export function parseSwimTime(text: string): number | null {
   const frac = m[3] ? Number(m[3].padEnd(2, "0")) : 0;
   const ms = (minutes * 60 + seconds) * 1000 + frac * 10;
   return ms > 0 && ms < 60 * 60 * 1000 ? ms : null;
+}
+
+// A session start as Commit Swimming writes it ("08:50AM", "4:30 pm") →
+// "08:50" / "16:30"; null if it isn't a time.
+export function sessionTime(text: string | null | undefined): string | null {
+  const m = /^\s*(\d{1,2}):(\d{2})\s*(?:([ap])\.?m\.?)?\s*$/i.exec(text ?? "");
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2]);
+  if (min > 59) return null;
+  if (m[3]) {
+    if (h < 1 || h > 12) return null;
+    h = (h % 12) + (m[3].toLowerCase() === "p" ? 12 : 0);
+  } else if (h > 23) return null;
+  return `${String(h).padStart(2, "0")}:${m[2]}`;
+}
+
+// The date an entry swims: the meet's first day, plus (day - 1).
+export function sessionDate(startDate: string, meetDay: number | null): string {
+  return meetDay && meetDay > 1 ? addDays(startDate, meetDay - 1) : startDate;
+}
+
+// "Sat 2024-04-28 16:30", for a session on the meet pages.
+export function formatSession(s: { date: string; time: string }): string {
+  const day = new Date(`${s.date}T12:00:00Z`).toLocaleDateString("en-CA", {
+    weekday: "short",
+    timeZone: "UTC",
+  });
+  return `${day} ${s.date} ${s.time}`;
 }
 
 // Heats before semis before finals on the same day.

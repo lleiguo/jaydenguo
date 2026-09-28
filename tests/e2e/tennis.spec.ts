@@ -123,6 +123,7 @@ test.describe("tennis", () => {
       await row("e2e-found", "Entry Found Open", "found", null);
       await row("e2e-pay", "Entry Pay Classic", "payment_needed", null);
       await row("e2e-reserve", "Entry Reserve Cup", "reserve", 2);
+      await row("e2e-entered", "Entry Waiting Open", "entered", null);
     } finally {
       await pool.end();
     }
@@ -134,12 +135,26 @@ test.describe("tennis", () => {
       "href",
       `${base}/individual-entry/e2e-found`,
     );
-    const pay = entries.filter({ hasText: "Entry Pay Classic" });
-    await expect(pay).toContainText("Entered, payment needed");
+    // Registered ones are under "Upcoming tournaments", before any draw.
+    await expect(entries).toHaveCount(1);
+    const upcoming = page
+      .getByRole("region", { name: "Upcoming tournaments" })
+      .getByTestId("upcoming-tournament");
+    const pay = upcoming.filter({ hasText: "Entry Pay Classic" });
+    await expect(pay).toContainText("Registered · payment needed");
     await expect(pay.getByRole("link", { name: "Pay on the site →" })).toBeVisible();
-    const reserve = entries.filter({ hasText: "Entry Reserve Cup" });
+    const waiting = upcoming.filter({ hasText: "Entry Waiting Open" });
+    await expect(waiting).toHaveAttribute("data-status", "registered");
+    await expect(waiting).toContainText("Draw not out yet");
+    await expect(waiting.getByRole("link", { name: "Entry Waiting Open" })).toHaveAttribute(
+      "href",
+      `${base}/tournament/e2e-entered`,
+    );
+    const reserve = upcoming.filter({ hasText: "Entry Reserve Cup" });
     await expect(reserve).toContainText("Reserve list (2)");
-    await expect(reserve).toContainText("U9 Orange Boys · 40 min drive");
+    await expect(reserve).toContainText("U9 Orange Boys");
+    await expect(reserve).toContainText("40 min drive");
+    await expect(reserve).toContainText("2024-10-05 – 2024-10-06");
     await expect(reserve.getByRole("link", { name: /on the site/ })).toHaveCount(0);
   });
 

@@ -141,10 +141,22 @@ export async function syncSwim(
             .update(swimEntries)
             .set({ status: "withdrawn", updatedAt: now })
             .where(eq(swimEntries.id, e.id));
-        else if (want && (e.status !== "active" || e.seedTimeMs !== want.seedTimeMs))
+        else if (
+          want &&
+          (e.status !== "active" ||
+            e.seedTimeMs !== want.seedTimeMs ||
+            e.meetDay !== want.meetDay ||
+            e.sessionStart !== want.sessionStart)
+        )
           await tx
             .update(swimEntries)
-            .set({ status: "active", seedTimeMs: want.seedTimeMs, updatedAt: now })
+            .set({
+              status: "active",
+              seedTimeMs: want.seedTimeMs,
+              meetDay: want.meetDay,
+              sessionStart: want.sessionStart,
+              updatedAt: now,
+            })
             .where(eq(swimEntries.id, e.id));
         wanted.delete(key(e));
       }
