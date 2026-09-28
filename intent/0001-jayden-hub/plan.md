@@ -574,6 +574,21 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   written. `EMAIL_LLM=fake` stands in for Claude locally and in tests.
   The next migration is 0014.
 
+- M5.9 Google Calendar copy: Settings → General "Copy to Google Calendar".
+  It uses its own Google grant with only `calendar.app.created` (feature
+  `calendar_copy`), so Google itself only lets the site write to calendars
+  it created: the household calendar can't be written (GCO-1), and the
+  worker also refuses any calendar that is a source or "primary" (tested).
+  Job `calendar:copy` creates "Jayden (hub)" in the home time zone on first
+  use (again if it was deleted in Google), then copies every active event
+  from 30 days back to a year ahead as the calendar shows it (moves
+  applied; skipped, cancelled and deleted left out or removed), writing
+  only what changed (`calendar_copy_events` keeps each event's Google ID
+  and a hash; migration 0014). It runs after the daily `sync all`, when
+  switched on, and on "Copy now". Switching off stops updates; "delete the
+  copy" runs `calendar:copy delete` (GCO-2). The last run's counts or
+  error show on the page. The next migration is 0015.
+
 ### M6: Go-live hardening (≈ 2 days; can run after M1 and again after M5)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -651,7 +666,7 @@ or his opponents.
 | M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
 | M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
 | M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks, closures from the public key dates page, and the Veracross timetable with the "Today at school" card are built; Veracross sign-in codes are entered once on the Accounts page and remembered. M4.3 (homework and grades) deferred by the owner; M4.4 links are done for Veracross and the key dates page. |
-| M5 Extras (S5) | **started 2026-09-28.** M5.1: SP-6 done except the real-clip run (Claude quota still 0, owner step); AI budget in Terraform, not applied. M5.2–M5.6 built on `m5/2-video-review` (not merged): intake, media prep, clients, debate, review page and scoreboard. Needs before use: Terraform apply (Drive and Photos Picker APIs, AI budget), Claude quota for debate mode, connect Drive and Photos. M5.7 waits on the owner's clips. M5.8 built on `m5/3-email-suggestions` (stacked, not merged); needs the Claude quota and a Gmail source to be useful. |
+| M5 Extras (S5) | **started 2026-09-28.** M5.1: SP-6 done except the real-clip run (Claude quota still 0, owner step); AI budget in Terraform, not applied. M5.2–M5.6 built on `m5/2-video-review` (not merged): intake, media prep, clients, debate, review page and scoreboard. Needs before use: Terraform apply (Drive and Photos Picker APIs, AI budget), Claude quota for debate mode, connect Drive and Photos. M5.7 waits on the owner's clips. M5.8 built on `m5/3-email-suggestions` and M5.9 on `m5/4-calendar-copy` (stacked, not merged). M5.8 needs the Claude quota and a Gmail source to be useful. |
 | M6 Go-live hardening | not started |
 
 Between M3 and M4 (2026-09-27): Sources, Accounts, Clashes and Deleted

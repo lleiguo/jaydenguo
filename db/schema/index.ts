@@ -6,3 +6,4 @@ export * from "./swim";
 export * from "./tennis";
 export * from "./video";
 export * from "./email";
+export * from "./calendar-copy";
