@@ -354,3 +354,65 @@ choose Jayden's school account (or "Use another account"), and consent.
 Jayden's password is typed only on Google's page, never in chat.
 
 **Result:** not run yet.
+
+## SP-6: Gemini and Claude on Vertex AI (M5.1, 2026-09-28, partly done)
+
+**Checked:** from the owner's Mac with Application Default Credentials in
+project `jaydenguo`, a handful of tiny calls (well under $1 in total). No
+video of Jayden was used: the video test used a 10 s synthetic ffmpeg
+test pattern.
+
+**Models listed in Model Garden (2026-09-28):**
+- Gemini: the newest Pro is `gemini-3.1-pro-preview` (public preview,
+  served from `global`); `gemini-2.5-pro` is the newest GA Pro; the newest
+  Flash is `gemini-3.8-flash` (GA). All three answered from `global`.
+- Claude: `claude-opus-5`, `claude-opus-5-5`, `claude-sonnet-5`,
+  `claude-fable-5-1`, `claude-haiku-4-5` and older are listed.
+
+**Claude is still blocked:** every Claude call fails with 429 "Quota exceeded
+for aiplatform.googleapis.com/global_online_prediction_requests_per_base_model"
+(base models `anthropic-claude-opus`, `-sonnet` and `-haiku-4-5`). Regional
+endpoints (`us-east5`, `northamerica-northeast1`, `europe-west1`) answer 404
+for Claude. **Owner step:** request a quota increase for
+`global_online_prediction_requests_per_base_model` for `anthropic-claude-opus`
+(IAM & Admin > Quotas; 10 requests per minute is plenty). Until then video
+reviews can run in single-model mode with Gemini only; debate mode, email
+suggestions and match explanations need Claude.
+
+**Gemini video input works:** the video goes inline (base64) with
+`videoMetadata.fps`, and structured output (JSON schema) holds. Measured
+on `gemini-3.1-pro-preview`, 10 s at 1280×720:
+
+| fps | video tokens | thinking tokens | answer tokens | time |
+|---|---|---|---|---|
+| 1 | 660 | 6,908 | 104 | 73 s |
+| 5 | 3,300 | 2,428 | 454 | 35 s |
+| 10 | 6,600 | 3,817 | 468 | 46 s |
+
+So a video costs about **66 tokens per sampled frame**, and each call spends
+more on thinking than on the video. A single call takes 30–75 s, so a debate
+(five rounds, the two models in parallel) takes several minutes: fine for a
+background job with a 30-minute limit.
+
+**Cost per debate (estimate from the measured tokens):** a 20 s clip at 8 fps
+is about 11k video tokens per Gemini call; Claude gets up to 60 frames at
+768 px wide, about 26k image tokens per call, cached after the first round.
+With list prices at build time (Gemini 3.1 Pro preview about $2 in / $12 out
+per million tokens, thinking billed as output; Claude Opus 5 about $5 / $25,
+cache reads a tenth of input), five rounds each come to about **$0.55 for
+Gemini and $1.00 for Claude: $1.50–2.00 per debate**, inside the spec's
+§8 range ($1.50–3.00), so §8 is unchanged. Single-model Gemini review:
+about $0.15. Every call records its own tokens and cost
+(`video_review_rounds`), so the real figure shows on the review page. The
+prices live in `src/server/llm/pricing.ts`; check them against the Vertex AI
+pricing page when the first bill arrives.
+
+**AI budget:** `infra/budget.tf` adds a second budget ("hub AI monthly",
+`ai_monthly_budget`, default 40) filtered on the Vertex AI billing service
+(`C7E2-9256-1C43`). The Cloud Billing API isn't enabled in the project, so
+the service list couldn't be read here. **Owner step:** after the first
+Claude charges, check Billing > Reports grouped by service; if Claude shows
+under a different service, add its ID to `ai_billing_services`.
+
+**Still to do (needs the owner):** one real clip reviewed by both models
+(O-9 clips), after the Claude quota is raised. That run happens in M5.7.
