@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, BrowserContextOptions, Page } from "playwright-core";
+import type { Browser, BrowserContext, BrowserContextOptions, Locator, Page } from "playwright-core";
 import { addDays, localDate, weekday } from "../../domain/time";
 import { USER_AGENT } from "../http";
 import { SyncError, type Adapter, type AdapterContext, type BrowserSession } from "../types";
@@ -59,8 +59,12 @@ const onPortal = (url: string, portal: string) => url.startsWith(portal);
 const USER_FIELD =
   'input[type="email"], input[autocomplete="username"], input[name*="user" i], input[id*="user" i], input[name*="email" i], input[name*="login" i]';
 const PASSWORD_FIELD = 'input[type="password"]';
+// Fields a code page may use: marked as a code, or plain text-like boxes
+// (one box, or one box per digit).
 const CODE_FIELD =
-  'input[autocomplete="one-time-code"], input[name*="code" i], input[id*="code" i], input[inputmode="numeric"]';
+  'input[autocomplete="one-time-code"], input[name*="code" i], input[id*="code" i], input[name*="otp" i], input[id*="otp" i], input[name*="token" i]';
+const TEXT_FIELD =
+  'input:not([type]), input[type="text"], input[type="tel"], input[type="number"], input[inputmode="numeric"]';
 const asksForCode = (text: string) =>
   /verification|one.?time|two.?(step|factor)|authenticator|enter the code/i.test(text);
 export const NEEDS_CODE =
@@ -74,25 +78,91 @@ const bodyText = async (page: Page) =>
       .catch(() => "")
   ).slice(0, 5000);
 
+// What the code page offers, without any values, for the error message
+// when no code box is recognised (e.g. "text maxlength=1 ×6").
+async function describeFields(page: Page): Promise<string> {
+  const fields = await page
+    .locator("input:visible, textarea:visible")
+    .evaluateAll((els) =>
+      els.map((e) => {
+        const i = e as HTMLInputElement;
+        return [
+          i.type || i.tagName.toLowerCase(),
+          i.name && `name=${i.name}`,
+          i.id && `id=${i.id}`,
+          i.autocomplete && `autocomplete=${i.autocomplete}`,
+          i.maxLength > 0 && `maxlength=${i.maxLength}`,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .slice(0, 80);
+      }),
+    )
+    .catch(() => [] as string[]);
+  const counts = new Map<string, number>();
+  for (const f of fields) counts.set(f, (counts.get(f) ?? 0) + 1);
+  const frames = page.frames().length - 1;
+  const list = [...counts].map(([f, n]) => (n > 1 ? `${f} ×${n}` : f)).join("; ");
+  return `${list || "no fields"}${frames ? `; ${frames} frame(s)` : ""}`.slice(0, 300);
+}
+
+// The code box: one marked as a code, else one box per digit, else the only
+// text box on the page.
+async function findCodeBoxes(page: Page): Promise<Locator[] | null> {
+  const marked = page.locator(CODE_FIELD).filter({ visible: true });
+  const text = page.locator(TEXT_FIELD).filter({ visible: true });
+  // The page may still be drawing its form.
+  await Promise.race([
+    marked.first().waitFor({ timeout: 10_000 }),
+    text.first().waitFor({ timeout: 10_000 }),
+  ]).catch(() => {});
+  const boxes = await text.all();
+  const perDigit =
+    boxes.length >= 4 &&
+    (await Promise.all(boxes.map((b) => b.getAttribute("maxlength")))).every((m) => m === "1");
+  if (perDigit) return boxes;
+  if (await marked.count()) return [marked.first()];
+  return boxes.length === 1 ? boxes : null;
+}
+
 // Veracross emailed a code (it doesn't know this browser yet): wait for the
 // owner to type it on the Accounts page, tick "remember this device", send it.
 async function enterCode(page: Page, portal: string, session: BrowserSession | undefined) {
   if (!session?.waitForCode) throw new SyncError(NEEDS_CODE);
-  const field = page.locator(CODE_FIELD).filter({ visible: true }).first();
-  if (!(await field.count()))
-    throw new SyncError("Veracross's sign-in code page has changed, so this sync needs an update.");
+  const boxes = await findCodeBoxes(page);
+  if (!boxes)
+    throw new SyncError(
+      `Veracross's sign-in code page wasn't recognised, so this sync needs an update (fields seen: ${await describeFields(page)}).`,
+    );
   const code = await session.waitForCode();
   if (!code)
     throw new SyncError(
       "No sign-in code was entered in time. Press Test connection on the Veracross login to try again.",
     );
-  await field.fill(code);
+  if (boxes.length === 1) await boxes[0].fill(code);
+  else for (const [i, box] of boxes.entries()) await box.fill(code[i] ?? "");
   const byName = page.getByRole("checkbox", { name: /remember|trust|don.?t ask/i });
-  const boxes = page.locator('input[type="checkbox"]').filter({ visible: true });
-  const remember = (await byName.count()) ? byName.first() : (await boxes.count()) === 1 ? boxes : null;
-  if (remember && !(await remember.isChecked())) await remember.check();
-  await field.press("Enter");
-  await page.waitForURL((u) => onPortal(u.href, portal), { timeout: 30_000 }).catch(() => {});
+  const checkboxes = page.locator('input[type="checkbox"]').filter({ visible: true });
+  const remember = (await byName.count())
+    ? byName.first()
+    : (await checkboxes.count()) === 1
+      ? checkboxes
+      : null;
+  // Styled checkboxes hide the real input behind their label.
+  if (remember && !(await remember.isChecked().catch(() => true)))
+    await remember.check({ force: true }).catch(() => {});
+  await boxes.at(-1)!.press("Enter");
+  await page
+    .waitForURL((u) => onPortal(u.href, portal), { timeout: 10_000 })
+    .catch(async () => {
+      // Enter didn't send it: press the page's own button.
+      await page
+        .getByRole("button", { name: /verify|submit|continue|confirm|sign in|log in|next/i })
+        .first()
+        .click({ timeout: 5_000 })
+        .catch(() => {});
+      await page.waitForURL((u) => onPortal(u.href, portal), { timeout: 30_000 }).catch(() => {});
+    });
   if (!onPortal(page.url(), portal))
     throw new SyncError(
       "Veracross didn't accept the code. Press Test connection on the Veracross login to get a new one.",
