@@ -31,7 +31,7 @@ test("a private calendar link can be added, tested, updated and removed without 
   const label = `Soccer team ${testInfo.project.name} ${Date.now()}`;
   const secretLink = feed("team.ics") + `?token=secret-${Date.now()}`;
   await signInAs(context, OWNER);
-  await page.goto("/accounts");
+  await page.goto("/settings/accounts");
 
   const teamsnap = page.getByRole("region", { name: "TeamSnap" });
   await teamsnap.getByRole("button", { name: "Add private calendar link" }).click();
@@ -99,11 +99,11 @@ test("a Google account can be connected, tested and removed (revoked)", async ({
 }, testInfo) => {
   const account = `calendar-${testInfo.project.name}@example.test`;
   await signInAs(context, OWNER);
-  await page.goto("/accounts");
+  await page.goto("/settings/accounts");
   const google = page.getByRole("region", { name: "Google" });
   await google.getByRole("link", { name: /Connect Google account|Reconnect Google/ }).click();
   await page.getByRole("link", { name: account }).click();
-  await expect(page).toHaveURL(/\/accounts$/);
+  await expect(page).toHaveURL(/\/settings\/accounts$/);
 
   const label = `Google (${account})`;
   await expect(card(page, label)).toContainText("Google access");
@@ -138,7 +138,7 @@ test("a link that isn't a calendar link is refused with a reason, and the link i
   context,
 }) => {
   await signInAs(context, OWNER);
-  await page.goto("/accounts");
+  await page.goto("/settings/accounts");
   const spordle = page.getByRole("region", { name: "Spordle" });
   await spordle.getByRole("button", { name: "Add private calendar link" }).click();
   const field = spordle.getByLabel("Calendar link");

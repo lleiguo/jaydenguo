@@ -78,7 +78,7 @@ export function ClashList() {
             ))}
             <div className="flex flex-wrap gap-2">
               <button
-                className="rounded border px-2 py-1"
+                className="rounded bg-neutral-900 px-3 py-1 font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
                 onClick={() => act(call("/api/v1/clashes", "POST", { a: c.a, b: c.b }), "Clash accepted.")}
               >
                 Accept clash
@@ -95,9 +95,9 @@ export function ClashList() {
       </ul>
       {accepted.length > 0 && (
         <section aria-labelledby="accepted">
-          <h2 id="accepted" className="font-semibold">
+          <h3 id="accepted" className="font-semibold">
             Accepted
-          </h2>
+          </h3>
           <ul className="flex flex-col gap-2 text-sm">
             {accepted.map((c) => (
               <li key={c.acceptedId} className="flex flex-wrap items-center justify-between gap-2">

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const features = request.nextUrl.searchParams
     .getAll("feature")
     .filter((f): f is GoogleFeature => Object.hasOwn(GOOGLE_SCOPES, f));
-  const returnTo = safeReturnTo(request.nextUrl.searchParams.get("next") ?? "/accounts");
+  const returnTo = safeReturnTo(request.nextUrl.searchParams.get("next") ?? "/settings/accounts");
   const url = await startGoogleConnect(await getDb(), session, features, returnTo);
   return NextResponse.redirect(url, 303);
 }

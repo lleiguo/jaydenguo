@@ -38,7 +38,7 @@ export default async function ResultsPage({ searchParams }: PageProps<"/tennis/r
       ) : (
         <p className={`text-sm ${muted}`}>
           Add his Tennis Canada profile on the{" "}
-          <a href="/sources" className="underline">
+          <a href="/settings/sources" className="underline">
             Sources page
           </a>{" "}
           to sync his matches, or add one by hand below once he&apos;s set up.
