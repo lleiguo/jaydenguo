@@ -3,10 +3,11 @@
 import { useState } from "react";
 
 // Home time zone (CAL-9): every time on the site is shown in it.
-export function TimeZoneSetting({ initial }: { initial: string }) {
+// `zones` comes from the server so the options hydrate identically; the
+// browser's Intl zone list can differ from Node's.
+export function TimeZoneSetting({ initial, zones }: { initial: string; zones: string[] }) {
   const [value, setValue] = useState(initial);
   const [saved, setSaved] = useState<string | null>(null);
-  const zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [initial];
   return (
     <form
       className="flex flex-wrap items-end gap-2"

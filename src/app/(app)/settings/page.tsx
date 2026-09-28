@@ -10,13 +10,16 @@ export default async function SettingsPage() {
   const db = await getDb();
   const devices = await listSessions(db, session);
   const homeTimeZone = await getHomeTimeZone(db);
+  // Keep the saved zone selectable even if this runtime's list lacks it.
+  const zones = Intl.supportedValuesOf("timeZone");
+  if (!zones.includes(homeTimeZone)) zones.unshift(homeTimeZone);
   return (
     <main className="flex flex-col gap-6">
       <section aria-labelledby="general" className="flex flex-col gap-3">
         <h2 id="general" className="font-semibold">
           General
         </h2>
-        <TimeZoneSetting initial={homeTimeZone} />
+        <TimeZoneSetting initial={homeTimeZone} zones={zones} />
       </section>
       <section aria-labelledby="account" className="flex flex-col gap-3">
         <h2 id="account" className="font-semibold">
