@@ -39,7 +39,9 @@ test("a feed source syncs on demand, shows its history, and a second refresh is 
 
   // SYNC-2/5: a second refresh within the hour doesn't start another run.
   await card.getByRole("button", { name: "Refresh" }).click();
-  await expect(page.getByText(/Synced recently/)).toBeVisible();
+  // The reason shows on the card, with when it can run again.
+  await expect(card.getByTestId("refresh-message")).toContainText("Synced recently");
+  await expect(card).toContainText("The next refresh is possible after");
   await card.getByRole("button", { name: "History" }).click();
   await expect(card.getByRole("table").locator("tbody tr")).toHaveCount(1);
   await expect(card.getByRole("table")).toContainText("succeeded (manual)");
@@ -93,6 +95,16 @@ test("a failing source shows a red status with the reason in plain language (SYN
     { timeout: 30_000 },
   );
   await expect(card).toContainText("Failed");
+
+  // SYNC-5: a failed run doesn't start the hour's wait; History follows along.
+  await expect(card).not.toContainText("The next refresh is possible after");
+  await card.getByRole("button", { name: "History" }).click();
+  await expect(card.getByRole("table").locator("tbody tr")).toHaveCount(1);
+  await card.getByRole("button", { name: "Refresh" }).click();
+  await expect(card.getByRole("table").locator("tbody tr")).toHaveCount(2, { timeout: 30_000 });
+  await expect(card.getByRole("table").locator("tbody tr").first()).toContainText("failed (manual)", {
+    timeout: 30_000,
+  });
 });
 
 test("the household Google calendar can be chosen and synced (SRC-1)", async ({

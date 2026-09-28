@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, ne, sql } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { sources, syncRuns } from "@db/schema";
 import { adapterFor } from "../adapters/registry";
 import { SyncError, type AdapterContext } from "../adapters/types";
@@ -90,11 +90,12 @@ async function runLocked(
       ),
     );
 
-  // At most one run per source per hour (SYNC-5).
+  // At most one successful run per source per hour (SYNC-5); after a failure
+  // it may run again straight away. The lock above stops overlapping runs.
   const [last] = await db
     .select()
     .from(syncRuns)
-    .where(and(eq(syncRuns.sourceId, sourceId), ne(syncRuns.status, "skipped")))
+    .where(and(eq(syncRuns.sourceId, sourceId), eq(syncRuns.status, "succeeded")))
     .orderBy(desc(syncRuns.startedAt))
     .limit(1);
   if (last && now().getTime() - last.startedAt.getTime() < minGapMs()) {

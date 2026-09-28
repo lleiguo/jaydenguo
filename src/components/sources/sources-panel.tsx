@@ -102,15 +102,15 @@ export function SourcesPanel() {
     return () => clearInterval(t);
   }, [anyRunning, watchUntil, load]);
 
-  async function refresh(url: string, what: string) {
+  // Returns what to tell the owner: shown next to the button they pressed.
+  async function refresh(url: string, what: string): Promise<string> {
     const res = await fetch(url, { method: "POST" });
     const body = await res.json().catch(() => ({}));
     if (res.ok) {
-      setMessage(`Refreshing ${what}…`);
       setWatchUntil(Date.now() + 30_000);
-    } else {
-      setMessage(body.error ?? "Couldn't start the refresh.");
+      return `Refreshing ${what}…`;
     }
+    return body.error ?? "Couldn't start the refresh.";
   }
 
   async function toggle(s: Source) {
@@ -128,7 +128,7 @@ export function SourcesPanel() {
       <div className="flex flex-wrap items-center gap-3">
         <button
           className="rounded-md border px-3 py-2"
-          onClick={() => refresh("/api/v1/sources/refresh-all", "all sources")}
+          onClick={async () => setMessage(await refresh("/api/v1/sources/refresh-all", "all sources"))}
         >
           Refresh all
         </button>
@@ -154,12 +154,36 @@ export function SourcesPanel() {
   );
 }
 
-function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => void; onToggle: () => void }) {
+function SourceCard({
+  s,
+  onRefresh,
+  onToggle,
+}: {
+  s: Source;
+  onRefresh: () => Promise<string>;
+  onToggle: () => void;
+}) {
   const [runs, setRuns] = useState<Run[] | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [entryOpen, setEntryOpen] = useState(false);
   const failed = s.lastRun?.status === "failed";
   const status = s.running ? "Syncing…" : failed ? "Failed" : s.lastRun ? "OK" : "Not synced yet";
   const tooSoon = !!s.nextRefreshAt && new Date(s.nextRefreshAt) > new Date();
+  const historyOpen = runs !== null;
+  const loadRuns = useCallback(async () => {
+    const res = await fetch(`/api/v1/sources/${s.id}/runs`);
+    setRuns(res.ok ? (await res.json()).runs : []);
+  }, [s.id]);
+  // Once the run starts, the status says "Syncing…" instead.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (s.running) setMessage(null);
+  }, [s.running]);
+  // An open history follows new runs as they start and finish.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (historyOpen) void loadRuns();
+  }, [historyOpen, loadRuns, s.lastRun?.id, s.lastRun?.status, s.running]);
   return (
     <li
       data-testid="source"
@@ -191,7 +215,10 @@ function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => vo
       <div className="flex flex-wrap gap-2">
         <button
           className="rounded border px-2 py-1 disabled:opacity-50"
-          onClick={onRefresh}
+          onClick={async () => {
+            setMessage(null);
+            setMessage(await onRefresh());
+          }}
           disabled={s.running || !s.enabled}
           title={tooSoon ? `Next refresh after ${fmt(s.nextRefreshAt)}` : undefined}
         >
@@ -211,16 +238,22 @@ function SourceCard({ s, onRefresh, onToggle }: { s: Source; onRefresh: () => vo
         )}
         <button
           className="rounded border px-2 py-1"
-          aria-expanded={runs !== null}
-          onClick={async () => {
-            if (runs) return setRuns(null);
-            const res = await fetch(`/api/v1/sources/${s.id}/runs`);
-            setRuns(res.ok ? (await res.json()).runs : []);
-          }}
+          aria-expanded={historyOpen}
+          onClick={() => (historyOpen ? setRuns(null) : void loadRuns())}
         >
           History
         </button>
       </div>
+      {message && (
+        <p role="status" data-testid="refresh-message">
+          {message}
+        </p>
+      )}
+      {tooSoon && !s.running && (
+        <p className="text-neutral-600 dark:text-neutral-400">
+          The next refresh is possible after {fmt(s.nextRefreshAt)}.
+        </p>
+      )}
       {entryOpen && <EntryForm s={s} onSaved={() => setEntryOpen(false)} />}
       {runs && (
         <table className="mt-2 w-full text-left text-xs">
