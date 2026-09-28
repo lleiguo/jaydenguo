@@ -47,13 +47,14 @@ type Credential = {
   meta: { calendars?: { id: string; summary: string; primary: boolean }[] };
 };
 
-type Kind = "google_calendar" | "ical" | "commit_swim" | "tennis_tc" | "school_dates";
+type Kind = "google_calendar" | "ical" | "commit_swim" | "tennis_tc" | "school_dates" | "veracross";
 const KIND_LABEL: Record<Kind, string> = {
   google_calendar: "Google Calendar",
   ical: "Calendar feed",
   commit_swim: "Commit Swimming",
   tennis_tc: "Tennis Canada tournaments",
   school_dates: "School key dates",
+  veracross: "Veracross",
 };
 // Kinds that read public pages and need no account.
 const NO_ACCOUNT: Kind[] = ["tennis_tc", "school_dates"];
@@ -63,6 +64,7 @@ const ACCOUNT_NOUN: Record<Kind, [string, string]> = {
   commit_swim: ["a Commit Swimming login", "Commit Swimming login"],
   tennis_tc: ["", ""],
   school_dates: ["", ""],
+  veracross: ["a Veracross login", "Veracross login"],
 };
 const DEFAULT_CATEGORY: Record<Kind, string> = {
   google_calendar: "other",
@@ -70,6 +72,7 @@ const DEFAULT_CATEGORY: Record<Kind, string> = {
   commit_swim: "swimming",
   tennis_tc: "tennis",
   school_dates: "school_class",
+  veracross: "school_class",
 };
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : "never");
@@ -339,8 +342,8 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
   const usable = creds.filter((c) =>
     kind === "google_calendar"
       ? c.provider === "google"
-      : kind === "commit_swim"
-        ? c.provider === "commit_swim" && c.kind === "password"
+      : kind === "commit_swim" || kind === "veracross"
+        ? c.provider === kind && c.kind === "password"
         : c.kind === "secret_url",
   );
   const cred = usable.find((c) => c.id === credentialId) ?? usable[0];
@@ -371,7 +374,12 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
                   ? { profileUrl: f.get("profileUrl") }
                   : kind === "school_dates"
                     ? { pageUrl: f.get("pageUrl"), exclude: f.get("exclude") || undefined }
-                    : {},
+                    : kind === "veracross"
+                      ? {
+                          portalUrl: f.get("portalUrl"),
+                          studentFirstName: f.get("studentFirstName") || undefined,
+                        }
+                      : {},
             categoryMapping: { default: f.get("category"), rules },
           }),
         });
@@ -397,6 +405,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
           <option value="commit_swim">Commit Swimming (meets and results)</option>
           <option value="tennis_tc">Tennis Canada (draws, matches and results)</option>
           <option value="school_dates">School key dates (public web page)</option>
+          <option value="veracross">Veracross (daily schedule)</option>
         </select>
       </label>
       <label className="flex flex-col">
@@ -454,6 +463,24 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
             ))}
           </select>
         </label>
+      )}
+      {kind === "veracross" && (
+        <>
+          <label className="flex flex-col">
+            Parent portal link
+            <input
+              name="portalUrl"
+              type="url"
+              required
+              className="rounded border px-2 py-1"
+              placeholder="https://portals.veracross.com/…/parent"
+            />
+          </label>
+          <label className="flex flex-col">
+            Student&apos;s first name (if the login has more than one child)
+            <input name="studentFirstName" className="rounded border px-2 py-1" />
+          </label>
+        </>
       )}
       {kind === "google_calendar" && cred && (
         <label className="flex flex-col">

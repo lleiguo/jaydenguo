@@ -66,6 +66,24 @@ owner hasn't looked for the subscription links yet.
   Classes & Reports are a possible F-5 fallback for homework and grades
   if Classroom is blocked.
 
+**Veracross Daily Schedule page map (M4.2, 2026-09-28, signed in by the
+owner in the browser pane; read with all text masked):**
+| Part | Where | Gives |
+|---|---|---|
+| Page | `portals.veracross.com/<school>/parent/student/<student id>/daily-schedule?date=YYYY-MM-DD` (`&type=student`, the default; `type=school` came back empty) | Server-rendered HTML: a plain GET with the session cookies has every period. |
+| Day | `h1.date-header` ("Monday, September 28"), `h2.rotation-day-header` (the rotation day's name) | The date and rotation day. A day without classes has no items. |
+| Period | `.vx-schedule-item`, one per period, in order | `.item-time` start only ("8:30 am"; **no end times**); `.item-main-description` the class or block (with his homeroom code); `.item-subtitle` "teacher, teacher • room"; `span.item-type.class` for classes, `span.item-type.universal-block` for recess and lunch; `table.assignments` per period (empty on the day looked at). |
+| Navigation | `a.day[href=…?date=]` for two weeks; previous/next-day buttons | Any date by the `date` parameter. |
+
+Monday had 13 items (classes, homeroom twice, two recesses, lunch). End
+times: each period ends when the next starts; the last gets the day's
+most common period length. The student id is in the My Children links.
+The sign-in flow (accounts.veracross.com → portal session) was not
+inspected: the owner chose a generic browser sign-in, checked with "Test
+connection" once the login is saved. "My Children" is drawn by a script
+after load (`component/MyChildrenParent/…/load_data`); each child has an
+`h4.vx-child-name` next to its links.
+
 **How the owner checks:** TeamSnap → the team → Schedule → Sync/Export
 calendar → copy the link. Spordle → the team → Schedule → the calendar sync
 icon (or My Account → Calendar) → copy the subscription link. Paste each

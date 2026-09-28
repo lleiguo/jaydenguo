@@ -438,6 +438,19 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   "pro-d" → `school_closure`, the rest `school_class`), with a "leave out"
   list for the other campus's days. Only the listed school year can be
   cancelled, so last year's dates stay. No login, no migration.
+- M4.2, timetable (SCH-1, SCH-5): source kind `veracross` with the
+  stored parent login, the parent portal link and (with several children)
+  the student's first name. The worker signs in with headless Chromium,
+  filling whatever username and password fields it finds (one page or two)
+  and typing the password once only; the sign-in page itself was never
+  inspected (owner's choice). It then reads the next two weeks' weekdays
+  from the server-rendered Daily Schedule pages, 2 s apart. Each period is
+  a `school_class` event (room as location, teachers in the notes, a link
+  back to that day's page). The page has start times only: a period ends
+  when a later one starts, the last gets the day's most common length. The
+  "Today at school" card above the calendar shows today's periods, or the
+  next school day's once today's are over. No migration. Tested against a
+  fake portal (`tests/e2e/support/fake-veracross.ts`) with real Chromium.
 
 ### M5 (slice S5): Extras (≈ 10 days)
 | Task | Description | Spec | Done when |
@@ -528,7 +541,7 @@ or his opponents.
 | M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
 | M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
 | M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
-| M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks collapse and expand, and the public key dates page gives closures (`m4/2-school-blocks`); the Veracross Daily Schedule scraper and "Today at school" card wait on a signed-in look and the owner's Veracross login. |
+| M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks, closures from the public key dates page, and the Veracross timetable with the "Today at school" card are built; the live Veracross sign-in is untested until the owner saves the login and adds the source. |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |
 

@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import { credentials, sources, syncRuns } from "@db/schema";
 import { profileIdFromLink } from "../adapters/tennis-tc";
+import { portalFrom } from "../adapters/veracross";
 import { parseMapping } from "../domain/categories";
 import { CATEGORIES, ATTENDANCE } from "../domain/constants";
 import type { Db } from "./db/client";
@@ -17,6 +18,7 @@ export const SOURCE_KINDS = {
   commit_swim: { label: "Commit Swimming", credentialProvider: "commit_swim" },
   tennis_tc: { label: "Tennis Canada tournaments", credentialProvider: null },
   school_dates: { label: "School key dates (public page)", credentialProvider: null },
+  veracross: { label: "Veracross (daily schedule)", credentialProvider: "veracross" },
 } as const;
 
 const mappingSchema = z.object({
@@ -44,6 +46,10 @@ const configSchema = z.object({
     .max(300)
     .optional(),
   exclude: z.string().trim().max(300).optional(),
+  // veracross: the parent portal link and, with more than one child on the
+  // login, which one is his.
+  portalUrl: z.string().trim().max(300).optional(),
+  studentFirstName: z.string().trim().max(60).optional(),
   // tennis_tc: tournament entries (TEN-9). The home postal code is sent to
   // the tournament site's search and, with the venue, to the routing
   // service for drive times; it's never shown outside the Sources page.
@@ -63,7 +69,7 @@ const configSchema = z.object({
 });
 
 export const createSourceInput = z.object({
-  kind: z.enum(["google_calendar", "ical", "commit_swim", "tennis_tc", "school_dates"]),
+  kind: z.enum(["google_calendar", "ical", "commit_swim", "tennis_tc", "school_dates", "veracross"]),
   name: z.string().trim().min(1).max(80),
   // Not needed for tennis_tc and school_dates, which read public pages.
   credentialId: z.uuid().optional(),
@@ -161,14 +167,16 @@ export async function createSource(db: Db, input: z.infer<typeof createSourceInp
       .returning({ id: sources.id });
     return row;
   }
+  if (input.kind === "veracross" && !portalFrom(input.config.portalUrl))
+    throw new HttpError(400, "paste the parent portal link (https://portals.veracross.com/…/parent)");
   if (!input.credentialId) throw new HttpError(400, "choose an account");
   const [cred] = await db.select().from(credentials).where(eq(credentials.id, input.credentialId));
   if (!cred) throw new HttpError(400, "unknown account");
   const fits =
     input.kind === "google_calendar"
       ? cred.provider === "google"
-      : input.kind === "commit_swim"
-        ? cred.provider === "commit_swim" && cred.kind === "password"
+      : input.kind === "commit_swim" || input.kind === "veracross"
+        ? cred.provider === input.kind && cred.kind === "password"
         : cred.kind === "secret_url";
   if (!fits) throw new HttpError(400, "that account can't be used for this kind of source");
   const [row] = await db.insert(sources).values(input).returning({ id: sources.id });
@@ -178,6 +186,8 @@ export async function createSource(db: Db, input: z.infer<typeof createSourceInp
 export async function updateSource(db: Db, id: string, input: z.infer<typeof updateSourceInput>) {
   if (input.config?.profileUrl !== undefined && !profileIdFromLink(input.config.profileUrl))
     throw new HttpError(400, "paste his profile link from tc.tournamentsoftware.com (…/player-profile/…)");
+  if (input.config?.portalUrl !== undefined && !portalFrom(input.config.portalUrl))
+    throw new HttpError(400, "paste the parent portal link (https://portals.veracross.com/…/parent)");
   // Config is merged, so saving one setting keeps the others.
   const [current] = await db.select({ config: sources.config }).from(sources).where(eq(sources.id, id));
   if (!current) throw new HttpError(404, "not found");
