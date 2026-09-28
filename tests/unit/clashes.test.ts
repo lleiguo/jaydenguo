@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectClashes, type Buffers, type ClashEvent, type Place } from "@/domain/clashes";
+import { detectClashes, type ClashEvent } from "@/domain/clashes";
 
 // Every rule in spec CON-1, plus CAL-7 closures (plan M1.9).
 const tz = "America/Toronto";
@@ -12,44 +12,39 @@ function ev(start: string, end: string, extra: Partial<ClashEvent> = {}): ClashE
     start: new Date(start),
     end: new Date(end),
     allDay: false,
-    locationId: null,
-    locationName: null,
     ...extra,
   };
 }
-const run = (events: ClashEvent[], places: Place[] = [], buffers: Buffers = new Map()) =>
-  detectClashes({ events, places, buffers, homeTimeZone: tz });
+const run = (events: ClashEvent[]) => detectClashes({ events, homeTimeZone: tz });
 
 describe("detectClashes", () => {
   it("flags overlapping events that both need Jayden", () => {
     const a = ev("2026-10-05T21:00:00Z", "2026-10-05T22:30:00Z");
     const b = ev("2026-10-05T22:00:00Z", "2026-10-05T23:00:00Z", { category: "tennis" });
-    expect(run([a, b])).toEqual([{ a: a.id, b: b.id, kind: "overlap", gapMin: 0, bufferMin: 15 }]);
+    expect(run([a, b])).toEqual([{ a: a.id, b: b.id, overlapMin: 30 }]);
   });
 
-  it("uses the 15-minute default travel buffer between back-to-back events", () => {
+  it("back-to-back events and short gaps don't clash", () => {
     const a = ev("2026-10-05T21:00:00Z", "2026-10-05T22:00:00Z");
-    const b = ev("2026-10-05T22:10:00Z", "2026-10-05T23:00:00Z");
-    expect(run([a, b])).toMatchObject([{ kind: "travel", gapMin: 10, bufferMin: 15 }]);
+    const b = ev("2026-10-05T22:00:00Z", "2026-10-05T23:00:00Z");
     const c = ev("2026-10-06T21:00:00Z", "2026-10-06T22:00:00Z");
-    const d = ev("2026-10-06T22:15:00Z", "2026-10-06T23:00:00Z");
-    expect(run([c, d])).toEqual([]);
+    const d = ev("2026-10-06T22:05:00Z", "2026-10-06T23:00:00Z");
+    expect(run([a, b, c, d])).toEqual([]);
   });
 
-  it("uses the travel time set between two places, and none within one place", () => {
-    const places: Place[] = [
-      { id: "club", match: ["tennis club"] },
-      { id: "pool", match: ["aquatic centre"] },
-    ];
-    const buffers: Buffers = new Map([["club|pool", 30]]);
-    const a = ev("2026-10-05T21:00:00Z", "2026-10-05T22:00:00Z", {
-      locationName: "Maple Tennis Club, court 2",
-    });
-    const b = ev("2026-10-05T22:20:00Z", "2026-10-05T23:00:00Z", { locationName: "Cedar Aquatic Centre" });
-    expect(run([a, b], places, buffers)).toMatchObject([{ kind: "travel", gapMin: 20, bufferMin: 30 }]);
-    const c = ev("2026-10-06T21:00:00Z", "2026-10-06T22:00:00Z", { locationId: "club" });
-    const d = ev("2026-10-06T22:00:00Z", "2026-10-06T23:00:00Z", { locationId: "club" });
-    expect(run([c, d], places, buffers)).toEqual([]);
+  it("clashes only when the overlap is more than 15 minutes", () => {
+    const a = ev("2026-10-05T21:00:00Z", "2026-10-05T22:00:00Z");
+    const b = ev("2026-10-05T21:45:00Z", "2026-10-05T23:00:00Z"); // 15 min
+    expect(run([a, b])).toEqual([]);
+    const c = ev("2026-10-06T21:00:00Z", "2026-10-06T22:00:00Z");
+    const d = ev("2026-10-06T21:44:00Z", "2026-10-06T23:00:00Z"); // 16 min
+    expect(run([c, d])).toEqual([{ a: c.id, b: d.id, overlapMin: 16 }]);
+  });
+
+  it("measures the overlap when one event sits inside another", () => {
+    const long = ev("2026-10-05T20:00:00Z", "2026-10-05T23:00:00Z");
+    const short = ev("2026-10-05T21:00:00Z", "2026-10-05T21:20:00Z");
+    expect(run([long, short])).toMatchObject([{ overlapMin: 20 }]);
   });
 
   it("never counts optional or parent-only events", () => {
@@ -80,7 +75,7 @@ describe("detectClashes", () => {
 
   it("finds every pair when three events overlap", () => {
     const a = ev("2026-10-05T21:00:00Z", "2026-10-05T23:00:00Z");
-    const b = ev("2026-10-05T21:30:00Z", "2026-10-05T22:00:00Z");
+    const b = ev("2026-10-05T21:30:00Z", "2026-10-05T22:15:00Z");
     const c = ev("2026-10-05T21:45:00Z", "2026-10-05T22:30:00Z");
     expect(
       run([c, a, b])
@@ -95,7 +90,7 @@ describe("detectClashes", () => {
     // ~10 events a day for two years.
     for (let day = 0; day < 730; day++) {
       for (let i = 0; i < 10; i++) {
-        const s = start + day * 86_400_000 + (8 + i * 1.3) * 3_600_000;
+        const s = start + day * 86_400_000 + (8 + i) * 3_600_000;
         events.push(
           ev(new Date(s).toISOString(), new Date(s + 5_400_000).toISOString(), {
             category: i % 3 ? "soccer" : "school_class",
@@ -103,9 +98,9 @@ describe("detectClashes", () => {
         );
       }
     }
-    detectClashes({ events: events.slice(0, 100), places: [], buffers: new Map(), homeTimeZone: tz }); // warm up
+    detectClashes({ events: events.slice(0, 100), homeTimeZone: tz }); // warm up
     const t0 = performance.now();
-    const clashes = detectClashes({ events, places: [], buffers: new Map(), homeTimeZone: tz });
+    const clashes = detectClashes({ events, homeTimeZone: tz });
     const ms = performance.now() - t0;
     expect(clashes.length).toBeGreaterThan(0);
     expect(ms).toBeLessThan(200);

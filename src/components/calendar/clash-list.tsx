@@ -60,8 +60,7 @@ export function ClashList() {
             className="flex flex-col gap-2 rounded-lg border border-red-700 p-3 text-sm"
           >
             <p className="font-medium text-red-700 dark:text-red-400">
-              ⚠{" "}
-              {c.kind === "overlap" ? "Overlap" : `Only ${c.gapMin} min to get there (needs ${c.bufferMin})`}
+              ⚠ Overlap of {c.overlapMin} min
             </p>
             {[c.eventA, c.eventB].map((e) => (
               <div key={e.id} className="flex flex-wrap items-center justify-between gap-2">

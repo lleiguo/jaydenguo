@@ -87,7 +87,7 @@ export function EventDetail(props: {
                 {c.other
                   ? `${CATEGORY_INFO[c.other.category].icon} ${c.other.title}, ${formatWhen(c.other.start, c.other.end, c.other.allDay, tz)}`
                   : "Another event"}
-                {c.kind === "travel" && ` (only ${c.gapMin} min to travel; needs ${c.bufferMin})`}
+                {` (overlaps ${c.overlapMin} min)`}
                 {c.acceptedId && " · accepted"}
               </span>
               {c.acceptedId ? (

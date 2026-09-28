@@ -40,9 +40,7 @@ export type EventView = {
 export type ClashView = {
   a: string;
   b: string;
-  kind: "overlap" | "travel";
-  gapMin: number;
-  bufferMin: number;
+  overlapMin: number;
   // Set when the owner accepted this clash (CON-4).
   acceptedId: string | null;
 };

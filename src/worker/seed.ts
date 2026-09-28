@@ -188,13 +188,13 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     durationMin: 60,
     weekdays: [3],
   });
-  // 10 minutes after tennis at a place 30 minutes away: a travel clash.
+  // Starts 20 minutes before tennis ends: a clash (over the 15-minute tolerance).
   await series("Fitness class", {
     ...common,
     category: "fitness",
     locationName: "Cedar Rec Centre",
     startDate: addDays(monday, -7),
-    startTime: "17:40",
+    startTime: "17:10",
     durationMin: 45,
     weekdays: [3],
   });

@@ -4,8 +4,6 @@ import {
   conflicts,
   eventOverrides,
   events,
-  locationBuffers,
-  locations,
   sources,
 } from "@db/schema";
 import { closureDates, detectClashes, type ClashEvent } from "../../domain/clashes";
@@ -88,18 +86,10 @@ export async function currentCursor(db: DbOrTx): Promise<number> {
   return row?.seq ?? 0;
 }
 
-export async function loadPlaces(db: DbOrTx) {
-  const places = await db.select({ id: locations.id, match: locations.match }).from(locations);
-  const buffers = new Map(
-    (await db.select().from(locationBuffers)).map((b) => [`${b.fromId}|${b.toId}`, b.minutes] as const),
-  );
-  return { places, buffers };
-}
-
 export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<CalendarPayload> {
   const cursor = await currentCursor(db);
   const homeTimeZone = await getHomeTimeZone(db);
-  // A day either side, so travel buffers and closures at the edges count.
+  // A day either side, so clashes and closures at the edges count.
   const lo = new Date(from.getTime() - 86_400_000);
   const hi = new Date(to.getTime() + 86_400_000);
   const rows: Row[] = await baseQuery(db)
@@ -115,17 +105,14 @@ export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<Ca
       start: r.override?.newStartUtc ?? r.event.startUtc,
       end: r.override?.newEndUtc ?? r.event.endUtc,
       allDay: r.event.allDay,
-      locationId: r.event.locationId,
-      locationName: r.event.locationName,
     }));
   const closed = closureDates(clashEvents, homeTimeZone);
-  const { places, buffers } = await loadPlaces(db);
   const accepted = await db
     .select({ id: conflicts.id, a: conflicts.eventA, b: conflicts.eventB })
     .from(conflicts)
     .where(isNull(conflicts.undoneAt));
   const acceptedByPair = new Map(accepted.map((c) => [`${c.a}|${c.b}`, c.id]));
-  const clashes: ClashView[] = detectClashes({ events: clashEvents, places, buffers, homeTimeZone }).map(
+  const clashes: ClashView[] = detectClashes({ events: clashEvents, homeTimeZone }).map(
     (c) => ({
       ...c,
       acceptedId: acceptedByPair.get(`${c.a}|${c.b}`) ?? null,
