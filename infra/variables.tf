@@ -126,3 +126,27 @@ variable "claude_region" {
   type        = string
   default     = "global"
 }
+
+variable "ai_monthly_budget" {
+  description = "Monthly alert budget for AI alone: video reviews, email suggestions, match explanations (spec §8: about $20-35)."
+  type        = number
+  default     = 40
+}
+
+variable "ai_billing_services" {
+  description = "Billing service IDs the AI budget watches. C7E2-9256-1C43 is Vertex AI (Gemini). If Claude's charges show under another service on the bill (Billing > Reports, group by service), add its ID here (spikes.md SP-6)."
+  type        = list(string)
+  default     = ["C7E2-9256-1C43"]
+}
+
+variable "gemini_model" {
+  description = "Gemini model for video reviews (SP-6: the newest Pro model on Vertex AI in 2026-09 was a preview)."
+  type        = string
+  default     = "gemini-3.1-pro-preview"
+}
+
+variable "gemini_region" {
+  description = "Vertex AI location for Gemini calls. Preview models are served from \"global\" only."
+  type        = string
+  default     = "global"
+}

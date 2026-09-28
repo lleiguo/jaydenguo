@@ -481,6 +481,17 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
 | M5.8 | Gmail adapter (allow-listed senders and labels only). Claude extraction into suggestions with quotes and confidence. Approve or reject queue. | SRC-4, EML-1..3 | Fixture tests. Nothing reaches the calendar without approval (test). |
 | M5.9 | Google Calendar copy: create the "Jayden (hub)" calendar and sync one way; switch off with keep or delete. | GCO-1, GCO-2 | Integration test with a stubbed Google API. The household calendar is never written (test). |
 
+**Build notes (M5, 2026-09-28):**
+- M5.1 (SP-6, spikes.md): Gemini works on Vertex AI (`gemini-3.1-pro-preview`
+  from `global`, video inline with a chosen frame rate, about 66 tokens a
+  frame). Claude still gets 429 (quota 0), so the owner has to raise the
+  `anthropic-claude-opus` quota before debate mode, email suggestions and
+  match explanations can run. Estimated cost per debate: $1.50–2.00 (§8
+  unchanged). The AI budget is `google_billing_budget.ai` on the Vertex AI
+  billing service; not applied (the owner runs Terraform). Gemini's model
+  and location are Terraform variables (`GEMINI_MODEL`,
+  `GEMINI_VERTEX_REGION` on the worker).
+
 ### M6: Go-live hardening (≈ 2 days; can run after M1 and again after M5)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -558,7 +569,7 @@ or his opponents.
 | M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
 | M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
 | M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks, closures from the public key dates page, and the Veracross timetable with the "Today at school" card are built; Veracross sign-in codes are entered once on the Accounts page and remembered. M4.3 (homework and grades) deferred by the owner; M4.4 links are done for Veracross and the key dates page. |
-| M5 Extras (S5) | not started |
+| M5 Extras (S5) | **started 2026-09-28.** M5.1: SP-6 done except the real-clip run (Claude quota still 0, owner step); AI budget in Terraform, not applied. |
 | M6 Go-live hardening | not started |
 
 Between M3 and M4 (2026-09-27): Sources, Accounts, Clashes and Deleted
