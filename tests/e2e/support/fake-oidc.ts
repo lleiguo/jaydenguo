@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { SignJWT, exportJWK, generateKeyPair } from "jose";
 
 import { FAKE_OIDC_PORT } from "./fake-oidc-port";
+import { createGmailFake } from "./fake-gmail";
 import { createGoogleMediaFake } from "./fake-google-media";
 const issuer = `http://127.0.0.1:${FAKE_OIDC_PORT}`;
 const accounts = [
@@ -25,6 +26,9 @@ const accounts = [
   // Accounts connected for video reviews (Drive and Photos, plan M5.2).
   "videos-desktop@example.test",
   "videos-phone@example.test",
+  // Gmail for coach and club emails (plan M5.8).
+  "gmail-desktop@example.test",
+  "gmail-phone@example.test",
 ];
 const BLOCKED = "blocked-school@example.test";
 
@@ -123,6 +127,8 @@ async function main() {
   };
   // Google Drive and the Photos Picker for video reviews.
   const media = createGoogleMediaFake((t) => accessTokens.has(t));
+  // Gmail with made-up coach and club emails.
+  const gmail = createGmailFake((t) => accessTokens.has(t));
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", issuer);
@@ -262,6 +268,7 @@ async function main() {
     }
 
     if (media.handle(req, res, issuer)) return;
+    if (gmail.handle(req, res, issuer)) return;
 
     send(404, { error: "not found" });
   });

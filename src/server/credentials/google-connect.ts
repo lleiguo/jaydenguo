@@ -22,6 +22,9 @@ import { audit } from "./store";
 export const GOOGLE_SCOPES = {
   calendar: ["https://www.googleapis.com/auth/calendar.readonly"],
   classroom: CLASSROOM_SCOPES,
+  // Coach and club emails, read-only; only allow-listed senders and labels
+  // are fetched (SRC-4, EML-1).
+  gmail: ["https://www.googleapis.com/auth/gmail.readonly"],
   // Video reviews (VID-2, F-4): read a Drive file the owner links, and the
   // video the owner picks in Google Photos.
   videos: [

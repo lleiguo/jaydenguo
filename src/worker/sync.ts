@@ -13,6 +13,7 @@ import { syncEntries } from "../server/tennis/entries";
 import { localDate } from "../domain/time";
 import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
+import { defaultEmailExtractor, syncEmails } from "../server/email/apply";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
 import type { JobContext } from "./context";
 import { workerBrowserSession } from "./browser-session";
@@ -152,6 +153,17 @@ async function runLocked(
       counts.added += tennis.added;
       counts.changed += tennis.changed;
       counts.cancelled += tennis.cancelled;
+    }
+    if (batch.emails) {
+      // EML-2: new suggestions count as added; nothing reaches the calendar
+      // until the owner approves.
+      const read = await syncEmails(db, sourceId, batch.emails, {
+        extractor: defaultEmailExtractor(),
+        now: now(),
+        homeTimeZone,
+        log,
+      });
+      counts.added += read.suggestions;
     }
     await db
       .update(syncRuns)
