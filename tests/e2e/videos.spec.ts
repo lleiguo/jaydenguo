@@ -77,11 +77,11 @@ test("a Drive video is reviewed in debate mode, and the vote is kept once", asyn
   await row.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByTestId("video-row").filter({ hasText: note })).toHaveCount(0);
   await page.goto("/videos?deleted=1");
-  await page
-    .getByTestId("video-row")
-    .filter({ hasText: note })
-    .getByRole("button", { name: "Restore" })
-    .click();
+  const deletedRow = page.getByTestId("video-row").filter({ hasText: note });
+  await deletedRow.getByRole("button", { name: "Restore" }).click();
+  // The row leaves the list once the restore is saved; leaving the page
+  // before that can cancel the request.
+  await expect(deletedRow).toHaveCount(0);
   await page.goto("/videos?sport=tennis");
   await expect(page.getByTestId("video-row").filter({ hasText: note })).toHaveCount(1);
 });
