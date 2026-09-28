@@ -1,0 +1,236 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { credentials, videoReviewRounds, videoReviews } from "@db/schema";
+import {
+  createPickerSession,
+  deletePickerSession,
+  downloadDriveFile,
+  downloadPickedVideo,
+  getPickerSession,
+  pickedVideo,
+  VideoFetchError,
+} from "../../adapters/google-media";
+import { googleAccessToken } from "../../adapters/google-calendar";
+import { SyncError } from "../../adapters/types";
+import { geminiFps } from "../../domain/frames";
+import { parseVideoLink } from "../../domain/video-links";
+import type { ReviewMode, VideoSport } from "../../domain/video-constants";
+import type { Db } from "../../server/db/client";
+import { claudeModel } from "../../server/llm/claude";
+import { geminiModel } from "../../server/llm/gemini";
+import { LlmError, type StructuredModel } from "../../server/llm/types";
+import { registerSecret } from "../../server/log";
+import { runDebate, type Models } from "../../server/video/debate";
+import { fakeModels } from "../../server/video/fake";
+import { PROMPT_VERSION } from "../../server/video/prompts";
+import { DRIVE_SCOPE, PHOTOS_SCOPE } from "../../server/video/store";
+import type { JobContext } from "../context";
+import { openCredential } from "../credentials";
+import { MediaError, prepareMedia } from "./media";
+
+// The review job (plan M5.2-M5.5, spec VID-2, VID-5): `video:review <id>`.
+// Fetches the video through the owner's Google account into a temp folder,
+// prepares it, runs the debate (or one model), stores every round as it
+// finishes, and always deletes the temp folder, whether it worked or not.
+
+// How long the owner has to pick in Google Photos.
+const PICK_TIMEOUT_MS = () => Number(process.env.PHOTOS_PICK_TIMEOUT_MS ?? 15 * 60_000);
+
+export type ReviewDeps = {
+  models?: () => Models;
+  accessToken?: (db: Db, scope: string) => Promise<string>;
+  sleep?: (ms: number) => Promise<void>;
+};
+
+// Vertex AI in production; stand-ins when VIDEO_LLM=fake (never on Cloud Run).
+export function defaultModels(): Models {
+  if (process.env.VIDEO_LLM === "fake") {
+    if (process.env.K_SERVICE || process.env.CLOUD_RUN_JOB)
+      throw new Error("VIDEO_LLM=fake is for local use only");
+    return fakeModels();
+  }
+  // Only the models the mode needs are created, so a Gemini-only review
+  // works while Claude isn't set up.
+  const lazy = (make: () => StructuredModel, name: "gemini" | "claude"): StructuredModel => {
+    let m: StructuredModel | null = null;
+    return {
+      name,
+      input: name === "gemini" ? "video" : "frames",
+      call: (req) => (m ??= make()).call(req),
+    };
+  };
+  return { gemini: lazy(() => geminiModel(), "gemini"), claude: lazy(() => claudeModel(), "claude") };
+}
+
+async function defaultAccessToken(db: Db, scope: string): Promise<string> {
+  const [cred] = await db
+    .select({ id: credentials.id })
+    .from(credentials)
+    .where(
+      and(
+        eq(credentials.provider, "google"),
+        eq(credentials.status, "active"),
+        sql`${scope} = any(${credentials.scopes})`,
+      ),
+    )
+    .orderBy(desc(credentials.updatedAt))
+    .limit(1);
+  if (!cred)
+    throw new VideoFetchError(
+      "Connect Google Drive and Photos on the Videos page first (the Google account isn't connected).",
+    );
+  const opened = await openCredential(db, cred.id, "video review");
+  try {
+    const token = await googleAccessToken(opened.secret);
+    registerSecret(token);
+    return token;
+  } catch (err) {
+    if (err instanceof SyncError)
+      throw new VideoFetchError(
+        "Can't open the video. Is the Google account still connected? Reconnect it on the Accounts page.",
+      );
+    throw err;
+  }
+}
+
+// A plain-language reason for the page (VID-5).
+export function failureMessage(err: unknown): string {
+  if (err instanceof VideoFetchError || err instanceof MediaError || err instanceof LlmError)
+    return err.message;
+  return "The review failed unexpectedly. Try again.";
+}
+
+export async function videoReviewJob(args: string[], ctx: JobContext, deps: ReviewDeps = {}) {
+  const id = args[0];
+  if (!id) throw new Error("usage: video:review <id>");
+  const db = await ctx.db();
+  const sleep = deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+  const token = deps.accessToken ?? defaultAccessToken;
+  const models = deps.models ?? defaultModels;
+
+  const [row] = await db.select().from(videoReviews).where(eq(videoReviews.id, id));
+  if (!row || row.deletedAt) return ctx.log("video review not found", { id }, "WARNING");
+  if (row.status !== "queued" && row.status !== "picking")
+    return ctx.log("video review not waiting", { id, status: row.status });
+
+  const set = async (values: Partial<typeof videoReviews.$inferInsert>) => {
+    await db.update(videoReviews).set(values).where(eq(videoReviews.id, id));
+  };
+  const progress = (text: string) => set({ progress: text });
+
+  const dir = await mkdtemp(join(tmpdir(), "video-review-"));
+  const src = join(dir, "source");
+  try {
+    // 1. The video, into the temp folder.
+    if (row.provider === "drive") {
+      await set({
+        status: "analysing",
+        startedAt: new Date(),
+        progress: "Fetching the video from Google Drive",
+      });
+      const link = parseVideoLink(row.url ?? "");
+      if (!link.ok || !link.driveFileId)
+        throw new VideoFetchError("That Google Drive link doesn't point to a file.");
+      const file = await downloadDriveFile(await token(db, DRIVE_SCOPE), link.driveFileId, src);
+      await set({ mediaName: file.name });
+    } else if (row.provider === "photos") {
+      const access = await token(db, PHOTOS_SCOPE);
+      let session = row.pickerSessionId ? await getPickerSession(access, row.pickerSessionId) : null;
+      if (!session) {
+        session = await createPickerSession(access);
+        await set({
+          pickerSessionId: session.id,
+          pickerUri: `${session.pickerUri}/autoclose`,
+          progress: "Waiting for you to pick the video in Google Photos",
+        });
+      }
+      const deadline = Date.now() + PICK_TIMEOUT_MS();
+      while (!session.mediaItemsSet) {
+        if (Date.now() > deadline) {
+          await deletePickerSession(access, session.id);
+          throw new VideoFetchError(
+            "Nothing was picked in Google Photos in time. Try again when you're ready to pick.",
+          );
+        }
+        await sleep(session.pollIntervalMs);
+        session = await getPickerSession(access, session.id);
+      }
+      const video = await pickedVideo(access, session.id);
+      await set({
+        status: "analysing",
+        startedAt: new Date(),
+        mediaItemId: video.id,
+        mediaName: video.filename,
+        pickerUri: null,
+        progress: "Fetching the video from Google Photos",
+      });
+      await downloadPickedVideo(access, video, src);
+      await deletePickerSession(access, session.id);
+    } else {
+      throw new VideoFetchError("This kind of link can't be reviewed.");
+    }
+
+    // 2. Media prep.
+    await progress("Preparing the video");
+    const mode = row.mode as ReviewMode;
+    const media = await prepareMedia(
+      src,
+      dir,
+      { start: row.segmentStart, end: row.segmentEnd },
+      mode !== "gemini",
+    );
+    await set({ durationSec: media.durationSec, promptVersion: PROMPT_VERSION });
+
+    // 3. The review.
+    const result = await runDebate(
+      mode,
+      models(),
+      {
+        context: { sport: row.sport as VideoSport, note: row.note },
+        media: {
+          gemini: {
+            kind: "video",
+            data: media.clip,
+            mimeType: "video/mp4",
+            fps: geminiFps(row.sport, media.durationSec),
+          },
+          claude: { kind: "frames", frames: media.frames },
+        },
+      },
+      {
+        progress,
+        saveRound: async (r) => {
+          await db.insert(videoReviewRounds).values({ reviewId: id, ...r });
+        },
+      },
+    );
+    await set({
+      status: "done",
+      progress: null,
+      verdict: result.verdict,
+      combinedReview: result.combined,
+      costUsd: result.costUsd,
+      finishedAt: new Date(),
+    });
+    ctx.log("video review done", { id, mode, costUsd: result.costUsd });
+  } catch (err) {
+    const message = failureMessage(err);
+    const cost = await db
+      .select({ sum: sql<number>`coalesce(sum(${videoReviewRounds.costUsd}), 0)::float` })
+      .from(videoReviewRounds)
+      .where(eq(videoReviewRounds.reviewId, id));
+    await set({
+      status: "failed",
+      progress: null,
+      errorMessage: message,
+      finishedAt: new Date(),
+      costUsd: cost[0]?.sum ?? 0,
+    });
+    ctx.log("video review failed", { id, error: err }, "WARNING");
+  } finally {
+    // VID-2: nothing is kept after the review.
+    await rm(dir, { recursive: true, force: true });
+  }
+}

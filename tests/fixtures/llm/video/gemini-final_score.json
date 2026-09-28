@@ -1,0 +1,46 @@
+{
+  "recorded": true,
+  "model": "gemini-3.1-pro-preview",
+  "promptVersion": "video-1-draft",
+  "response": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "{\n  \"reviews\": [\n    {\n      \"label\": \"A\",\n      \"scores\": {\n        \"grounded\": 1,\n        \"correct\": 4,\n        \"ageAppropriate\": 5,\n        \"actionable\": 4,\n        \"prioritised\": 4\n      },\n      \"reason\": \"The video is a moving test pattern, not a real swing, making all observations completely hallucinated. While the tennis advice provided is standard and age-appropriate in theory, it is entirely disconnected from the actual video content.\"\n    },\n    {\n      \"label\": \"B\",\n      \"scores\": {\n        \"grounded\": 1,\n        \"correct\": 4,\n        \"ageAppropriate\": 5,\n        \"actionable\": 4,\n        \"prioritised\": 4\n      },\n      \"reason\": \"This review is identical to Review A and hallucinates a tennis player hitting a ball in what is clearly a test pattern video. The technique and drills mentioned are sound for a young tennis player, but none of the claims are grounded in reality.\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "createTime": "2026-09-28T06:37:16.402258Z",
+    "modelVersion": "gemini-3.1-pro-preview",
+    "responseId": "HAu6atLGGJCepucPh-LbgQg",
+    "usageMetadata": {
+      "promptTokenCount": 2809,
+      "candidatesTokenCount": 252,
+      "totalTokenCount": 3659,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "VIDEO",
+          "tokenCount": 1584
+        },
+        {
+          "modality": "TEXT",
+          "tokenCount": 1225
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 252
+        }
+      ],
+      "thoughtsTokenCount": 598
+    }
+  }
+}

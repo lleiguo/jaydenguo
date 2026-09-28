@@ -85,6 +85,13 @@
       "when": 1790571455030,
       "tag": "0011_swim_entry_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790577092658,
+      "tag": "0012_video_reviews",
+      "breakpoints": true
     }
   ]
 }

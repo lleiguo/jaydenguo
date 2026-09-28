@@ -1,0 +1,46 @@
+{
+  "recorded": true,
+  "model": "gemini-3.1-pro-preview",
+  "promptVersion": "video-1-draft",
+  "response": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "{\n  \"summary\": \"This video is a test clip showing a moving color pattern, not an athlete playing tennis. Since there is no player visible, I cannot evaluate their strokes or footwork. Please provide a video of the athlete on the court so I can give helpful feedback.\",\n  \"good\": [\n    {\n      \"text\": \"I cannot assess any positive points from this footage.\",\n      \"at\": null,\n      \"why\": \"The video displays a color test pattern rather than a tennis player.\"\n    }\n  ],\n  \"fix\": [\n    {\n      \"text\": \"I cannot assess what technique needs fixing from this footage.\",\n      \"at\": null,\n      \"why\": \"There is no athlete visible in the clip to analyze.\"\n    }\n  ],\n  \"drills\": [\n    {\n      \"name\": \"Shadow Swings\",\n      \"how\": \"Practice your forehand and backhand swings without a ball, focusing on holding a balanced finish.\",\n      \"reps\": \"10 swings each side\"\n    }\n  ],\n  \"filmNext\": \"Please film the athlete hitting some tennis shots on the court. A view from slightly behind them and to the side is usually best to see their footwork and swing path clearly.\"\n}"
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "createTime": "2026-09-28T06:36:28.712865Z",
+    "modelVersion": "gemini-3.1-pro-preview",
+    "responseId": "7Aq6aqHBK9uFpucPyZan6Qc",
+    "usageMetadata": {
+      "promptTokenCount": 2458,
+      "candidatesTokenCount": 279,
+      "totalTokenCount": 4489,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 874
+        },
+        {
+          "modality": "VIDEO",
+          "tokenCount": 1584
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 279
+        }
+      ],
+      "thoughtsTokenCount": 1752
+    }
+  }
+}

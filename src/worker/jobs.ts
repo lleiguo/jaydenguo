@@ -7,6 +7,7 @@ import { removeCredentialJob, rotateKeysJob, testCredentialJob } from "./credent
 import { seedJob } from "./seed";
 import { smokeJob, syncJob } from "./sync";
 import { tennisAcceptanceJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
+import { videoReviewJob } from "./video/review";
 
 export type { JobContext } from "./context";
 export type Job = { description: string; run: (args: string[], ctx: JobContext) => Promise<void> };
@@ -50,6 +51,10 @@ export const jobs: Record<string, Job> = {
   "tennis:draw-watch": {
     description: "Look for his draws this week; sync once out (hourly on draw days)",
     run: tennisDrawWatchJob,
+  },
+  "video:review": {
+    description: "Fetch a linked video and review it (debate or one model): video:review <id>",
+    run: (args, ctx) => videoReviewJob(args, ctx),
   },
   backup: {
     description: "Export the database to the backup bucket (nightly)",
