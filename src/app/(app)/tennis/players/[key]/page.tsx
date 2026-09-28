@@ -6,6 +6,7 @@ import { formatRecord } from "@/domain/tennis";
 import { getDb } from "@/server/db";
 import { explanationsFor } from "@/server/tennis/explain";
 import { loadPlayer, predictAgainst } from "@/server/tennis/load";
+import { externalHref } from "@/lib/external-href";
 
 // TEN-4, TEN-5, TEN-6: an opponent, every meeting with him, their recent
 // form, and the prediction for a match between them.
@@ -33,7 +34,12 @@ export default async function PlayerPage({ params }: PageProps<"/tennis/players/
           {player.profileUrl && (
             <>
               {" · "}
-              <a href={player.profileUrl} className="underline" rel="noreferrer" target="_blank">
+              <a
+                href={externalHref(player.profileUrl)}
+                className="underline"
+                rel="noreferrer"
+                target="_blank"
+              >
                 Profile on the tournament site
               </a>
             </>

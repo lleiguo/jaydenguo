@@ -8,6 +8,7 @@ import { getDb } from "@/server/db";
 import { loadMeet } from "@/server/swim/load";
 import { localDate } from "@/domain/time";
 import { getHomeTimeZone } from "@/server/settings";
+import { externalHref } from "@/lib/external-href";
 
 // SWM-2, SWM-3: one meet, its entries with seed times, and its swims.
 export default async function MeetPage({ params }: PageProps<"/swimming/meets/[id]">) {
@@ -31,7 +32,7 @@ export default async function MeetPage({ params }: PageProps<"/swimming/meets/[i
           {meet.sourceUrl && (
             <>
               {" · "}
-              <a href={meet.sourceUrl} className="underline" rel="noreferrer" target="_blank">
+              <a href={externalHref(meet.sourceUrl)} className="underline" rel="noreferrer" target="_blank">
                 Open in Commit Swimming
               </a>
             </>

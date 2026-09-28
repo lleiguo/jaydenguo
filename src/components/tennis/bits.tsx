@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { PlayerRef } from "@/domain/tennis";
 import type { DrawView, PredictionView } from "@/server/tennis/load";
+import { externalHref } from "@/lib/external-href";
 
 // Small shared pieces of the tennis pages (TEN-2..6).
 
@@ -87,10 +88,10 @@ export function DrawLine({ draw }: { draw: DrawView }) {
       </span>
       <span className={muted}>
         {[where, draw.seed ? `seed ${draw.seed}` : null].filter(Boolean).join(" · ")}
-        {draw.sourceUrl && (
+        {externalHref(draw.sourceUrl) && (
           <>
             {where || draw.seed ? " · " : ""}
-            <a href={draw.sourceUrl} className="underline" rel="noreferrer" target="_blank">
+            <a href={externalHref(draw.sourceUrl)} className="underline" rel="noreferrer" target="_blank">
               Draw on the site
             </a>
           </>

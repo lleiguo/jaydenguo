@@ -46,3 +46,113 @@ pnpm job sync all    # sync every enabled source now
 pnpm smoke <id>      # live check of one source, saves nothing
 pnpm seed            # sample data for local development
 ```
+
+## Runbook (production)
+
+Everything runs in project `jaydenguo`, region `northamerica-northeast2`
+(Toronto). Worker jobs run as the Cloud Run job `worker`:
+
+```bash
+gcloud run jobs execute worker --region northamerica-northeast2 --args=<job>[,<arg>…] --wait
+```
+
+Logs: Console → Logging → Logs Explorer, bucket `hub-logs` (Toronto,
+30 days). Useful filters: `jsonPayload.message="sync failed"`,
+`jsonPayload.message="video review failed"`, `severity>=WARNING`.
+
+### Redeploy
+
+- **Normal:** merge to `main`. CI runs, then the Deploy workflow builds
+  both images, updates the worker, runs `migrate`, deploys `web` and calls
+  `/api/healthz`.
+- **Deploy again without a change** (e.g. a failed deploy step): GitHub →
+  Actions → Deploy → Run workflow.
+- **Roll back the site:** Console → Cloud Run → `web` → Revisions → send
+  100% of traffic to the previous revision (or
+  `gcloud run services update-traffic web --region northamerica-northeast2 --to-revisions=<rev>=100`).
+  Roll the worker back with
+  `gcloud run jobs update worker --region northamerica-northeast2 --image <previous worker image>`.
+  Migrations only add; an older version runs on a newer schema. Then fix
+  forward on `main`.
+- **Stale page after a deploy:** every response is `private, no-store`,
+  so Firebase Hosting shouldn't cache pages. If a stale page ever appears,
+  a new Hosting release clears its cache:
+  `cd infra && terraform apply -replace=google_firebase_hosting_release.hub`.
+
+### Rotate keys and secrets
+
+- **Credential key (Cloud KMS `hub/credentials`):** rotates itself every
+  90 days; old versions stay enabled so stored credentials still open.
+  After a rotation (or a manual one: Console → Key Management → `hub` →
+  `credentials` → Rotate), re-wrap every stored data key with the new
+  version, then old versions can be disabled after a week:
+  `gcloud run jobs execute worker --region northamerica-northeast2 --args=rotate-keys --wait`.
+- **Session secret (`auth-secret`):** add a new version
+  (`read -rs V && printf '%s' "$V" | gcloud secrets versions add auth-secret --data-file=-`)
+  and redeploy `web`. Every device is signed out.
+- **Google OAuth client secret:** create a new secret on the OAuth client
+  (Console → APIs & Services → Credentials), add it as a new version of
+  `google-oauth-client-secret` the same way, redeploy `web` and update the
+  worker (`gcloud run jobs update worker --region northamerica-northeast2`),
+  then delete the old client secret. Connected Google accounts keep working.
+- **A site password** (Commit Swimming, Veracross, Tennis Canada): change
+  it on the site, then Settings → Accounts → the login → update the
+  password → Test connection.
+- **A feed link** (TeamSnap, Spordle): get a fresh link on the site, update
+  it on Settings → Accounts. The old link keeps working until the site
+  revokes it.
+
+### Reconnect a source
+
+- **Red source on Settings → Sources:** the card says why in plain words.
+  "Login failed" or "Google access was revoked": fix the account on
+  Settings → Accounts (update the password, or Reconnect Google), press
+  Test connection, then Refresh on the source.
+- **Veracross asks for a sign-in code:** Settings → Accounts → the
+  Veracross login → Test connection, then type the emailed code in the box
+  that appears. The browser is remembered, so syncs carry on without it.
+- **Google features:** each one is its own grant on Settings → Accounts
+  (calendar; Classroom; Gmail; Drive and Photos for videos; the calendar
+  copy). Connecting again replaces the token and keeps the sources.
+- **Three failures in a row** send an email (SYNC-4). A successful run
+  resets the count.
+
+### Restore a backup
+
+See [`infra/README.md`](infra/README.md), "Backups and restore": point-in-time
+restore for the last 7 days, a nightly export for anything older, and the
+restore test.
+
+### When an adapter breaks (a site changed its pages)
+
+1. The source goes red with a plain-language reason; the other sources
+   carry on (one job per source, NFR-8). Nothing already synced is changed
+   or deleted by a failed run (NFR-6).
+2. Look at the run in Logs (`jsonPayload.message="sync failed"` with the
+   source ID) and run a live check that saves nothing:
+   `gcloud run jobs execute worker --region northamerica-northeast2 --args=smoke,<source-id> --wait`.
+3. Until it's fixed, switch the source off on Settings → Sources if it
+   keeps failing, and add anything urgent by hand (the calendar's
+   "+ Add event", Tennis → Results → add a match, Swimming → add a result;
+   SYNC-6).
+4. Fix it in the adapter under `src/adapters/<kind>/`: save the new page as
+   a fixture (scrub names; no real data about Jayden or other players),
+   make the adapter test pass, then merge. The next sync picks it up.
+
+### AI features (Vertex AI)
+
+- **Video reviews fail with "Claude is over its quota":** Claude's Vertex
+  quota is 0 until raised (IAM & Admin → Quotas →
+  `global_online_prediction_requests_per_base_model`,
+  `anthropic-claude-opus`). Meanwhile set Videos → Review settings to
+  "Gemini only". Email suggestions and match explanations need Claude too.
+- **"Google Photos refused" / "Can't open this link":** the Drive or Photos
+  Picker API is off in the project, or the Google account lost that
+  access. Check `terraform apply` is clean, then reconnect "Drive and
+  Photos" on Settings → Accounts.
+- **Cost:** each review shows its cost; the "hub AI monthly" budget emails
+  at 50/90/100%. Prices used for the estimates are in
+  `src/server/llm/pricing.ts`.
+- **Calendar copy errors** show under Settings → General → Copy to Google
+  Calendar; "Copy now" retries. Deleting the "Jayden (hub)" calendar in
+  Google Calendar is fine: the next run makes a new one.
