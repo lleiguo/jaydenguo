@@ -22,6 +22,12 @@ import { audit } from "./store";
 export const GOOGLE_SCOPES = {
   calendar: ["https://www.googleapis.com/auth/calendar.readonly"],
   classroom: CLASSROOM_SCOPES,
+  // Video reviews (VID-2, F-4): read a Drive file the owner links, and the
+  // video the owner picks in Google Photos.
+  videos: [
+    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/photospicker.mediaitems.readonly",
+  ],
 } as const satisfies Record<string, readonly string[]>;
 export type GoogleFeature = keyof typeof GOOGLE_SCOPES;
 

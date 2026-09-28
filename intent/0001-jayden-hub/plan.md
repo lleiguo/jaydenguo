@@ -492,6 +492,65 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   and location are Terraform variables (`GEMINI_MODEL`,
   `GEMINI_VERTEX_REGION` on the worker).
 
+- M5.2 video intake: the Videos page (menu: Calendar, Tennis, Swimming,
+  Videos, Settings) takes a link or "Pick from Google Photos", with sport,
+  date filmed, note and an optional segment (up to 2 minutes reviewed).
+  The row is saved first (VID-1), then the worker job `video:review <id>`
+  starts. Drive links are fetched with `drive.readonly`; Google Photos uses
+  the Picker API (`photospicker.mediaitems.readonly`): the worker opens a
+  session, the page shows its link, the owner picks, the worker polls (up
+  to 15 minutes). Both scopes come from "Connect Google Drive and Photos"
+  (feature `videos`, also on the Accounts page); `drive.googleapis.com` and
+  `photospicker.googleapis.com` are enabled in Terraform (not applied).
+  YouTube and other links are saved as "not reviewable" (F-3); pasted
+  Google Photos links are refused with a pointer to the picker (F-4).
+  Videos are capped at 400 MB (Cloud Run's temp folder is memory) and the
+  temp folder is deleted in a `finally` (tested). Soft delete and restore;
+  two finished reviews can be compared side by side (`/videos/compare`).
+- M5.3 media prep (`src/worker/video/media.ts`, `src/domain/frames.ts`):
+  ffmpeg trims to the segment and re-encodes to H.264 at most 720p without
+  sound (480p if still over the inline limit); Gemini gets the clip with 8
+  fps for tennis and 4 otherwise (at most ~400 sampled frames). Claude gets
+  up to 60 JPEG frames 768 px wide: 1.5 a second, plus 12 a second in the
+  one or two 1.2 s windows with the most motion (ffmpeg scene scores),
+  each labelled with its time in the original video. CI installs ffmpeg.
+- M5.4 clients (`src/server/llm/`): Gemini through `@google/genai` (Vertex,
+  `responseJsonSchema`), Claude through `@anthropic-ai/vertex-sdk`
+  (adaptive thinking, effort medium, `output_config.format` JSON schema,
+  frames marked for prompt caching). One zod schema per step; limits are
+  stripped from the JSON schema sent and enforced when parsing; a
+  malformed answer is retried once. Refusals, quota (429) and size errors
+  become plain-language messages. Tokens and cost are recorded per call
+  from `src/server/llm/pricing.ts`. Contract tests replay real Gemini
+  answers (`tests/fixtures/llm/video/gemini-*.json`, recorded with
+  `scripts/record-video-llm.ts` on a synthetic clip); Claude's fixture is
+  hand-written until its quota allows a recording.
+- M5.5 debate (`src/server/video/debate.ts`): the §6.3 rounds, the two
+  models in parallel per round. Each judge sees Review A/B in its own
+  random order, kept for the final scoring; no prompt a judge, author or
+  combiner gets names a model (tested). Interpretation of "winner: highest
+  average of the two judges' final totals": each review's total is the
+  average of both judges' final totals, so each judge's score of its own
+  review counts once; that score is also reported as the self-score, and
+  self-preference is its gap to the other judge's score of the same
+  review (scoreboard). Within 1 point is a tie; the higher average (Gemini
+  when equal) writes the combined review. Points an author conceded are
+  removed from the combined review even if the model keeps them
+  (`dropConceded`, tested). Single-model mode (VID-3e, a setting on the
+  Videos page) is round 1 only. `VIDEO_LLM=fake` swaps in scripted models
+  for local runs and e2e tests; refused on Cloud Run.
+- M5.6 review page (`/videos/[id]`): progress while it runs (polls every
+  3 s), the verdict labelled as the AI judges' opinion, the combined advice
+  with agreed and disputed points (both sides shown), the vote (once;
+  a second vote is a 409), and under "Both reviews…" each review, the
+  judges' scores per criterion (self marked), critiques and replies, plus
+  calls, cost, model versions and prompt version. The scoreboard (Videos
+  page) shows per sport judge wins, parent-vote wins, ties, how often the
+  judges agreed with the vote, and each model's self-lean.
+- Prompts are `video-1-draft`; M5.7 freezes v1 after the owner's clips.
+- The next migration is 0013 (M5 took 0012 for `video_reviews` and
+  `video_review_rounds`).
+
 ### M6: Go-live hardening (≈ 2 days; can run after M1 and again after M5)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -569,7 +628,7 @@ or his opponents.
 | M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
 | M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
 | M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks, closures from the public key dates page, and the Veracross timetable with the "Today at school" card are built; Veracross sign-in codes are entered once on the Accounts page and remembered. M4.3 (homework and grades) deferred by the owner; M4.4 links are done for Veracross and the key dates page. |
-| M5 Extras (S5) | **started 2026-09-28.** M5.1: SP-6 done except the real-clip run (Claude quota still 0, owner step); AI budget in Terraform, not applied. |
+| M5 Extras (S5) | **started 2026-09-28.** M5.1: SP-6 done except the real-clip run (Claude quota still 0, owner step); AI budget in Terraform, not applied. M5.2–M5.6 built on `m5/2-video-review` (not merged): intake, media prep, clients, debate, review page and scoreboard. Needs before use: Terraform apply (Drive and Photos Picker APIs, AI budget), Claude quota for debate mode, connect Drive and Photos. M5.7 waits on the owner's clips. |
 | M6 Go-live hardening | not started |
 
 Between M3 and M4 (2026-09-27): Sources, Accounts, Clashes and Deleted
