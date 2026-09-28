@@ -2,16 +2,18 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { events, sources } from "@db/schema";
+import { credentialSessions, credentials, events, sources } from "@db/schema";
 import { loadSchoolDay } from "@/server/calendar/school-day";
-import { createCredential } from "@/server/credentials/store";
+import { createCredential, submitSignInCode } from "@/server/credentials/store";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import { createLogger, forgetSecrets } from "@/server/log";
 import { setHomeTimeZone } from "@/server/settings";
+import { testCredentialJob } from "@/worker/credentials";
 import { syncSource } from "@/worker/sync";
 import {
   createFakeVeracross,
+  FAKE_VERACROSS_CODE,
   FAKE_VERACROSS_LOGIN,
   OTHER_STUDENT,
   OUR_STUDENT,
@@ -36,10 +38,17 @@ describe("Veracross sync", () => {
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     servers.push(server);
     process.env.VERACROSS_BASE_URL = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-    return server as Server & { requested: string[] };
+    return server;
   }
 
   async function newSource(config: Record<string, string>, password = FAKE_VERACROSS_LOGIN.password) {
+    return (await newSourceWithCredential(config, password)).sourceId;
+  }
+
+  async function newSourceWithCredential(
+    config: Record<string, string>,
+    password = FAKE_VERACROSS_LOGIN.password,
+  ) {
     const cred = await createCredential(db, "test", {
       kind: "password",
       provider: "veracross",
@@ -57,7 +66,7 @@ describe("Veracross sync", () => {
         categoryMapping: { default: "school_class" },
       })
       .returning();
-    return s.id;
+    return { sourceId: s.id, credentialId: cred.id };
   }
 
   beforeAll(async () => {
@@ -66,13 +75,11 @@ describe("Veracross sync", () => {
     db = createDb(handle.pool);
     await setHomeTimeZone(db, "America/Toronto");
     process.env.SYNC_MIN_GAP_MINUTES = "0";
-    process.env.FETCH_MIN_GAP_MS = "0";
   });
   afterAll(async () => {
     for (const s of servers) s.close();
     delete process.env.VERACROSS_BASE_URL;
     delete process.env.SYNC_MIN_GAP_MINUTES;
-    delete process.env.FETCH_MIN_GAP_MS;
     await handle.close();
   });
   beforeEach(() => {
@@ -143,6 +150,76 @@ describe("Veracross sync", () => {
     lines.length = 0;
     await fakeSite({ requireCode: true });
     await syncSource(db, await newSource({ studentFirstName: "Kid" }), "manual", log, now);
-    expect(lines.join("\n")).toContain("asks for a sign-in code");
+    expect(lines.join("\n")).toContain("Veracross needs a sign-in code");
   }, 90_000);
+
+  it("takes the emailed code once through Test connection, then remembers the device", async () => {
+    process.env.SIGNIN_CODE_WAIT_MS = "60000";
+    const site = await fakeSite({ requireCode: true });
+    const { sourceId, credentialId } = await newSourceWithCredential({ studentFirstName: "Kid" });
+    const meta = async () =>
+      (
+        await db.select({ meta: credentials.meta }).from(credentials).where(eq(credentials.id, credentialId))
+      )[0].meta as { codeRequestedAt?: string };
+
+    // No code can be given before a sign-in waits for one.
+    await expect(submitSignInCode(db, "owner", credentialId, FAKE_VERACROSS_CODE)).rejects.toThrow(
+      /Test connection first/,
+    );
+
+    // "Test connection" signs in and waits; the owner types the code.
+    const test = testCredentialJob([credentialId], { log, db: async () => db });
+    await expect.poll(async () => (await meta()).codeRequestedAt, { timeout: 30_000 }).toBeTruthy();
+    await submitSignInCode(db, "owner", credentialId, FAKE_VERACROSS_CODE);
+    await test;
+    const [cred] = await db.select().from(credentials).where(eq(credentials.id, credentialId));
+    expect(cred).toMatchObject({ lastTestOk: true, lastError: null });
+    expect((await meta()).codeRequestedAt).toBeUndefined();
+    const extras = await db
+      .select({ kind: credentialSessions.kind, ciphertext: credentialSessions.ciphertext })
+      .from(credentialSessions)
+      .where(eq(credentialSessions.credentialId, credentialId));
+    // The code is gone; the cookies are kept, sealed.
+    expect(extras.map((e) => e.kind)).toEqual(["browser"]);
+    expect(extras[0].ciphertext.toString("utf8")).not.toContain("vcdevice");
+    expect(lines.join("\n")).not.toContain(FAKE_VERACROSS_CODE);
+    expect(site.codesSent).toBe(1);
+
+    // A scheduled sync goes straight in on the saved session...
+    expect(await syncSource(db, sourceId, "scheduled", log, now)).toMatchObject({ status: "succeeded" });
+    // ...and once that session has expired, the remembered device skips the code.
+    site.expireSessions();
+    expect(await syncSource(db, sourceId, "scheduled", log, now)).toMatchObject({ status: "succeeded" });
+    expect(site.codesSent).toBe(1);
+    await db.update(sources).set({ enabled: false }).where(eq(sources.id, sourceId));
+    delete process.env.SIGNIN_CODE_WAIT_MS;
+  }, 120_000);
+
+  it("says so when no code comes in time or the code is wrong", async () => {
+    process.env.SIGNIN_CODE_WAIT_MS = "3000";
+    await fakeSite({ requireCode: true });
+    const { credentialId } = await newSourceWithCredential({ studentFirstName: "Kid" });
+    await testCredentialJob([credentialId], { log, db: async () => db });
+    let [cred] = await db.select().from(credentials).where(eq(credentials.id, credentialId));
+    expect(cred.lastError).toContain("No sign-in code was entered in time");
+
+    process.env.SIGNIN_CODE_WAIT_MS = "60000";
+    const test = testCredentialJob([credentialId], { log, db: async () => db });
+    await expect
+      .poll(
+        async () =>
+          (
+            (await db.select().from(credentials).where(eq(credentials.id, credentialId)))[0].meta as {
+              codeRequestedAt?: string;
+            }
+          ).codeRequestedAt,
+        { timeout: 30_000 },
+      )
+      .toBeTruthy();
+    await submitSignInCode(db, "owner", credentialId, "000000");
+    await test;
+    [cred] = await db.select().from(credentials).where(eq(credentials.id, credentialId));
+    expect(cred.lastError).toContain("didn't accept the code");
+    delete process.env.SIGNIN_CODE_WAIT_MS;
+  }, 120_000);
 });

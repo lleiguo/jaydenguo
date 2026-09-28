@@ -409,7 +409,7 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
 |---|---|---|---|
 | M4.1 | SP-5 Classroom access spike. | F-5 | Works, or a fallback is chosen with the owner. |
 | M4.2 | Veracross: school calendar via ICS, or scraping (per SP-4). Timetable scraper for daily periods. | SRC-7, SCH-1, SCH-2, CAL-7 | Fixture tests. The "Today at school" card. Closures appear as banners. School blocks collapse and expand. |
-| M4.3 | Classroom adapter (API), or the chosen fallback (guardian emails via EML, or manual). | SRC-8, SCH-3, SCH-4 | Homework with states. Missing and due-in-24 h items highlighted. Grades with a per-course trend. |
+| M4.3 | Classroom adapter (API), or the chosen fallback (guardian emails via EML, or manual). **Deferred by the owner (2026-09-28).** | SRC-8, SCH-3, SCH-4 | Homework with states. Missing and due-in-24 h items highlighted. Grades with a per-course trend. |
 | M4.4 | School links back to the source systems; school layer wired into the School toggle. | SCH-5, CAL-3a | e2e test. |
 
 **Build notes (M4, 2026-09-27):**
@@ -451,6 +451,22 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   "Today at school" card above the calendar shows today's periods, or the
   next school day's once today's are over. No migration. Tested against a
   fake portal (`tests/e2e/support/fake-veracross.ts`) with real Chromium.
+- M4.2, sign-in code (2026-09-28): the live portal emails a code to a
+  browser it doesn't know, with a "remember this device" box. The worker
+  now keeps the headless browser's cookies sealed in `credential_sessions`
+  (migration 0010, same envelope as credentials, never in the API, rotated
+  with the keys), so the session and the remembered device carry over
+  between runs. A code is only typed through "Test connection" on the
+  Accounts page: the worker waits up to 8 minutes on the code page, sets
+  `meta.codeRequestedAt` so the page shows a code box, and reads the code
+  the owner types (sealed as a `code` row, deleted once read). It ticks
+  "remember this device" and saves the cookies. A sync that meets the code
+  page doesn't wait; it says to use Test connection.
+- M4.3 deferred (owner, 2026-09-28): homework and grades wait. When they
+  resume: SP-5's result (Classroom connect with his school account) is
+  still unreported. The fallback is Veracross, now signed in: each child
+  has "Upcoming Assignments" and "Classes & Reports", and each Daily
+  Schedule period has an `assignments` table. The next migration is 0011.
 
 ### M5 (slice S5): Extras (≈ 10 days)
 | Task | Description | Spec | Done when |
@@ -541,7 +557,7 @@ or his opponents.
 | M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
 | M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
 | M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
-| M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks, closures from the public key dates page, and the Veracross timetable with the "Today at school" card are built; the live Veracross sign-in is untested until the owner saves the login and adds the source. |
+| M4 School (S4) | **started 2026-09-27** ([handoff.md](handoff.md)). M4.1: the Classroom connect and check are built (`m4/1-classroom-connect`); the spike itself waits on the owner (O-7: Terraform apply, deploy, consent with the school account). M4.2: school blocks, closures from the public key dates page, and the Veracross timetable with the "Today at school" card are built; Veracross sign-in codes are entered once on the Accounts page and remembered. M4.3 (homework and grades) deferred by the owner; M4.4 links are done for Veracross and the key dates page. |
 | M5 Extras (S5) | not started |
 | M6 Go-live hardening | not started |
 

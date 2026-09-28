@@ -10,6 +10,7 @@ import {
   index,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
@@ -51,6 +52,30 @@ export const credentials = pgTable(
     index("credentials_provider_idx").on(t.provider),
     check("credentials_kind_chk", sql`${t.kind} in ('oauth', 'password', 'secret_url')`),
     check("credentials_status_chk", sql`${t.status} in ('active', 'removing')`),
+  ],
+);
+
+// Sealed extras for a password credential whose site asks for a sign-in
+// code (Veracross, plan M4.2): `browser` is the headless browser's saved
+// cookies (with the site's "remember this device" mark), written by the
+// worker; `code` is a code the owner typed on the Accounts page, written
+// (sealed) by the web app and deleted by the worker once used. Same envelope
+// as `credentials`; never returned by the API.
+export const credentialSessions = pgTable(
+  "credential_sessions",
+  {
+    credentialId: uuid("credential_id")
+      .notNull()
+      .references(() => credentials.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    ciphertext: bytea("ciphertext").notNull(),
+    wrappedDek: bytea("wrapped_dek").notNull(),
+    keyVersion: text("key_version").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.credentialId, t.kind] }),
+    check("credential_sessions_kind_chk", sql`${t.kind} in ('browser', 'code')`),
   ],
 );
 

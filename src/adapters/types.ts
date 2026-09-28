@@ -29,12 +29,25 @@ export type TennisEntryHint = {
   tournamentPlayerId: string | null;
 };
 
+// A site that asks for a sign-in code (Veracross): the worker keeps the
+// headless browser's cookies sealed between runs, so the site's "remember
+// this device" holds, and, when the owner started the run, waits for the
+// code they type on the Accounts page.
+export type BrowserSession = {
+  // Playwright storage state (JSON), or null before the first sign-in.
+  load(): Promise<string | null>;
+  save(state: string): Promise<void>;
+  // Null on scheduled runs: nobody is there to type a code.
+  waitForCode: (() => Promise<string | null>) | null;
+};
+
 export type AdapterContext = {
   source: AdapterSource;
   credential: AdapterCredential | null;
   now: Date;
   homeTimeZone: string;
   tennisEntries?: TennisEntryHint[];
+  browserSession?: BrowserSession;
 };
 
 export type NormalisedBatch = {

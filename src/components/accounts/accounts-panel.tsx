@@ -18,7 +18,8 @@ type Credential = {
   label: string;
   username: string | null;
   scopes: string[] | null;
-  meta: { classroom?: ClassroomProbe } | null;
+  // codeRequestedAt: a sign-in is waiting for the code the site emailed.
+  meta: { classroom?: ClassroomProbe; codeRequestedAt?: string } | null;
   status: string;
   updatedAt: string;
   lastUsedAt: string | null;
@@ -82,11 +83,18 @@ export function AccountsPanel() {
       return;
     }
     // The worker writes the result to the credential; poll until it lands.
-    for (let i = 0; i < 40; i++) {
+    // A sign-in code can take a few minutes to arrive and be typed.
+    let waitingForCode = false;
+    for (let i = 0; i < (c.provider === "veracross" ? 400 : 40); i++) {
       await new Promise((r) => setTimeout(r, 1500));
       const res = await fetch(`/api/v1/credentials/${c.id}`);
       if (!res.ok) break;
       const next: Credential = await res.json();
+      if (!!next.meta?.codeRequestedAt !== waitingForCode) {
+        waitingForCode = !!next.meta?.codeRequestedAt;
+        if (waitingForCode) setMessage(`${c.label}: enter the sign-in code from the email below.`);
+        await load();
+      }
       if (next.lastTestAt !== c.lastTestAt) {
         setMessage(next.lastTestOk ? `${c.label}: connection works.` : `${c.label}: ${next.lastError}`);
         await load();
@@ -207,6 +215,7 @@ function CredentialRow(props: {
           ` · last test ${fmt(c.lastTestAt)}: ${c.lastTestOk ? "worked" : (c.lastError ?? "not available")}`}
         {c.status === "removing" && " · removing…"}
       </div>
+      {c.meta?.codeRequestedAt && <SignInCodeForm c={c} />}
       {c.meta?.classroom && (
         <div className={c.meta.classroom.ok ? "" : "text-red-700 dark:text-red-400"}>
           {c.meta.classroom.ok
@@ -245,6 +254,48 @@ function CredentialRow(props: {
         />
       )}
     </div>
+  );
+}
+
+// Veracross emailed a sign-in code while "Test connection" signs in; the
+// worker is waiting for it (and ticks "remember this device").
+function SignInCodeForm({ c }: { c: Credential }) {
+  const [state, setState] = useState<{ sent?: boolean; error?: string }>({});
+  if (state.sent) return <p role="status">Code sent. Finishing the sign-in…</p>;
+  return (
+    <form
+      className="flex flex-wrap items-end gap-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const code = String(new FormData(e.currentTarget).get("code") ?? "");
+        try {
+          await send(`/api/v1/credentials/${c.id}/code`, "POST", { code });
+          setState({ sent: true });
+        } catch (err) {
+          setState({ error: (err as Error).message });
+        }
+      }}
+    >
+      <label className="flex flex-col">
+        Sign-in code from the email
+        <input
+          name="code"
+          required
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          spellCheck={false}
+          className="rounded border px-2 py-1"
+        />
+      </label>
+      <button type="submit" className="rounded bg-blue-700 px-3 py-1 text-white">
+        Send code
+      </button>
+      {state.error && (
+        <p role="alert" className="w-full text-red-700 dark:text-red-400">
+          {state.error}
+        </p>
+      )}
+    </form>
   );
 }
 

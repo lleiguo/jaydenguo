@@ -1,7 +1,7 @@
-import type { Browser, BrowserContext, Page } from "playwright-core";
+import type { Browser, BrowserContext, BrowserContextOptions, Page } from "playwright-core";
 import { addDays, localDate, weekday } from "../../domain/time";
 import { USER_AGENT } from "../http";
-import { SyncError, type Adapter, type AdapterContext } from "../types";
+import { SyncError, type Adapter, type AdapterContext, type BrowserSession } from "../types";
 import { normaliseVeracross, type VeracrossRaw } from "./normalise";
 import { parseDailySchedule, type VcDay } from "./parse";
 
@@ -59,6 +59,45 @@ const onPortal = (url: string, portal: string) => url.startsWith(portal);
 const USER_FIELD =
   'input[type="email"], input[autocomplete="username"], input[name*="user" i], input[id*="user" i], input[name*="email" i], input[name*="login" i]';
 const PASSWORD_FIELD = 'input[type="password"]';
+const CODE_FIELD =
+  'input[autocomplete="one-time-code"], input[name*="code" i], input[id*="code" i], input[inputmode="numeric"]';
+const asksForCode = (text: string) =>
+  /verification|one.?time|two.?(step|factor)|authenticator|enter the code/i.test(text);
+export const NEEDS_CODE =
+  "Veracross needs a sign-in code. On Settings → Accounts, press Test connection on the Veracross login and enter the code it emails you.";
+
+const bodyText = async (page: Page) =>
+  (
+    await page
+      .locator("body")
+      .innerText()
+      .catch(() => "")
+  ).slice(0, 5000);
+
+// Veracross emailed a code (it doesn't know this browser yet): wait for the
+// owner to type it on the Accounts page, tick "remember this device", send it.
+async function enterCode(page: Page, portal: string, session: BrowserSession | undefined) {
+  if (!session?.waitForCode) throw new SyncError(NEEDS_CODE);
+  const field = page.locator(CODE_FIELD).filter({ visible: true }).first();
+  if (!(await field.count()))
+    throw new SyncError("Veracross's sign-in code page has changed, so this sync needs an update.");
+  const code = await session.waitForCode();
+  if (!code)
+    throw new SyncError(
+      "No sign-in code was entered in time. Press Test connection on the Veracross login to try again.",
+    );
+  await field.fill(code);
+  const byName = page.getByRole("checkbox", { name: /remember|trust|don.?t ask/i });
+  const boxes = page.locator('input[type="checkbox"]').filter({ visible: true });
+  const remember = (await byName.count()) ? byName.first() : (await boxes.count()) === 1 ? boxes : null;
+  if (remember && !(await remember.isChecked())) await remember.check();
+  await field.press("Enter");
+  await page.waitForURL((u) => onPortal(u.href, portal), { timeout: 30_000 }).catch(() => {});
+  if (!onPortal(page.url(), portal))
+    throw new SyncError(
+      "Veracross didn't accept the code. Press Test connection on the Veracross login to get a new one.",
+    );
+}
 
 // Opens the portal, signing in if it sends us to a sign-in page.
 export async function signIn(
@@ -66,9 +105,19 @@ export async function signIn(
   portal: string,
   username: string,
   password: string,
+  session?: BrowserSession,
 ): Promise<Page> {
   const version = browser.version();
+  // Cookies from the last run: the session, and "remember this device".
+  let storageState: BrowserContextOptions["storageState"];
+  try {
+    const saved = await session?.load();
+    storageState = saved ? JSON.parse(saved) : undefined;
+  } catch {
+    storageState = undefined;
+  }
   const context: BrowserContext = await browser.newContext({
+    storageState,
     userAgent: `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${version} Safari/537.36 ${USER_AGENT}`,
   });
   await context.addInitScript("globalThis.__name ??= (f) => f;");
@@ -109,16 +158,14 @@ export async function signIn(
     // or an extra step, never a reason to type it again.
     if (hasPass) break;
   }
-  if (onPortal(page.url(), portal)) return page;
+  if (!onPortal(page.url(), portal) && asksForCode(await bodyText(page)))
+    await enterCode(page, portal, session);
+  if (onPortal(page.url(), portal)) {
+    await session?.save(JSON.stringify(await context.storageState()));
+    return page;
+  }
 
-  const text = (
-    await page
-      .locator("body")
-      .innerText()
-      .catch(() => "")
-  ).slice(0, 5000);
-  if (/verification|one.?time|two.?(step|factor)|authenticator|enter the code/i.test(text))
-    throw new SyncError("Veracross asks for a sign-in code, so automatic sync can't sign in.");
+  const text = await bodyText(page);
   if (/incorrect|invalid|not (match|recognized|found)|try again|wrong/i.test(text))
     throw new SyncError("Login failed: check the Veracross username and password on the Accounts page.");
   throw new SyncError("Couldn't sign in to Veracross. Check the login on the Accounts page.");
@@ -171,7 +218,7 @@ export async function fetchVeracross(ctx: AdapterContext): Promise<VeracrossRaw>
   if (!portal) throw new SyncError("Set the parent portal link in the source settings.");
   const browser = await launch();
   try {
-    const page = await signIn(browser, portal, cred.username, cred.secret);
+    const page = await signIn(browser, portal, cred.username, cred.secret, ctx.browserSession);
     const scheduleUrl = await findStudent(page, portal, config.studentFirstName ?? null);
     const days: VcDay[] = [];
     for (const date of schoolDays(ctx.now, ctx.homeTimeZone)) {
@@ -193,12 +240,17 @@ export async function fetchVeracross(ctx: AdapterContext): Promise<VeracrossRaw>
 }
 
 // CRED-6 "Test connection": sign in only.
-export async function testVeracrossLogin(portalUrl: string | undefined, username: string, password: string) {
+export async function testVeracrossLogin(
+  portalUrl: string | undefined,
+  username: string,
+  password: string,
+  session?: BrowserSession,
+) {
   const portal = portalFrom(portalUrl);
   if (!portal) throw new SyncError("Add the Veracross source (with its portal link) first, then test.");
   const browser = await launch();
   try {
-    await signIn(browser, portal, username, password);
+    await signIn(browser, portal, username, password, session);
   } finally {
     await browser.close().catch(() => {});
   }
