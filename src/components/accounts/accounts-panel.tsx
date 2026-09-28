@@ -139,6 +139,10 @@ export function AccountsPanel() {
           >
             Connect school account (Classroom)
           </a>
+          {/* Video reviews (VID-2): Drive links and the Google Photos picker. */}
+          <a className="rounded-md border px-3 py-2 text-sm" href="/accounts/google/connect?feature=videos">
+            Connect Drive and Photos (videos)
+          </a>
         </div>
       </ProviderSection>
 

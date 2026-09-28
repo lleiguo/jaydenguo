@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { settings, videoReviewRounds, videoReviews } from "@db/schema";
+import { credentials, settings, videoReviewRounds, videoReviews } from "@db/schema";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import type { JobLauncher } from "@/server/jobs/launcher";
@@ -206,9 +206,22 @@ describe("video reviews", () => {
   });
 
   it("needs Drive access before a Drive link is saved", async () => {
+    // Other tests may have connected Google; hide those grants in a
+    // transaction that is rolled back.
+    const rollback = new Error("rollback");
     await expect(
-      createVideoReview(db, input("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view"), launcher),
-    ).rejects.toBeInstanceOf(HttpError);
+      db.transaction(async (tx) => {
+        await tx.update(credentials).set({ status: "removing" }).where(eq(credentials.provider, "google"));
+        await expect(
+          createVideoReview(
+            tx as unknown as typeof db,
+            input("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view"),
+            launcher,
+          ),
+        ).rejects.toBeInstanceOf(HttpError);
+        throw rollback;
+      }),
+    ).rejects.toBe(rollback);
   });
 
   it("lists newest first per sport, and a vote is written once", async () => {

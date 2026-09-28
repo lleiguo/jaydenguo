@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { SignJWT, exportJWK, generateKeyPair } from "jose";
 
 import { FAKE_OIDC_PORT } from "./fake-oidc-port";
+import { createGoogleMediaFake } from "./fake-google-media";
 const issuer = `http://127.0.0.1:${FAKE_OIDC_PORT}`;
 const accounts = [
   "owner@example.test",
@@ -21,6 +22,9 @@ const accounts = [
   "school-desktop@example.test",
   "school-phone@example.test",
   "blocked-school@example.test",
+  // Accounts connected for video reviews (Drive and Photos, plan M5.2).
+  "videos-desktop@example.test",
+  "videos-phone@example.test",
 ];
 const BLOCKED = "blocked-school@example.test";
 
@@ -117,6 +121,8 @@ async function main() {
     accessTokens.set(t, email);
     return t;
   };
+  // Google Drive and the Photos Picker for video reviews.
+  const media = createGoogleMediaFake((t) => accessTokens.has(t));
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", issuer);
@@ -254,6 +260,8 @@ async function main() {
         scope: pending.scope,
       });
     }
+
+    if (media.handle(req, res, issuer)) return;
 
     send(404, { error: "not found" });
   });
