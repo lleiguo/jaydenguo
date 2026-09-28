@@ -156,3 +156,12 @@ restore test.
 - **Calendar copy errors** show under Settings → General → Copy to Google
   Calendar; "Copy now" retries. Deleting the "Jayden (hub)" calendar in
   Google Calendar is fine: the next run makes a new one.
+
+### Costs page
+
+Settings → Costs shows the bill from the Cloud Billing export to BigQuery,
+read daily by `costs:sync`. If it's empty: turn the export on once (the
+page lists the steps), set `billing_export_dataset` and then
+`billing_export_table` in the Terraform variables and apply. Refresh on
+the page reads it again; an error shows there in words. The AI-by-feature
+table works without the export.
