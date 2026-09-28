@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { ATTENDANCE, type Attendance } from "@/domain/constants";
 import type { ClashView, EventView, Undo } from "@/lib/calendar-types";
 import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
 import { formatWhen, fromLocalInputs, toLocalInputs } from "./time-format";
 
 // Event detail (CAL-4) with the non-drag ways to resolve clashes (NFR-9,
-// CON-3, CON-4): Move to…, Skip, Accept clash, and back to the source time.
+// CON-3, CON-4): Move to…, Skip, Accept clash, and back to the source time;
+// and whose event it is (a parent's own appointment never clashes).
 export function EventDetail(props: {
   event: EventView;
   clashes: (ClashView & { other?: EventView })[];
@@ -35,7 +37,7 @@ export function EventDetail(props: {
     <div className="flex flex-col gap-3 text-sm">
       <p>
         <span aria-hidden>{info.icon}</span> {info.label}
-        {e.attendance !== "required" && ` · ${e.attendance === "optional" ? "optional" : "parent only"}`}
+        {e.attendance !== "required" && ` · ${ATTENDANCE_LABEL[e.attendance]}`}
         {e.status === "cancelled" && " · cancelled by the source"}
         {o?.skip && " · skipped (Jayden won't attend)"}
       </p>
@@ -87,7 +89,7 @@ export function EventDetail(props: {
                 {c.other
                   ? `${CATEGORY_INFO[c.other.category].icon} ${c.other.title}, ${formatWhen(c.other.start, c.other.end, c.other.allDay, tz)}`
                   : "Another event"}
-                {c.kind === "travel" && ` (only ${c.gapMin} min to travel; needs ${c.bufferMin})`}
+                {` (overlaps ${c.overlapMin} min)`}
                 {c.acceptedId && " · accepted"}
               </span>
               {c.acceptedId ? (
@@ -113,6 +115,32 @@ export function EventDetail(props: {
           ))}
         </div>
       )}
+
+      <label className="flex flex-wrap items-center gap-2">
+        Jayden&apos;s attendance
+        <select
+          value={e.attendance}
+          onChange={(ev) => {
+            const attendance = ev.target.value as Attendance;
+            act(
+              () => call(`/api/v1/events/${e.id}/attendance`, "POST", { attendance }),
+              attendance === "required"
+                ? "Jayden needs to be there."
+                : `Marked ${ATTENDANCE_LABEL[attendance]}; it won't clash.`,
+            );
+          }}
+          className="rounded border px-2 py-1"
+        >
+          {ATTENDANCE.map((a) => (
+            <option key={a} value={a}>
+              {ATTENDANCE_LABEL[a]}
+            </option>
+          ))}
+        </select>
+        {o?.attendance && fromSource && (
+          <span className="text-xs">(changed here; the source isn&apos;t)</span>
+        )}
+      </label>
 
       <div className="flex flex-wrap gap-2">
         {e.status === "active" && (
@@ -229,3 +257,9 @@ function MoveForm({
     </form>
   );
 }
+
+const ATTENDANCE_LABEL: Record<Attendance, string> = {
+  required: "required",
+  optional: "optional",
+  parent_only: "parent only",
+};

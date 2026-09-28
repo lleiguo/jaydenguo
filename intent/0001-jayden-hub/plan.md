@@ -700,3 +700,28 @@ after the merge skips the checks when the merged files are the same, and
 runs them in full otherwise. Deploy caches Docker layers in the registry
 (`cache:web`, `cache:worker`), Chromium is cached per lockfile, and types
 are checked by `pnpm typecheck` only (`next build` skips them).
+
+Clash rule (owner, 2026-09-28): two events clash only when they overlap
+by more than 15 minutes (`CLASH_TOLERANCE_MIN`). Back-to-back events and
+short overlaps don't clash, and there are no travel-time clashes any
+more: clash detection no longer reads `locations` or `location_buffers`
+(the tables and seed rows stay for now). Each clash carries its overlap in
+minutes, shown on the clash list and event detail. Settings > General
+builds the time zone list on the server, so it matches on hydration.
+
+Entries made by hand (owner, 2026-09-28): a tournament he was entered in
+outside the app (by hand, or before the entry jobs first ran) didn't show
+under Upcoming, because the Thursday search only asks for "entry open"
+tournaments and his profile doesn't list a tournament until he's played
+there. `tennis:enter` and `tennis:acceptance` now also search every Rookie
+tournament near home in the next 28 days, open or closed (the search's
+`TournamentFilter.StartDate`/`EndDate`), read each event's entry list,
+and record the ones he's on with main draw or reserve status. The
+acceptance job's request cap is 100 (was 60).
+
+Whose event (owner, 2026-09-28): a parent's own appointment on the family
+calendar (e.g. Lei's dentist) shouldn't clash with Jayden's day. The event
+detail has a "Jayden's attendance" menu on every event. For events from a
+source or a series it's saved on the override (`event_overrides.attendance`,
+migration 0015; the next is 0016), so it survives syncs, and "Use the
+source's time" keeps it. Events added here change directly.

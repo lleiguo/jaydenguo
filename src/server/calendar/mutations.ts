@@ -2,7 +2,7 @@ import { and, eq, gte, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { changeLog, conflicts, eventOverrides, eventRevisions, events, eventSeries } from "@db/schema";
 import { pairKey } from "../../domain/clashes";
-import { ATTENDANCE, CATEGORIES } from "../../domain/constants";
+import { ATTENDANCE, CATEGORIES, type Attendance } from "../../domain/constants";
 import { expandSeries } from "../../domain/series";
 import { isValidTimeZone, localDate } from "../../domain/time";
 import type { Undo } from "../../lib/calendar-types";
@@ -166,7 +166,12 @@ async function writeOverride(
   tx: Tx,
   actor: Actor,
   e: typeof events.$inferSelect,
-  change: { newStartUtc?: Date | null; newEndUtc?: Date | null; skip?: boolean },
+  change: {
+    newStartUtc?: Date | null;
+    newEndUtc?: Date | null;
+    skip?: boolean;
+    attendance?: Attendance | null;
+  },
 ): Promise<string> {
   const previous = await activeOverride(tx, e.id);
   if (previous) {
@@ -182,6 +187,7 @@ async function writeOverride(
       newStartUtc: change.newStartUtc !== undefined ? change.newStartUtc : (previous?.newStartUtc ?? null),
       newEndUtc: change.newEndUtc !== undefined ? change.newEndUtc : (previous?.newEndUtc ?? null),
       skip: change.skip ?? previous?.skip ?? false,
+      attendance: change.attendance !== undefined ? change.attendance : (previous?.attendance ?? null),
       createdBy: actor,
       // What the source said when the owner changed it (CON-5).
       sourceSnapshot: { start: e.startUtc.toISOString(), end: e.endUtc.toISOString(), title: e.title },
@@ -235,6 +241,29 @@ export async function skipEvent(db: Db, actor: Actor, id: string, skip: boolean)
   });
 }
 
+// Whose event it is (CON-1): e.g. a parent's dentist from the family
+// calendar is "parent only", so it never clashes with his day. Events added
+// here change directly; events from a source or a series get an override
+// that survives syncs.
+export const attendanceInput = z.object({ attendance: z.enum(ATTENDANCE) });
+
+export async function setAttendance(db: Db, actor: Actor, id: string, attendance: Attendance): Promise<Undo> {
+  return db.transaction(async (tx) => {
+    const e = await getEvent(tx, id);
+    if (isSingleManual(e)) {
+      await tx.update(events).set({ attendance, updatedAt: new Date() }).where(eq(events.id, id));
+      await revise(tx, id, actor, "attendance", { attendance: e.attendance }, { attendance });
+      await note(tx, "event", id);
+      return { method: "POST", url: `/api/v1/events/${id}/attendance`, body: { attendance: e.attendance } };
+    }
+    // Back to what the source says: no attendance override.
+    const overrideId = await writeOverride(tx, actor, e, {
+      attendance: attendance === e.attendance ? null : attendance,
+    });
+    return { method: "POST", url: `/api/v1/overrides/${overrideId}/undo` };
+  });
+}
+
 // Undo: clear this override and bring back the one it replaced.
 export async function undoOverride(db: Db, actor: Actor, overrideId: string) {
   return db.transaction(async (tx) => {
@@ -260,6 +289,11 @@ export async function resetEvent(db: Db, actor: Actor, eventId: string) {
   return db.transaction(async (tx) => {
     const o = await activeOverride(tx, eventId);
     if (!o) return;
+    // Only the time goes back; "skip" and whose event it is stay.
+    if (o.skip || o.attendance) {
+      await writeOverride(tx, actor, await getEvent(tx, eventId), { newStartUtc: null, newEndUtc: null });
+      return;
+    }
     await tx
       .update(eventOverrides)
       .set({ clearedAt: new Date(), clearedBy: actor })

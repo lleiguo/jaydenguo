@@ -6,6 +6,7 @@ import {
   parseEventPage,
   parseSearchResults,
   type TcEventPage,
+  type TcSearchResult,
 } from "../../adapters/tennis-tc/entry-parse";
 import { parseBracket, parseDrawMatches, parseTournament } from "../../adapters/tennis-tc/parse";
 import type { EntryStatus } from "../../domain/tennis-constants";
@@ -32,6 +33,10 @@ import type { DriveTimer } from "./drive";
 //   site's entry link for the owner.
 // - Friday 10:00 (`tennis:acceptance`): read each event's entry list and
 //   record main draw or reserve list (and place).
+// - Both also look for tournaments he's already on an entry list for that
+//   the app didn't enter him in (entered by hand, or before these jobs
+//   ran), open for entry or not: his profile doesn't show a tournament
+//   until he's played there.
 // - Monday, hourly (`tennis:draw-watch`): for tournaments in the coming
 //   week, look for his draw; once it's out, run the full tennis sync, which
 //   reads the draw, his opponents (one hop) and writes the predictions.
@@ -46,10 +51,12 @@ const ROOKIE_CATEGORY = "7207";
 const ENTRY_OPEN = "2";
 const MAX_SEARCH_PAGES = 5;
 const ENTER_REQUESTS = 150;
-const LIST_REQUESTS = 60;
+const LIST_REQUESTS = 100;
 const WATCH_REQUESTS = 40;
 // How far ahead the draw watch looks.
 const WATCH_DAYS = 7;
+// How far ahead the search for entries he already has looks.
+const LISTED_DAYS = 28;
 
 // Enters him in one event on the site. "unavailable": the app can't do it
 // (not built yet, or no Tennis Canada login), so the owner uses the link.
@@ -122,7 +129,121 @@ function listUpdate(e: EntryRow, page: TcEventPage, name: string, now: Date) {
   };
 }
 
-export type EnterResult = { found: number; entered: number; left: number; skipped: number };
+// One search of the site, page by page (20 results a page).
+async function search(client: TcClient, form: Record<string, string>): Promise<TcSearchResult[]> {
+  const out: TcSearchResult[] = [];
+  for (let pageNo = 1; pageNo <= MAX_SEARCH_PAGES; pageNo++) {
+    const res = await client.get("/find/tournament/DoSearch", {
+      xhr: true,
+      form: { ...form, Page: String(pageNo) },
+    });
+    const results = res ? parseSearchResults(res.html) : [];
+    out.push(...results);
+    if (results.length < 20) break;
+  }
+  return out;
+}
+
+const searchForm = (settings: EntrySettings, radiusKm: number) => ({
+  "TournamentFilter.DateFilterType": "0",
+  "TournamentFilter.PostalCode": settings.postalCode!,
+  "TournamentFilter.Distance": String(radiusKm),
+  "TournamentExtendedFilter.TournamentCategoryIDList[0]": ROOKIE_CATEGORY,
+});
+
+// Tournaments in the coming weeks he's on an entry list for that the app
+// doesn't know about yet: every Rookie tournament near home, entry open or
+// closed, and every event's list. Records each with where he stands.
+// Tournaments already being followed (found or entered) are left to the
+// list checks.
+async function findListed(
+  ctx: EntryContext,
+  source: TcSource,
+  client: TcClient,
+  name: string,
+  settings: EntrySettings,
+): Promise<number> {
+  if (!settings.postalCode) return 0;
+  const today = localDate(ctx.now, ctx.timeZone);
+  const followed = new Set(
+    (
+      await ctx.db
+        .select({ id: tennisEntries.tournamentExternalId })
+        .from(tennisEntries)
+        .where(
+          and(
+            eq(tennisEntries.sourceId, source.id),
+            inArray(tennisEntries.status, ["found", ...ACTIVE_ENTRY]),
+          ),
+        )
+    ).map((r) => r.id),
+  );
+  let recorded = 0;
+  try {
+    const results = await search(client, {
+      ...searchForm(settings, searchRadiusKm(settings.prefs.maxDriveMinutes)),
+      "TournamentFilter.StartDate": `${today}T00:00`,
+      "TournamentFilter.EndDate": `${addDays(today, LISTED_DAYS)}T00:00`,
+    });
+    for (const t of results) {
+      if (followed.has(t.id) || (t.endDate ?? t.startDate ?? today) < today) continue;
+      const list = await client.get(`/sport/events.aspx?id=${t.id}`);
+      for (const event of list ? parseEventList(list.html) : []) {
+        const page = await readEvent(client, { tournamentExternalId: t.id, eventNo: event.eventNo });
+        const self = page && findSelfRow(page.entries, { name });
+        if (!self) continue;
+        const overview = await client.get(`/tournament/${t.id}`);
+        const d = overview ? parseTournament(overview.html, t.id) : null;
+        const startDate = d?.startDate ?? t.startDate ?? today;
+        const endDate = d?.endDate ?? t.endDate ?? startDate;
+        const s = statusFromList("entered", self);
+        const values = {
+          status: s.status,
+          reservePosition: s.reservePosition,
+          tournamentPlayerId: self.tournamentPlayerIds[0] ?? null,
+          listCheckedAt: ctx.now,
+          note: "Already on the entry list.",
+          updatedAt: ctx.now,
+        };
+        await ctx.db
+          .insert(tennisEntries)
+          .values({
+            sourceId: source.id,
+            tournamentExternalId: t.id,
+            tournamentName: d?.name ?? t.name,
+            startDate,
+            endDate: endDate < startDate ? startDate : endDate,
+            venue: d?.venue ?? t.venue,
+            city: d?.city ?? null,
+            region: d?.region ?? null,
+            entryDeadline: d?.entryDeadline ?? null,
+            eventNo: event.eventNo,
+            eventName: event.name,
+            driveMinutes: null,
+            driveEstimated: true,
+            tournamentUrl: `${client.base}/tournament/${t.id}`,
+            entryUrl: `${client.base}/individual-entry/${t.id}`,
+            ...values,
+          })
+          .onConflictDoUpdate({
+            target: [tennisEntries.sourceId, tennisEntries.tournamentExternalId, tennisEntries.eventNo],
+            set: values,
+          });
+        recorded++;
+      }
+    }
+  } catch (err) {
+    if (!(err instanceof Budget)) throw err;
+    ctx.log(
+      "tennis entries: reached the page limit looking for his entries",
+      { source: source.name },
+      "WARNING",
+    );
+  }
+  return recorded;
+}
+
+export type EnterResult = { listed: number; found: number; entered: number; left: number; skipped: number };
 
 // Thursday: find and enter.
 export async function runEnter(
@@ -138,6 +259,7 @@ export async function runEnter(
   const today = localDate(ctx.now, ctx.timeZone);
   const client = newClient(ctx, ENTER_REQUESTS);
   const base = client.base;
+  const alreadyListed = await findListed(ctx, source, client, name, settings);
   const known = await db.select().from(tennisEntries).where(eq(tennisEntries.sourceId, source.id));
   const knownTournaments = new Set(known.map((e) => e.tournamentExternalId));
   const radius = deps.drive
@@ -160,56 +282,45 @@ export async function runEnter(
   };
   const found: Found[] = [];
   try {
-    for (let pageNo = 1; pageNo <= MAX_SEARCH_PAGES; pageNo++) {
-      const res = await client.get("/find/tournament/DoSearch", {
-        xhr: true,
-        form: {
-          Page: String(pageNo),
-          "TournamentFilter.DateFilterType": "0",
-          "TournamentFilter.PostalCode": settings.postalCode,
-          "TournamentFilter.Distance": String(radius),
-          "TournamentExtendedFilter.StatusFilterID": ENTRY_OPEN,
-          "TournamentExtendedFilter.TournamentCategoryIDList[0]": ROOKIE_CATEGORY,
-        },
-      });
-      const results = res ? parseSearchResults(res.html) : [];
-      for (const t of results) {
-        if (knownTournaments.has(t.id) || (t.startDate && t.startDate < today)) continue;
-        knownTournaments.add(t.id);
-        const list = await client.get(`/sport/events.aspx?id=${t.id}`);
-        const event = list ? pickEvent(parseEventList(list.html), settings.prefs) : null;
-        if (!event) continue;
-        const overview = await client.get(`/tournament/${t.id}`);
-        const d = overview ? parseTournament(overview.html, t.id) : null;
-        const startDate = d?.startDate ?? t.startDate;
-        if (!startDate || startDate < today) continue;
-        const endDate = d?.endDate ?? t.endDate ?? startDate;
-        const where = [d?.venue ?? t.venue, d?.city, d?.region].filter(Boolean).join(", ");
-        let driveMinutes: number | null = null;
-        if (deps.drive && where) {
-          try {
-            driveMinutes = await deps.drive(`${settings.postalCode}, Canada`, `${where}, Canada`);
-          } catch (err) {
-            log("drive time failed", { error: err }, "WARNING");
-          }
-          if (driveMinutes !== null && driveMinutes > settings.prefs.maxDriveMinutes) continue;
+    const results = await search(client, {
+      ...searchForm(settings, radius),
+      "TournamentExtendedFilter.StatusFilterID": ENTRY_OPEN,
+    });
+    for (const t of results) {
+      if (knownTournaments.has(t.id) || (t.startDate && t.startDate < today)) continue;
+      knownTournaments.add(t.id);
+      const list = await client.get(`/sport/events.aspx?id=${t.id}`);
+      const event = list ? pickEvent(parseEventList(list.html), settings.prefs) : null;
+      if (!event) continue;
+      const overview = await client.get(`/tournament/${t.id}`);
+      const d = overview ? parseTournament(overview.html, t.id) : null;
+      const startDate = d?.startDate ?? t.startDate;
+      if (!startDate || startDate < today) continue;
+      const endDate = d?.endDate ?? t.endDate ?? startDate;
+      const where = [d?.venue ?? t.venue, d?.city, d?.region].filter(Boolean).join(", ");
+      let driveMinutes: number | null = null;
+      if (deps.drive && where) {
+        try {
+          driveMinutes = await deps.drive(`${settings.postalCode}, Canada`, `${where}, Canada`);
+        } catch (err) {
+          log("drive time failed", { error: err }, "WARNING");
         }
-        found.push({
-          tournamentId: t.id,
-          name: d?.name ?? t.name,
-          startDate,
-          endDate: endDate < startDate ? startDate : endDate,
-          venue: d?.venue ?? t.venue,
-          city: d?.city ?? null,
-          region: d?.region ?? null,
-          entryDeadline: d?.entryDeadline ?? null,
-          eventNo: event.eventNo,
-          eventName: event.name,
-          driveMinutes,
-          page: await readEvent(client, { tournamentExternalId: t.id, eventNo: event.eventNo }),
-        });
+        if (driveMinutes !== null && driveMinutes > settings.prefs.maxDriveMinutes) continue;
       }
-      if (results.length < 20) break;
+      found.push({
+        tournamentId: t.id,
+        name: d?.name ?? t.name,
+        startDate,
+        endDate: endDate < startDate ? startDate : endDate,
+        venue: d?.venue ?? t.venue,
+        city: d?.city ?? null,
+        region: d?.region ?? null,
+        entryDeadline: d?.entryDeadline ?? null,
+        eventNo: event.eventNo,
+        eventName: event.name,
+        driveMinutes,
+        page: await readEvent(client, { tournamentExternalId: t.id, eventNo: event.eventNo }),
+      });
     }
   } catch (err) {
     if (!(err instanceof Budget)) throw err;
@@ -247,7 +358,13 @@ export async function runEnter(
     entryUrl: `${base}/individual-entry/${f.tournamentId}`,
     ...extra,
   });
-  const result: EnterResult = { found: found.length, entered: 0, left: 0, skipped: skip.length };
+  const result: EnterResult = {
+    listed: alreadyListed,
+    found: found.length,
+    entered: 0,
+    left: 0,
+    skipped: skip.length,
+  };
   const values = [];
   for (const f of listed) {
     const r = findSelfRow(f.page!.entries, { name })!;
@@ -329,8 +446,9 @@ export async function runAcceptance(ctx: EntryContext, source: TcSource) {
   } catch (err) {
     if (!(err instanceof Budget)) throw err;
   }
-  log("tennis acceptance lists read", { source: source.name, entries: rows.length, ...counts });
-  return counts;
+  const listed = await findListed(ctx, source, client, name, entrySettingsOf(source.config));
+  log("tennis acceptance lists read", { source: source.name, entries: rows.length, listed, ...counts });
+  return { ...counts, listed };
 }
 
 // Is he in one of these draws? Knockout draws come as a bracket, round

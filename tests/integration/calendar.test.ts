@@ -9,7 +9,9 @@ import {
   createSeries,
   deleteEvent,
   moveEvent,
+  resetEvent,
   restoreEvent,
+  setAttendance,
   skipEvent,
   undoAcceptClash,
   undoOverride,
@@ -120,6 +122,57 @@ describe("calendar service", () => {
     await undoAcceptClash(db, actor, acceptUndo.url.split("/")[4]);
     expect(await clashesWith()).toHaveLength(1);
     await deleteEvent(db, actor, other);
+  });
+
+  it("a parent's own event doesn't clash with his; the choice survives syncs and moves (CON-1)", async () => {
+    const id = await gameId();
+    const cls = await createEvent(db, actor, {
+      title: "Class",
+      category: "school_class",
+      attendance: "required",
+      start: day(3, 21),
+      end: day(3, 22),
+      allDay: false,
+      notes: null,
+      locationName: null,
+    });
+    const clashes = async () =>
+      (await cal()).clashes.filter((c) => [c.a, c.b].includes(id) && [c.a, c.b].includes(cls));
+    expect(await clashes()).toHaveLength(1);
+
+    // The synced event is someone else's: an override, kept by the next sync.
+    const undo = await setAttendance(db, actor, id, "parent_only");
+    expect(await clashes()).toHaveLength(0);
+    await syncRecords(db, { sourceId }, [{ ...game, startUtc: day(3, 21), endUtc: day(3, 22) }], window, {
+      actor: "sync",
+    });
+    const view = (await cal()).events.find((e) => e.id === id)!;
+    expect(view).toMatchObject({ attendance: "parent_only", override: { attendance: "parent_only" } });
+
+    // "Use the source's time" after a move keeps whose event it is.
+    await moveEvent(db, actor, id, { start: day(4, 21), end: day(4, 22) });
+    await resetEvent(db, actor, id);
+    expect((await cal()).events.find((e) => e.id === id)).toMatchObject({
+      start: day(3, 21).toISOString(),
+      attendance: "parent_only",
+    });
+    expect(await clashes()).toHaveLength(0);
+    await resetEvent(db, actor, id);
+    await setAttendance(db, actor, id, "required");
+    expect(await clashes()).toHaveLength(1);
+    expect(undo.url).toMatch(/^\/api\/v1\/overrides\//);
+
+    // An event added here changes directly, and undo sets it back.
+    const manualUndo = await setAttendance(db, actor, cls, "parent_only");
+    const [row] = await db.select().from(events).where(eq(events.id, cls));
+    expect(row.attendance).toBe("parent_only");
+    expect(await clashes()).toHaveLength(0);
+    expect(manualUndo).toEqual({
+      method: "POST",
+      url: `/api/v1/events/${cls}/attendance`,
+      body: { attendance: "required" },
+    });
+    await deleteEvent(db, actor, cls);
   });
 
   it("deletes softly and restores (CAL-6)", async () => {
