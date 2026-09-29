@@ -182,8 +182,10 @@ export async function loadTennis(db: DbOrTx): Promise<TennisData> {
     .filter((t) => t.entered || mineByTournament.has(t.id))
     .map((t) => {
       const mine = mineByTournament.get(t.id) ?? [];
+      // A draw that doesn't list him isn't his (the sync no longer stores
+      // those; older rows may linger until it next runs).
       const draws: DrawView[] = drawRows
-        .filter((d) => d.tournamentId === t.id)
+        .filter((d) => d.tournamentId === t.id && (d.nextMatch as NextMatch | null)?.status !== "not_drawn")
         .map((d) => {
           const next = (d.nextMatch ?? null) as NextMatch | null;
           const opponent = next?.status === "next" ? next.opponent : null;

@@ -98,6 +98,33 @@ describe("Tennis Canada sync", () => {
     });
   }, 60_000);
 
+  it("keeps only the draws that list him: a draw in his event he isn't in is dropped", async () => {
+    const id = await newSource();
+    await syncSource(db, id, "manual", log, now);
+    const [current] = await db
+      .select()
+      .from(tennisTournaments)
+      .where(
+        and(
+          eq(tennisTournaments.sourceId, id),
+          eq(tennisTournaments.externalId, TC_FIXTURE.currentTournament),
+        ),
+      );
+    // Stored by an earlier sync, before draws he isn't in were skipped.
+    await db.insert(tennisDraws).values({
+      tournamentId: current.id,
+      drawNo: "99",
+      eventName: "U10 (Orange Ball)",
+      kind: "other",
+      nextMatch: { status: "not_drawn" },
+      status: "active",
+    });
+    await syncSource(db, id, "manual", log, now);
+    const draws = await db.select().from(tennisDraws).where(eq(tennisDraws.tournamentId, current.id));
+    expect(draws).toHaveLength(1);
+    expect(draws[0]).toMatchObject({ position: 1, status: "active" });
+  }, 60_000);
+
   it("keeps the owner's correction through the next sync and flags the disagreement (TEN-8)", async () => {
     const id = await newSource();
     await syncSource(db, id, "manual", log, now);
