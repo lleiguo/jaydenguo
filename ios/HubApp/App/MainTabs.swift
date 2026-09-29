@@ -40,6 +40,10 @@ struct MainTabs: View {
                 ProgressView()
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let since = model.offlineSince { OfflineBanner(since: since) }
+        }
+        .animation(.snappy, value: model.offlineSince)
         .overlay(alignment: .bottom) {
             if let toast = model.toast {
                 UndoBanner(toast: toast).padding(.bottom, 60)
@@ -50,5 +54,22 @@ struct MainTabs: View {
         .task(id: scenePhase == .active) {
             if scenePhase == .active { await model.watchChanges() }
         }
+    }
+}
+
+/// "Offline, updated 2 hours ago" while screens show cached answers (OFF-1).
+struct OfflineBanner: View {
+    let since: Date
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { _ in
+            Label("Offline, updated \(since.formatted(.relative(presentation: .named)))", systemImage: "wifi.slash")
+                .font(.footnote.weight(.medium))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .background(.orange.opacity(0.2))
+        }
+        .accessibilityIdentifier("offlineBanner")
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 }

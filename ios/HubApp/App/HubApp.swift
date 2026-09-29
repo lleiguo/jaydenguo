@@ -13,6 +13,10 @@ struct HubApp: App {
                 .environment(model.lock)
                 .onOpenURL { model.open($0) }
         }
-        .onChange(of: scenePhase) { _, phase in model.lock.sceneChanged(phase) }
+        .onChange(of: scenePhase) { _, phase in
+            model.lock.sceneChanged(phase)
+            if phase == .background { model.scheduleRefresh() }
+        }
+        .backgroundTask(.appRefresh(AppModel.refreshTaskID)) { await model.refreshInBackground() }
     }
 }

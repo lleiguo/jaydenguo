@@ -11,22 +11,28 @@ public final class HubClient: Sendable {
     public let api: Client
     private let tokens: TokenStore
     private let onEvent: @Sendable (HubEvent) -> Void
+    /// The offline copy of every GET, shared with the widgets (OFF-1..3).
+    public let cache: ResponseCache?
 
     public init(
         config: HubConfig,
         tokens: TokenStore,
         transport: any ClientTransport = URLSessionTransport(),
+        cache: ResponseCache? = nil,
         onEvent: @escaping @Sendable (HubEvent) -> Void = { _ in }
     ) {
         self.config = config
         self.tokens = tokens
         self.onEvent = onEvent
+        self.cache = cache
+        var middlewares: [any ClientMiddleware] = [HubMiddleware(tokens: tokens, appVersion: config.appVersion, onEvent: onEvent)]
+        if let cache { middlewares.append(CacheMiddleware(cache: cache, onEvent: onEvent)) }
         api = Client(
             serverURL: config.baseURL,
             // The server sends Date.toISOString(): milliseconds, always.
             configuration: Configuration(dateTranscoder: .iso8601WithFractionalSeconds),
             transport: transport,
-            middlewares: [HubMiddleware(tokens: tokens, appVersion: config.appVersion, onEvent: onEvent)]
+            middlewares: middlewares
         )
     }
 
@@ -44,15 +50,16 @@ public final class HubClient: Sendable {
     }
 
     /// Ends the session on the server (best effort) and forgets the token.
-    /// The caller also wipes the offline cache and widget data (SEC-3).
     public func signOut() async {
         if isSignedIn { _ = try? await api.signOut() }
-        try? tokens.delete()
+        forgetToken()
     }
 
-    /// Forgets the token without calling the server (it was already refused).
+    /// Forgets the token and the offline copy without calling the server
+    /// (it was already refused). The caller reloads the widgets (SEC-3).
     public func forgetToken() {
         try? tokens.delete()
+        cache?.wipe()
     }
 
     /// Runs the undo an action returned (CON-3: "Undo" for 10 s). Undos are

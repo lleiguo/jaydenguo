@@ -258,6 +258,34 @@ Results go in a `## Spikes` section of this file.
 | N5.1 | HubKit response cache in the app group (file protection, no backup), cache-first stores, "Offline, updated …" banner, offline write refusal. | OFF-1..3 | HubKit tests; UI test in airplane mode (network link conditioner) shows cached Today and refuses a move. |
 | N5.2 | Widgets: small, medium, lock screen rectangular and inline; privacy-sensitive; reload on fetch and background refresh. | EXT-1, EXT-2 | Widget previews with seed data; manual check on device, locked and unlocked. |
 
+**N5 as built (2026-09-29):**
+- App group `group.com.jaydenguo.hub` (plus the `.dev` suffix on a Personal
+  Team, like the bundle ID), set in `Signing.xcconfig`. A free Personal
+  Team can sign it, so the widgets run on the owner's iPhone before O-1.
+- HubKit `Cache/`: `ResponseCache` keeps the last answer to every GET in
+  the app group (readable after first unlock, out of backups, oldest pruned
+  past 300). A client middleware stores answers and, when there's no
+  connection, replays them and reports how old they are; the change feed is
+  never replayed. Writes offline fail with "You're offline" and nothing is
+  queued (OFF-2). Sign-out and a refused token wipe it (SEC-3).
+- The calendar is cached as loaded: the week before to ten weeks ahead of
+  the day shown, not exactly "30 days back to 90 ahead" (OFF-1); other
+  screens are cached as they're opened.
+- App: "Offline, updated 2 hours ago" banner over every tab while cached
+  answers are shown.
+- Widgets (`HubWidgets` extension): "Next up" (small, lock screen
+  rectangular and inline) and "Today" (medium), privacy-sensitive. They
+  read a snapshot the app writes whenever the calendar loads or the people
+  filters change (the calendar's filters, school days folded into
+  "School", clashes marked) and never call the API. Timelines redraw at
+  each event's end and at midnight in the home zone. Background app
+  refresh (about hourly, as iOS allows) fetches the next days and redraws
+  them; a notification arriving joins this in N7.
+- Tests: HubKit (12 new: cache, offline, wipe, pruning, backups, snapshot
+  timeline and building from the seed calendar); a UI test that opens the
+  app on a closed port after one online visit, sees the cached Today and
+  calendar with the banner, and has a skip refused.
+
 ### N6: School, Videos, Suggestions, Settings (≈ 7 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -318,8 +346,9 @@ about 16 days in.
 | N1 | done 2026-09-29 (#46, deployed); SP-N1 passed: Firebase Hosting forwards `Authorization` |
 | N2 | done 2026-09-29 (#47); first TestFlight build waits on O-1/O-2 |
 | N3 | done 2026-09-29 (#49) |
-| N4 | built 2026-09-29 (`ios/n4-tennis-swimming`) |
-| N5–N8 | not started |
+| N4 | done 2026-09-29 (#50) |
+| N5 | built 2026-09-29 (`ios/n5-offline-widgets`) |
+| N6–N8 | not started |
 | N9 | not planned (owner kept the no-upload default) |
 
 ## Spikes

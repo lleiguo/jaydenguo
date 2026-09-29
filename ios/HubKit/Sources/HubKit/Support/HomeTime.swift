@@ -52,7 +52,11 @@ public struct HomeTime: Sendable, Equatable {
     /// "5:30 – 6:30 PM"-style range.
     public func range(_ start: String, _ end: String) -> String {
         guard let s = HomeTime.parse(start), let e = HomeTime.parse(end) else { return "\(start) – \(end)" }
-        return (s..<max(e, s)).formatted(
+        return range(s, e)
+    }
+
+    public func range(_ start: Date, _ end: Date) -> String {
+        (start..<max(end, start)).formatted(
             Date.IntervalFormatStyle(date: .omitted, time: .shortened, locale: locale, calendar: calendar, timeZone: timeZone)
         )
     }

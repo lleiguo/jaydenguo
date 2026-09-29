@@ -1,8 +1,10 @@
+import BackgroundTasks
 import Foundation
 import HubAPI
 import HubKit
 import Observation
 import UIKit
+import WidgetKit
 
 /// App-wide state (intent 0004, §4.1): whether we're signed in, the home
 /// time zone, where links open, and reactions to API events (SEC-3, API-6).
@@ -32,6 +34,9 @@ final class AppModel {
     private(set) var openClashes = 0
     /// The 10-second undo banner (CON-3), shared by every screen.
     var toast: Toast?
+    /// Set while screens show cached answers: when they were fetched (OFF-1).
+    private(set) var offlineSince: Date?
+    private var widgetItems: [WidgetSnapshot.Item]?
     private var cursor: Double?
 
     let client: HubClient
@@ -66,7 +71,8 @@ final class AppModel {
             // UI tests sign in with a token from the local server's dev route.
             try? tokens.save(arguments[i + 1])
         }
-        let client = HubClient(config: config, tokens: tokens, onEvent: { continuation.yield($0) })
+        let cache = ResponseCache.shared(appGroup: ResponseCache.bundleAppGroup)
+        let client = HubClient(config: config, tokens: tokens, cache: cache, onEvent: { continuation.yield($0) })
         let lock = AppLock(forceOff: debug && arguments.contains("-HubNoLock"))
         return AppModel(client: client, events: events, lock: lock)
     }
@@ -100,7 +106,10 @@ final class AppModel {
     }
 
     private func wipe() {
-        // The offline cache and widget data join this in N5 (SEC-3).
+        // The client already removed the token and the offline cache (SEC-3).
+        widgetItems = nil
+        offlineSince = nil
+        WidgetCenter.shared.reloadAllTimelines()
         email = nil
         cursor = nil
         openClashes = 0
@@ -117,6 +126,11 @@ final class AppModel {
             signInError = "You were signed out. Sign in again."
         case .updateRequired(let message):
             phase = .updateRequired(message)
+        case .offline(let since):
+            // The oldest answer on screen is the one to own up to.
+            offlineSince = min(offlineSince ?? since, since)
+        case .online:
+            if offlineSince != nil { offlineSince = nil }
         }
     }
 
@@ -182,6 +196,42 @@ final class AppModel {
         case .meet, .swimEvent: swimmingPath = [route]
         default: pendingRoute = route
         }
+    }
+
+    // MARK: Widgets (EXT-1, EXT-2)
+
+    /// Writes what the widgets show and asks them to redraw, when it changed.
+    func saveWidgets(_ index: CalendarIndex, filters: CalendarFilters) {
+        guard phase == .signedIn, let cache = client.cache else { return }
+        let snapshot = WidgetSnapshot.build(from: index, filters: filters, homeTime: homeTime)
+        guard snapshot.items != widgetItems || WidgetSnapshot.load(from: cache) == nil else { return }
+        try? snapshot.save(to: cache)
+        widgetItems = snapshot.items
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    static let refreshTaskID = "com.jaydenguo.hub.refresh"
+
+    /// Asks iOS for a background refresh in about an hour (EXT-2).
+    func scheduleRefresh() {
+        guard phase == .signedIn else { return }
+        let request = BGAppRefreshTaskRequest(identifier: Self.refreshTaskID)
+        request.earliestBeginDate = .now.addingTimeInterval(60 * 60)
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    /// Background app refresh: fetch the next days (which also refreshes
+    /// the offline copy) and redraw the widgets.
+    func refreshInBackground() async {
+        scheduleRefresh()
+        guard phase == .signedIn else { return }
+        let today = homeTime.localDate(.now)
+        guard let from = homeTime.startOfDay(today),
+              let to = homeTime.startOfDay(CalendarDates.add(days: 4, to: today)),
+              let payload = try? await client.api.listEvents(query: .init(from: from, to: to)).ok.body.json
+        else { return }
+        _ = try? await client.api.getToday().ok
+        saveWidgets(CalendarIndex(payload), filters: CalendarStore.loadFilters())
     }
 
     // MARK: Refresh (APP-7, SYNC-2)

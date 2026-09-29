@@ -32,6 +32,12 @@ targets:
         product: HubKit
       - package: HubKit
         product: HubAPI
+      - target: HubWidgets
+    entitlements:
+      path: HubApp/HubApp.entitlements
+      properties:
+        # The offline cache and widget data live here (OFF-3, EXT-2).
+        com.apple.security.application-groups: [$(HUB_APP_GROUP)]
     info:
       path: HubApp/Info.plist
       properties:
@@ -45,6 +51,10 @@ targets:
           - CFBundleURLName: com.jaydenguo.hub
             CFBundleURLSchemes: [jaydenguohub]
         NSFaceIDUsageDescription: Face ID keeps the hub locked when someone else picks up your phone.
+        HubAppGroup: $(HUB_APP_GROUP)
+        # Background app refresh keeps the widgets current (EXT-2).
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.jaydenguo.hub.refresh]
         ITSAppUsesNonExemptEncryption: false
         # Only for development builds pointed at a local server (release
         # builds can't change the server).
@@ -56,6 +66,36 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_STRICT_CONCURRENCY: complete
         ASSETCATALOG_COMPILER_APPICON_NAME: ""
+  HubWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [HubWidgets]
+    dependencies:
+      - package: HubKit
+        product: HubKit
+      - package: HubKit
+        product: HubAPI
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    entitlements:
+      path: HubWidgets/HubWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [$(HUB_APP_GROUP)]
+    info:
+      path: HubWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Hub
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        HubAppGroup: $(HUB_APP_GROUP)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub$(HUB_BUNDLE_SUFFIX).widgets
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SKIP_INSTALL: YES
   HubAppUITests:
     type: bundle.ui-testing
     platform: iOS

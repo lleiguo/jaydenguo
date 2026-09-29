@@ -8,4 +8,6 @@
 // stays free for the paid team and TestFlight.
 DEVELOPMENT_TEAM =
 HUB_BUNDLE_SUFFIX =
+// Shared by the app and its widgets: the offline cache (OFF-3).
+HUB_APP_GROUP = group.com.jaydenguo.hub$(HUB_BUNDLE_SUFFIX)
 #include? "Local.xcconfig"
