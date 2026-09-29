@@ -14,6 +14,7 @@ import { CATEGORIES } from "@/domain/constants";
 import { schoolBlocks } from "@/domain/school-blocks";
 import { RefreshButton } from "@/components/sport/refresh-button";
 import type { CalendarPayload, ClashView, EventView, Undo } from "@/lib/calendar-types";
+import { allDayMove } from "./all-day";
 import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
 import { EventDetail } from "./event-detail";
@@ -131,8 +132,11 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
       out.push({
         id: e.id,
         title: e.title,
-        start: e.start,
-        end: e.end,
+        // All-day events are stored as UTC midnights of their dates; the
+        // calendar runs in the home zone, so give it plain dates or it
+        // shows them a day early west of UTC.
+        start: e.allDay ? e.start.slice(0, 10) : e.start,
+        end: e.allDay ? e.end.slice(0, 10) : e.end,
         allDay: e.allDay,
         editable: e.status === "active" && !e.deletedAt,
         className: [
@@ -178,10 +182,11 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
       event.end ??
       new Date(event.start.getTime() + ((oldEvent.end?.getTime() ?? 0) - (oldEvent.start?.getTime() ?? 0)));
     try {
-      const res = await call<{ undo: Undo }>(`/api/v1/events/${event.id}/move`, "POST", {
-        start: event.start,
-        end,
-      });
+      const res = await call<{ undo: Undo }>(
+        `/api/v1/events/${event.id}/move`,
+        "POST",
+        event.allDay ? allDayMove(event, oldEvent) : { start: event.start, end },
+      );
       done(`Moved ${event.title}.`, res.undo);
     } catch (err) {
       info.revert();
