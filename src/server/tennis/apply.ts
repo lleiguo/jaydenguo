@@ -229,18 +229,28 @@ export async function syncTennis(
       ext ? (tournamentIdByExternal.get(ext) ?? (ext.startsWith("manual:") ? ext.slice(7) : null)) : null;
 
     // His draws, for the tournaments whose draws this run read: each one
-    // is replaced; a draw no longer listed is marked withdrawn.
+    // is replaced; a draw no longer listed, or no longer listing him, is
+    // marked withdrawn. Draws in his event he isn't in (a reserve, or
+    // another group) aren't his: they're not stored, and rows stored for
+    // them before are removed.
     const drawsByTournament = new Map<string, typeof batch.draws>();
     for (const d of batch.draws) {
       const list = drawsByTournament.get(d.tournamentExternalId) ?? [];
       list.push(d);
       drawsByTournament.set(d.tournamentExternalId, list);
     }
-    for (const [ext, draws] of drawsByTournament) {
+    const notDrawn = (next: unknown) => (next as { status?: string } | null)?.status === "not_drawn";
+    for (const [ext, read] of drawsByTournament) {
       const tournamentId = tournamentIdByExternal.get(ext);
       if (!tournamentId) continue;
+      const draws = read.filter((d) => !notDrawn(d.nextMatch));
       const existing = await tx.select().from(tennisDraws).where(eq(tennisDraws.tournamentId, tournamentId));
-      const byNo = new Map(existing.map((d) => [d.drawNo, d]));
+      const strays = existing.filter((d) => notDrawn(d.nextMatch)).map((d) => d.id);
+      if (strays.length) {
+        await tx.delete(tennisDraws).where(inArray(tennisDraws.id, strays));
+        touched = true;
+      }
+      const byNo = new Map(existing.filter((d) => !strays.includes(d.id)).map((d) => [d.drawNo, d]));
       for (const d of draws) {
         const values = {
           eventName: d.eventName,
