@@ -45,15 +45,18 @@ describe.runIf(hasFfmpeg)("prepareMedia", () => {
     expect(await probeDuration(SAMPLE)).toBeCloseTo(6, 0);
   });
 
-  it("trims to the segment and labels frames with the original times", async () => {
+  // Frame times count from the clip's start, like Gemini's times and the
+  // playback copy (intent 0003, PLAY-6).
+  it("trims to the segment and labels frames with the clip's times", async () => {
     const media = await prepareMedia(SAMPLE, dir, { start: 2, end: 5 }, true);
     expect(media.durationSec).toBeCloseTo(3, 0);
+    expect(media.offsetSec).toBe(2);
     expect(media.clip.length).toBeGreaterThan(1000);
     expect(media.frames.length).toBeGreaterThan(5);
     expect(media.frames.length).toBeLessThanOrEqual(60);
     for (const f of media.frames) {
-      expect(f.atSec).toBeGreaterThanOrEqual(2);
-      expect(f.atSec).toBeLessThan(5.1);
+      expect(f.atSec).toBeGreaterThanOrEqual(0);
+      expect(f.atSec).toBeLessThan(3.1);
       // JPEG magic number.
       expect(f.jpeg.subarray(0, 2).toString("hex")).toBe("ffd8");
     }

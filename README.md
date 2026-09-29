@@ -150,6 +150,13 @@ restore test.
   Picker API is off in the project, or the Google account lost that
   access. Check `terraform apply` is clean, then reconnect "Drive and
   Photos" on Settings → Accounts.
+- **Video playback (intent 0003):** a finished review keeps a copy of the
+  reviewed clip in the `<project>-media` bucket (`reviews/<id>.mp4`), shown
+  on the review page. "Delete video" there removes it for good. No player
+  on a new review means the copy wasn't saved: look for
+  `jsonPayload.message="playback copy not saved"` in the worker's logs.
+  Locally, set `MEDIA_DIR` to a folder for both `pnpm dev` and the worker;
+  without it no copy is kept.
 - **Cost:** each review shows its cost; the "hub AI monthly" budget emails
   at 50/90/100%. Prices used for the estimates are in
   `src/server/llm/pricing.ts`.

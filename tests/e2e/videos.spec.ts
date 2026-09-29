@@ -35,7 +35,7 @@ test("a Drive video is reviewed in debate mode, and the vote is kept once", asyn
   await expect(page.getByRole("heading", { name: /review won by|A tie/ })).toBeVisible();
   await expect(page.getByText("AI feedback to help you, not a coach's assessment.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "The advice" })).toBeVisible();
-  await expect(page.getByText("disputed")).toBeVisible();
+  await expect(page.getByText("disputed", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Claude's review" }).click();
   await expect(page.getByText("was more useful")).toContainText("Claude's review");
@@ -51,6 +51,25 @@ test("a Drive video is reviewed in debate mode, and the vote is kept once", asyn
   });
   expect(again.status()).toBe(409);
 
+  // Intent 0003: the reviewed clip plays next to the advice, and a point's
+  // time shows that moment (PLAY-3..5).
+  const video = page.locator("video");
+  await expect(video).toBeVisible();
+  await page.getByRole("button", { name: "Show 0:02 in the video" }).first().click();
+  await expect(page.getByTestId("current-point")).toContainText("Fix 1: Turn the shoulders sooner");
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeCloseTo(2, 1);
+  const part = await page.request.get(`/api/v1/videos/${id}/video`, { headers: { range: "bytes=0-99" } });
+  expect(part.status()).toBe(206);
+  expect(part.headers()["content-range"]).toMatch(/^bytes 0-99\/\d+$/);
+  expect((await part.body()).length).toBe(100);
+
+  // PLAY-7: the copy can be deleted; the review stays.
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("button", { name: "Delete video" }).click();
+  await expect(video).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "The advice" })).toBeVisible();
+  expect((await page.request.get(`/api/v1/videos/${id}/video`)).status()).toBe(404);
+
   // It's in the history, and can be deleted and restored (VID-4).
   await page.goto("/videos?sport=tennis");
   const row = page.getByTestId("video-row").filter({ hasText: note });
@@ -58,11 +77,11 @@ test("a Drive video is reviewed in debate mode, and the vote is kept once", asyn
   await row.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByTestId("video-row").filter({ hasText: note })).toHaveCount(0);
   await page.goto("/videos?deleted=1");
-  await page
-    .getByTestId("video-row")
-    .filter({ hasText: note })
-    .getByRole("button", { name: "Restore" })
-    .click();
+  const deletedRow = page.getByTestId("video-row").filter({ hasText: note });
+  await deletedRow.getByRole("button", { name: "Restore" }).click();
+  // The row leaves the list once the restore is saved; leaving the page
+  // before that can cancel the request.
+  await expect(deletedRow).toHaveCount(0);
   await page.goto("/videos?sport=tennis");
   await expect(page.getByTestId("video-row").filter({ hasText: note })).toHaveCount(1);
 });

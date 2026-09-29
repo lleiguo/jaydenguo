@@ -58,6 +58,8 @@ resource "google_cloud_run_v2_service" "web" {
           MONTHLY_BUDGET       = tostring(var.monthly_budget)
           AI_MONTHLY_BUDGET    = tostring(var.ai_monthly_budget)
           BUDGET_CURRENCY      = var.budget_currency
+          # Playback copies of reviewed clips (intent 0003).
+          MEDIA_BUCKET = google_storage_bucket.media.name
         })
         content {
           name  = env.key
@@ -136,6 +138,8 @@ resource "google_cloud_run_v2_job" "worker" {
             KMS_KEY        = google_kms_crypto_key.credentials.id
             HOME_TIME_ZONE = var.home_time_zone
             BACKUP_BUCKET  = google_storage_bucket.backups.name
+            # Playback copies of reviewed clips (intent 0003).
+            MEDIA_BUCKET = google_storage_bucket.media.name
             # Claude on Vertex AI for tennis prediction explanations (plan M3.6).
             VERTEX_PROJECT       = var.project_id
             CLAUDE_VERTEX_REGION = var.claude_region

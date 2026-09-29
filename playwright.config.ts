@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { APP_URL, AUTH_SECRET, E2E_PORT, OWNER, PROJECTS, soleOwner } from "./tests/e2e/support/env";
@@ -64,6 +65,8 @@ export default defineConfig({
         PHOTOS_PICKER_BASE: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
         // Video reviews run with stand-in models, not Vertex AI.
         VIDEO_LLM: "fake",
+        // Playback copies (intent 0003) go to a local folder, not a bucket.
+        MEDIA_DIR: path.join(os.tmpdir(), "jaydenguo-e2e-media"),
         // Email suggestions likewise (plan M5.8).
         EMAIL_LLM: "fake",
         // Jobs the site starts run as local processes of the built worker.

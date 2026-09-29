@@ -161,7 +161,7 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | VID-1 | Submit a video link for any sport, with a short note (e.g. "second serve, focus on toss"). | The form takes a URL, sport, date filmed (defaults to today) and note. The link is saved before any analysis runs. |
-| VID-2 | Supported sources: Google Drive links and Google Photos (through the Google Photos picker). YouTube: see F-3. | The site fetches private videos through the owner's connected Google account. The video is streamed or temp-downloaded, processed, then deleted. Nothing is kept after the review. |
+| VID-2 | Supported sources: Google Drive links and Google Photos (through the Google Photos picker). YouTube: see F-3. | The site fetches private videos through the owner's connected Google account. The video is streamed or temp-downloaded, processed, then deleted. Nothing is kept after the review. *Changed by intent 0003: a playback copy of the reviewed clip is kept until the owner deletes it.* |
 | VID-3 | Each review has a fixed structure. | Sections: what's good, what to fix (ranked by impact), 1–3 drills, and what to film next time. Each point references a time in the video where possible. The review is framed for a 9-year-old's development stage. Labelled as AI feedback, not a coach's assessment. Method in §6.3. |
 | VID-3a | Two independent reviews. | Gemini and Claude each review the same video without seeing the other's review. |
 | VID-3b | Cross-examination and scoring. | Each model critiques and scores both reviews, labelled only "Review A" and "Review B" in random order. Scoring uses the rubric in §6.3. Each author then gets one rebuttal to the critique of its own review, and the judges give final scores. |
@@ -420,7 +420,8 @@ for any service that isn't available in Toronto.
 ### 7.2 Retention
 - Events, revisions, results, matches, video reviews and link history are kept
   indefinitely. Deletes are soft, with restore available.
-- Temp video files: deleted when the job ends.
+- Temp video files: deleted when the job ends. The reviewed clip is kept as a
+  playback copy until the owner deletes it (intent 0003).
 - Raw emails are not stored. Only the extracted fields and a short quote are kept.
 - Sync run logs: 1 year.
 
@@ -496,7 +497,7 @@ extraction. That is the owner's decision and is not assumed here.
 - Resolving a clash changes only this site. Nobody is notified.
 - Only the owner logs in. There are no roles or extra users.
 - Events are copied one way to a dedicated Google Calendar, which can be switched off.
-- Linked videos are sent to Gemini and Claude through Vertex AI for review, and nothing is kept afterwards except the reviews.
+- Linked videos are sent to Gemini and Claude through Vertex AI for review, and nothing is kept afterwards except the reviews and, since intent 0003, a private playback copy of the reviewed clip.
 - Home time zone is a setting, confirmed at setup.
 
 ## 12. Open questions (not blocking; each has a default)
