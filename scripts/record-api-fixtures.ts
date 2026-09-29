@@ -59,7 +59,16 @@ async function main() {
   if (meet) save("getMeet", await get(`/api/v1/swim/meets/${meet.id}`));
   const pbs = saved.listPersonalBests as { pbs: { key: string }[] };
   if (pbs.pbs[0]) save("getSwimEvent", await get(`/api/v1/swim/events/${pbs.pbs[0].key}`));
-  console.log(`recorded ${Object.keys(saved).length + 4} fixtures in ${path.relative(process.cwd(), out)}`);
+  const tennis = saved.getTennisOverview as {
+    nextMatches: { tournament: { id: string }; draw: { opponentKey: string | null } }[];
+    past: { id: string }[];
+  };
+  const next = tennis.nextMatches[0];
+  const tournamentId = next?.tournament.id ?? tennis.past[0]?.id;
+  if (tournamentId) save("getTournament", await get(`/api/v1/tennis/tournaments/${tournamentId}`));
+  if (next?.draw.opponentKey)
+    save("getTennisPlayer", await get(`/api/v1/tennis/players/${next.draw.opponentKey}`));
+  console.log(`recorded ${Object.keys(saved).length + 6} fixtures in ${path.relative(process.cwd(), out)}`);
 }
 
 if (require.main === module)

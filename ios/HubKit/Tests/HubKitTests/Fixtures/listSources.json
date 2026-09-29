@@ -75,6 +75,25 @@
       "lastRun": null,
       "running": false,
       "nextRefreshAt": null
+    },
+    {
+      "id": "925b6cb4-f0ab-4e6d-9737-f46a6e0bfcd5",
+      "kind": "tennis_tc",
+      "name": "Tennis site (sample)",
+      "enabled": false,
+      "credentialId": null,
+      "credentialLabel": null,
+      "config": {},
+      "categoryMapping": {
+        "default": "tennis",
+        "owners": [],
+        "rules": []
+      },
+      "lastSuccessAt": null,
+      "consecutiveFailures": 0,
+      "lastRun": null,
+      "running": false,
+      "nextRefreshAt": null
     }
   ]
 }

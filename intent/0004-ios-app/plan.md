@@ -158,6 +158,11 @@ Results go in a `## Spikes` section of this file.
 - CI: `.github/workflows/ios.yml` runs HubKit's tests and a Simulator
   build on changes to `ios/` or `openapi.json`. The first TestFlight build
   waits on O-1/O-2 (the Apple Developer account).
+- Signing: the team comes from a git-ignored `ios/Local.xcconfig` (via
+  `Signing.xcconfig`), not `project.yml`. While O-1 is under review the
+  owner runs builds on their iPhone with a free Personal Team under
+  `com.jaydenguo.hub.dev` (7-day builds, no push), so the real bundle ID
+  stays free for the paid team.
 
 ### N3: Today and Calendar (≈ 7 days)
 | Task | Description | Spec | Done when |
@@ -203,6 +208,49 @@ Results go in a `## Spikes` section of this file.
 |---|---|---|---|
 | N4.1 | Tennis tab: next match card, upcoming table, found-for-him (Safari entry link), tournament, player, results, accuracy; score and time corrections. | ITEN-1 | UI test per screen with seed data; a correction shows at once. |
 | N4.2 | Swimming tab: meets, meet results, PB table, progression chart with forecast band and accessible table; result corrections. | ISWM-1, APP-6 | UI test; VoiceOver reads the chart table. |
+
+**N4 as built (2026-09-29):**
+- Seed: `pnpm seed` now makes a tennis season too (made-up players with
+  numeric member numbers, five past tournaments, an upcoming one with his
+  draw and a next opponent he has played, and one found for him), so the
+  tennis screens have data locally and in the fixtures. Fixtures add
+  `getTournament` and `getTennisPlayer`.
+- HubKit `Sports/`: the API's unions made plain (next match in a draw,
+  upcoming status, forecast), set scores from either side, swim times and
+  changes formatted as on the web. `HubClient.patch` sends explicit nulls:
+  the generated client leaves nil fields out, which the correction routes
+  read as "unchanged", so clearing a DQ, place or start time, or marking a
+  match not played, goes through it. (The event and series edits don't
+  need it: those routes default missing fields to null.)
+- `Route` gains `/tennis/results` and `/tennis/accuracy`; Tennis and
+  Swimming have their own navigation paths, so links open inside them.
+- Tennis: next matches with the estimate and why, in progress, upcoming
+  (status, next opponent, win %, the site's enter or pay link), found for
+  him (opens the entry page in Safari), past; tournament, player (head-to-
+  head, form, estimate), results (season filter, running W–L) and accuracy
+  pages. Tapping a match opens its sheet: links to the tournament and
+  opponent, the score/result/time correction, "use the site's result" and
+  delete with undo. A list row holds one link, so "How accurate is this?"
+  is a row under each estimate.
+- Swimming: upcoming and past meets (sessions, entries with seed times,
+  swims and PBs), PBs per course, meet pages, and the event page with a
+  Swift Charts progression chart (swims, PB steps, the estimate line and
+  likely range labelled "Estimate", faster higher) followed by a "Chart
+  values" table VoiceOver reads row by row. Tapping a swim opens its sheet
+  with splits, the time/DQ/place correction, "use Commit's time" and
+  delete with undo.
+- Rows take a tap anywhere (not only on their text), and the correction
+  sheets put "Save correction" above the keyboard, which covers the form's
+  own button while typing.
+- Refresh on both tabs syncs that sport's source and follows it until done
+  (APP-7); refusals show the server's reason.
+- Departure: adding a match or a swim by hand stays on the website for
+  now (ITEN-1 and ISWM-1 ask for corrections only); it can join N8.
+- UI tests (5 new): the tennis page with the next match and a found
+  tournament; tournament, player and accuracy pages by tap and deep link;
+  a score correction that shows at once and goes back to the site's; the
+  PB table and the chart's value table; a swim-time correction and back.
+  Corrections are undone through the API in `tearDown`.
 
 ### N5: Offline cache and widgets (≈ 4 days)
 | Task | Description | Spec | Done when |
@@ -269,8 +317,9 @@ about 16 days in.
 | N0 | done 2026-09-29 (#45, deployed) |
 | N1 | done 2026-09-29 (#46, deployed); SP-N1 passed: Firebase Hosting forwards `Authorization` |
 | N2 | done 2026-09-29 (#47); first TestFlight build waits on O-1/O-2 |
-| N3 | built 2026-09-29 (`ios/n3-calendar`) |
-| N4–N8 | not started |
+| N3 | done 2026-09-29 (#49) |
+| N4 | built 2026-09-29 (`ios/n4-tennis-swimming`) |
+| N5–N8 | not started |
 | N9 | not planned (owner kept the no-upload default) |
 
 ## Spikes

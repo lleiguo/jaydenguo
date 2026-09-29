@@ -1,0 +1,107 @@
+{
+  "tournament": {
+    "id": "e9119fcf-0ef4-4c31-96fe-66c6423a01d9",
+    "name": "Autumn Championship (sample)",
+    "startDate": "2026-10-11",
+    "endDate": "2026-10-13",
+    "venue": "Maple Tennis Club",
+    "city": "Springfield",
+    "region": null,
+    "entryDeadline": null,
+    "categories": [
+      "U12 Boys Singles"
+    ],
+    "sourceUrl": null,
+    "manual": false,
+    "sourceId": "925b6cb4-f0ab-4e6d-9737-f46a6e0bfcd5",
+    "externalId": "seed-t-next",
+    "when": "upcoming",
+    "draws": [
+      {
+        "id": "db96e1ba-1b1a-45f9-8384-f17852229ee1",
+        "eventName": "U12 Boys Singles",
+        "drawName": "Main draw",
+        "kind": "bracket",
+        "size": 16,
+        "position": 5,
+        "seed": "3",
+        "status": "active",
+        "next": {
+          "date": "2026-10-11",
+          "time": "10:30",
+          "round": "Round of 16",
+          "status": "next",
+          "feeders": null,
+          "opponent": {
+            "name": "Morgan Vale",
+            "memberId": "92002",
+            "tournamentPlayerId": null
+          }
+        },
+        "opponentKey": "92002",
+        "sourceUrl": null
+      }
+    ],
+    "events": [
+      "U12 Boys Singles"
+    ],
+    "entryStatus": "In the draw",
+    "record": {
+      "wins": 0,
+      "losses": 0
+    }
+  },
+  "matches": [],
+  "drawPredictions": [
+    {
+      "drawId": "db96e1ba-1b1a-45f9-8384-f17852229ee1",
+      "prediction": {
+        "version": "tennis-predict-1",
+        "probability": 0.7266881731367426,
+        "base": 0.7142199895306895,
+        "adjustments": {
+          "headToHead": 0,
+          "form": 0.030000000000000006,
+          "margin": 0.031915393654524095
+        },
+        "confidence": "low",
+        "band": "More likely a win; a third set is possible",
+        "a": {
+          "rating": 1680.9216651495249,
+          "rd": 125.3641530565201,
+          "ratedMatches": 14,
+          "last": {
+            "wins": 8,
+            "losses": 2
+          },
+          "gameShare": 0.6378378378378379
+        },
+        "b": {
+          "rating": 1471.23927498269,
+          "rd": 239.5916148018694,
+          "ratedMatches": 2,
+          "last": {
+            "wins": 1,
+            "losses": 1
+          },
+          "gameShare": 0.4782608695652174
+        },
+        "headToHead": {
+          "wins": 1,
+          "losses": 1
+        },
+        "why": "Ratings 1681 ± 125 vs 1471 ± 240 · head-to-head 1–1 · last 10: Sam 8–2, Morgan 1–1 · games won 64% vs 48% · rated matches 14 vs 2",
+        "opponentKey": "92002",
+        "opponentName": "Morgan Vale",
+        "opponentLevel": {
+          "tournaments": 2,
+          "lastYear": {
+            "wins": 1,
+            "losses": 1
+          }
+        }
+      },
+      "explanation": null
+    }
+  ]
+}

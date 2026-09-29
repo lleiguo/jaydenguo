@@ -10,6 +10,7 @@ public final class HubClient: Sendable {
     /// Generated from openapi.json: one method per operation.
     public let api: Client
     private let tokens: TokenStore
+    private let onEvent: @Sendable (HubEvent) -> Void
 
     public init(
         config: HubConfig,
@@ -19,6 +20,7 @@ public final class HubClient: Sendable {
     ) {
         self.config = config
         self.tokens = tokens
+        self.onEvent = onEvent
         api = Client(
             serverURL: config.baseURL,
             // The server sends Date.toISOString(): milliseconds, always.
@@ -56,24 +58,70 @@ public final class HubClient: Sendable {
     /// Runs the undo an action returned (CON-3: "Undo" for 10 s). Undos are
     /// relative `/api/v1/…` POSTs; anything else is refused.
     public func perform(_ undo: Undo, session: URLSession = .shared) async throws {
-        guard undo.url.hasPrefix("/api/v1/"), !undo.url.contains(".."),
-              let url = URL(string: undo.url, relativeTo: config.baseURL)?.absoluteURL,
+        let body = try undo.body.map { try JSONEncoder().encode($0) }
+        _ = try await send(undo.method.rawValue, undo.url, body: body, session: session, fallback: "Couldn't undo that.")
+    }
+
+    /// A PATCH whose fields can be cleared. The generated client leaves nil
+    /// fields out, which the correction routes (TEN-8, SWM-7) read as
+    /// "unchanged"; here `.null` sends an explicit null.
+    public func patch(_ path: String, _ fields: [String: JSONField], session: URLSession = .shared) async throws {
+        let body = try JSONSerialization.data(withJSONObject: fields.mapValues(\.object), options: [.sortedKeys])
+        _ = try await send("PATCH", path, body: body, session: session, fallback: "Couldn't save that.")
+    }
+
+    /// A request to a relative `/api/v1/…` path on this server with the
+    /// device token, turning errors into HubError like the middleware does.
+    private func send(_ method: String, _ path: String, body: Data?, session: URLSession, fallback: String) async throws -> Data {
+        guard path.hasPrefix("/api/v1/"), !path.contains(".."),
+              let url = URL(string: path, relativeTo: config.baseURL)?.absoluteURL,
               url.host() == config.baseURL.host()
-        else { throw HubError.server(status: 0, message: "That can't be undone here.") }
+        else { throw HubError.server(status: 0, message: "That can't be done here.") }
         var request = URLRequest(url: url)
-        request.httpMethod = undo.method.rawValue
+        request.httpMethod = method
         request.setValue(config.appVersion, forHTTPHeaderField: "X-App-Version")
         if let token = try tokens.read() { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
-        if let body = undo.body {
+        if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(body)
+            request.httpBody = body
         }
-        let (data, response) = try await session.data(for: request)
+        let data: Data, response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw HubError.from(error) ?? HubError.server(status: 0, message: fallback)
+        }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(status) else {
-            let message = (try? JSONDecoder().decode([String: String].self, from: data))?["error"]
-            throw HubError.server(status: status, message: message ?? "Couldn't undo that.")
+            let message = (try? JSONDecoder().decode([String: String].self, from: data))?["error"] ?? fallback
+            if status == 401 { onEvent(.signedOut) }
+            if status == 426 { onEvent(.updateRequired(message: message)) }
+            throw HubError.server(status: status, message: message)
         }
+        return data
+    }
+}
+
+/// One field of a `patch` body.
+public enum JSONField: Sendable, Equatable {
+    case string(String)
+    case int(Int)
+    case bool(Bool)
+    case null
+
+    var object: Any {
+        switch self {
+        case .string(let s): s
+        case .int(let i): i
+        case .bool(let b): b
+        case .null: NSNull()
+        }
+    }
+
+    /// A string, or null when it's empty after trimming.
+    public static func text(_ s: String?) -> JSONField {
+        guard let t = s?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty else { return .null }
+        return .string(t)
     }
 }
 

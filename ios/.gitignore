@@ -5,3 +5,4 @@ HubKit/.swiftpm/
 build/
 DerivedData/
 *.log
+Local.xcconfig

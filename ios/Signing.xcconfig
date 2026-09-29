@@ -1,0 +1,11 @@
+// Signing (intent 0004, plan O-1). The team isn't committed: put it in
+// Local.xcconfig (git-ignored), e.g.
+//
+//   DEVELOPMENT_TEAM = ABCDE12345
+//   HUB_BUNDLE_SUFFIX = .dev
+//
+// A free Personal Team needs its own bundle ID (.dev), so com.jaydenguo.hub
+// stays free for the paid team and TestFlight.
+DEVELOPMENT_TEAM =
+HUB_BUNDLE_SUFFIX =
+#include? "Local.xcconfig"

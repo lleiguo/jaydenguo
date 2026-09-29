@@ -24,7 +24,7 @@
         "kind": "ical"
       },
       "seriesId": null,
-      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "lastSyncedAt": "2026-09-29T17:19:35.754Z",
       "override": null,
       "schoolClosed": false
     },
@@ -50,7 +50,7 @@
         "kind": "ical"
       },
       "seriesId": null,
-      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "lastSyncedAt": "2026-09-29T17:19:35.745Z",
       "override": null,
       "schoolClosed": false
     }
@@ -157,7 +157,7 @@
           "kind": "ical"
         },
         "seriesId": null,
-        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "lastSyncedAt": "2026-09-29T17:19:35.745Z",
         "override": null,
         "schoolClosed": false
       },
@@ -185,9 +185,87 @@
       }
     }
   ],
-  "cursor": 11,
+  "cursor": 32,
   "schoolDay": null,
-  "nextMatches": [],
+  "nextMatches": [
+    {
+      "tournament": {
+        "id": "e9119fcf-0ef4-4c31-96fe-66c6423a01d9",
+        "name": "Autumn Championship (sample)"
+      },
+      "draw": {
+        "id": "db96e1ba-1b1a-45f9-8384-f17852229ee1",
+        "eventName": "U12 Boys Singles",
+        "drawName": "Main draw",
+        "kind": "bracket",
+        "size": 16,
+        "position": 5,
+        "seed": "3",
+        "status": "active",
+        "next": {
+          "date": "2026-10-11",
+          "time": "10:30",
+          "round": "Round of 16",
+          "status": "next",
+          "feeders": null,
+          "opponent": {
+            "name": "Morgan Vale",
+            "memberId": "92002",
+            "tournamentPlayerId": null
+          }
+        },
+        "opponentKey": "92002",
+        "sourceUrl": null
+      },
+      "prediction": {
+        "version": "tennis-predict-1",
+        "probability": 0.7266881731367426,
+        "base": 0.7142199895306895,
+        "adjustments": {
+          "headToHead": 0,
+          "form": 0.030000000000000006,
+          "margin": 0.031915393654524095
+        },
+        "confidence": "low",
+        "band": "More likely a win; a third set is possible",
+        "a": {
+          "rating": 1680.9216651495249,
+          "rd": 125.3641530565201,
+          "ratedMatches": 14,
+          "last": {
+            "wins": 8,
+            "losses": 2
+          },
+          "gameShare": 0.6378378378378379
+        },
+        "b": {
+          "rating": 1471.23927498269,
+          "rd": 239.5916148018694,
+          "ratedMatches": 2,
+          "last": {
+            "wins": 1,
+            "losses": 1
+          },
+          "gameShare": 0.4782608695652174
+        },
+        "headToHead": {
+          "wins": 1,
+          "losses": 1
+        },
+        "why": "Ratings 1681 ± 125 vs 1471 ± 240 · head-to-head 1–1 · last 10: Sam 8–2, Morgan 1–1 · games won 64% vs 48% · rated matches 14 vs 2",
+        "opponentKey": "92002",
+        "opponentName": "Morgan Vale",
+        "opponentLevel": {
+          "tournaments": 2,
+          "lastYear": {
+            "wins": 1,
+            "losses": 1
+          }
+        }
+      },
+      "explanation": null
+    }
+  ],
   "nextMeet": {
     "id": "f7d58724-8a54-4aad-8de3-532801443fcc",
     "name": "Fall Classic (sample)",
@@ -237,7 +315,36 @@
     "pbs": 0
   },
   "waiting": {
-    "entries": [],
+    "entries": [
+      {
+        "id": "39b09a11-517c-4e01-b4d3-db86826c3e1d",
+        "sourceId": "925b6cb4-f0ab-4e6d-9737-f46a6e0bfcd5",
+        "tournamentExternalId": "seed-t-found",
+        "tournamentName": "Winter Warm-up (sample)",
+        "startDate": "2026-11-08",
+        "endDate": "2026-11-09",
+        "venue": "Birch Tennis Centre",
+        "city": "Springfield",
+        "region": null,
+        "entryDeadline": "2026-10-19",
+        "eventNo": "1",
+        "eventName": "U12 Boys Singles",
+        "driveMinutes": 25,
+        "driveEstimated": false,
+        "status": "found",
+        "reservePosition": null,
+        "note": null,
+        "tournamentPlayerId": null,
+        "tournamentUrl": "https://example.test/tournament/seed-t-found",
+        "entryUrl": "https://example.test/tournament/seed-t-found/enter",
+        "enteredAt": null,
+        "listCheckedAt": null,
+        "drawSeenAt": null,
+        "drawSyncedAt": null,
+        "createdAt": "2026-09-29T17:07:16.226Z",
+        "updatedAt": "2026-09-29T17:07:16.226Z"
+      }
+    ],
     "suggestions": 0,
     "failingSources": []
   }

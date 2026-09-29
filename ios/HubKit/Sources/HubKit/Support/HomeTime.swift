@@ -36,6 +36,19 @@ public struct HomeTime: Sendable, Equatable {
 
     public func time(_ iso: String) -> String { HomeTime.parse(iso).map(time) ?? iso }
 
+    /// "17:30" in the home zone: the form the API takes for a time of day.
+    public func hhmm(_ date: Date) -> String {
+        let c = calendar.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", c.hour!, c.minute!)
+    }
+
+    /// A time of day on a home date as an instant (for time pickers).
+    public func date(_ localDate: String, hhmm: String) -> Date? {
+        let t = hhmm.split(separator: ":").compactMap { Int($0) }
+        guard t.count == 2, let day = startOfDay(localDate) else { return nil }
+        return calendar.date(bySettingHour: t[0], minute: t[1], second: 0, of: day)
+    }
+
     /// "5:30 – 6:30 PM"-style range.
     public func range(_ start: String, _ end: String) -> String {
         guard let s = HomeTime.parse(start), let e = HomeTime.parse(end) else { return "\(start) – \(end)" }

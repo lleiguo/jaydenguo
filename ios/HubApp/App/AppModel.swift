@@ -17,6 +17,11 @@ final class AppModel {
     private(set) var phase: Phase
     var selectedTab: Route.Tab = .today
     var pendingRoute: Route?
+    /// The Tennis and Swimming stacks, so links can open a page in them.
+    var tennisPath: [Route] = []
+    var swimmingPath: [Route] = []
+    /// Source kinds being refreshed from a sport screen (APP-7).
+    private(set) var refreshing: Set<String> = []
     var signInError: String?
     var isSigningIn = false
     private(set) var homeTime = HomeTime(identifier: "America/Toronto")
@@ -170,7 +175,44 @@ final class AppModel {
     func open(_ url: URL) {
         guard let route = Route(url: url) else { return }
         selectedTab = route.tab
-        pendingRoute = route
+        switch route {
+        case .tennis: tennisPath = []
+        case .tournament, .player, .tennisResults, .tennisAccuracy: tennisPath = [route]
+        case .swimming: swimmingPath = []
+        case .meet, .swimEvent: swimmingPath = [route]
+        default: pendingRoute = route
+        }
+    }
+
+    // MARK: Refresh (APP-7, SYNC-2)
+
+    /// Syncs the sources of one kind (e.g. `tennis_tc`) and follows along
+    /// until they finish. Refusals (SYNC-5) show the server's reason.
+    func refreshSources(kind: String, site: String) async {
+        guard !refreshing.contains(kind) else { return }
+        refreshing.insert(kind)
+        defer { refreshing.remove(kind) }
+        do {
+            let ids = try await client.api.listSources().ok.body.json.sources.filter { $0.kind == kind }.map(\.id)
+            guard !ids.isEmpty else {
+                show("Add a \(site) source on the website's Sources page first.")
+                return
+            }
+            for id in ids { _ = try await client.api.refreshSource(path: .init(id: id)).accepted }
+            show("Refreshing from \(site). This takes a minute or two.")
+            try await Task.sleep(for: .seconds(3))
+            for _ in 0..<60 {
+                let sources = try await client.api.listSources().ok.body.json.sources
+                if !sources.contains(where: { ids.contains($0.id) && $0.running }) { break }
+                try await Task.sleep(for: .seconds(3))
+            }
+            show("Updated from \(site).")
+        } catch is CancellationError {
+            return
+        } catch {
+            show(HubError.from(error)?.message ?? "Couldn't refresh from \(site).")
+        }
+        await dataChanged()
     }
 }
 
