@@ -22,10 +22,14 @@ struct MainTabs: View {
                     }
                     .badge(model.openClashes)
                     Tab("Tennis", systemImage: "tennisball", value: Route.Tab.tennis) {
-                        NavigationStack { TennisScreen() }
+                        NavigationStack(path: $model.tennisPath) {
+                            TennisScreen().navigationDestination(for: Route.self) { SportDestination(route: $0) }
+                        }
                     }
                     Tab("Swimming", systemImage: "figure.pool.swim", value: Route.Tab.swimming) {
-                        NavigationStack { SwimmingScreen() }
+                        NavigationStack(path: $model.swimmingPath) {
+                            SwimmingScreen().navigationDestination(for: Route.self) { SportDestination(route: $0) }
+                        }
                     }
                     Tab("More", systemImage: "ellipsis.circle", value: Route.Tab.more) {
                         NavigationStack { MoreScreen() }

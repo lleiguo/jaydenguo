@@ -11,6 +11,8 @@ public enum Route: Equatable, Sendable, Hashable {
     case tennis
     case tournament(id: String)
     case player(key: String)
+    case tennisResults
+    case tennisAccuracy
     case swimming
     case meet(id: String)
     case swimEvent(key: String)
@@ -42,6 +44,8 @@ public enum Route: Equatable, Sendable, Hashable {
         case (1, "tennis", _, _): self = .tennis
         case (3, "tennis", "tournaments", let id?): self = .tournament(id: id)
         case (3, "tennis", "players", let key?): self = .player(key: key)
+        case (2, "tennis", "results", _): self = .tennisResults
+        case (2, "tennis", "accuracy", _): self = .tennisAccuracy
         case (1, "swimming", _, _): self = .swimming
         case (3, "swimming", "meets", let id?): self = .meet(id: id)
         case (3, "swimming", "events", let key?): self = .swimEvent(key: key)
@@ -61,7 +65,7 @@ public enum Route: Equatable, Sendable, Hashable {
         switch self {
         case .today: .today
         case .calendar, .event, .clashes: .calendar
-        case .tennis, .tournament, .player: .tennis
+        case .tennis, .tournament, .player, .tennisResults, .tennisAccuracy: .tennis
         case .swimming, .meet, .swimEvent: .swimming
         case .videos, .video, .school, .suggestions, .sources, .accounts, .settings: .more
         }

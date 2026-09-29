@@ -7,6 +7,8 @@ import Testing
         ("jaydenguohub://open/today", Route.today),
         ("jaydenguohub://open/events/abc", .event(id: "abc")),
         ("https://jaydenguo.com/tennis/tournaments/t1", .tournament(id: "t1")),
+        ("https://jaydenguo.com/tennis/results", .tennisResults),
+        ("jaydenguohub://open/tennis/accuracy", .tennisAccuracy),
         ("https://jaydenguo.com/settings/clashes", .clashes),
         ("https://jaydenguo.com/", .today),
         ("jaydenguohub://open/calendar?date=2026-10-01", .calendar(date: "2026-10-01")),

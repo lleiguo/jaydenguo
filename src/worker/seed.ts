@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { eventSeries, locationBuffers, locations, people, sources } from "@db/schema";
+import { eventSeries, locationBuffers, locations, people, sources, tennisEntries } from "@db/schema";
 import type { Category } from "../domain/constants";
 import { addDays, localDate, weekday, zonedToUtc } from "../domain/time";
 import type { SourceRecord } from "../domain/upsert";
@@ -9,6 +9,8 @@ import { syncSwim } from "../server/swim/apply";
 import { syncRecords } from "../server/sync/apply";
 import type { Stroke } from "../domain/swim-constants";
 import type { SwimMeetRecord, SwimResultRecord } from "../domain/swim-upsert";
+import type { TennisMatchRecord, TennisTournamentRecord } from "../domain/tennis-upsert";
+import { syncTennis } from "../server/tennis/apply";
 import type { JobContext } from "./context";
 
 // `pnpm seed` (plan M1.14, spec §5.2): a realistic fake season so the app
@@ -335,6 +337,142 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     ],
   });
   await syncSwim(db, swim, { meets, results, window }, { actor: "seed" });
+
+  // Tennis (TEN): a season of made-up tournaments and matches, one coming
+  // up with his draw and next opponent, and one found for him to enter.
+  const tennis = await source("Tennis site (sample)", "tennis_tc", "tennis");
+  const self = "91000";
+  const rivals: [string, string][] = [
+    ["92001", "Riley Stone"],
+    ["92002", "Morgan Vale"],
+    ["92003", "Casey Brook"],
+    ["92004", "Jordan Pike"],
+    ["92005", "Quinn Marsh"],
+    ["92006", "Avery Holt"],
+  ];
+  const tournaments: TennisTournamentRecord[] = [];
+  const matches: TennisMatchRecord[] = [];
+  const tournament = (externalId: string, name: string, start: string): TennisTournamentRecord => ({
+    externalId,
+    name,
+    startDate: start,
+    endDate: addDays(start, 2),
+    venue: "Maple Tennis Club",
+    city: "Springfield",
+    region: null,
+    entryDeadline: null,
+    categories: ["U12 Boys Singles"],
+    entered: true,
+    sourceUrl: null,
+  });
+  const tNames = ["Maple Open", "Harvest Cup", "Frost Classic", "Thaw Invitational", "Blossom Open"];
+  const rounds = ["Round of 16", "Quarter final", "Semi final", "Final"];
+  for (let i = 0; i < 5; i++) {
+    const start = addDays(today, -330 + i * 70);
+    const externalId = `seed-t-${i}`;
+    tournaments.push(tournament(externalId, `${tNames[i]} (sample)`, start));
+    // Goes deeper as the season goes on, and wins the last one.
+    const deepest = Math.min(3, 1 + Math.floor(i / 2));
+    for (let r = 0; r <= deepest; r++) {
+      const won = r < deepest || i === 4;
+      matches.push({
+        externalId: `seed-m-${i}-${r}`,
+        tournamentExternalId: externalId,
+        drawNo: "1",
+        eventName: "U12 Boys Singles",
+        round: rounds[r],
+        matchDate: addDays(start, Math.min(r, 2)),
+        scheduledAt: null,
+        side1: [self],
+        side2: [rivals[(i * 2 + r) % rivals.length][0]],
+        winner: won ? 1 : 2,
+        sets: won
+          ? [
+              [6, (i + r) % 5],
+              [6, 1 + (r % 4)],
+            ]
+          : [
+              [4 - (r % 3), 6],
+              [6, 4],
+              [3, 6],
+            ],
+        outcome: "played",
+      });
+    }
+  }
+  const upcoming = addDays(today, 12);
+  tournaments.push(tournament("seed-t-next", "Autumn Championship (sample)", upcoming));
+  const [nextId, nextName] = rivals[1];
+  await syncTennis(
+    db,
+    tennis,
+    {
+      selfMemberId: self,
+      players: [
+        {
+          memberId: self,
+          name: "Sam Sample",
+          club: "Maple Tennis Club",
+          profileId: null,
+          isSelf: true,
+          profileFetched: true,
+        },
+        ...rivals.map(([memberId, name], i) => ({
+          memberId,
+          name,
+          club: ["Cedar Racquet Club", "Birch Tennis Centre"][i % 2],
+          profileId: null,
+          isSelf: false,
+          profileFetched: true,
+        })),
+      ],
+      tournaments,
+      draws: [
+        {
+          tournamentExternalId: "seed-t-next",
+          drawNo: "1",
+          eventName: "U12 Boys Singles",
+          drawName: "Main draw",
+          kind: "bracket",
+          size: 16,
+          position: 5,
+          seed: "3",
+          nextMatch: {
+            status: "next",
+            round: "Round of 16",
+            opponent: { name: nextName, memberId: nextId, tournamentPlayerId: null },
+            feeders: null,
+            date: upcoming,
+            time: "10:30",
+          },
+          sourceUrl: null,
+        },
+      ],
+      matches,
+      window,
+    },
+    { actor: "seed" },
+  );
+  const found = addDays(today, 40);
+  await db
+    .insert(tennisEntries)
+    .values({
+      sourceId: tennis,
+      tournamentExternalId: "seed-t-found",
+      tournamentName: "Winter Warm-up (sample)",
+      startDate: found,
+      endDate: addDays(found, 1),
+      venue: "Birch Tennis Centre",
+      city: "Springfield",
+      entryDeadline: addDays(today, 20),
+      eventNo: "1",
+      eventName: "U12 Boys Singles",
+      driveMinutes: 25,
+      status: "found",
+      tournamentUrl: "https://example.test/tournament/seed-t-found",
+      entryUrl: "https://example.test/tournament/seed-t-found/enter",
+    })
+    .onConflictDoNothing();
 
   ctx.log("seeded", { weeks: WEEKS, from: monday });
 }

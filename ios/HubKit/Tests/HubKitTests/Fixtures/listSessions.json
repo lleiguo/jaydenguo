@@ -16,6 +16,393 @@
       "lastSeenAt": "2026-09-29T08:44:51.325Z",
       "expiresAt": "2026-10-29T08:44:51.324Z",
       "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T08:51:11.808Z",
+      "lastSeenAt": "2026-09-29T08:51:16.205Z",
+      "expiresAt": "2026-10-29T08:51:16.204Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T08:52:01.374Z",
+      "lastSeenAt": "2026-09-29T08:52:05.529Z",
+      "expiresAt": "2026-10-29T08:52:05.529Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T08:52:38.135Z",
+      "lastSeenAt": "2026-09-29T08:52:44.261Z",
+      "expiresAt": "2026-10-29T08:52:44.261Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:41:26.420Z",
+      "lastSeenAt": "2026-09-29T14:42:30.799Z",
+      "expiresAt": "2026-10-29T14:42:30.798Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:42:58.962Z",
+      "lastSeenAt": "2026-09-29T14:43:00.614Z",
+      "expiresAt": "2026-10-29T14:43:00.614Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:43:41.344Z",
+      "lastSeenAt": "2026-09-29T14:45:50.491Z",
+      "expiresAt": "2026-10-29T14:45:50.491Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:45:57.757Z",
+      "lastSeenAt": "2026-09-29T14:46:01.700Z",
+      "expiresAt": "2026-10-29T14:46:01.699Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:46:18.460Z",
+      "lastSeenAt": "2026-09-29T14:46:22.196Z",
+      "expiresAt": "2026-10-29T14:46:22.195Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:46:30.056Z",
+      "lastSeenAt": "2026-09-29T14:46:33.783Z",
+      "expiresAt": "2026-10-29T14:46:33.782Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:46:47.596Z",
+      "lastSeenAt": "2026-09-29T14:46:51.317Z",
+      "expiresAt": "2026-10-29T14:46:51.317Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:47:00.070Z",
+      "lastSeenAt": "2026-09-29T14:47:02.740Z",
+      "expiresAt": "2026-10-29T14:47:02.740Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:47:10.580Z",
+      "lastSeenAt": "2026-09-29T14:47:14.508Z",
+      "expiresAt": "2026-10-29T14:47:14.508Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:47:33.224Z",
+      "lastSeenAt": "2026-09-29T14:47:36.939Z",
+      "expiresAt": "2026-10-29T14:47:36.939Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:47:42.068Z",
+      "lastSeenAt": "2026-09-29T14:47:45.819Z",
+      "expiresAt": "2026-10-29T14:47:45.819Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:48:30.325Z",
+      "lastSeenAt": "2026-09-29T14:48:34.042Z",
+      "expiresAt": "2026-10-29T14:48:34.042Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:49:45.240Z",
+      "lastSeenAt": "2026-09-29T14:49:50.294Z",
+      "expiresAt": "2026-10-29T14:49:50.294Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:50:09.794Z",
+      "lastSeenAt": "2026-09-29T14:50:13.553Z",
+      "expiresAt": "2026-10-29T14:50:13.552Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:50:21.469Z",
+      "lastSeenAt": "2026-09-29T14:50:25.224Z",
+      "expiresAt": "2026-10-29T14:50:25.224Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:50:39.052Z",
+      "lastSeenAt": "2026-09-29T14:50:42.800Z",
+      "expiresAt": "2026-10-29T14:50:42.800Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:50:51.301Z",
+      "lastSeenAt": "2026-09-29T14:50:53.999Z",
+      "expiresAt": "2026-10-29T14:50:53.998Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:51:01.831Z",
+      "lastSeenAt": "2026-09-29T14:51:05.553Z",
+      "expiresAt": "2026-10-29T14:51:05.552Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:51:19.340Z",
+      "lastSeenAt": "2026-09-29T14:51:23.071Z",
+      "expiresAt": "2026-10-29T14:51:23.071Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:51:37.666Z",
+      "lastSeenAt": "2026-09-29T14:51:37.683Z",
+      "expiresAt": "2026-10-29T14:51:37.682Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:52:44.971Z",
+      "lastSeenAt": "2026-09-29T14:53:49.188Z",
+      "expiresAt": "2026-10-29T14:53:49.188Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:53:04.151Z",
+      "lastSeenAt": "2026-09-29T14:53:04.191Z",
+      "expiresAt": "2026-10-29T14:53:04.191Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:53:50.890Z",
+      "lastSeenAt": "2026-09-29T14:53:56.889Z",
+      "expiresAt": "2026-10-29T14:53:56.889Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:54:03.835Z",
+      "lastSeenAt": "2026-09-29T14:54:16.124Z",
+      "expiresAt": "2026-10-29T14:54:16.123Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:54:16.451Z",
+      "lastSeenAt": "2026-09-29T14:54:20.176Z",
+      "expiresAt": "2026-10-29T14:54:20.176Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:54:28.021Z",
+      "lastSeenAt": "2026-09-29T14:54:31.746Z",
+      "expiresAt": "2026-10-29T14:54:31.746Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:54:45.524Z",
+      "lastSeenAt": "2026-09-29T14:54:49.237Z",
+      "expiresAt": "2026-10-29T14:54:49.237Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:54:57.656Z",
+      "lastSeenAt": "2026-09-29T14:55:00.315Z",
+      "expiresAt": "2026-10-29T14:55:00.315Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:55:08.092Z",
+      "lastSeenAt": "2026-09-29T14:55:11.822Z",
+      "expiresAt": "2026-10-29T14:55:11.822Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:55:25.323Z",
+      "lastSeenAt": "2026-09-29T14:55:29.061Z",
+      "expiresAt": "2026-10-29T14:55:29.060Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:55:34.163Z",
+      "lastSeenAt": "2026-09-29T14:55:37.876Z",
+      "expiresAt": "2026-10-29T14:55:37.875Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:56:22.247Z",
+      "lastSeenAt": "2026-09-29T14:56:25.921Z",
+      "expiresAt": "2026-10-29T14:56:25.920Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T14:56:51.864Z",
+      "lastSeenAt": "2026-09-29T17:16:47.435Z",
+      "expiresAt": "2026-10-29T17:16:47.435Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T17:06:24.534Z",
+      "lastSeenAt": "2026-09-29T17:06:24.561Z",
+      "expiresAt": "2026-10-29T17:06:24.560Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T17:06:42.035Z",
+      "lastSeenAt": "2026-09-29T17:06:42.047Z",
+      "expiresAt": "2026-10-29T17:06:42.047Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T17:06:54.939Z",
+      "lastSeenAt": "2026-09-29T17:06:54.968Z",
+      "expiresAt": "2026-10-29T17:06:54.968Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T17:07:17.026Z",
+      "lastSeenAt": "2026-09-29T17:07:17.039Z",
+      "expiresAt": "2026-10-29T17:07:17.038Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T17:16:49.858Z",
+      "lastSeenAt": "2026-09-29T17:18:00.016Z",
+      "expiresAt": "2026-10-29T17:18:00.016Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T17:18:19.307Z",
+      "lastSeenAt": "2026-09-29T17:19:25.500Z",
+      "expiresAt": "2026-10-29T17:19:25.500Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T17:19:36.545Z",
+      "lastSeenAt": "2026-09-29T17:19:36.558Z",
+      "expiresAt": "2026-10-29T17:19:36.558Z",
+      "kind": "device",
       "current": true
     }
   ]

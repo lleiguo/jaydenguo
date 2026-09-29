@@ -1,0 +1,397 @@
+{
+  "player": {
+    "key": "92002",
+    "name": "Morgan Vale",
+    "club": "Birch Tennis Centre",
+    "isSelf": false,
+    "profileUrl": null
+  },
+  "h2h": {
+    "meetings": [
+      {
+        "match": {
+          "id": "59e7a03a-b444-4a33-8f5c-23dffda1a1da",
+          "matchDate": "2026-06-02",
+          "scheduledAt": null,
+          "tournamentId": "8dcb57c6-5a66-4015-8683-705c4ea3451e",
+          "tournamentName": "Thaw Invitational (sample)",
+          "eventName": "U12 Boys Singles",
+          "round": "Quarter final",
+          "drawNo": "1",
+          "sides": [
+            [
+              {
+                "key": "91000",
+                "name": "Sam Sample"
+              }
+            ],
+            [
+              {
+                "key": "92002",
+                "name": "Morgan Vale"
+              }
+            ]
+          ],
+          "winner": 1,
+          "sets": [
+            [
+              6,
+              4
+            ],
+            [
+              6,
+              2
+            ]
+          ],
+          "outcome": "played",
+          "origin": "source",
+          "corrected": false,
+          "sourceDisagrees": false,
+          "notes": null,
+          "source": {
+            "winner": 1,
+            "sets": [
+              [
+                6,
+                4
+              ],
+              [
+                6,
+                2
+              ]
+            ],
+            "outcome": "played",
+            "scheduledAt": null
+          }
+        },
+        "view": {
+          "side": 1,
+          "partner": null,
+          "opponents": [
+            {
+              "key": "92002",
+              "name": "Morgan Vale"
+            }
+          ],
+          "result": "W",
+          "score": "6–4 6–2"
+        }
+      },
+      {
+        "match": {
+          "id": "831f5046-8665-4507-acb9-7f7d3bc1d3e8",
+          "matchDate": "2025-11-04",
+          "scheduledAt": null,
+          "tournamentId": "563942ba-56e9-45f3-be73-42ad562efd26",
+          "tournamentName": "Maple Open (sample)",
+          "eventName": "U12 Boys Singles",
+          "round": "Quarter final",
+          "drawNo": "1",
+          "sides": [
+            [
+              {
+                "key": "91000",
+                "name": "Sam Sample"
+              }
+            ],
+            [
+              {
+                "key": "92002",
+                "name": "Morgan Vale"
+              }
+            ]
+          ],
+          "winner": 2,
+          "sets": [
+            [
+              3,
+              6
+            ],
+            [
+              6,
+              4
+            ],
+            [
+              3,
+              6
+            ]
+          ],
+          "outcome": "played",
+          "origin": "source",
+          "corrected": false,
+          "sourceDisagrees": false,
+          "notes": null,
+          "source": {
+            "winner": 2,
+            "sets": [
+              [
+                3,
+                6
+              ],
+              [
+                6,
+                4
+              ],
+              [
+                3,
+                6
+              ]
+            ],
+            "outcome": "played",
+            "scheduledAt": null
+          }
+        },
+        "view": {
+          "side": 1,
+          "partner": null,
+          "opponents": [
+            {
+              "key": "92002",
+              "name": "Morgan Vale"
+            }
+          ],
+          "result": "L",
+          "score": "3–6 6–4 3–6"
+        }
+      }
+    ],
+    "record": {
+      "wins": 1,
+      "losses": 1
+    }
+  },
+  "form": {
+    "last": [
+      {
+        "match": {
+          "id": "59e7a03a-b444-4a33-8f5c-23dffda1a1da",
+          "matchDate": "2026-06-02",
+          "scheduledAt": null,
+          "tournamentId": "8dcb57c6-5a66-4015-8683-705c4ea3451e",
+          "tournamentName": "Thaw Invitational (sample)",
+          "eventName": "U12 Boys Singles",
+          "round": "Quarter final",
+          "drawNo": "1",
+          "sides": [
+            [
+              {
+                "key": "91000",
+                "name": "Sam Sample"
+              }
+            ],
+            [
+              {
+                "key": "92002",
+                "name": "Morgan Vale"
+              }
+            ]
+          ],
+          "winner": 1,
+          "sets": [
+            [
+              6,
+              4
+            ],
+            [
+              6,
+              2
+            ]
+          ],
+          "outcome": "played",
+          "origin": "source",
+          "corrected": false,
+          "sourceDisagrees": false,
+          "notes": null,
+          "source": {
+            "winner": 1,
+            "sets": [
+              [
+                6,
+                4
+              ],
+              [
+                6,
+                2
+              ]
+            ],
+            "outcome": "played",
+            "scheduledAt": null
+          }
+        },
+        "view": {
+          "side": 2,
+          "partner": null,
+          "opponents": [
+            {
+              "key": "91000",
+              "name": "Sam Sample"
+            }
+          ],
+          "result": "L",
+          "score": "4–6 2–6"
+        }
+      },
+      {
+        "match": {
+          "id": "831f5046-8665-4507-acb9-7f7d3bc1d3e8",
+          "matchDate": "2025-11-04",
+          "scheduledAt": null,
+          "tournamentId": "563942ba-56e9-45f3-be73-42ad562efd26",
+          "tournamentName": "Maple Open (sample)",
+          "eventName": "U12 Boys Singles",
+          "round": "Quarter final",
+          "drawNo": "1",
+          "sides": [
+            [
+              {
+                "key": "91000",
+                "name": "Sam Sample"
+              }
+            ],
+            [
+              {
+                "key": "92002",
+                "name": "Morgan Vale"
+              }
+            ]
+          ],
+          "winner": 2,
+          "sets": [
+            [
+              3,
+              6
+            ],
+            [
+              6,
+              4
+            ],
+            [
+              3,
+              6
+            ]
+          ],
+          "outcome": "played",
+          "origin": "source",
+          "corrected": false,
+          "sourceDisagrees": false,
+          "notes": null,
+          "source": {
+            "winner": 2,
+            "sets": [
+              [
+                3,
+                6
+              ],
+              [
+                6,
+                4
+              ],
+              [
+                3,
+                6
+              ]
+            ],
+            "outcome": "played",
+            "scheduledAt": null
+          }
+        },
+        "view": {
+          "side": 2,
+          "partner": null,
+          "opponents": [
+            {
+              "key": "91000",
+              "name": "Sam Sample"
+            }
+          ],
+          "result": "W",
+          "score": "6–3 4–6 6–3"
+        }
+      }
+    ],
+    "lastYear": {
+      "wins": 1,
+      "losses": 1
+    },
+    "winRate": 0.5
+  },
+  "upcoming": [
+    {
+      "tournament": {
+        "id": "e9119fcf-0ef4-4c31-96fe-66c6423a01d9",
+        "name": "Autumn Championship (sample)"
+      },
+      "draw": {
+        "id": "db96e1ba-1b1a-45f9-8384-f17852229ee1",
+        "eventName": "U12 Boys Singles",
+        "drawName": "Main draw",
+        "kind": "bracket",
+        "size": 16,
+        "position": 5,
+        "seed": "3",
+        "status": "active",
+        "next": {
+          "date": "2026-10-11",
+          "time": "10:30",
+          "round": "Round of 16",
+          "status": "next",
+          "feeders": null,
+          "opponent": {
+            "name": "Morgan Vale",
+            "memberId": "92002",
+            "tournamentPlayerId": null
+          }
+        },
+        "opponentKey": "92002",
+        "sourceUrl": null
+      }
+    }
+  ],
+  "prediction": {
+    "version": "tennis-predict-1",
+    "probability": 0.7266881731367426,
+    "base": 0.7142199895306895,
+    "adjustments": {
+      "headToHead": 0,
+      "form": 0.030000000000000006,
+      "margin": 0.031915393654524095
+    },
+    "confidence": "low",
+    "band": "More likely a win; a third set is possible",
+    "a": {
+      "rating": 1680.9216651495249,
+      "rd": 125.3641530565201,
+      "ratedMatches": 14,
+      "last": {
+        "wins": 8,
+        "losses": 2
+      },
+      "gameShare": 0.6378378378378379
+    },
+    "b": {
+      "rating": 1471.23927498269,
+      "rd": 239.5916148018694,
+      "ratedMatches": 2,
+      "last": {
+        "wins": 1,
+        "losses": 1
+      },
+      "gameShare": 0.4782608695652174
+    },
+    "headToHead": {
+      "wins": 1,
+      "losses": 1
+    },
+    "why": "Ratings 1681 ± 125 vs 1471 ± 240 · head-to-head 1–1 · last 10: Sam 8–2, Morgan 1–1 · games won 64% vs 48% · rated matches 14 vs 2",
+    "opponentKey": "92002",
+    "opponentName": "Morgan Vale",
+    "opponentLevel": {
+      "tournaments": 2,
+      "lastYear": {
+        "wins": 1,
+        "losses": 1
+      }
+    }
+  },
+  "explanation": null
+}
