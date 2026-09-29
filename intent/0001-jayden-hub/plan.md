@@ -755,3 +755,30 @@ detail has a "Jayden's attendance" menu on every event. For events from a
 source or a series it's saved on the override (`event_overrides.attendance`,
 migration 0015; the next is 0016), so it survives syncs, and "Use the
 source's time" keeps it. Events added here change directly.
+
+Household duplicates (owner, 2026-09-28): the family calendar often
+repeats an event a dedicated source has (e.g. "Jayden soccer" next to the
+TeamSnap game). The dedicated source is the truth: `loadCalendar` leaves
+out a household (`google_calendar`) event when a non-household source has
+one of the same category (not "other") that overlaps it by at least half
+the shorter event, or, for all-day events, shares a date
+(`src/domain/duplicates.ts`). Nothing is stored or deleted; the household
+event is just not shown, not clashed and not copied to Google. The two
+events must also share an owner (see Owners below).
+
+Owners (owner, 2026-09-28): every event belongs to one or more people,
+replacing the School/Activities chips (CAL-3a) and "parent only"
+attendance (CON-1). `people` (migration 0018) holds them; exactly one is
+primary (Jayden, seeded by 0019), and an event with no owners is his.
+`events.owner_ids`, `event_series.owner_ids` and `event_overrides.owner_ids`
+hold `people.id`s; a change to a synced event is an override, like
+attendance. A source's mapping has default `owners` and rules can name a
+person ("(Lei) = Lei"), applied at sync by `ownersFor` in the worker;
+owners count in the record hash only when set, so existing events kept
+their hash. Clashes are per person (`Clash.people`), the Google copy holds
+the primary person's events only, and removing a person takes them off
+every event and source. 0019 is a custom migration (`db:generate --custom`):
+it turns `parent_only` into `optional` and drops rules that only said
+"parent only", before 0020 narrows the attendance check. People are added
+under Settings > General; each source's categories and owners are edited
+from its card ("Categories and owners"). The next migration is 0021.

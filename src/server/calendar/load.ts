@@ -2,9 +2,12 @@ import { and, desc, eq, gt, isNotNull, isNull, lt, max, sql } from "drizzle-orm"
 import { changeLog, conflicts, eventOverrides, events, sources } from "@db/schema";
 import { closureDates, detectClashes, type ClashEvent } from "../../domain/clashes";
 import type { Attendance, Category } from "../../domain/constants";
+import { householdDuplicates } from "../../domain/duplicates";
+import { resolveOwners, type Person } from "../../domain/people";
 import { localDate } from "../../domain/time";
 import type { CalendarPayload, ClashView, EventView } from "../../lib/calendar-types";
 import type { DbOrTx } from "../db/client";
+import { listPeople } from "../people";
 import { getHomeTimeZone } from "../settings";
 
 // Reads the calendar for a date range (plan M1.8-M1.9): events with any
@@ -33,7 +36,10 @@ function baseQuery(db: DbOrTx) {
 
 const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : null);
 
-function toView(r: Row, closed: Set<string>, homeTz: string): EventView {
+const ownersOf = (r: Row, people: Person[]) =>
+  resolveOwners(r.override?.ownerIds ?? r.event.ownerIds, people);
+
+function toView(r: Row, closed: Set<string>, homeTz: string, people: Person[]): EventView {
   const e = r.event;
   const o = r.override;
   const start = o?.newStartUtc ?? e.startUtc;
@@ -44,6 +50,7 @@ function toView(r: Row, closed: Set<string>, homeTz: string): EventView {
     title: e.title,
     category: e.category as Category,
     attendance: (o?.attendance ?? e.attendance) as Attendance,
+    owners: ownersOf(r, people),
     start: start.toISOString(),
     end: end.toISOString(),
     allDay: e.allDay,
@@ -60,6 +67,7 @@ function toView(r: Row, closed: Set<string>, homeTz: string): EventView {
           id: o.id,
           skip: o.skip,
           attendance: (o.attendance as Attendance | null) ?? null,
+          owners: o.ownerIds ? resolveOwners(o.ownerIds, people) : null,
           moved: !!o.newStartUtc,
           originalStart: e.startUtc.toISOString(),
           originalEnd: e.endUtc.toISOString(),
@@ -84,12 +92,27 @@ export async function currentCursor(db: DbOrTx): Promise<number> {
 export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<CalendarPayload> {
   const cursor = await currentCursor(db);
   const homeTimeZone = await getHomeTimeZone(db);
+  const people = await listPeople(db);
   // A day either side, so clashes and closures at the edges count.
   const lo = new Date(from.getTime() - 86_400_000);
   const hi = new Date(to.getTime() + 86_400_000);
-  const rows: Row[] = await baseQuery(db)
+  const fetched: Row[] = await baseQuery(db)
     .where(and(isNull(events.deletedAt), lt(effStart, hi), gt(effEnd, lo)))
     .orderBy(effStart, events.id);
+  // A household event that repeats a source's event shows once, as the
+  // source's.
+  const duplicates = householdDuplicates(
+    fetched.map((r) => ({
+      id: r.event.id,
+      sourceKind: r.source?.kind ?? null,
+      category: r.event.category as Category,
+      owners: ownersOf(r, people),
+      start: r.override?.newStartUtc ?? r.event.startUtc,
+      end: r.override?.newEndUtc ?? r.event.endUtc,
+      allDay: r.event.allDay,
+    })),
+  );
+  const rows = fetched.filter((r) => !duplicates.has(r.event.id));
 
   const clashEvents: ClashEvent[] = rows
     .filter((r) => r.event.status === "active" && !r.override?.skip)
@@ -97,6 +120,7 @@ export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<Ca
       id: r.event.id,
       category: r.event.category as Category,
       attendance: (r.override?.attendance ?? r.event.attendance) as Attendance,
+      owners: ownersOf(r, people),
       start: r.override?.newStartUtc ?? r.event.startUtc,
       end: r.override?.newEndUtc ?? r.event.endUtc,
       allDay: r.event.allDay,
@@ -124,10 +148,11 @@ export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<Ca
   const shown = [...inRange, ...rows.filter((r) => partners.has(r.event.id))];
 
   return {
-    events: shown.map((r) => toView(r, closed, homeTimeZone)),
+    events: shown.map((r) => toView(r, closed, homeTimeZone, people)),
     clashes,
     closures: [...closed].sort(),
     homeTimeZone,
+    people,
     cursor,
   };
 }
@@ -136,7 +161,7 @@ export async function loadEvent(db: DbOrTx, id: string): Promise<EventView | nul
   const [row] = await baseQuery(db).where(eq(events.id, id));
   if (!row) return null;
   const homeTz = await getHomeTimeZone(db);
-  return toView(row, new Set(), homeTz);
+  return toView(row, new Set(), homeTz, await listPeople(db));
 }
 
 // The "Deleted" view (CAL-6): manual events that can be restored.
@@ -146,5 +171,6 @@ export async function loadDeleted(db: DbOrTx): Promise<EventView[]> {
     .orderBy(desc(events.deletedAt))
     .limit(200);
   const homeTz = await getHomeTimeZone(db);
-  return rows.map((r) => toView(r, new Set(), homeTz));
+  const people = await listPeople(db);
+  return rows.map((r) => toView(r, new Set(), homeTz, people));
 }

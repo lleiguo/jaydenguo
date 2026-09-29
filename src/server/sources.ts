@@ -24,12 +24,15 @@ export const SOURCE_KINDS = {
 
 const mappingSchema = z.object({
   default: z.enum(CATEGORIES),
+  // Whose events by default (`people.id`s); none means the primary person.
+  owners: z.array(z.uuid()).max(20).optional(),
   rules: z
     .array(
       z.object({
         match: z.string().trim().min(1).max(60),
         category: z.enum(CATEGORIES).optional(),
         attendance: z.enum(ATTENDANCE).optional(),
+        owner: z.uuid().optional(),
       }),
     )
     .max(50)

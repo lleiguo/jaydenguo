@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ATTENDANCE, CATEGORIES } from "@/domain/constants";
+import { resolveOwners, type Person } from "@/domain/people";
 import type { EventView } from "@/lib/calendar-types";
 import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
@@ -14,6 +15,7 @@ type Series = {
   title: string;
   category: string;
   attendance: string;
+  ownerIds: string[];
   notes: string | null;
   locationName: string | null;
   allDay: boolean;
@@ -28,6 +30,7 @@ type Series = {
 // Add or edit a manual event, one-off or repeating (CAL-5).
 export function EventForm(props: {
   tz: string;
+  people: Person[];
   event?: EventView;
   series?: Series;
   defaultDate?: string;
@@ -39,6 +42,7 @@ export function EventForm(props: {
   const [repeat, setRepeat] = useState(!!series);
   const [allDay, setAllDay] = useState(series?.allDay ?? event?.allDay ?? false);
   const [error, setError] = useState<string | null>(null);
+  const owners = event?.owners ?? resolveOwners(series?.ownerIds, props.people);
   const endTimeFromSeries = series
     ? (() => {
         const [h, m] = series.startTime.split(":").map(Number);
@@ -58,12 +62,16 @@ export function EventForm(props: {
           title: s("title"),
           category: s("category"),
           attendance: s("attendance"),
+          // Only sent when there's a choice; otherwise it's the primary person's.
+          ...(props.people.length > 1 && { ownerIds: f.getAll("owner").map(String) }),
           notes: s("notes") || null,
           locationName: s("location") || null,
           allDay,
         };
         setError(null);
         try {
+          if (props.people.length > 1 && f.getAll("owner").length === 0)
+            throw new Error("Pick whose event it is.");
           if (repeat) {
             const [sh, sm] = (s("startTime") || "00:00").split(":").map(Number);
             const [eh, em] = (s("endTime") || "00:00").split(":").map(Number);
@@ -126,7 +134,7 @@ export function EventForm(props: {
           </select>
         </label>
         <label className="flex flex-col">
-          Jayden&apos;s attendance
+          Attendance
           <select
             name="attendance"
             defaultValue={series?.attendance ?? event?.attendance ?? "required"}
@@ -134,12 +142,23 @@ export function EventForm(props: {
           >
             {ATTENDANCE.map((a) => (
               <option key={a} value={a}>
-                {a === "parent_only" ? "parent only" : a}
+                {a}
               </option>
             ))}
           </select>
         </label>
       </div>
+      {props.people.length > 1 && (
+        <fieldset className="flex flex-wrap items-center gap-3">
+          <legend className="float-left mr-2">Whose event</legend>
+          {props.people.map((p) => (
+            <label key={p.id} className="flex items-center gap-1">
+              <input type="checkbox" name="owner" value={p.id} defaultChecked={owners.includes(p.id)} />
+              {p.name}
+            </label>
+          ))}
+        </fieldset>
+      )}
       <label className="flex items-center gap-2">
         <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} /> All day
       </label>

@@ -12,12 +12,14 @@ import {
   resetEvent,
   restoreEvent,
   setAttendance,
+  setOwners,
   skipEvent,
   undoAcceptClash,
   undoOverride,
 } from "@/server/calendar/mutations";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
+import { addPerson, listPeople, removePerson } from "@/server/people";
 import { syncRecords } from "@/server/sync/apply";
 
 const actor = "owner@example.test";
@@ -28,7 +30,7 @@ describe("calendar service", () => {
   let handle: PoolHandle;
   let db: ReturnType<typeof createDb>;
   let sourceId: string;
-  const game: SourceRecord = {
+  const game0: SourceRecord = {
     externalId: "game",
     category: "soccer",
     title: "Game",
@@ -50,12 +52,15 @@ describe("calendar service", () => {
     await db.execute(
       sql`truncate conflicts, event_overrides, event_revisions, events, event_series, change_log restart identity cascade`,
     );
+    await db.execute(sql`delete from people where not is_primary`);
     [{ id: sourceId }] = await db.insert(sources).values({ kind: "ical", name: "Soccer" }).returning();
-    await syncRecords(db, { sourceId }, [game], window, { actor: "sync" });
+    await syncRecords(db, { sourceId }, [game0], window, { actor: "sync" });
   });
   afterAll(() => handle.close());
 
   const cal = () => loadCalendar(db, day(1, 0), day(10, 0));
+  const personId = async (name: string) =>
+    (await listPeople(db)).find((p) => p.name === name)?.id ?? (await addPerson(db, name));
   const gameId = async () => (await db.select().from(events).where(eq(events.sourceId, sourceId)))[0].id;
 
   it("detects a clash, and moving the event clears it; the move survives the next sync (CON-3, CON-5)", async () => {
@@ -79,7 +84,7 @@ describe("calendar service", () => {
     expect(after.cursor).toBeGreaterThan(before.cursor);
 
     // The source moves the game by 30 minutes: the owner's move stays, flagged.
-    await syncRecords(db, { sourceId }, [{ ...game, startUtc: day(3, 21), endUtc: day(3, 22) }], window, {
+    await syncRecords(db, { sourceId }, [{ ...game0, startUtc: day(3, 21), endUtc: day(3, 22) }], window, {
       actor: "sync",
     });
     const moved = (await cal()).events.find((e) => e.id === id)!;
@@ -126,6 +131,7 @@ describe("calendar service", () => {
 
   it("a parent's own event doesn't clash with his; the choice survives syncs and moves (CON-1)", async () => {
     const id = await gameId();
+    const parent = await personId("Parent");
     const cls = await createEvent(db, actor, {
       title: "Class",
       category: "school_class",
@@ -138,41 +144,75 @@ describe("calendar service", () => {
     });
     const clashes = async () =>
       (await cal()).clashes.filter((c) => [c.a, c.b].includes(id) && [c.a, c.b].includes(cls));
-    expect(await clashes()).toHaveLength(1);
+    expect(await clashes()).toMatchObject([{ people: [await personId("Jayden")] }]);
 
     // The synced event is someone else's: an override, kept by the next sync.
-    const undo = await setAttendance(db, actor, id, "parent_only");
+    const undo = await setOwners(db, actor, id, [parent]);
     expect(await clashes()).toHaveLength(0);
-    await syncRecords(db, { sourceId }, [{ ...game, startUtc: day(3, 21), endUtc: day(3, 22) }], window, {
+    await syncRecords(db, { sourceId }, [{ ...game0, startUtc: day(3, 21), endUtc: day(3, 22) }], window, {
       actor: "sync",
     });
     const view = (await cal()).events.find((e) => e.id === id)!;
-    expect(view).toMatchObject({ attendance: "parent_only", override: { attendance: "parent_only" } });
+    expect(view).toMatchObject({ owners: [parent], override: { owners: [parent] } });
 
     // "Use the source's time" after a move keeps whose event it is.
     await moveEvent(db, actor, id, { start: day(4, 21), end: day(4, 22) });
     await resetEvent(db, actor, id);
     expect((await cal()).events.find((e) => e.id === id)).toMatchObject({
       start: day(3, 21).toISOString(),
-      attendance: "parent_only",
+      owners: [parent],
     });
     expect(await clashes()).toHaveLength(0);
-    await resetEvent(db, actor, id);
-    await setAttendance(db, actor, id, "required");
+    // Both of theirs: it clashes again, for him.
+    const both = await setOwners(db, actor, id, [await personId("Jayden"), parent]);
     expect(await clashes()).toHaveLength(1);
+    // Undo steps back to the parent's alone.
+    await undoOverride(db, actor, both.url.split("/")[4]);
+    expect(await clashes()).toHaveLength(0);
     expect(undo.url).toMatch(/^\/api\/v1\/overrides\//);
+    // Giving it back to what the source says drops the owners override.
+    await setOwners(db, actor, id, []);
+    expect((await cal()).events.find((e) => e.id === id)?.override?.owners).toBeNull();
 
     // An event added here changes directly, and undo sets it back.
-    const manualUndo = await setAttendance(db, actor, cls, "parent_only");
+    const manualUndo = await setOwners(db, actor, cls, [parent]);
     const [row] = await db.select().from(events).where(eq(events.id, cls));
-    expect(row.attendance).toBe("parent_only");
+    expect(row.ownerIds).toEqual([parent]);
     expect(await clashes()).toHaveLength(0);
     expect(manualUndo).toEqual({
       method: "POST",
-      url: `/api/v1/events/${cls}/attendance`,
-      body: { attendance: "required" },
+      url: `/api/v1/events/${cls}/owners`,
+      body: { ownerIds: [] },
     });
+
+    // Optional events never clash either.
+    await setOwners(db, actor, cls, []);
+    expect(await clashes()).toHaveLength(1);
+    await setAttendance(db, actor, cls, "optional");
+    expect(await clashes()).toHaveLength(0);
     await deleteEvent(db, actor, cls);
+  });
+
+  it("removing a person gives their events back to the primary person", async () => {
+    const aunt = await addPerson(db, "Aunt");
+    await expect(addPerson(db, "aunt")).rejects.toThrow(/already/);
+    const id = await createEvent(db, actor, {
+      title: "Aunt's visit",
+      category: "other",
+      attendance: "required",
+      ownerIds: [aunt],
+      start: day(6, 15),
+      end: day(6, 16),
+      allDay: false,
+      notes: null,
+      locationName: null,
+    });
+    await removePerson(db, aunt);
+    const view = (await cal()).events.find((e) => e.id === id)!;
+    expect(view.owners).toEqual([await personId("Jayden")]);
+    const [primary] = (await listPeople(db)).filter((p) => p.isPrimary);
+    await expect(removePerson(db, primary.id)).rejects.toThrow(/can't be removed/);
+    await deleteEvent(db, actor, id);
   });
 
   it("deletes softly and restores (CAL-6)", async () => {
@@ -192,6 +232,45 @@ describe("calendar service", () => {
     await restoreEvent(db, actor, id);
     expect((await cal()).events.find((e) => e.id === id)).toBeDefined();
     await expect(deleteEvent(db, actor, await gameId())).rejects.toThrow(/skipped, not deleted/);
+  });
+
+  it("shows a household copy of a source's game once, as the source's", async () => {
+    const [{ id: householdId }] = await db
+      .insert(sources)
+      .values({ kind: "google_calendar", name: "Household" })
+      .returning();
+    const game = (await cal()).events.find((e) => e.title === "Game")!;
+    await syncRecords(
+      db,
+      { sourceId: householdId },
+      [
+        {
+          ...game0,
+          externalId: "h-soccer",
+          title: "Jayden soccer",
+          startUtc: new Date(game.start),
+          endUtc: new Date(game.end),
+        },
+        {
+          ...game0,
+          externalId: "h-math",
+          title: "Math",
+          category: "math",
+          startUtc: new Date(game.start),
+          endUtc: new Date(game.end),
+        },
+      ],
+      window,
+      { actor: "sync" },
+    );
+    const got = await cal();
+    const titles = got.events.map((e) => e.title);
+    expect(titles).toContain("Game");
+    expect(titles).not.toContain("Jayden soccer");
+    // The household math at the same time is a different event: it shows, and clashes.
+    const math = got.events.find((e) => e.title === "Math")!;
+    expect(got.clashes.filter((c) => [c.a, c.b].includes(math.id))).toHaveLength(1);
+    await syncRecords(db, { sourceId: householdId }, [], window, { actor: "sync" });
   });
 
   it("writes out repeating events (CAL-5)", async () => {

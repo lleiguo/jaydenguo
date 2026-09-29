@@ -19,6 +19,9 @@ export type SourceRecord = {
   allDay: boolean;
   attendance: Attendance;
   sourceUrl: string | null;
+  // Whose event (`people.id`s), from the source's mapping; none means the
+  // primary person.
+  ownerIds?: string[];
 };
 
 // The span of time the source was asked about. Only stored events that
@@ -69,6 +72,8 @@ export function recordHash(r: SourceRecord): string {
     r.allDay ? "1" : "0",
     r.attendance,
     r.sourceUrl ?? "",
+    // Only when set, so events from before owners keep their hash.
+    ...(r.ownerIds?.length ? [[...r.ownerIds].sort().join(",")] : []),
   ];
   return createHash("sha256").update(JSON.stringify(stable)).digest("hex").slice(0, 32);
 }

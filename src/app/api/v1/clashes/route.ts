@@ -23,6 +23,7 @@ export const GET = api(async ({ db, request }) => {
     clashes,
     open: clashes.filter((c) => !c.acceptedId).length,
     homeTimeZone: cal.homeTimeZone,
+    people: cal.people,
   });
 });
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ATTENDANCE, type Attendance } from "@/domain/constants";
+import type { Person } from "@/domain/people";
 import type { ClashView, EventView, Undo } from "@/lib/calendar-types";
 import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
@@ -10,15 +11,21 @@ import { externalHref } from "@/lib/external-href";
 
 // Event detail (CAL-4) with the non-drag ways to resolve clashes (NFR-9,
 // CON-3, CON-4): Move to…, Skip, Accept clash, and back to the source time;
-// and whose event it is (a parent's own appointment never clashes).
+// and whose event it is (it only clashes with the same person's events).
 export function EventDetail(props: {
   event: EventView;
   clashes: (ClashView & { other?: EventView })[];
+  people: Person[];
   tz: string;
   onAction: (message: string, undo?: Undo) => void;
   onEdit: () => void;
 }) {
-  const { event: e, tz } = props;
+  const { event: e, tz, people } = props;
+  const names = (ids: string[]) =>
+    people
+      .filter((p) => ids.includes(p.id))
+      .map((p) => p.name)
+      .join(", ");
   const [moving, setMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const info = CATEGORY_INFO[e.category];
@@ -40,7 +47,7 @@ export function EventDetail(props: {
         <span aria-hidden>{info.icon}</span> {info.label}
         {e.attendance !== "required" && ` · ${ATTENDANCE_LABEL[e.attendance]}`}
         {e.status === "cancelled" && " · cancelled by the source"}
-        {o?.skip && " · skipped (Jayden won't attend)"}
+        {o?.skip && " · skipped (won't attend)"}
       </p>
       <p className="font-medium">{formatWhen(e.start, e.end, e.allDay, tz)}</p>
       {e.schoolClosed && <p>🚫 School is closed this day.</p>}
@@ -95,7 +102,9 @@ export function EventDetail(props: {
                 {c.other
                   ? `${CATEGORY_INFO[c.other.category].icon} ${c.other.title}, ${formatWhen(c.other.start, c.other.end, c.other.allDay, tz)}`
                   : "Another event"}
-                {` (overlaps ${c.overlapMin} min)`}
+                {` (overlaps ${c.overlapMin} min`}
+                {people.length > 1 && c.people.length > 0 && `, for ${names(c.people)}`}
+                {")"}
                 {c.acceptedId && " · accepted"}
               </span>
               {c.acceptedId ? (
@@ -122,8 +131,36 @@ export function EventDetail(props: {
         </div>
       )}
 
+      {people.length > 1 && (
+        <fieldset className="flex flex-wrap items-center gap-3" data-testid="event-owners">
+          <legend className="float-left mr-2">Whose event</legend>
+          {people.map((p) => {
+            const on = e.owners.includes(p.id);
+            return (
+              <label key={p.id} className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={on}
+                  // Someone always owns it.
+                  disabled={on && e.owners.length === 1}
+                  onChange={() => {
+                    const ownerIds = on ? e.owners.filter((id) => id !== p.id) : [...e.owners, p.id];
+                    act(
+                      () => call(`/api/v1/events/${e.id}/owners`, "POST", { ownerIds }),
+                      `Now ${names(ownerIds)}'s.`,
+                    );
+                  }}
+                />
+                {p.name}
+              </label>
+            );
+          })}
+          {o?.owners && fromSource && <span className="text-xs">(changed here; the source isn&apos;t)</span>}
+        </fieldset>
+      )}
+
       <label className="flex flex-wrap items-center gap-2">
-        Jayden&apos;s attendance
+        Attendance
         <select
           value={e.attendance}
           onChange={(ev) => {
@@ -131,7 +168,7 @@ export function EventDetail(props: {
             act(
               () => call(`/api/v1/events/${e.id}/attendance`, "POST", { attendance }),
               attendance === "required"
-                ? "Jayden needs to be there."
+                ? "Marked required."
                 : `Marked ${ATTENDANCE_LABEL[attendance]}; it won't clash.`,
             );
           }}
@@ -267,5 +304,4 @@ function MoveForm({
 const ATTENDANCE_LABEL: Record<Attendance, string> = {
   required: "required",
   optional: "optional",
-  parent_only: "parent only",
 };

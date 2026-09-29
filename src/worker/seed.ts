@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { eventSeries, locationBuffers, locations, sources } from "@db/schema";
+import { eventSeries, locationBuffers, locations, people, sources } from "@db/schema";
 import type { Category } from "../domain/constants";
 import { addDays, localDate, weekday, zonedToUtc } from "../domain/time";
 import type { SourceRecord } from "../domain/upsert";
@@ -55,6 +55,17 @@ export async function seedJob(_args: string[], ctx: JobContext) {
   await pair(club, rec, 30);
   await pair(club, pool, 25);
   await pair(rec, pool, 20);
+
+  // People (owner, 2026-09-28): the primary person comes from the
+  // migrations; a made-up parent and brother share the calendar.
+  const person = async (name: string) => {
+    const [existing] = await db.select().from(people).where(eq(people.name, name));
+    if (existing) return existing.id;
+    const [row] = await db.insert(people).values({ name }).returning({ id: people.id });
+    return row.id;
+  };
+  const parent = await person("Parent");
+  const brother = await person("Brother");
 
   const source = async (name: string, kind: string, category: Category) => {
     const [existing] = await db.select().from(sources).where(eq(sources.name, name));
@@ -226,9 +237,9 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     durationMin: 120,
     weekdays: [6],
   });
-  await series("Grandparents' dinner (parent)", {
+  await series("Grandparents' dinner", {
     ...common,
-    attendance: "parent_only",
+    ownerIds: [parent],
     category: "other",
     locationName: null,
     startDate: addDays(monday, -7),
@@ -236,6 +247,18 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     durationMin: 120,
     weekdays: [0],
     intervalWeeks: 2,
+  });
+  // His brother's lesson overlaps his math tutoring: not a clash, since
+  // they're different people's.
+  await series("Piano lesson", {
+    ...common,
+    ownerIds: [brother],
+    category: "other",
+    locationName: "Aspen Music Studio",
+    startDate: addDays(monday, -7),
+    startTime: "17:00",
+    durationMin: 45,
+    weekdays: [1],
   });
 
   // Swimming (SWM): a year of made-up meets with steadily faster times, one

@@ -2,7 +2,7 @@ import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { sources, syncRuns } from "@db/schema";
 import { adapterFor } from "../adapters/registry";
 import { SyncError, type AdapterContext } from "../adapters/types";
-import { parseMapping } from "../domain/categories";
+import { ownersFor, parseMapping } from "../domain/categories";
 import type { Db } from "../server/db/client";
 import type { Logger } from "../server/log";
 import { extendAllSeries } from "../server/calendar/mutations";
@@ -138,7 +138,9 @@ async function runLocked(
     };
     const raw = await withTimeout(adapter.fetchRaw(ctx), SOURCE_TIMEOUT_MS);
     const batch = adapter.normalise(raw, ctx);
-    const plan = await syncRecords(db, { sourceId }, batch.records, batch.window, {
+    // Whose events, from the source's default owners and title rules.
+    const records = batch.records.map((r) => ({ ...r, ownerIds: ownersFor(r.title, ctx.source.mapping) }));
+    const plan = await syncRecords(db, { sourceId }, records, batch.window, {
       actor: "sync",
       syncRunId: run.id,
     });

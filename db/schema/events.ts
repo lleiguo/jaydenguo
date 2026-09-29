@@ -27,6 +27,28 @@ export { ATTENDANCE, CATEGORIES, type Attendance, type Category } from "../../sr
 
 const inList = (values: readonly string[]) => sql.raw(values.map((v) => `'${v}'`).join(", "));
 
+// People whose events the calendar holds (owner, 2026-09-28): Jayden,
+// his parents, his brother. Exactly one is the primary person (Jayden):
+// an event with no owners is his, and the Google copy holds his events.
+export const people = pgTable(
+  "people",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull().unique(),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("people_primary_uq")
+      .on(t.isPrimary)
+      .where(sql`${t.isPrimary}`),
+  ],
+);
+
+// Whose events: `people.id`s. Empty means the primary person.
+const ownerIds = (name: string) => uuid(name).array();
+
 // Places with travel buffers (CON-1). `match` lists lower-case fragments of
 // source location text that mean this place, e.g. "aquatic centre".
 export const locations = pgTable("locations", {
@@ -72,6 +94,9 @@ export const eventSeries = pgTable(
     locationName: text("location_name"),
     locationId: uuid("location_id").references(() => locations.id),
     attendance: text("attendance").notNull().default("required"),
+    ownerIds: ownerIds("owner_ids")
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
     allDay: boolean("all_day").notNull().default(false),
     startDate: date("start_date").notNull(),
     untilDate: date("until_date"),
@@ -113,6 +138,9 @@ export const events = pgTable(
     // not converted to the home time zone.
     allDay: boolean("all_day").notNull().default(false),
     attendance: text("attendance").notNull().default("required"),
+    ownerIds: ownerIds("owner_ids")
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
     status: text("status").notNull().default("active"),
     deletedAt: ts("deleted_at"),
     sourceUrl: text("source_url"),
@@ -147,9 +175,11 @@ export const eventOverrides = pgTable(
     newEndUtc: ts("new_end_utc"),
     // "Skip this one": Jayden won't attend.
     skip: boolean("skip").notNull().default(false),
-    // Whose event it is, when the owner says otherwise than the source
-    // (e.g. a parent's dentist on the family calendar is "parent_only").
+    // Required or optional, when the owner says otherwise than the source.
     attendance: text("attendance"),
+    // Whose event it is, when the owner says otherwise than the source
+    // (e.g. a parent's dentist on the family calendar is Lei's).
+    ownerIds: ownerIds("owner_ids"),
     createdBy: text("created_by").notNull(),
     createdAt: ts("created_at").notNull().defaultNow(),
     // The source's version when the override was made, and when the source

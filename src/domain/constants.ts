@@ -14,5 +14,6 @@ export const CATEGORIES = [
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
-export const ATTENDANCE = ["required", "optional", "parent_only"] as const;
+// Whose event it is lives in its owners (people), not here.
+export const ATTENDANCE = ["required", "optional"] as const;
 export type Attendance = (typeof ATTENDANCE)[number];

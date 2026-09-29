@@ -26,7 +26,15 @@ export const toronto = (date: string, hhmm: string) => new Date(`${date}T${hhmm}
 
 export async function addEvent(
   context: BrowserContext,
-  e: { title: string; category: string; start: string; end: string; allDay?: boolean; attendance?: string },
+  e: {
+    title: string;
+    category: string;
+    start: string;
+    end: string;
+    allDay?: boolean;
+    attendance?: string;
+    ownerIds?: string[];
+  },
 ): Promise<string> {
   const res = await apiSend(context, "POST", "/api/v1/events", {
     attendance: "required",

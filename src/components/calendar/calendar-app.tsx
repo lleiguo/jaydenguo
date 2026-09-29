@@ -30,11 +30,10 @@ type Range = { from: string; to: string };
 type Clash = ClashView & { other?: EventView };
 
 function isVisible(e: EventView, f: Filters): boolean {
-  // Closure banners stay visible even when School is hidden (CAL-3a).
+  // Closure banners stay visible whoever is hidden (CAL-3a).
   if (e.category === "school_closure") return true;
-  const layer = CATEGORY_INFO[e.category].layer;
-  if (layer === "school" && !f.school) return false;
-  if (layer === "activities" && !f.activities) return false;
+  // Shown while any of its people is (owner, 2026-09-28).
+  if (!e.owners.some((id) => !f.hiddenPeople.includes(id))) return false;
   if (f.hiddenCategories.includes(e.category)) return false;
   if (e.source && f.hiddenSources.includes(e.source.id)) return false;
   return true;
@@ -73,6 +72,19 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
   useLiveUpdates(data?.cursor ?? null, reload);
 
   const byId = useMemo(() => new Map((data?.events ?? []).map((e) => [e.id, e])), [data]);
+  const people = useMemo(() => data?.people ?? [], [data]);
+  // Names on an event, unless it's only the primary person's.
+  const ownerLabel = useCallback(
+    (e: EventView) => {
+      const primary = people.find((p) => p.isPrimary)?.id;
+      if (e.owners.length === 1 && e.owners[0] === primary) return null;
+      return people
+        .filter((p) => e.owners.includes(p.id))
+        .map((p) => p.name)
+        .join(", ");
+    },
+    [people],
+  );
   const clashesOf = useMemo(() => {
     const m = new Map<string, Clash[]>();
     for (const c of data?.clashes ?? []) {
@@ -207,17 +219,27 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        {/* CAL-3a layer chips, always visible above the calendar. */}
-        {(["school", "activities"] as const).map((layer) => (
-          <button
-            key={layer}
-            aria-pressed={filters[layer]}
-            onClick={() => setFilters({ ...filters, [layer]: !filters[layer] })}
-            className={`rounded-full border px-3 py-1 text-sm ${filters[layer] ? "border-blue-700 bg-blue-700 text-white" : ""}`}
-          >
-            {layer === "school" ? "🏫 School" : "⚽ Activities"}
-          </button>
-        ))}
+        {/* CAL-3a people chips, always visible above the calendar. */}
+        {people.map((p) => {
+          const on = !filters.hiddenPeople.includes(p.id);
+          return (
+            <button
+              key={p.id}
+              aria-pressed={on}
+              onClick={() =>
+                setFilters({
+                  ...filters,
+                  hiddenPeople: on
+                    ? [...filters.hiddenPeople, p.id]
+                    : filters.hiddenPeople.filter((x) => x !== p.id),
+                })
+              }
+              className={`rounded-full border px-3 py-1 text-sm ${on ? "border-blue-700 bg-blue-700 text-white" : ""}`}
+            >
+              {p.name}
+            </button>
+          );
+        })}
         <button
           className="rounded-full border px-3 py-1 text-sm"
           aria-expanded={showFilters}
@@ -386,6 +408,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
                   {clashMark}
                   {arg.timeText && <span>{arg.timeText}</span>}
                   <span className="hub-title">{e.title}</span>
+                  {ownerLabel(e) && <span className="hub-owner">· {ownerLabel(e)}</span>}
                   {e.override?.sourceChangedAt && <span title="Source changed since you moved this">↻</span>}
                   {e.schoolClosed && <span title="School closed">🚫</span>}
                 </div>
@@ -400,6 +423,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
           <EventDetail
             event={selectedEvent}
             clashes={clashesOf.get(selectedEvent.id) ?? []}
+            people={data.people}
             tz={data.homeTimeZone}
             onAction={done}
             onEdit={() => openEdit(selectedEvent)}
@@ -416,6 +440,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
         >
           <EventForm
             tz={data.homeTimeZone}
+            people={data.people}
             event={editing === "new" || series ? undefined : editing}
             series={series}
             defaultDate={range?.from.slice(0, 10)}

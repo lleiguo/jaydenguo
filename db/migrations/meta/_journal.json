@@ -127,6 +127,27 @@
       "when": 1790632502914,
       "tag": "0017_video_playback",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790652945130,
+      "tag": "0018_people",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790652950071,
+      "tag": "0019_people_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790652972081,
+      "tag": "0020_attendance_owners",
+      "breakpoints": true
     }
   ]
 }

@@ -29,6 +29,7 @@ function sourceFields(r: SourceRecord) {
     allDay: r.allDay,
     attendance: r.attendance,
     sourceUrl: r.sourceUrl,
+    ownerIds: r.ownerIds ?? [],
   };
 }
 
@@ -56,6 +57,7 @@ async function loadStored(db: DbOrTx, scope: SyncScope): Promise<StoredEvent[]> 
       allDay: e.allDay,
       attendance: e.attendance as SourceRecord["attendance"],
       sourceUrl: e.sourceUrl,
+      ownerIds: e.ownerIds,
     },
   }));
 }
