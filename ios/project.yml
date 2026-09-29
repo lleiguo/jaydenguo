@@ -7,6 +7,11 @@ options:
     iOS: "18.0"
   createIntermediateGroups: true
   generateEmptyDirectories: true
+# The team comes from Signing.xcconfig, which includes a git-ignored
+# Local.xcconfig (plan O-1).
+configFiles:
+  Debug: Signing.xcconfig
+  Release: Signing.xcconfig
 packages:
   HubKit:
     path: HubKit
@@ -15,8 +20,6 @@ settings:
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
-    # The owner's team, once the Apple Developer account exists (plan O-1).
-    DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 targets:
@@ -49,7 +52,7 @@ targets:
           NSAllowsLocalNetworking: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub
+        PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub$(HUB_BUNDLE_SUFFIX)
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_STRICT_CONCURRENCY: complete
         ASSETCATALOG_COMPILER_APPICON_NAME: ""
@@ -61,7 +64,7 @@ targets:
       - target: HubApp
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub$(HUB_BUNDLE_SUFFIX).uitests
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
 schemes:

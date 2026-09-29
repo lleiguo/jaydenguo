@@ -26,6 +26,30 @@ ios/
 3. `cd ios && xcodegen && open JaydenHub.xcodeproj`. The first build asks
    to trust the OpenAPI generator plugin: choose **Trust & Enable**.
 
+## Run on your iPhone
+
+Signing comes from `Signing.xcconfig`, which includes a git-ignored
+`Local.xcconfig`. Create it with your team ID (Xcode shows it once a
+project picks the team in Signing & Capabilities):
+
+```
+DEVELOPMENT_TEAM = ABCDE12345
+HUB_BUNDLE_SUFFIX = .dev
+```
+
+Keep `.dev` on a free Personal Team: its builds stop opening after 7 days
+and it can't use `com.jaydenguo.hub`, which belongs to the paid team
+(TestFlight). With the paid team, drop the suffix. Then, with the phone
+plugged in and Developer Mode on:
+
+```bash
+cd ios && xcodegen && xcodebuild -project JaydenHub.xcodeproj -scheme HubApp -destination 'platform=iOS,name=<your iPhone>' -derivedDataPath build/device -allowProvisioningUpdates -skipPackagePluginValidation build
+xcrun devicectl device install app --device '<your iPhone>' build/device/Build/Products/Debug-iphoneos/HubApp.app
+```
+
+The first launch needs Settings → General → VPN & Device Management →
+trust the developer. Device builds talk to jaydenguo.com.
+
 ## Test
 
 ```bash
