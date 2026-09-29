@@ -1,5 +1,5 @@
 # Spec: watch the video alongside its review
-Source: [intent.md](intent.md). Status: draft (2026-09-28).
+Source: [intent.md](intent.md). Status: approved (owner, 2026-09-28: merged in #40 and deployed).
 
 Changes 0001 VID-2, §7.2 and the §11 assumption "nothing is kept
 afterwards except the reviews": a small copy of the reviewed part is now
@@ -40,5 +40,5 @@ and each view downloads the clip once.
 | # | Concern | Handling |
 |---|---|---|
 | P-1 | This reverses a privacy decision in 0001. The copies show Jayden. | They're kept in the owner's own Google Cloud project in Canada, behind sign-in, with no public or signed links, and each one can be deleted. Only the reviewed part is kept, without sound. |
-| P-2 | Firebase Hosting might not pass range requests through to Cloud Run. | Seeking still works if it doesn't: the clip is small and saved with `faststart`, so the browser downloads it whole. Check in production after deploy. |
+| P-2 | Firebase Hosting might not pass range requests through to Cloud Run. | Seeking still works if it doesn't: the clip is small and saved with `faststart`, so the browser downloads it whole. Checked in production 2026-09-28: seeking works. |
 | P-3 | The model's time for a point can be a second or so out. | The markers show where the model looked. The frame-step buttons help find the exact moment. |

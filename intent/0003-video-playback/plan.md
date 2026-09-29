@@ -1,5 +1,5 @@
 # Plan: watch the video alongside its review
-Source: [spec.md](spec.md). Status: draft (2026-09-28).
+Source: [spec.md](spec.md). Status: approved (2026-09-28).
 
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -13,4 +13,4 @@ Source: [spec.md](spec.md). Status: draft (2026-09-28).
 ## Status
 | Task | Status |
 |---|---|
-| P.1–P.6 | built on `video/playback` (2026-09-28), not merged; P.6 needs `terraform apply` |
+| P.1–P.6 | done: merged in #40, Terraform applied and deployed (2026-09-28); live check passed |

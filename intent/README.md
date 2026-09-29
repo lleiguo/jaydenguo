@@ -16,5 +16,5 @@ Rules:
 | # | Change | Intent | Spec | Plan |
 |---|---|---|---|---|
 | 0001 | [Jayden hub](0001-jayden-hub/) | approved 2026-09-26 | approved 2026-09-26 | approved 2026-09-26; M0 done |
-| 0002 | [Costs dashboard](0002-costs-dashboard/) | approved 2026-09-28 (chat) | draft 2026-09-28 | draft 2026-09-28; built, not merged |
-| 0003 | [Video playback](0003-video-playback/) | approved 2026-09-28 (chat) | draft 2026-09-28 | draft 2026-09-28; built, not merged |
+| 0002 | [Costs dashboard](0002-costs-dashboard/) | approved 2026-09-28 (chat) | approved 2026-09-28 (merged, #40) | approved 2026-09-28; done, deployed |
+| 0003 | [Video playback](0003-video-playback/) | approved 2026-09-28 (chat) | approved 2026-09-28 (merged, #40) | approved 2026-09-28; done, deployed |
