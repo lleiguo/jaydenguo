@@ -635,27 +635,19 @@
                   },
                   "notes": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000
                   },
                   "locationName": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 300
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 300
                   }
                 },
                 "required": [
@@ -824,27 +816,19 @@
                   },
                   "notes": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000
                   },
                   "locationName": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 300
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 300
                   }
                 },
                 "required": [
@@ -1294,27 +1278,19 @@
                   },
                   "notes": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000
                   },
                   "locationName": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 300
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 300
                   },
                   "allDay": {
                     "default": false,
@@ -1326,15 +1302,11 @@
                   },
                   "untilDate": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                   },
                   "startTime": {
                     "type": "string",
@@ -1499,27 +1471,19 @@
                   },
                   "notes": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000
                   },
                   "locationName": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 300
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 300
                   },
                   "allDay": {
                     "default": false,
@@ -1531,15 +1495,11 @@
                   },
                   "untilDate": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                   },
                   "startTime": {
                     "type": "string",
@@ -2994,37 +2954,25 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   },
                   "startTime": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
                   },
                   "endTime": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
                   },
                   "location": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 300
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 300
                   },
                   "category": {
                     "type": "string",
@@ -3407,16 +3355,12 @@
                     "maxLength": 120
                   },
                   "place": {
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 500
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 500
                   },
                   "notes": {
                     "type": "string",
@@ -3534,27 +3478,19 @@
                     ]
                   },
                   "dqReason": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 120
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 120
                   },
                   "place": {
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 500
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 500
                   },
                   "swimDate": {
                     "type": "string",
@@ -3562,15 +3498,11 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   },
                   "notes": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 500
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
                   }
                 }
               }
@@ -3889,15 +3821,11 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   },
                   "time": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
                   },
                   "opponentKey": {
                     "type": "string",
@@ -4024,37 +3952,25 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   },
                   "time": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
                   },
                   "round": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 40
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 40
                   },
                   "notes": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 500
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
                   }
                 }
               }
@@ -4245,15 +4161,11 @@
                 "type": "object",
                 "properties": {
                   "url": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 2000
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000
                   },
                   "sport": {
                     "type": "string",
@@ -4272,41 +4184,29 @@
                   },
                   "note": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 500
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
                   },
                   "segmentStart": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 21600
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 21600
                   },
                   "segmentEnd": {
                     "default": null,
-                    "anyOf": [
-                      {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 21600
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 21600
                   }
                 },
                 "required": [
@@ -4931,10 +4831,7 @@
             ]
           },
           "last": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "properties": {
               "created": {
                 "type": "number"
@@ -4950,7 +4847,8 @@
               "created",
               "updated",
               "deleted"
-            ]
+            ],
+            "x-nullable": true
           },
           "accounts": {
             "type": "array",
@@ -4977,7 +4875,6 @@
           "calendarId",
           "lastRunAt",
           "lastError",
-          "last",
           "accounts"
         ]
       },
@@ -5012,10 +4909,7 @@
             ]
           },
           "last": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "properties": {
               "created": {
                 "type": "number"
@@ -5031,7 +4925,8 @@
               "created",
               "updated",
               "deleted"
-            ]
+            ],
+            "x-nullable": true
           }
         },
         "required": [
@@ -5039,8 +4934,7 @@
           "credentialId",
           "calendarId",
           "lastRunAt",
-          "lastError",
-          "last"
+          "lastError"
         ]
       },
       "CalendarPayload": {
@@ -5303,10 +5197,7 @@
                   ]
                 },
                 "sides": {
-                  "type": [
-                    "object",
-                    "null"
-                  ],
+                  "type": "object",
                   "properties": {
                     "for": {
                       "type": "string"
@@ -5318,15 +5209,15 @@
                   "required": [
                     "for",
                     "against"
-                  ]
+                  ],
+                  "x-nullable": true
                 }
               },
               "required": [
                 "text",
                 "at",
                 "why",
-                "status",
-                "sides"
+                "status"
               ]
             }
           },
@@ -5355,10 +5246,7 @@
                   ]
                 },
                 "sides": {
-                  "type": [
-                    "object",
-                    "null"
-                  ],
+                  "type": "object",
                   "properties": {
                     "for": {
                       "type": "string"
@@ -5370,15 +5258,15 @@
                   "required": [
                     "for",
                     "against"
-                  ]
+                  ],
+                  "x-nullable": true
                 }
               },
               "required": [
                 "text",
                 "at",
                 "why",
-                "status",
-                "sides"
+                "status"
               ]
             }
           },
@@ -5514,10 +5402,7 @@
             ]
           },
           "forecast": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "properties": {
               "total": {
                 "$ref": "#/components/schemas/Forecast"
@@ -5529,13 +5414,11 @@
             "required": [
               "total",
               "ai"
-            ]
+            ],
+            "x-nullable": true
           },
           "lastMonth": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "properties": {
               "total": {
                 "type": "number"
@@ -5547,7 +5430,8 @@
             "required": [
               "total",
               "toSameDay"
-            ]
+            ],
+            "x-nullable": true
           },
           "services": {
             "type": "array",
@@ -5575,30 +5459,14 @@
             "type": "object",
             "properties": {
               "project": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/Budget"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "$ref": "#/components/schemas/Budget",
+                "x-nullable": true
               },
               "ai": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/Budget"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "$ref": "#/components/schemas/Budget",
+                "x-nullable": true
               }
-            },
-            "required": [
-              "project",
-              "ai"
-            ]
+            }
           }
         },
         "required": [
@@ -5606,8 +5474,6 @@
           "latestDay",
           "month",
           "monthToDate",
-          "forecast",
-          "lastMonth",
           "services",
           "budgets"
         ]
@@ -5749,13 +5615,11 @@
             ]
           },
           "scopes": {
-            "type": [
-              "array",
-              "null"
-            ],
+            "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "x-nullable": true
           },
           "meta": {},
           "status": {
@@ -5795,7 +5659,6 @@
           "provider",
           "label",
           "username",
-          "scopes",
           "meta",
           "status",
           "updatedAt",
@@ -5948,6 +5811,28 @@
           "expiresAt"
         ]
       },
+      "DrawPrediction": {
+        "type": "object",
+        "properties": {
+          "drawId": {
+            "type": "string"
+          },
+          "prediction": {
+            "$ref": "#/components/schemas/PredictionView",
+            "x-nullable": true
+          },
+          "explanation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "drawId",
+          "explanation"
+        ]
+      },
       "DrawView": {
         "type": "object",
         "properties": {
@@ -6011,10 +5896,7 @@
                     "type": "string"
                   },
                   "opponent": {
-                    "type": [
-                      "object",
-                      "null"
-                    ],
+                    "type": "object",
                     "properties": {
                       "name": {
                         "type": "string"
@@ -6036,13 +5918,11 @@
                       "name",
                       "memberId",
                       "tournamentPlayerId"
-                    ]
+                    ],
+                    "x-nullable": true
                   },
                   "feeders": {
-                    "type": [
-                      "array",
-                      "null"
-                    ],
+                    "type": "array",
                     "prefixItems": [
                       {
                         "type": "string"
@@ -6052,7 +5932,8 @@
                       }
                     ],
                     "minItems": 2,
-                    "maxItems": 2
+                    "maxItems": 2,
+                    "x-nullable": true
                   },
                   "date": {
                     "type": [
@@ -6070,8 +5951,6 @@
                 "required": [
                   "status",
                   "round",
-                  "opponent",
-                  "feeders",
                   "date",
                   "time"
                 ]
@@ -6091,11 +5970,9 @@
                 "required": [
                   "status"
                 ]
-              },
-              {
-                "type": "null"
               }
-            ]
+            ],
+            "x-nullable": true
           },
           "opponentKey": {
             "type": [
@@ -6119,7 +5996,6 @@
           "position",
           "seed",
           "status",
-          "next",
           "opponentKey",
           "sourceUrl"
         ]
@@ -6270,10 +6146,7 @@
             ]
           },
           "source": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "properties": {
               "id": {
                 "type": "string"
@@ -6289,7 +6162,8 @@
               "id",
               "name",
               "kind"
-            ]
+            ],
+            "x-nullable": true
           },
           "seriesId": {
             "type": [
@@ -6304,10 +6178,7 @@
             ]
           },
           "override": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "properties": {
               "id": {
                 "type": "string"
@@ -6327,13 +6198,11 @@
                 ]
               },
               "owners": {
-                "type": [
-                  "array",
-                  "null"
-                ],
+                "type": "array",
                 "items": {
                   "type": "string"
-                }
+                },
+                "x-nullable": true
               },
               "moved": {
                 "type": "boolean"
@@ -6351,10 +6220,7 @@
                 ]
               },
               "snapshot": {
-                "type": [
-                  "object",
-                  "null"
-                ],
+                "type": "object",
                 "properties": {
                   "start": {
                     "type": "string"
@@ -6370,7 +6236,8 @@
                   "start",
                   "end",
                   "title"
-                ]
+                ],
+                "x-nullable": true
               },
               "createdBy": {
                 "type": "string"
@@ -6383,15 +6250,14 @@
               "id",
               "skip",
               "attendance",
-              "owners",
               "moved",
               "originalStart",
               "originalEnd",
               "sourceChangedAt",
-              "snapshot",
               "createdBy",
               "createdAt"
-            ]
+            ],
+            "x-nullable": true
           },
           "schoolClosed": {
             "type": "boolean"
@@ -6411,10 +6277,8 @@
           "notes",
           "locationName",
           "sourceUrl",
-          "source",
           "seriesId",
           "lastSyncedAt",
-          "override",
           "schoolClosed"
         ]
       },
@@ -6751,11 +6615,9 @@
               {
                 "type": "number",
                 "const": 2
-              },
-              {
-                "type": "null"
               }
-            ]
+            ],
+            "x-nullable": true
           },
           "sets": {
             "type": "array",
@@ -6798,10 +6660,7 @@
             ]
           },
           "source": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "properties": {
               "scheduledAt": {
                 "type": [
@@ -6818,11 +6677,9 @@
                   {
                     "type": "number",
                     "const": 2
-                  },
-                  {
-                    "type": "null"
                   }
-                ]
+                ],
+                "x-nullable": true
               },
               "sets": {
                 "type": "array",
@@ -6842,10 +6699,10 @@
             },
             "required": [
               "scheduledAt",
-              "winner",
               "sets",
               "outcome"
-            ]
+            ],
+            "x-nullable": true
           }
         },
         "required": [
@@ -6857,15 +6714,13 @@
           "eventName",
           "round",
           "sides",
-          "winner",
           "sets",
           "outcome",
           "drawNo",
           "origin",
           "corrected",
           "sourceDisagrees",
-          "notes",
-          "source"
+          "notes"
         ]
       },
       "MeetView": {
@@ -6963,10 +6818,7 @@
                   ]
                 },
                 "session": {
-                  "type": [
-                    "object",
-                    "null"
-                  ],
+                  "type": "object",
                   "properties": {
                     "date": {
                       "type": "string"
@@ -6978,7 +6830,8 @@
                   "required": [
                     "date",
                     "time"
-                  ]
+                  ],
+                  "x-nullable": true
                 }
               },
               "required": [
@@ -6986,8 +6839,7 @@
                 "stroke",
                 "course",
                 "key",
-                "seedTimeMs",
-                "session"
+                "seedTimeMs"
               ]
             }
           },
@@ -7105,14 +6957,8 @@
             ]
           },
           "partner": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PlayerRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/PlayerRef",
+            "x-nullable": true
           },
           "opponents": {
             "type": "array",
@@ -7137,7 +6983,6 @@
         },
         "required": [
           "side",
-          "partner",
           "opponents",
           "result",
           "score"
@@ -7452,10 +7297,7 @@
             "type": "boolean"
           },
           "source": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "properties": {
               "timeMs": {
                 "type": [
@@ -7473,7 +7315,8 @@
             "required": [
               "timeMs",
               "dqReason"
-            ]
+            ],
+            "x-nullable": true
           },
           "isPb": {
             "type": "boolean"
@@ -7511,7 +7354,6 @@
           "origin",
           "corrected",
           "sourceDisagrees",
-          "source",
           "isPb",
           "previousBestMs",
           "changeMs"
@@ -7774,19 +7616,10 @@
         "type": "object",
         "properties": {
           "schoolDay": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SchoolDay"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/SchoolDay",
+            "x-nullable": true
           }
-        },
-        "required": [
-          "schoolDay"
-        ]
+        }
       },
       "ScoreboardResponse": {
         "type": "object",
@@ -8206,14 +8039,8 @@
                   "type": "number"
                 },
                 "lastRun": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/RunView"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
+                  "$ref": "#/components/schemas/RunView",
+                  "x-nullable": true
                 },
                 "running": {
                   "type": "boolean"
@@ -8236,7 +8063,6 @@
                 "categoryMapping",
                 "lastSuccessAt",
                 "consecutiveFailures",
-                "lastRun",
                 "running",
                 "nextRefreshAt"
               ]
@@ -8322,10 +8148,7 @@
             "type": "string"
           },
           "target": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "properties": {
               "id": {
                 "type": "string"
@@ -8349,7 +8172,8 @@
               "start",
               "end",
               "allDay"
-            ]
+            ],
+            "x-nullable": true
           },
           "eventId": {
             "type": [
@@ -8377,7 +8201,6 @@
           "subject",
           "receivedAt",
           "sourceName",
-          "target",
           "eventId",
           "decidedAt"
         ]
@@ -8583,14 +8406,8 @@
             "$ref": "#/components/schemas/DrawView"
           },
           "prediction": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PredictionView"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/PredictionView",
+            "x-nullable": true
           },
           "explanation": {
             "type": [
@@ -8602,7 +8419,6 @@
         "required": [
           "tournament",
           "draw",
-          "prediction",
           "explanation"
         ]
       },
@@ -8698,17 +8514,10 @@
                     "$ref": "#/components/schemas/DrawView"
                   }
                 },
-                "predictions": {
+                "drawPredictions": {
                   "type": "array",
                   "items": {
-                    "anyOf": [
-                      {
-                        "$ref": "#/components/schemas/PredictionView"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "$ref": "#/components/schemas/DrawPrediction"
                   }
                 }
               },
@@ -8724,7 +8533,7 @@
                 "events",
                 "status",
                 "draws",
-                "predictions"
+                "drawPredictions"
               ]
             }
           },
@@ -9003,14 +8812,8 @@
             }
           },
           "prediction": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PredictionView"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/PredictionView",
+            "x-nullable": true
           },
           "explanation": {
             "type": [
@@ -9024,7 +8827,6 @@
           "h2h",
           "form",
           "upcoming",
-          "prediction",
           "explanation"
         ]
       },
@@ -9149,34 +8951,17 @@
               ]
             }
           },
-          "predictions": {
+          "drawPredictions": {
             "type": "array",
             "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/PredictionView"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "explanations": {
-            "type": "array",
-            "items": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "$ref": "#/components/schemas/DrawPrediction"
             }
           }
         },
         "required": [
           "tournament",
           "matches",
-          "predictions",
-          "explanations"
+          "drawPredictions"
         ]
       },
       "TodayView": {
@@ -9254,14 +9039,8 @@
             "type": "number"
           },
           "schoolDay": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SchoolDay"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/SchoolDay",
+            "x-nullable": true
           },
           "nextMatches": {
             "type": "array",
@@ -9270,14 +9049,8 @@
             }
           },
           "nextMeet": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MeetView"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/MeetView",
+            "x-nullable": true
           },
           "waiting": {
             "type": "object",
@@ -9482,9 +9255,7 @@
           "closures",
           "clashes",
           "cursor",
-          "schoolDay",
           "nextMatches",
-          "nextMeet",
           "waiting"
         ]
       },
@@ -9655,10 +9426,7 @@
                 "type": "string"
               },
               "action": {
-                "type": [
-                  "object",
-                  "null"
-                ],
+                "type": "object",
                 "properties": {
                   "text": {
                     "type": "string"
@@ -9670,13 +9438,13 @@
                 "required": [
                   "text",
                   "url"
-                ]
+                ],
+                "x-nullable": true
               }
             },
             "required": [
               "kind",
-              "label",
-              "action"
+              "label"
             ]
           },
           {
@@ -10003,14 +9771,8 @@
             ]
           },
           "verdict": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Verdict"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/Verdict",
+            "x-nullable": true
           },
           "combinedReview": {},
           "costUsd": {
@@ -10110,7 +9872,6 @@
           "segmentEnd",
           "durationSec",
           "promptVersion",
-          "verdict",
           "combinedReview",
           "costUsd",
           "votedAt",

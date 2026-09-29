@@ -1,0 +1,23 @@
+{
+  "id": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+  "title": "Tennis lesson",
+  "category": "tennis",
+  "notes": null,
+  "locationName": "Maple Tennis Club",
+  "locationId": null,
+  "attendance": "required",
+  "ownerIds": [],
+  "allDay": false,
+  "startDate": "2026-09-21",
+  "untilDate": "2026-12-07",
+  "startTime": "16:30",
+  "durationMin": 60,
+  "timeZone": "America/Toronto",
+  "intervalWeeks": 1,
+  "weekdays": [
+    3
+  ],
+  "createdAt": "2026-09-29T08:43:52.627Z",
+  "updatedAt": "2026-09-29T08:43:52.627Z",
+  "deletedAt": null
+}

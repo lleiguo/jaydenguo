@@ -14,7 +14,19 @@ type Doc = {
   components: object;
 };
 
-const doc = JSON.parse(readFileSync(path.resolve(__dirname, "../../../openapi.json"), "utf8")) as Doc;
+// Properties marked `x-nullable` (see scripts/openapi.ts) may be null.
+function allowNulls(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(allowNulls);
+  if (!node || typeof node !== "object") return node;
+  const out = Object.fromEntries(Object.entries(node).map(([k, v]) => [k, allowNulls(v)]));
+  if (out["x-nullable"] !== true) return out;
+  delete out["x-nullable"];
+  return { anyOf: [out, { type: "null" }] };
+}
+
+const doc = allowNulls(
+  JSON.parse(readFileSync(path.resolve(__dirname, "../../../openapi.json"), "utf8")),
+) as Doc;
 const ajv = new Ajv2020({ strict: false, allErrors: true });
 addFormats(ajv);
 

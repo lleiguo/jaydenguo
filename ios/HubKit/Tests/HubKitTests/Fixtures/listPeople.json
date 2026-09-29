@@ -1,0 +1,19 @@
+{
+  "people": [
+    {
+      "id": "6d13c3b6-63c4-4078-983e-0e36257c13d6",
+      "name": "Child",
+      "isPrimary": true
+    },
+    {
+      "id": "df482782-a98c-45a9-b16b-3ee5616a15ab",
+      "name": "Parent",
+      "isPrimary": false
+    },
+    {
+      "id": "579a6c67-834b-401a-be17-84c893a80315",
+      "name": "Brother",
+      "isPrimary": false
+    }
+  ]
+}

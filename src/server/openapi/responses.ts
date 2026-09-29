@@ -24,7 +24,7 @@ import type {
   loadTournament,
   PredictionView,
 } from "../tennis/load";
-import type { TennisOverview } from "../tennis/overview";
+import type { DrawPrediction, TennisOverview } from "../tennis/overview";
 import type { TodayView } from "../today";
 import type { Combined, Critique, FinalScore, Rebuttal, Review } from "../video/prompts";
 import type { ScoreboardRow, VideoReviewDetail, VideoReviewSummary } from "../video/store";
@@ -89,9 +89,8 @@ export type { TennisOverview };
 export type TennisTournamentResponse = {
   tournament: LoadedTournament["tournament"];
   matches: LoadedTournament["matches"];
-  // One per draw, in the same order: a prediction for his next match.
-  predictions: (PredictionView | null)[];
-  explanations: (string | null)[];
+  // One per draw: a prediction for his next match.
+  drawPredictions: DrawPrediction[];
 };
 export type TennisPlayerResponse = {
   player: LoadedPlayer["player"];

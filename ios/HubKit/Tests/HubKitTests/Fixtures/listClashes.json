@@ -1,0 +1,1013 @@
+{
+  "clashes": [
+    {
+      "a": "58aa7563-b921-4676-bcad-83f61b2e8403",
+      "b": "e69304e2-9dfe-49f2-aa4b-a1ca7f520ac8",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "58aa7563-b921-4676-bcad-83f61b2e8403",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-09-30T21:10:00.000Z",
+        "end": "2026-09-30T21:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "e69304e2-9dfe-49f2-aa4b-a1ca7f520ac8",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-09-30T20:30:00.000Z",
+        "end": "2026-09-30T21:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "63d43f33-96a6-4858-a53f-749f2f0e9e7d",
+      "b": "ebe57760-e402-46df-8370-1f89702136ae",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "63d43f33-96a6-4858-a53f-749f2f0e9e7d",
+        "title": "Game vs Red Rockets",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-03T14:00:00.000Z",
+        "end": "2026-10-03T15:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "ebe57760-e402-46df-8370-1f89702136ae",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-03T14:00:00.000Z",
+        "end": "2026-10-03T16:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "4987e8fa-81b7-4897-8bb4-7c3ca4ec4963",
+      "b": "a0ed19de-23ed-43e7-acde-76ded9cda921",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "4987e8fa-81b7-4897-8bb4-7c3ca4ec4963",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-07T21:10:00.000Z",
+        "end": "2026-10-07T21:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "a0ed19de-23ed-43e7-acde-76ded9cda921",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-07T20:30:00.000Z",
+        "end": "2026-10-07T21:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "ec5c9ca0-2337-4523-ab3e-c9caafc755a7",
+      "b": "f64b1150-0802-4f81-8b25-e175f95233dc",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "ec5c9ca0-2337-4523-ab3e-c9caafc755a7",
+        "title": "Game vs Green Giants",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-10T14:00:00.000Z",
+        "end": "2026-10-10T15:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "f64b1150-0802-4f81-8b25-e175f95233dc",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-10T14:00:00.000Z",
+        "end": "2026-10-10T16:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "2e11d608-b566-49e7-99d6-a15e0b0049c9",
+      "b": "ad76e5bf-0153-4e03-ab3b-310a0a9e7656",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "2e11d608-b566-49e7-99d6-a15e0b0049c9",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-14T21:10:00.000Z",
+        "end": "2026-10-14T21:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "ad76e5bf-0153-4e03-ab3b-310a0a9e7656",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-14T20:30:00.000Z",
+        "end": "2026-10-14T21:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "058331c8-e040-4307-939c-91acd229b465",
+      "b": "706cba59-d4f8-4e2e-a542-631df1338f67",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "058331c8-e040-4307-939c-91acd229b465",
+        "title": "Game vs Blue Jays",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-17T14:00:00.000Z",
+        "end": "2026-10-17T15:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "706cba59-d4f8-4e2e-a542-631df1338f67",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-17T14:00:00.000Z",
+        "end": "2026-10-17T16:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "8a2566d0-6344-4397-a94f-f816d42e5395",
+      "b": "977d89c4-0008-4137-b756-325282d0798a",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "8a2566d0-6344-4397-a94f-f816d42e5395",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-21T20:30:00.000Z",
+        "end": "2026-10-21T21:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "977d89c4-0008-4137-b756-325282d0798a",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-21T21:10:00.000Z",
+        "end": "2026-10-21T21:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "40bd2e29-ca70-4d33-83c0-655f047d4d60",
+      "b": "42bc11f0-5e9f-48c0-b309-cf60d957f2f1",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "40bd2e29-ca70-4d33-83c0-655f047d4d60",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-24T14:00:00.000Z",
+        "end": "2026-10-24T16:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "42bc11f0-5e9f-48c0-b309-cf60d957f2f1",
+        "title": "Game vs Red Rockets",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-24T14:00:00.000Z",
+        "end": "2026-10-24T15:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "19b41096-0766-4313-8d0b-27ea9b01fd9f",
+      "b": "753a0759-eb9f-493f-b503-3a5e3579cf16",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "19b41096-0766-4313-8d0b-27ea9b01fd9f",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-28T21:10:00.000Z",
+        "end": "2026-10-28T21:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "753a0759-eb9f-493f-b503-3a5e3579cf16",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-28T20:30:00.000Z",
+        "end": "2026-10-28T21:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "535ba5aa-3a1d-4132-a591-4e35768c7570",
+      "b": "b86e968b-6343-4e68-9ca8-415d3d5838b3",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "535ba5aa-3a1d-4132-a591-4e35768c7570",
+        "title": "Game vs Green Giants",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-31T14:00:00.000Z",
+        "end": "2026-10-31T15:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "b86e968b-6343-4e68-9ca8-415d3d5838b3",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-31T14:00:00.000Z",
+        "end": "2026-10-31T16:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "5bb5fd08-45e5-4f27-a3ed-a41880b7329f",
+      "b": "d860f89e-8ea8-48bc-a53a-dc4382dea849",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "5bb5fd08-45e5-4f27-a3ed-a41880b7329f",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-04T22:10:00.000Z",
+        "end": "2026-11-04T22:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "d860f89e-8ea8-48bc-a53a-dc4382dea849",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-04T21:30:00.000Z",
+        "end": "2026-11-04T22:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "3fff6be5-dad6-42b5-85a6-c179df1b5c47",
+      "b": "87360bad-e2cc-4f56-9e3b-6fe0d47b9551",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "3fff6be5-dad6-42b5-85a6-c179df1b5c47",
+        "title": "Game vs Blue Jays",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-07T15:00:00.000Z",
+        "end": "2026-11-07T16:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "87360bad-e2cc-4f56-9e3b-6fe0d47b9551",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-07T15:00:00.000Z",
+        "end": "2026-11-07T17:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "61912966-cfd6-4eca-ade9-676821f77e47",
+      "b": "c075f84e-87f4-4639-90f1-fdb43a8a887a",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "61912966-cfd6-4eca-ade9-676821f77e47",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-11T22:10:00.000Z",
+        "end": "2026-11-11T22:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "c075f84e-87f4-4639-90f1-fdb43a8a887a",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-11T21:30:00.000Z",
+        "end": "2026-11-11T22:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "6cdaeba9-3498-420f-b934-b5bd277312b5",
+      "b": "b4e8663b-8696-49c7-8158-fa2ddab78276",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "6cdaeba9-3498-420f-b934-b5bd277312b5",
+        "title": "Game vs Red Rockets",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-14T15:00:00.000Z",
+        "end": "2026-11-14T16:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "b4e8663b-8696-49c7-8158-fa2ddab78276",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-14T15:00:00.000Z",
+        "end": "2026-11-14T17:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "80a17b89-1b2f-4542-95c6-1b733108356a",
+      "b": "bca7f915-e56d-4937-992e-dc72c42e5ec6",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "80a17b89-1b2f-4542-95c6-1b733108356a",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-18T21:30:00.000Z",
+        "end": "2026-11-18T22:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "bca7f915-e56d-4937-992e-dc72c42e5ec6",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-18T22:10:00.000Z",
+        "end": "2026-11-18T22:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "838f31e9-c0d0-4686-bc6b-73a061e06717",
+      "b": "ff2e20e9-c201-44b7-a4ff-7282ea480f49",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "838f31e9-c0d0-4686-bc6b-73a061e06717",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-21T15:00:00.000Z",
+        "end": "2026-11-21T17:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "ff2e20e9-c201-44b7-a4ff-7282ea480f49",
+        "title": "Game vs Green Giants",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-21T15:00:00.000Z",
+        "end": "2026-11-21T16:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "0a69bd20-0fcd-4c96-b565-d4c8f1c2842f",
+      "b": "1c1aa0d3-9861-4ff7-93e5-68c3da981b86",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "0a69bd20-0fcd-4c96-b565-d4c8f1c2842f",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-25T22:10:00.000Z",
+        "end": "2026-11-25T22:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "1c1aa0d3-9861-4ff7-93e5-68c3da981b86",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-25T21:30:00.000Z",
+        "end": "2026-11-25T22:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "376dd664-5a01-459c-ad95-3a41c9d8d5cc",
+      "b": "812f0744-72bc-478b-8cb6-1491fa888d25",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "376dd664-5a01-459c-ad95-3a41c9d8d5cc",
+        "title": "Game vs Blue Jays",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-28T15:00:00.000Z",
+        "end": "2026-11-28T16:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "812f0744-72bc-478b-8cb6-1491fa888d25",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-11-28T15:00:00.000Z",
+        "end": "2026-11-28T17:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    }
+  ],
+  "open": 18,
+  "homeTimeZone": "America/Toronto",
+  "people": [
+    {
+      "id": "6d13c3b6-63c4-4078-983e-0e36257c13d6",
+      "name": "Child",
+      "isPrimary": true
+    },
+    {
+      "id": "df482782-a98c-45a9-b16b-3ee5616a15ab",
+      "name": "Parent",
+      "isPrimary": false
+    },
+    {
+      "id": "579a6c67-834b-401a-be17-84c893a80315",
+      "name": "Brother",
+      "isPrimary": false
+    }
+  ]
+}

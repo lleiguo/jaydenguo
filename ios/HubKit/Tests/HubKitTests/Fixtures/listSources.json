@@ -1,0 +1,80 @@
+{
+  "sources": [
+    {
+      "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+      "kind": "ical",
+      "name": "Soccer team (sample)",
+      "enabled": false,
+      "credentialId": null,
+      "credentialLabel": null,
+      "config": {},
+      "categoryMapping": {
+        "default": "soccer",
+        "owners": [],
+        "rules": []
+      },
+      "lastSuccessAt": null,
+      "consecutiveFailures": 0,
+      "lastRun": null,
+      "running": false,
+      "nextRefreshAt": null
+    },
+    {
+      "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+      "kind": "ical",
+      "name": "Hockey team (sample)",
+      "enabled": false,
+      "credentialId": null,
+      "credentialLabel": null,
+      "config": {},
+      "categoryMapping": {
+        "default": "hockey",
+        "owners": [],
+        "rules": []
+      },
+      "lastSuccessAt": null,
+      "consecutiveFailures": 0,
+      "lastRun": null,
+      "running": false,
+      "nextRefreshAt": null
+    },
+    {
+      "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+      "kind": "ical",
+      "name": "School calendar (sample)",
+      "enabled": false,
+      "credentialId": null,
+      "credentialLabel": null,
+      "config": {},
+      "categoryMapping": {
+        "default": "school_class",
+        "owners": [],
+        "rules": []
+      },
+      "lastSuccessAt": null,
+      "consecutiveFailures": 0,
+      "lastRun": null,
+      "running": false,
+      "nextRefreshAt": null
+    },
+    {
+      "id": "7cb1bbdf-47cb-41ce-b67e-7582ccfed7d0",
+      "kind": "commit_swim",
+      "name": "Swim club (sample)",
+      "enabled": false,
+      "credentialId": null,
+      "credentialLabel": null,
+      "config": {},
+      "categoryMapping": {
+        "default": "swimming",
+        "owners": [],
+        "rules": []
+      },
+      "lastSuccessAt": null,
+      "consecutiveFailures": 0,
+      "lastRun": null,
+      "running": false,
+      "nextRefreshAt": null
+    }
+  ]
+}

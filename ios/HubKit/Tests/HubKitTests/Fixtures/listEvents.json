@@ -1,0 +1,2102 @@
+{
+  "events": [
+    {
+      "id": "dfe25c58-6197-46a8-88ce-ea2ecccb4db6",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-22T12:30:00.000Z",
+      "end": "2026-09-22T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "7140d4d9-2df8-457d-bbaf-abe37b3f8768",
+      "title": "Soccer practice",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-22T21:00:00.000Z",
+      "end": "2026-09-22T22:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 2",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "477853c2-353b-45b6-bbe4-2fec7c1bb0fe",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-23T12:30:00.000Z",
+      "end": "2026-09-23T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "1ede49a2-24c2-42b5-8775-e1ec1412b40d",
+      "title": "Tennis lesson",
+      "category": "tennis",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-23T20:30:00.000Z",
+      "end": "2026-09-23T21:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Maple Tennis Club",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+      "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "36987cc6-c6a4-414c-a08c-10d7e2a34ff8",
+      "title": "Fitness class",
+      "category": "fitness",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-23T21:10:00.000Z",
+      "end": "2026-09-23T21:55:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Cedar Rec Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+      "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "833dab4f-87be-4091-9192-1892adf1a2ea",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-24T12:30:00.000Z",
+      "end": "2026-09-24T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "26c4fd7a-e7ea-4539-9b40-cfb5a7a96cd3",
+      "title": "Hockey ice time",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-24T22:00:00.000Z",
+      "end": "2026-09-24T23:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "c919bdf6-4a2e-4707-91a4-edc6a75a68d0",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-25T10:00:00.000Z",
+      "end": "2026-09-25T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "76419699-8696-434b-a8dc-8c3af9649de6",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-25T12:30:00.000Z",
+      "end": "2026-09-25T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "7eb5ea6e-6b40-4d12-bc21-af1f8da718ef",
+      "title": "Chinese school",
+      "category": "chinese",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-26T14:00:00.000Z",
+      "end": "2026-09-26T16:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Willow Community Hall",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+      "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "9aab4bd8-6eb4-4715-a0a2-9a8327964d5c",
+      "title": "Game vs Blue Jays",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-26T14:00:00.000Z",
+      "end": "2026-09-26T15:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 1",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "cb1fea89-2ff8-4f84-8bd3-c7c8229a321c",
+      "title": "Hockey game",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-27T13:00:00.000Z",
+      "end": "2026-09-27T14:15:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "ed5110b4-adf6-443d-8779-8e1bbc41a4bf",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-28T10:00:00.000Z",
+      "end": "2026-09-28T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "ed9f0c35-c29f-4bb6-93c6-f7926c61efd5",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-28T12:30:00.000Z",
+      "end": "2026-09-28T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "3bd33533-602b-42f4-a105-507be76089e5",
+      "title": "Piano lesson",
+      "category": "other",
+      "attendance": "required",
+      "owners": [
+        "579a6c67-834b-401a-be17-84c893a80315"
+      ],
+      "start": "2026-09-28T21:00:00.000Z",
+      "end": "2026-09-28T21:45:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Aspen Music Studio",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "630c5ae1-4233-48fe-85e0-8cf13150ddb2",
+      "lastSyncedAt": "2026-09-29T08:43:52.661Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "73d67a2e-16cf-45cb-92c5-c2502cc5256d",
+      "title": "Math tutoring",
+      "category": "math",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-28T21:00:00.000Z",
+      "end": "2026-09-28T22:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Library room B",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2828a8a8-4728-44e8-8545-5937d7b8887e",
+      "lastSyncedAt": "2026-09-29T08:43:52.648Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "aeb23c1c-7558-4e2d-88a2-e93b3f2c795d",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-29T12:30:00.000Z",
+      "end": "2026-09-29T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "0ed06731-c4bf-4af8-b7d1-372c4f2abd73",
+      "title": "Soccer practice",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-29T21:00:00.000Z",
+      "end": "2026-09-29T22:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 2",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "8a1adc7a-ce28-4c65-9425-6902b9e8e767",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-30T12:30:00.000Z",
+      "end": "2026-09-30T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "e69304e2-9dfe-49f2-aa4b-a1ca7f520ac8",
+      "title": "Tennis lesson",
+      "category": "tennis",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-30T20:30:00.000Z",
+      "end": "2026-09-30T21:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Maple Tennis Club",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+      "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "58aa7563-b921-4676-bcad-83f61b2e8403",
+      "title": "Fitness class",
+      "category": "fitness",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-30T21:10:00.000Z",
+      "end": "2026-09-30T21:55:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Cedar Rec Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+      "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "4bc23277-0172-4049-ba35-3a4571dd7503",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-01T12:30:00.000Z",
+      "end": "2026-10-01T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "68932a43-5cb1-4e2d-bae1-31b92cf8f3a1",
+      "title": "Hockey ice time",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-01T22:00:00.000Z",
+      "end": "2026-10-01T23:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "49f86bfa-f26a-464f-bed5-0379b2c63116",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-02T10:00:00.000Z",
+      "end": "2026-10-02T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "3243ef04-a2b5-47ff-a9df-9b83fdc02786",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-02T12:30:00.000Z",
+      "end": "2026-10-02T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "63d43f33-96a6-4858-a53f-749f2f0e9e7d",
+      "title": "Game vs Red Rockets",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-03T14:00:00.000Z",
+      "end": "2026-10-03T15:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 1",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "ebe57760-e402-46df-8370-1f89702136ae",
+      "title": "Chinese school",
+      "category": "chinese",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-03T14:00:00.000Z",
+      "end": "2026-10-03T16:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Willow Community Hall",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+      "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "439f4edb-262c-4b26-8700-98c90894fb3d",
+      "title": "Hockey game",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-04T13:00:00.000Z",
+      "end": "2026-10-04T14:15:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "b0bb3316-639f-402e-a6a7-efa68b0524e9",
+      "title": "Grandparents' dinner",
+      "category": "other",
+      "attendance": "required",
+      "owners": [
+        "df482782-a98c-45a9-b16b-3ee5616a15ab"
+      ],
+      "start": "2026-10-04T22:00:00.000Z",
+      "end": "2026-10-05T00:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": null,
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "6697df4e-c299-4f1a-a83d-f12a84e16721",
+      "lastSyncedAt": "2026-09-29T08:43:52.658Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "9a950efb-77be-4bd7-afca-255f964f3eec",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-05T10:00:00.000Z",
+      "end": "2026-10-05T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "77cb0978-4ffc-4aaf-9d81-8dffb133715b",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-05T12:30:00.000Z",
+      "end": "2026-10-05T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "cbb786f1-22c0-4209-930f-8be3d596c66c",
+      "title": "Math tutoring",
+      "category": "math",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-05T21:00:00.000Z",
+      "end": "2026-10-05T22:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Library room B",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2828a8a8-4728-44e8-8545-5937d7b8887e",
+      "lastSyncedAt": "2026-09-29T08:43:52.648Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "e3a38455-41bb-4720-b2d8-9d0d7913cf3e",
+      "title": "Piano lesson",
+      "category": "other",
+      "attendance": "required",
+      "owners": [
+        "579a6c67-834b-401a-be17-84c893a80315"
+      ],
+      "start": "2026-10-05T21:00:00.000Z",
+      "end": "2026-10-05T21:45:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Aspen Music Studio",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "630c5ae1-4233-48fe-85e0-8cf13150ddb2",
+      "lastSyncedAt": "2026-09-29T08:43:52.661Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "2b9e60dc-44c4-4811-abdc-0e87ccedd529",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-06T12:30:00.000Z",
+      "end": "2026-10-06T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "f17f4abb-8022-4de1-bbe5-f65fc2bf5644",
+      "title": "Soccer practice",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-06T21:00:00.000Z",
+      "end": "2026-10-06T22:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 2",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "c0322651-747f-4168-b5b0-a5ec3b11ad83",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-07T12:30:00.000Z",
+      "end": "2026-10-07T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "a0ed19de-23ed-43e7-acde-76ded9cda921",
+      "title": "Tennis lesson",
+      "category": "tennis",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-07T20:30:00.000Z",
+      "end": "2026-10-07T21:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Maple Tennis Club",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+      "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "4987e8fa-81b7-4897-8bb4-7c3ca4ec4963",
+      "title": "Fitness class",
+      "category": "fitness",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-07T21:10:00.000Z",
+      "end": "2026-10-07T21:55:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Cedar Rec Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+      "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "b6742524-4e95-40ef-8f65-012d312dac40",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-08T12:30:00.000Z",
+      "end": "2026-10-08T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "575f7bf1-bdc0-40f1-a421-1d4cd4d03634",
+      "title": "Hockey ice time",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-08T22:00:00.000Z",
+      "end": "2026-10-08T23:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "8e0588f1-e361-4972-b85e-f6198794e156",
+      "title": "PD day: no school",
+      "category": "school_closure",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-09T00:00:00.000Z",
+      "end": "2026-10-10T00:00:00.000Z",
+      "allDay": true,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": null,
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "f97ae8fd-3d1d-434b-9f42-ea59c66a9e23",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-09T10:00:00.000Z",
+      "end": "2026-10-09T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": true
+    },
+    {
+      "id": "ec5c9ca0-2337-4523-ab3e-c9caafc755a7",
+      "title": "Game vs Green Giants",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-10T14:00:00.000Z",
+      "end": "2026-10-10T15:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 1",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "f64b1150-0802-4f81-8b25-e175f95233dc",
+      "title": "Chinese school",
+      "category": "chinese",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-10T14:00:00.000Z",
+      "end": "2026-10-10T16:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Willow Community Hall",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+      "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "ba3f0f2b-4c07-4de6-a4f1-30bb1e9358fb",
+      "title": "Hockey game",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-11T13:00:00.000Z",
+      "end": "2026-10-11T14:15:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "0b12c0d8-b15e-44d5-8cc1-99902fad86db",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-12T10:00:00.000Z",
+      "end": "2026-10-12T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "3c81d562-6c1d-4d08-b984-72d305815da8",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-12T12:30:00.000Z",
+      "end": "2026-10-12T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "bdf6122a-157c-4fdb-95df-d8ea82bfb5c6",
+      "title": "Piano lesson",
+      "category": "other",
+      "attendance": "required",
+      "owners": [
+        "579a6c67-834b-401a-be17-84c893a80315"
+      ],
+      "start": "2026-10-12T21:00:00.000Z",
+      "end": "2026-10-12T21:45:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Aspen Music Studio",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "630c5ae1-4233-48fe-85e0-8cf13150ddb2",
+      "lastSyncedAt": "2026-09-29T08:43:52.661Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "c2d59067-357c-4751-9fbc-6103363daf95",
+      "title": "Math tutoring",
+      "category": "math",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-12T21:00:00.000Z",
+      "end": "2026-10-12T22:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Library room B",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2828a8a8-4728-44e8-8545-5937d7b8887e",
+      "lastSyncedAt": "2026-09-29T08:43:52.648Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "a1c6ee77-57a9-45dc-8702-4c41637a109f",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-13T12:30:00.000Z",
+      "end": "2026-10-13T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "522f7c30-bb06-450f-baab-059736076b7b",
+      "title": "Soccer practice",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-13T21:00:00.000Z",
+      "end": "2026-10-13T22:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 2",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "13995991-6218-48f6-ba9a-860e82b64d3b",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-14T12:30:00.000Z",
+      "end": "2026-10-14T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "ad76e5bf-0153-4e03-ab3b-310a0a9e7656",
+      "title": "Tennis lesson",
+      "category": "tennis",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-14T20:30:00.000Z",
+      "end": "2026-10-14T21:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Maple Tennis Club",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+      "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "2e11d608-b566-49e7-99d6-a15e0b0049c9",
+      "title": "Fitness class",
+      "category": "fitness",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-14T21:10:00.000Z",
+      "end": "2026-10-14T21:55:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Cedar Rec Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+      "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "a19ee8de-bd79-43c3-ad98-5f7547e5937e",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-15T12:30:00.000Z",
+      "end": "2026-10-15T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "db4fa338-18b9-47a1-b498-cc617f0a283d",
+      "title": "Hockey ice time",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-15T22:00:00.000Z",
+      "end": "2026-10-15T23:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "20e6e73c-25a7-436a-a372-481837b9ef5f",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-16T10:00:00.000Z",
+      "end": "2026-10-16T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "da9a886c-aeb9-46cf-94f8-ccdd2637d803",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-16T12:30:00.000Z",
+      "end": "2026-10-16T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "058331c8-e040-4307-939c-91acd229b465",
+      "title": "Game vs Blue Jays",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-17T14:00:00.000Z",
+      "end": "2026-10-17T15:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 1",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "706cba59-d4f8-4e2e-a542-631df1338f67",
+      "title": "Chinese school",
+      "category": "chinese",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-17T14:00:00.000Z",
+      "end": "2026-10-17T16:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Willow Community Hall",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+      "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "313c8ec5-5270-48e1-b223-0dc7f5d98e73",
+      "title": "Hockey game",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-18T13:00:00.000Z",
+      "end": "2026-10-18T14:15:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "6ed97588-91bb-4e06-a9eb-f1f2c417bd10",
+      "title": "Grandparents' dinner",
+      "category": "other",
+      "attendance": "required",
+      "owners": [
+        "df482782-a98c-45a9-b16b-3ee5616a15ab"
+      ],
+      "start": "2026-10-18T22:00:00.000Z",
+      "end": "2026-10-19T00:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": null,
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "6697df4e-c299-4f1a-a83d-f12a84e16721",
+      "lastSyncedAt": "2026-09-29T08:43:52.658Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "a552e1e1-6172-485b-a4b4-2e7f3bb8d5cb",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-19T10:00:00.000Z",
+      "end": "2026-10-19T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "9734bed7-4c3f-4cd4-a96b-a2244767c56f",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-19T12:30:00.000Z",
+      "end": "2026-10-19T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "69947aaf-a684-477e-98be-b5ef3eca0fae",
+      "title": "Math tutoring",
+      "category": "math",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-19T21:00:00.000Z",
+      "end": "2026-10-19T22:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Library room B",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2828a8a8-4728-44e8-8545-5937d7b8887e",
+      "lastSyncedAt": "2026-09-29T08:43:52.648Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "6ddbb5ef-c631-4908-9fb0-976e850f015d",
+      "title": "Piano lesson",
+      "category": "other",
+      "attendance": "required",
+      "owners": [
+        "579a6c67-834b-401a-be17-84c893a80315"
+      ],
+      "start": "2026-10-19T21:00:00.000Z",
+      "end": "2026-10-19T21:45:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Aspen Music Studio",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "630c5ae1-4233-48fe-85e0-8cf13150ddb2",
+      "lastSyncedAt": "2026-09-29T08:43:52.661Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "fea42a70-7851-4f42-b9ee-5e903f3cda2f",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-20T12:30:00.000Z",
+      "end": "2026-10-20T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "b390f392-f263-4437-bf2e-4cc1d2c8a591",
+      "title": "Soccer practice",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-20T21:00:00.000Z",
+      "end": "2026-10-20T22:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 2",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "f2d71e4d-d692-4c83-94dd-02bec02c2abe",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-21T12:30:00.000Z",
+      "end": "2026-10-21T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "8a2566d0-6344-4397-a94f-f816d42e5395",
+      "title": "Tennis lesson",
+      "category": "tennis",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-21T20:30:00.000Z",
+      "end": "2026-10-21T21:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Maple Tennis Club",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+      "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "977d89c4-0008-4137-b756-325282d0798a",
+      "title": "Fitness class",
+      "category": "fitness",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-21T21:10:00.000Z",
+      "end": "2026-10-21T21:55:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Cedar Rec Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+      "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "24487390-bebd-400e-aa51-e90042f685d4",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-22T12:30:00.000Z",
+      "end": "2026-10-22T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "ecfd8f0a-c4cf-4e8f-b265-60df4e7fcca9",
+      "title": "Hockey ice time",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-22T22:00:00.000Z",
+      "end": "2026-10-22T23:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "88ea81c8-8c7c-4bf9-b335-547c2006a974",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-23T10:00:00.000Z",
+      "end": "2026-10-23T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "a811fa2f-00c7-4b3d-972d-664bfbf72413",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-23T12:30:00.000Z",
+      "end": "2026-10-23T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "40bd2e29-ca70-4d33-83c0-655f047d4d60",
+      "title": "Chinese school",
+      "category": "chinese",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-24T14:00:00.000Z",
+      "end": "2026-10-24T16:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Willow Community Hall",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+      "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "42bc11f0-5e9f-48c0-b309-cf60d957f2f1",
+      "title": "Game vs Red Rockets",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-24T14:00:00.000Z",
+      "end": "2026-10-24T15:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 1",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "3a74b611-cff3-4669-8dcd-31d4988948f0",
+      "title": "Hockey game",
+      "category": "hockey",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-25T13:00:00.000Z",
+      "end": "2026-10-25T14:15:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Pine Arena",
+      "sourceUrl": null,
+      "source": {
+        "id": "8dae5711-ec28-4e3f-b94d-18728bee9030",
+        "name": "Hockey team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.597Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "c673f433-e59c-45e8-b11a-b06d21d36333",
+      "title": "Swim squad",
+      "category": "swimming",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-26T10:00:00.000Z",
+      "end": "2026-10-26T11:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Birch Aquatic Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2142e295-13d9-4878-9dab-4e4d8dabcae8",
+      "lastSyncedAt": "2026-09-29T08:43:52.639Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "c5cfbbbd-291e-4c36-8130-9ac40801ab4c",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-26T12:30:00.000Z",
+      "end": "2026-10-26T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "14be5cd1-12d0-48e7-b426-b4f58b19cfc0",
+      "title": "Piano lesson",
+      "category": "other",
+      "attendance": "required",
+      "owners": [
+        "579a6c67-834b-401a-be17-84c893a80315"
+      ],
+      "start": "2026-10-26T21:00:00.000Z",
+      "end": "2026-10-26T21:45:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Aspen Music Studio",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "630c5ae1-4233-48fe-85e0-8cf13150ddb2",
+      "lastSyncedAt": "2026-09-29T08:43:52.661Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "684ee819-be09-48d4-8865-f729f59ac525",
+      "title": "Math tutoring",
+      "category": "math",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-10-26T21:00:00.000Z",
+      "end": "2026-10-26T22:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Library room B",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "2828a8a8-4728-44e8-8545-5937d7b8887e",
+      "lastSyncedAt": "2026-09-29T08:43:52.648Z",
+      "override": null,
+      "schoolClosed": false
+    }
+  ],
+  "clashes": [
+    {
+      "a": "1ede49a2-24c2-42b5-8775-e1ec1412b40d",
+      "b": "36987cc6-c6a4-414c-a08c-10d7e2a34ff8",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    },
+    {
+      "a": "7eb5ea6e-6b40-4d12-bc21-af1f8da718ef",
+      "b": "9aab4bd8-6eb4-4715-a0a2-9a8327964d5c",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    },
+    {
+      "a": "58aa7563-b921-4676-bcad-83f61b2e8403",
+      "b": "e69304e2-9dfe-49f2-aa4b-a1ca7f520ac8",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    },
+    {
+      "a": "63d43f33-96a6-4858-a53f-749f2f0e9e7d",
+      "b": "ebe57760-e402-46df-8370-1f89702136ae",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    },
+    {
+      "a": "4987e8fa-81b7-4897-8bb4-7c3ca4ec4963",
+      "b": "a0ed19de-23ed-43e7-acde-76ded9cda921",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    },
+    {
+      "a": "ec5c9ca0-2337-4523-ab3e-c9caafc755a7",
+      "b": "f64b1150-0802-4f81-8b25-e175f95233dc",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    },
+    {
+      "a": "2e11d608-b566-49e7-99d6-a15e0b0049c9",
+      "b": "ad76e5bf-0153-4e03-ab3b-310a0a9e7656",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    },
+    {
+      "a": "058331c8-e040-4307-939c-91acd229b465",
+      "b": "706cba59-d4f8-4e2e-a542-631df1338f67",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    },
+    {
+      "a": "8a2566d0-6344-4397-a94f-f816d42e5395",
+      "b": "977d89c4-0008-4137-b756-325282d0798a",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    },
+    {
+      "a": "40bd2e29-ca70-4d33-83c0-655f047d4d60",
+      "b": "42bc11f0-5e9f-48c0-b309-cf60d957f2f1",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null
+    }
+  ],
+  "closures": [
+    "2026-10-09"
+  ],
+  "homeTimeZone": "America/Toronto",
+  "people": [
+    {
+      "id": "6d13c3b6-63c4-4078-983e-0e36257c13d6",
+      "name": "Child",
+      "isPrimary": true
+    },
+    {
+      "id": "df482782-a98c-45a9-b16b-3ee5616a15ab",
+      "name": "Parent",
+      "isPrimary": false
+    },
+    {
+      "id": "579a6c67-834b-401a-be17-84c893a80315",
+      "name": "Brother",
+      "isPrimary": false
+    }
+  ],
+  "cursor": 11
+}
