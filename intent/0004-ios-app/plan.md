@@ -87,6 +87,34 @@ Results go in a `## Spikes` section of this file.
 | N1.4 | `X-App-Version` check with a 426 answer below a configured minimum. | API-6 | Unit test. |
 | N1.5 | Dev-only device token route for UI tests, covered by the existing production-build check. | §4.4 | CI check fails if it's reachable in a production build. |
 
+**N1 as built (2026-09-29):**
+- Migration 0021 (`device_auth`): `sessions.kind` (`browser`, `device`,
+  `handoff`) and `sessions.device_name`; `auth_codes` (HMAC-keyed,
+  single use, a minute).
+- Sign-in: `/auth/google/start?client=ios&challenge=…&device=…` keeps the
+  app's S256 challenge in the pre-login state; the callback redirects to
+  `jaydenguohub://auth?code=…` (or `?error=…`) instead of setting a cookie.
+  `POST /api/v1/auth/device` (public, rate-limited per address, exempt
+  from the Origin check because it takes no cookie) swaps code + verifier
+  for a device token. `POST /api/v1/auth/signout` ends the current session.
+- Bearer tokens: the proxy and `api()` (`currentApiSession`) take
+  `Authorization: Bearer` on API paths only; a request that sends the
+  header is judged by it alone (a bad one is 401 even with a good cookie)
+  and skips the Origin check. Device tokens expire 30 days after last use
+  (renewed with `last_seen_at`, at most once a minute). The Settings
+  devices list names app sessions.
+- Handoff: `POST /api/v1/auth/handoff` takes only
+  `/accounts/google/connect…` as `next`; `/auth/handoff` sets an hour-long
+  `handoff` session; `/auth/app-done` (public) ends it and returns to
+  `jaydenguohub://done`, and a failed Google connect in a handoff reports
+  there too.
+- `MIN_APP_VERSION` (unset in production until the first app release): a
+  lower `X-App-Version` gets 426. `/auth/dev?client=ios` (development
+  builds only) returns a device token for UI tests.
+- SP-N1 (does Firebase Hosting pass `Authorization` through?) is checked
+  after this deploys; the `__session` fallback would need no app change
+  beyond sending the token as that cookie.
+
 ### N2: App skeleton (≈ 4 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -176,6 +204,6 @@ about 16 days in.
 | Milestone | Status |
 |---|---|
 | N0 | done 2026-09-29 (`ios/n0-api-contract`) |
-| N1 | not started |
+| N1 | built 2026-09-29 (`ios/n1-device-auth`); SP-N1 after deploy |
 | N2–N8 | blocked on O-1 and O-4: Xcode isn't installed on the Mac yet (only the command line tools) |
 | N9 | not planned (owner kept the no-upload default) |

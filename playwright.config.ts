@@ -78,6 +78,8 @@ export default defineConfig({
         TENNIS_TC_NOW: "2024-09-28T16:00:00Z",
         // The fake site needs no politeness gap between requests.
         FETCH_MIN_GAP_MS: "0",
+        // iPhone app builds older than this get 426 (intent 0004, API-6).
+        MIN_APP_VERSION: "1.0.0",
       },
     },
   ],

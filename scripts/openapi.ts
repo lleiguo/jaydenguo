@@ -253,6 +253,7 @@ export function buildDocument(): Schema {
     const operation: Schema = {
       operationId: op.operationId,
       summary: op.summary,
+      ...(op.public && { security: [] }),
       ...(op.spec && { description: `Spec: ${op.spec}` }),
       ...(params.length && { parameters: params }),
       ...(op.body && {

@@ -66,6 +66,8 @@ export type CredentialsResponse = { credentials: CredentialView[] };
 export type SessionsResponse = { sessions: Awaited<ReturnType<typeof listSessions>> };
 export type RevokedResponse = { revoked: number };
 export type MeResponse = { email: string };
+export type DeviceTokenResponse = { token: string; expiresAt: string };
+export type HandoffResponse = { url: string; expiresAt: string };
 export type { CostsView };
 
 // Suggestions (EML)

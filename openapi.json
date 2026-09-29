@@ -19,6 +19,130 @@
     }
   ],
   "paths": {
+    "/api/v1/auth/device": {
+      "post": {
+        "operationId": "exchangeDeviceCode",
+        "summary": "Swap the sign-in code from jaydenguohub://auth and the PKCE verifier for a device token.",
+        "security": [],
+        "description": "Spec: API-1",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "verifier": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "code",
+                  "verifier"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTokenResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signout": {
+      "post": {
+        "operationId": "signOut",
+        "summary": "End this session (the app's token, or the browser's cookie).",
+        "description": "Spec: SEC-3",
+        "responses": {
+          "204": {
+            "description": "Done."
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/handoff": {
+      "post": {
+        "operationId": "startHandoff",
+        "summary": "A single-use link that opens a browser-only flow (Google connect) signed in.",
+        "description": "Spec: API-5",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "next": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "next"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoffResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "operationId": "getMe",
@@ -5809,6 +5933,21 @@
           "events"
         ]
       },
+      "DeviceTokenResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expiresAt"
+        ]
+      },
       "DrawView": {
         "type": "object",
         "properties": {
@@ -6528,6 +6667,21 @@
           "timeMs",
           "lowMs",
           "highMs"
+        ]
+      },
+      "HandoffResponse": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
         ]
       },
       "MatchView": {
@@ -7863,6 +8017,14 @@
           "deletedAt"
         ]
       },
+      "SessionKind": {
+        "type": "string",
+        "enum": [
+          "browser",
+          "device",
+          "handoff"
+        ]
+      },
       "SessionsResponse": {
         "type": "object",
         "properties": {
@@ -7871,8 +8033,17 @@
             "items": {
               "type": "object",
               "properties": {
+                "kind": {
+                  "$ref": "#/components/schemas/SessionKind"
+                },
                 "current": {
                   "type": "boolean"
+                },
+                "deviceName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "userAgent": {
                   "type": [
@@ -7897,7 +8068,9 @@
                 }
               },
               "required": [
+                "kind",
                 "current",
+                "deviceName",
                 "userAgent",
                 "createdAt",
                 "lastSeenAt",
