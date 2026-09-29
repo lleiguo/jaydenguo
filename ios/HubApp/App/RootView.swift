@@ -36,6 +36,7 @@ struct PrivacyCover: View {
 
 struct LockedView: View {
     @Environment(AppLock.self) private var lock
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(spacing: 20) {
@@ -45,7 +46,10 @@ struct LockedView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
         }
-        .task { await lock.unlock() }
+        // Ask once the app is active: a prompt started earlier is cancelled.
+        .task(id: scenePhase == .active) {
+            if scenePhase == .active { await lock.unlock() }
+        }
     }
 }
 

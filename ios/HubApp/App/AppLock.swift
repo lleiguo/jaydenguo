@@ -15,6 +15,7 @@ final class AppLock {
     private(set) var isLocked: Bool
     private(set) var isCovered = false
     private var backgroundedAt: Date?
+    private var authenticating = false
     private let forceOff: Bool
 
     init(forceOff: Bool = false) {
@@ -33,7 +34,13 @@ final class AppLock {
             isCovered = true
         case .active:
             isCovered = false
-            if !forceOff, LockPolicy.shouldLock(enabled: enabled, backgroundedAt: backgroundedAt) { isLocked = true }
+            // Only a real trip to the background locks again. The Face ID
+            // prompt itself makes the app inactive for a moment; treating
+            // that return like a launch re-locked the app right after it
+            // unlocked. Launch is covered by `init`.
+            if !forceOff, let since = backgroundedAt, LockPolicy.shouldLock(enabled: enabled, backgroundedAt: since) {
+                isLocked = true
+            }
             backgroundedAt = nil
         @unknown default:
             break
@@ -44,6 +51,9 @@ final class AppLock {
     func didSignIn() { isLocked = false }
 
     func unlock() async {
+        guard isLocked, !authenticating else { return }
+        authenticating = true
+        defer { authenticating = false }
         let context = LAContext()
         context.localizedCancelTitle = "Not now"
         var error: NSError?
