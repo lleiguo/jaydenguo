@@ -10,11 +10,14 @@ final class FixtureTransport: ClientTransport, @unchecked Sendable {
     private var sent: [Sent] = []
     var status: HTTPResponse.Status = .ok
     var bodyOverride: String?
+    /// Thrown instead of answering, e.g. URLError(.notConnectedToInternet).
+    var failure: (any Error)?
 
     var requests: [Sent] { lock.withLock { sent } }
 
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
         lock.withLock { sent.append(Sent(request: request, operationID: operationID)) }
+        if let failure { throw failure }
         let data: Data
         if let bodyOverride {
             data = Data(bodyOverride.utf8)
@@ -42,13 +45,19 @@ enum Fixtures {
     }
 }
 
-func testClient(token: String? = "T".padding(toLength: 43, withPad: "T", startingAt: 0), transport: FixtureTransport = FixtureTransport(), events: EventLog = EventLog()) -> HubClient {
+func testClient(token: String? = "T".padding(toLength: 43, withPad: "T", startingAt: 0), transport: FixtureTransport = FixtureTransport(), cache: ResponseCache? = nil, events: EventLog = EventLog()) -> HubClient {
     HubClient(
         config: HubConfig(baseURL: URL(string: "https://hub.example")!, appVersion: "1.2.3", deviceName: "Test iPhone"),
         tokens: MemoryTokenStore(token: token),
         transport: transport,
+        cache: cache,
         onEvent: { events.append($0) }
     )
+}
+
+/// A cache in a fresh temporary folder.
+func temporaryCache(limit: Int = 300) -> ResponseCache {
+    ResponseCache(directory: FileManager.default.temporaryDirectory.appendingPathComponent("hubcache-\(UUID().uuidString)"), limit: limit)
 }
 
 final class EventLog: @unchecked Sendable {

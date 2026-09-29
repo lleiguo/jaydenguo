@@ -20,7 +20,10 @@ final class CalendarStore {
     /// The home date the day, week and month views show.
     var anchor: String
     var filters: CalendarFilters {
-        didSet { Self.saveFilters(filters) }
+        didSet {
+            Self.saveFilters(filters)
+            if let index { model.saveWidgets(index, filters: filters) }
+        }
     }
     /// School days opened to show each class (SCH-1), for this visit.
     var expandedSchoolDays: Set<String> = []
@@ -66,9 +69,11 @@ final class CalendarStore {
         guard let start = homeTime.startOfDay(from), let end = homeTime.startOfDay(to) else { return }
         do {
             let payload = try await model.client.api.listEvents(query: .init(from: start, to: end)).ok.body.json
-            index = CalendarIndex(payload)
+            let index = CalendarIndex(payload)
+            self.index = index
             loaded = (from, to)
             error = nil
+            model.saveWidgets(index, filters: filters)
         } catch {
             if index == nil { self.error = "Couldn't load the calendar. Pull to try again." }
         }
@@ -192,7 +197,7 @@ final class CalendarStore {
 
     private static let filtersKey = "calendarFilters.v1"
 
-    private static func loadFilters() -> CalendarFilters {
+    static func loadFilters() -> CalendarFilters {
         guard let data = UserDefaults.standard.data(forKey: filtersKey),
               let f = try? JSONDecoder().decode(CalendarFilters.self, from: data)
         else { return CalendarFilters() }

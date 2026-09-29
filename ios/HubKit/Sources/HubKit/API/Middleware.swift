@@ -9,6 +9,10 @@ public enum HubEvent: Sendable, Equatable {
     case signedOut
     /// This build is too old (426, API-6).
     case updateRequired(message: String)
+    /// No connection: a screen shows the answer fetched then (OFF-1).
+    case offline(since: Date)
+    /// An answer came from the server.
+    case online
 }
 
 /// Adds `Authorization: Bearer` and `X-App-Version` (API-2, API-6), reports
