@@ -33,12 +33,11 @@ public final class HubClient: Sendable {
     /// Finishes sign-in with the browser sheet's callback URL.
     public func signIn(callback: URL, request: SignInRequest) async throws {
         let code = try SignInRequest.code(from: callback)
-        let output = try await api.exchangeDeviceCode(body: .json(.init(code: code, verifier: request.pkce.verifier)))
-        switch output {
-        case .created(let created):
-            try tokens.save(try created.body.json.token)
-        case .default(let status, let failure):
-            throw HubError.server(status: status, message: (try? failure.body.json.error) ?? "Sign-in didn't finish.")
+        do {
+            let output = try await api.exchangeDeviceCode(body: .json(.init(code: code, verifier: request.pkce.verifier)))
+            try tokens.save(try output.created.body.json.token)
+        } catch {
+            throw HubError.from(error) ?? .server(status: 0, message: "Sign-in didn't finish. Try again.")
         }
     }
 
@@ -53,6 +52,29 @@ public final class HubClient: Sendable {
     public func forgetToken() {
         try? tokens.delete()
     }
+
+    /// Runs the undo an action returned (CON-3: "Undo" for 10 s). Undos are
+    /// relative `/api/v1/…` POSTs; anything else is refused.
+    public func perform(_ undo: Undo, session: URLSession = .shared) async throws {
+        guard undo.url.hasPrefix("/api/v1/"), !undo.url.contains(".."),
+              let url = URL(string: undo.url, relativeTo: config.baseURL)?.absoluteURL,
+              url.host() == config.baseURL.host()
+        else { throw HubError.server(status: 0, message: "That can't be undone here.") }
+        var request = URLRequest(url: url)
+        request.httpMethod = undo.method.rawValue
+        request.setValue(config.appVersion, forHTTPHeaderField: "X-App-Version")
+        if let token = try tokens.read() { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        if let body = undo.body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(body)
+        }
+        let (data, response) = try await session.data(for: request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status) else {
+            let message = (try? JSONDecoder().decode([String: String].self, from: data))?["error"]
+            throw HubError.server(status: status, message: message ?? "Couldn't undo that.")
+        }
+    }
 }
 
 public enum HubError: Error, Equatable, Sendable {
@@ -63,6 +85,29 @@ public enum HubError: Error, Equatable, Sendable {
         switch self {
         case .server(_, let message): message
         case .offline: "You're offline."
+        }
+    }
+
+    /// The HubError behind an API call's error (the generated client wraps
+    /// what the middleware throws), or `.offline` for a lost connection.
+    public static func from(_ error: any Error) -> HubError? {
+        if let hub = error as? HubError { return hub }
+        if let client = error as? ClientError { return from(client.underlyingError) }
+        if let url = error as? URLError,
+           [.notConnectedToInternet, .networkConnectionLost, .dataNotAllowed, .timedOut, .cannotConnectToHost].contains(url.code) {
+            return .offline
+        }
+        return nil
+    }
+
+    static func defaultMessage(_ status: Int) -> String {
+        switch status {
+        case 401: "You're not signed in."
+        case 404: "That isn't there any more."
+        case 409: "That changed on the site. Pull to refresh."
+        case 429: "Too many tries. Wait a minute."
+        case 500...: "The site had a problem. Try again in a minute."
+        default: "That didn't work."
         }
     }
 }

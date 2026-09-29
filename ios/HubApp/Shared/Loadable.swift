@@ -17,12 +17,8 @@ enum Loadable<Value> {
 func load<Value>(_ work: () async throws -> Value) async -> Loadable<Value> {
     do {
         return .loaded(try await work())
-    } catch let error as HubError {
-        return .failed(error.message)
-    } catch let error as URLError where error.code == .notConnectedToInternet || error.code == .networkConnectionLost {
-        return .failed(HubError.offline.message)
     } catch {
-        return .failed("Couldn't load this. Pull to try again.")
+        return .failed(HubError.from(error)?.message ?? "Couldn't load this. Pull to try again.")
     }
 }
 

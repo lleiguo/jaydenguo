@@ -21,6 +21,13 @@ final class AppModel {
     var isSigningIn = false
     private(set) var homeTime = HomeTime(identifier: "America/Toronto")
     private(set) var email: String?
+    /// Bumped whenever the server's data changed (CAL-8); screens reload.
+    private(set) var changes = 0
+    /// Open clashes in the next 60 days, for the Calendar tab (CON-2).
+    private(set) var openClashes = 0
+    /// The 10-second undo banner (CON-3), shared by every screen.
+    var toast: Toast?
+    private var cursor: Double?
 
     let client: HubClient
     let lock: AppLock
@@ -90,6 +97,9 @@ final class AppModel {
     private func wipe() {
         // The offline cache and widget data join this in N5 (SEC-3).
         email = nil
+        cursor = nil
+        openClashes = 0
+        toast = nil
         selectedTab = .today
         phase = .signedOut
     }
@@ -103,6 +113,49 @@ final class AppModel {
         case .updateRequired(let message):
             phase = .updateRequired(message)
         }
+    }
+
+    // MARK: Live updates (CAL-8, APP-4)
+
+    /// Asks every 10 s whether anything changed, while the app is open.
+    func watchChanges() async {
+        while !Task.isCancelled, phase == .signedIn {
+            await checkForChanges()
+            try? await Task.sleep(for: .seconds(10))
+        }
+    }
+
+    func checkForChanges() async {
+        guard let answer = try? await client.api.getChanges(query: .init(since: cursor.map { Int($0) })).ok.body.json else { return }
+        let first = cursor == nil
+        cursor = answer.cursor
+        if answer.changed || first { await dataChanged() }
+    }
+
+    /// After this app changed something, or the server says data changed.
+    func dataChanged() async {
+        changes += 1
+        if let clashes = try? await client.api.listClashes().ok.body.json { openClashes = Int(clashes.open) }
+    }
+
+    // MARK: Undo (CON-3)
+
+    func show(_ message: String, undo: Undo? = nil) {
+        toast = Toast(message: message, undo: undo)
+    }
+
+    func runUndo(_ toast: Toast) async {
+        guard let undo = toast.undo else { return }
+        self.toast = nil
+        do {
+            try await client.perform(undo)
+            show("Undone.")
+        } catch let error as HubError {
+            show(error.message)
+        } catch {
+            show("Couldn't undo that.")
+        }
+        await dataChanged()
     }
 
     private func loadAccount() async {
@@ -119,4 +172,12 @@ final class AppModel {
         selectedTab = route.tab
         pendingRoute = route
     }
+}
+
+struct Toast: Identifiable, Equatable {
+    let id = UUID()
+    let message: String
+    let undo: Undo?
+
+    static func == (a: Toast, b: Toast) -> Bool { a.id == b.id }
 }

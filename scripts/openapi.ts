@@ -270,7 +270,18 @@ function assertNoMarkers(node: unknown, where: string) {
 // ---------- the document ----------
 
 function jsonSchemaOf(schema: z.ZodType, io: "input" | "output" = "input"): Schema {
-  const out = z.toJSONSchema(schema, { io, unrepresentable: "any", target: "draft-2020-12" }) as Schema;
+  const out = z.toJSONSchema(schema, {
+    io,
+    unrepresentable: "any",
+    target: "draft-2020-12",
+    // `z.coerce.date()` takes an ISO string (what clients send).
+    override: (ctx) => {
+      if ((ctx.zodSchema as { _zod?: { def?: { type?: string } } })._zod?.def?.type === "date") {
+        ctx.jsonSchema.type = "string";
+        ctx.jsonSchema.format = "date-time";
+      }
+    },
+  }) as Schema;
   delete out.$schema;
   return out;
 }
