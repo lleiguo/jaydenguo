@@ -1,8 +1,7 @@
 import { api } from "@/server/http";
-import { listTournaments } from "@/server/tennis/load";
+import { tennisOverview } from "@/server/tennis/overview";
 
-// TEN-2, TEN-3: tournaments in progress, coming up and past, and his next matches.
-export const GET = api(async ({ db }) => {
-  const { today, nextMatches, inProgress, upcoming, past } = await listTournaments(db);
-  return Response.json({ today, nextMatches, inProgress, upcoming, past });
-});
+// TEN-2, TEN-3, TEN-6, TEN-9, TEN-10: everything on the Tennis page: his next
+// matches with predictions, tournaments in progress, coming up and past, the
+// "Upcoming tournaments" rows and the ones found for him.
+export const GET = api(async ({ db }) => Response.json(await tennisOverview(db)));

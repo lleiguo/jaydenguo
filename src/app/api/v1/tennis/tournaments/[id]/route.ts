@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { HttpError } from "@/server/errors";
 import { api } from "@/server/http";
+import type { TennisTournamentResponse } from "@/server/openapi/responses";
+import { explanationsFor } from "@/server/tennis/explain";
 import { loadTournament, predictAgainst } from "@/server/tennis/load";
 
 // TEN-2, TEN-3, TEN-6: one tournament, his draws with predictions, his matches.
@@ -13,5 +15,11 @@ export const GET = api<{ id: string }>(async ({ db, params }) => {
       ? predictAgainst(data, d.opponentKey)
       : null,
   );
-  return Response.json({ tournament, matches, predictions });
+  const explanations = await explanationsFor(db, predictions);
+  return Response.json({
+    tournament,
+    matches,
+    predictions,
+    explanations: predictions.map((p) => (p && explanations.get(p)) ?? null),
+  } satisfies TennisTournamentResponse);
 });

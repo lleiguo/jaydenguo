@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 import pg from "pg";
 import { RUN } from "./support/calendar";
 import { FAKE_VERACROSS_CODE, FAKE_VERACROSS_LOGIN, SCHOOL } from "./support/fake-veracross";

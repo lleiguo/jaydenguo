@@ -8,7 +8,7 @@ import { CATEGORY_INFO } from "./categories";
 export function DeletedList() {
   const [events, setEvents] = useState<EventView[] | null>(null);
   const load = useCallback(async () => {
-    const res = await fetch("/api/v1/events?deleted=1");
+    const res = await fetch("/api/v1/events/deleted");
     if (res.ok) setEvents((await res.json()).events);
   }, []);
   useEffect(() => {

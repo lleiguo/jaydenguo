@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./support/test";
 import { addFeedCredential } from "./support/api";
 import { FAKE_OIDC_PORT } from "./support/fake-oidc-port";
 import { OWNER } from "./support/env";

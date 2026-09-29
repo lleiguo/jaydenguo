@@ -1,4 +1,5 @@
-import { expect, test, type BrowserContext } from "@playwright/test";
+import type { BrowserContext } from "@playwright/test";
+import { expect, test } from "./support/test";
 import pg from "pg";
 import { apiSend } from "./support/api";
 import { OWNER } from "./support/env";
