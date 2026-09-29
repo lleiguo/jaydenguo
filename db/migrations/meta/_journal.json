@@ -148,6 +148,13 @@
       "when": 1790652972081,
       "tag": "0020_attendance_owners",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790666728002,
+      "tag": "0021_device_auth",
+      "breakpoints": true
     }
   ]
 }

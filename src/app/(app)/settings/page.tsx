@@ -50,8 +50,12 @@ export default async function SettingsPage() {
         <ul className="flex flex-col gap-1 text-sm">
           {devices.map((d, i) => (
             <li key={i}>
-              {d.current ? "This device" : (d.userAgent ?? "Unknown device")} — signed in{" "}
-              {d.createdAt.toISOString().slice(0, 10)}
+              {d.current
+                ? "This device"
+                : d.kind === "device"
+                  ? `iPhone app — ${d.deviceName ?? "unnamed phone"}`
+                  : (d.userAgent ?? "Unknown device")}{" "}
+              — signed in {d.createdAt.toISOString().slice(0, 10)}
             </li>
           ))}
         </ul>

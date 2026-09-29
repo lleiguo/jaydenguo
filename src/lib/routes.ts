@@ -4,6 +4,11 @@ const PUBLIC_EXACT = new Set([
   "/login",
   "/auth/google/start",
   "/auth/google/callback",
+  // The iPhone app (intent 0004): swap a sign-in code for a device token
+  // (API-1), and open a handoff link (API-5). Both take single-use codes.
+  "/api/v1/auth/device",
+  "/auth/handoff",
+  "/auth/app-done",
   "/auth/dev", // answers 404 outside `next dev`
   "/api/healthz",
   "/robots.txt",
@@ -16,6 +21,12 @@ const PUBLIC_PREFIXES = ["/_next/static/", "/icons/"];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_EXACT.has(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
+// Public endpoints that take a single-use code instead of a cookie, so the
+// CSRF check (which protects cookie-authenticated requests) doesn't apply.
+export function isTokenEndpoint(pathname: string): boolean {
+  return pathname === "/api/v1/auth/device";
 }
 
 export function isApiPath(pathname: string): boolean {

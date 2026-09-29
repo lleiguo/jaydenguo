@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { REVIEW_MODES, VIDEO_SPORTS } from "@/domain/video-constants";
 import { isValidTimeZone } from "@/domain/time";
+import { deviceTokenInput, handoffInput } from "../auth/device";
 import { copyInput } from "../calendar-copy";
 import { attendanceInput, eventInput, moveInput, ownersInput, seriesInput } from "../calendar/mutations";
 import { createCredentialInput, signInCodeInput, updateCredentialInput } from "../credentials/store";
@@ -34,6 +35,8 @@ export type Operation = {
   response: string | null;
   // Not JSON: the video stream.
   binary?: "video/mp4";
+  // No session needed (the body carries a single-use code).
+  public?: true;
 };
 
 const skipInput = z.object({ skip: z.boolean().default(true) });
@@ -42,6 +45,38 @@ const settingsInput = z.object({ homeTimeZone: z.string().refine(isValidTimeZone
 const modeInput = z.object({ mode: z.enum(REVIEW_MODES) });
 
 export const operations: Operation[] = [
+  // The iPhone app's sign-in (intent 0004, API-1, API-5)
+  {
+    method: "POST",
+    path: "/api/v1/auth/device",
+    operationId: "exchangeDeviceCode",
+    summary: "Swap the sign-in code from jaydenguohub://auth and the PKCE verifier for a device token.",
+    spec: "API-1",
+    body: deviceTokenInput,
+    status: 201,
+    response: "DeviceTokenResponse",
+    public: true,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/auth/signout",
+    operationId: "signOut",
+    summary: "End this session (the app's token, or the browser's cookie).",
+    spec: "SEC-3",
+    status: 204,
+    response: null,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/auth/handoff",
+    operationId: "startHandoff",
+    summary: "A single-use link that opens a browser-only flow (Google connect) signed in.",
+    spec: "API-5",
+    body: handoffInput,
+    status: 201,
+    response: "HandoffResponse",
+  },
+
   // Session and settings
   {
     method: "GET",

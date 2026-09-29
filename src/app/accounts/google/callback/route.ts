@@ -16,7 +16,11 @@ export async function GET(request: NextRequest) {
     console.error(
       JSON.stringify({ severity: "WARNING", message: "google connect failed", error: String(err) }),
     );
-    const back = new URL("/settings/accounts?error=google", appUrl());
+    // A flow the iPhone app handed off (intent 0004, API-5) reports back to it.
+    const back = new URL(
+      session.kind === "handoff" ? "/auth/app-done?error=google" : "/settings/accounts?error=google",
+      appUrl(),
+    );
     if (err instanceof GoogleConnectRefused && err.code) back.searchParams.set("reason", err.code);
     return NextResponse.redirect(back, 303);
   }
