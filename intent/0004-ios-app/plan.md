@@ -158,6 +158,11 @@ Results go in a `## Spikes` section of this file.
 - CI: `.github/workflows/ios.yml` runs HubKit's tests and a Simulator
   build on changes to `ios/` or `openapi.json`. The first TestFlight build
   waits on O-1/O-2 (the Apple Developer account).
+- Signing: the team comes from a git-ignored `ios/Local.xcconfig` (via
+  `Signing.xcconfig`), not `project.yml`. While O-1 is under review the
+  owner runs builds on their iPhone with a free Personal Team under
+  `com.jaydenguo.hub.dev` (7-day builds, no push), so the real bundle ID
+  stays free for the paid team.
 
 ### N3: Today and Calendar (≈ 7 days)
 | Task | Description | Spec | Done when |
