@@ -13,6 +13,7 @@ export type SeriesRule = {
   notes: string | null;
   locationName: string | null;
   attendance: Attendance;
+  ownerIds?: string[];
   allDay: boolean;
   startDate: string; // YYYY-MM-DD
   untilDate: string | null;
@@ -52,6 +53,7 @@ export function expandSeries(rule: SeriesRule, today: string): SourceRecord[] {
       notes: rule.notes,
       locationName: rule.locationName,
       attendance: rule.attendance,
+      ownerIds: rule.ownerIds,
       allDay: rule.allDay,
       startUtc,
       endUtc,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { Person } from "@/domain/people";
 import type { ClashView, EventView, Undo } from "@/lib/calendar-types";
 import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
@@ -14,6 +15,7 @@ type Row = ClashView & { eventA: EventView; eventB: EventView };
 export function ClashList() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [tz, setTz] = useState("UTC");
+  const [people, setPeople] = useState<Person[]>([]);
   const [cursor, setCursor] = useState<number | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -23,6 +25,7 @@ export function ClashList() {
       const body = await res.json();
       setRows(body.clashes);
       setTz(body.homeTimeZone);
+      setPeople(body.people);
     }
     if (ch.ok) setCursor((await ch.json()).cursor);
   }, []);
@@ -59,7 +62,14 @@ export function ClashList() {
             data-testid="clash"
             className="flex flex-col gap-2 rounded-lg border border-red-700 p-3 text-sm"
           >
-            <p className="font-medium text-red-700 dark:text-red-400">⚠ Overlap of {c.overlapMin} min</p>
+            <p className="font-medium text-red-700 dark:text-red-400">
+              ⚠ Overlap of {c.overlapMin} min
+              {people.length > 1 &&
+                ` for ${people
+                  .filter((p) => c.people.includes(p.id))
+                  .map((p) => p.name)
+                  .join(" and ")}`}
+            </p>
             {[c.eventA, c.eventB].map((e) => (
               <div key={e.id} className="flex flex-wrap items-center justify-between gap-2">
                 <span>{describe(e)}</span>

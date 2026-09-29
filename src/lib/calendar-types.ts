@@ -1,4 +1,5 @@
 import type { Attendance, Category } from "@/domain/constants";
+import type { Person } from "@/domain/people";
 
 // What the calendar API returns (spec CAL-1..9, CON-2..5). Shared by the
 // route handlers and the client.
@@ -8,6 +9,8 @@ export type EventView = {
   title: string;
   category: Category;
   attendance: Attendance;
+  // Whose event (`people.id`s), after any override; never empty.
+  owners: string[];
   // Effective times (after a move), ISO strings.
   start: string;
   end: string;
@@ -26,6 +29,8 @@ export type EventView = {
     skip: boolean;
     // Whose event it is, when the owner changed it from the source's.
     attendance: Attendance | null;
+    // Whose event, when the owner changed it from the source's.
+    owners: string[] | null;
     moved: boolean;
     originalStart: string;
     originalEnd: string;
@@ -43,6 +48,8 @@ export type ClashView = {
   a: string;
   b: string;
   overlapMin: number;
+  // The people both events belong to.
+  people: string[];
   // Set when the owner accepted this clash (CON-4).
   acceptedId: string | null;
 };
@@ -52,6 +59,8 @@ export type CalendarPayload = {
   clashes: ClashView[];
   closures: string[];
   homeTimeZone: string;
+  // Primary person first.
+  people: Person[];
   cursor: number;
 };
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CATEGORIES } from "@/domain/constants";
+import type { Person } from "@/domain/people";
 import { HOUSEHOLD_RULES, SCHOOL_DATE_RULES } from "@/domain/categories";
 import { rulesToText, textToRules } from "./rules";
 
@@ -26,11 +27,16 @@ type Source = {
   enabled: boolean;
   credentialLabel: string | null;
   config: { entry?: EntrySettings } | null;
-  categoryMapping: { default: string; rules?: { match: string; category?: string; attendance?: string }[] };
+  categoryMapping: Mapping;
   lastSuccessAt: string | null;
   lastRun: Run | null;
   running: boolean;
   nextRefreshAt: string | null;
+};
+type Mapping = {
+  default: string;
+  owners?: string[];
+  rules?: { match: string; category?: string; attendance?: string; owner?: string }[];
 };
 type EntrySettings = {
   homePostalCode?: string;
@@ -93,12 +99,18 @@ const label = (c: string) => c.replace("_", " ");
 export function SourcesPanel() {
   const [sources, setSources] = useState<Source[] | null>(null);
   const [creds, setCreds] = useState<Credential[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
   const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [s, c] = await Promise.all([fetch("/api/v1/sources"), fetch("/api/v1/credentials")]);
+    const [s, c, p] = await Promise.all([
+      fetch("/api/v1/sources"),
+      fetch("/api/v1/credentials"),
+      fetch("/api/v1/people"),
+    ]);
     if (s.ok) setSources((await s.json()).sources);
     if (c.ok) setCreds((await c.json()).credentials);
+    if (p.ok) setPeople((await p.json()).people);
   }, []);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -155,29 +167,36 @@ export function SourcesPanel() {
           <SourceCard
             key={s.id}
             s={s}
+            people={people}
+            onSaved={load}
             onRefresh={() => refresh(`/api/v1/sources/${s.id}/refresh`, s.name)}
             onToggle={() => toggle(s)}
           />
         ))}
       </ul>
 
-      <AddSource creds={creds} onAdded={load} />
+      <AddSource creds={creds} people={people} onAdded={load} />
     </div>
   );
 }
 
 function SourceCard({
   s,
+  people,
+  onSaved,
   onRefresh,
   onToggle,
 }: {
   s: Source;
+  people: Person[];
+  onSaved: () => void;
   onRefresh: () => Promise<string>;
   onToggle: () => void;
 }) {
   const [runs, setRuns] = useState<Run[] | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [entryOpen, setEntryOpen] = useState(false);
+  const [mappingOpen, setMappingOpen] = useState(false);
   const failed = s.lastRun?.status === "failed";
   const status = s.running ? "Syncing…" : failed ? "Failed" : s.lastRun ? "OK" : "Not synced yet";
   const tooSoon = !!s.nextRefreshAt && new Date(s.nextRefreshAt) > new Date();
@@ -213,6 +232,7 @@ function SourceCard({
         {KIND_LABEL[s.kind] ?? s.kind} ·{" "}
         {NO_ACCOUNT.includes(s.kind) ? "public pages" : (s.credentialLabel ?? "no account")} · default
         category {label(s.categoryMapping.default)}
+        {people.length > 1 && ` · ${ownerNames(s.categoryMapping.owners, people)}'s`}
       </div>
       {s.kind === "gmail" && (
         <div className="text-neutral-600 dark:text-neutral-400">
@@ -252,6 +272,13 @@ function SourceCard({
         <button className="rounded border px-2 py-1" onClick={onToggle}>
           {s.enabled ? "Switch off" : "Switch on"}
         </button>
+        <button
+          className="rounded border px-2 py-1"
+          aria-expanded={mappingOpen}
+          onClick={() => setMappingOpen(!mappingOpen)}
+        >
+          Categories and owners
+        </button>
         {s.kind === "tennis_tc" && (
           <button
             className="rounded border px-2 py-1"
@@ -280,6 +307,16 @@ function SourceCard({
         </p>
       )}
       {entryOpen && <EntryForm s={s} onSaved={() => setEntryOpen(false)} />}
+      {mappingOpen && (
+        <MappingForm
+          s={s}
+          people={people}
+          onSaved={() => {
+            setMappingOpen(false);
+            onSaved();
+          }}
+        />
+      )}
       {runs && (
         <table className="mt-2 w-full text-left text-xs">
           <caption className="sr-only">Run history for {s.name}</caption>
@@ -312,6 +349,95 @@ function SourceCard({
         </table>
       )}
     </li>
+  );
+}
+
+// Whose events, by default; none means the primary person.
+function ownerNames(ids: string[] | undefined, people: Person[]) {
+  const named = people.filter((p) => ids?.includes(p.id));
+  return (named.length ? named : people.filter((p) => p.isPrimary)).map((p) => p.name).join(" and ");
+}
+
+function OwnerChoice({ people, owners }: { people: Person[]; owners?: string[] }) {
+  if (people.length < 2) return null;
+  const checked = owners?.length ? owners : people.filter((p) => p.isPrimary).map((p) => p.id);
+  return (
+    <fieldset className="flex flex-wrap items-center gap-3">
+      <legend className="float-left mr-2">Whose events</legend>
+      {people.map((p) => (
+        <label key={p.id} className="flex items-center gap-1">
+          <input type="checkbox" name="owner" value={p.id} defaultChecked={checked.includes(p.id)} />
+          {p.name}
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+// Just the primary person is saved as none, so events keep their hash and a
+// save doesn't rewrite every event at the next sync.
+function chosenOwners(f: FormData, people: Person[]) {
+  const ids = f.getAll("owner").map(String);
+  const primary = people.find((p) => p.isPrimary)?.id;
+  return ids.length === 1 && ids[0] === primary ? [] : ids;
+}
+
+const RULES_HELP = "Rules (one per line: words in the title = category, attendance or person)";
+
+// A source's default category and owners, and its title rules (ACT-1,
+// owner 2026-09-28). Synced events pick up a change at the next sync.
+function MappingForm({ s, people, onSaved }: { s: Source; people: Person[]; onSaved: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const m = s.categoryMapping;
+  return (
+    <form
+      aria-label="Categories and owners"
+      className="mt-2 flex flex-col gap-2 rounded border border-dashed p-2"
+      onSubmit={async (ev) => {
+        ev.preventDefault();
+        const f = new FormData(ev.currentTarget);
+        const { rules, errors } = textToRules(String(f.get("rules") ?? ""), people);
+        if (errors.length) return setError(errors.join(" "));
+        if (people.length > 1 && f.getAll("owner").length === 0)
+          return setError("Pick whose events these are.");
+        const owners = chosenOwners(f, people);
+        const res = await fetch(`/api/v1/sources/${s.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ categoryMapping: { default: f.get("category"), owners, rules } }),
+        });
+        if (!res.ok) return setError((await res.json().catch(() => ({}))).error ?? "Couldn't save.");
+        setError(null);
+        onSaved();
+      }}
+    >
+      <label className="flex flex-col">
+        Default category
+        <select name="category" defaultValue={m.default} className="rounded border px-2 py-1">
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {label(c)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <OwnerChoice people={people} owners={m.owners} />
+      <label className="flex flex-col">
+        {RULES_HELP}
+        <textarea
+          name="rules"
+          rows={4}
+          className="rounded border px-2 py-1 font-mono text-xs"
+          defaultValue={rulesToText(m.rules, people)}
+        />
+      </label>
+      <p className="text-neutral-600 dark:text-neutral-400">
+        Changes reach the calendar at this source&apos;s next sync. Events you changed by hand keep your
+        choice.
+      </p>
+      {error && <p className="text-red-700 dark:text-red-400">{error}</p>}
+      <button className="self-start rounded border px-2 py-1">Save</button>
+    </form>
   );
 }
 
@@ -402,7 +528,15 @@ function EntryForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
   );
 }
 
-function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => void }) {
+function AddSource({
+  creds,
+  people,
+  onAdded,
+}: {
+  creds: Credential[];
+  people: Person[];
+  onAdded: () => void;
+}) {
   const [kind, setKind] = useState<Kind>("ical");
   const [credentialId, setCredentialId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -427,8 +561,9 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
         // Keep the form: React clears currentTarget once the handler awaits.
         const form = e.currentTarget;
         const f = new FormData(form);
-        const { rules, errors } = textToRules(String(f.get("rules") ?? ""));
+        const { rules, errors } = textToRules(String(f.get("rules") ?? ""), people);
         if (errors.length) return setError(errors.join(" "));
+        const owners = chosenOwners(f, people);
         const res = await fetch("/api/v1/sources", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -451,7 +586,7 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
                       : kind === "gmail"
                         ? { senders: splitList(f.get("senders")), labels: splitList(f.get("labels")) }
                         : {},
-            categoryMapping: { default: f.get("category"), rules },
+            categoryMapping: { default: f.get("category"), owners, rules },
           }),
         });
         if (!res.ok)
@@ -603,8 +738,9 @@ function AddSource({ creds, onAdded }: { creds: Credential[]; onAdded: () => voi
           ))}
         </select>
       </label>
+      <OwnerChoice key={`owners-${kind}`} people={people} />
       <label className="flex flex-col">
-        Rules (one per line: words in the title = category or attendance)
+        {RULES_HELP}
         <textarea
           key={kind}
           name="rules"

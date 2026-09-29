@@ -34,7 +34,7 @@ describe("Google Calendar adapter (SRC-1)", () => {
       sourceUrl: "https://www.google.com/calendar/event?eid=example1",
     });
     expect(byId("def456")).toMatchObject({ category: "swimming", attendance: "optional" });
-    expect(byId("jkl012")).toMatchObject({ category: "other", attendance: "parent_only" });
+    expect(byId("jkl012")).toMatchObject({ category: "other", attendance: "required" });
   });
 
   it("keeps all-day events as dates", () => {

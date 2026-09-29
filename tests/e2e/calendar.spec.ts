@@ -79,63 +79,88 @@ test("categories have their own icon, and the event shows where it came from (CA
   );
 });
 
-test("School and Activities chips hide layers, closures stay, and hidden clashes are marked (CAL-3a, CAL-7)", async ({
+test("people chips hide each person's events, closures stay, and hidden clashes are marked (CAL-3a, CAL-7)", async ({
   page,
   context,
 }, info) => {
   const monday = isolatedWeek(2, info.project.name);
   const tue = addDays(monday, 1);
   const wed = addDays(monday, 2);
-  await addEvent(context, {
-    title: `Class block ${RUN}`,
-    category: "school_class",
-    start: toronto(tue, "08:30"),
-    end: toronto(tue, "15:00"),
-  });
-  await addEvent(context, {
-    title: `Dentist at noon ${RUN}`,
-    category: "other",
-    start: toronto(tue, "12:00"),
-    end: toronto(tue, "13:00"),
-  });
-  await addEvent(context, {
-    title: `PD day ${RUN}`,
-    category: "school_closure",
-    allDay: true,
-    start: `${wed}T00:00:00.000Z`,
-    end: `${addDays(wed, 1)}T00:00:00.000Z`,
-  });
-  await addEvent(context, {
-    title: `Soccer camp ${RUN}`,
-    category: "soccer",
-    start: toronto(wed, "09:00"),
-    end: toronto(wed, "15:00"),
-  });
-  await openWeek(page, monday);
+  const brotherName = `Brother ${info.project.name} ${RUN}`;
+  const { id: brother } = await apiSend(context, "POST", "/api/v1/people", { name: brotherName });
+  const { people } = await apiSend(context, "GET", "/api/v1/people");
+  const primary = people.find((p: { isPrimary: boolean }) => p.isPrimary);
+  try {
+    await addEvent(context, {
+      title: `Class block ${RUN}`,
+      category: "school_class",
+      start: toronto(tue, "08:30"),
+      end: toronto(tue, "15:00"),
+    });
+    // Both brothers': it clashes with his class.
+    await addEvent(context, {
+      title: `Dentist at noon ${RUN}`,
+      category: "other",
+      ownerIds: [primary.id, brother],
+      start: toronto(tue, "12:00"),
+      end: toronto(tue, "13:00"),
+    });
+    // His brother's alone: no clash with his class.
+    await addEvent(context, {
+      title: `Piano ${RUN}`,
+      category: "other",
+      ownerIds: [brother],
+      start: toronto(tue, "09:00"),
+      end: toronto(tue, "10:00"),
+    });
+    await addEvent(context, {
+      title: `PD day ${RUN}`,
+      category: "school_closure",
+      allDay: true,
+      start: `${wed}T00:00:00.000Z`,
+      end: `${addDays(wed, 1)}T00:00:00.000Z`,
+    });
+    await addEvent(context, {
+      title: `Soccer camp ${RUN}`,
+      category: "soccer",
+      start: toronto(wed, "09:00"),
+      end: toronto(wed, "15:00"),
+    });
+    await openWeek(page, monday);
 
-  await expect(calEvent(page, `Dentist at noon ${RUN}`)).toHaveAttribute("data-clash", "visible");
-  // On the closure day the camp doesn't clash with school, and says so.
-  await expect(calEvent(page, `Soccer camp ${RUN}`)).toHaveAttribute("data-clash", "none");
-  await expect(calEvent(page, `Soccer camp ${RUN}`)).toContainText("🚫");
+    await expect(calEvent(page, `Dentist at noon ${RUN}`)).toHaveAttribute("data-clash", "visible");
+    await expect(calEvent(page, `Piano ${RUN}`)).toHaveAttribute("data-clash", "none");
+    await expect(calEvent(page, `Piano ${RUN}`)).toContainText(brotherName);
+    // On the closure day the camp doesn't clash with school, and says so.
+    await expect(calEvent(page, `Soccer camp ${RUN}`)).toHaveAttribute("data-clash", "none");
+    await expect(calEvent(page, `Soccer camp ${RUN}`)).toContainText("🚫");
 
-  await page.getByRole("button", { name: "🏫 School" }).click();
-  await expect(calEvent(page, `Class block ${RUN}`)).toHaveCount(0);
-  await expect(calEvent(page, `PD day ${RUN}`)).toBeVisible();
-  await expect(calEvent(page, `Dentist at noon ${RUN}`)).toHaveAttribute("data-clash", "hidden");
-  await expect(
-    calEvent(page, `Dentist at noon ${RUN}`).getByRole("img", { name: "clash with a hidden event" }),
-  ).toBeVisible();
+    const chip = (name: string) => page.getByRole("button", { name, exact: true });
+    await chip(primary.name).click();
+    await expect(calEvent(page, `Class block ${RUN}`)).toHaveCount(0);
+    await expect(calEvent(page, `Soccer camp ${RUN}`)).toHaveCount(0);
+    await expect(calEvent(page, `PD day ${RUN}`)).toBeVisible();
+    await expect(calEvent(page, `Piano ${RUN}`)).toBeVisible();
+    // Still shown for his brother; its clash is with a hidden event.
+    await expect(calEvent(page, `Dentist at noon ${RUN}`)).toHaveAttribute("data-clash", "hidden");
+    await expect(
+      calEvent(page, `Dentist at noon ${RUN}`).getByRole("img", { name: "clash with a hidden event" }),
+    ).toBeVisible();
 
-  // The choice persists on this device.
-  await page.reload();
-  await expect(page.getByRole("button", { name: "🏫 School" })).toHaveAttribute("aria-pressed", "false");
-  await expect(calEvent(page, `Class block ${RUN}`)).toHaveCount(0);
+    // The choice persists on this device.
+    await page.reload();
+    await expect(chip(primary.name)).toHaveAttribute("aria-pressed", "false");
+    await expect(calEvent(page, `Class block ${RUN}`)).toHaveCount(0);
 
-  await page.getByRole("button", { name: "⚽ Activities" }).click();
-  await expect(calEvent(page, `Soccer camp ${RUN}`)).toHaveCount(0);
-  await page.getByRole("button", { name: "🏫 School" }).click();
-  await page.getByRole("button", { name: "⚽ Activities" }).click();
-  await expect(calEvent(page, `Class block ${RUN}`)).toBeVisible();
+    await chip(brotherName).click();
+    await expect(calEvent(page, `Piano ${RUN}`)).toHaveCount(0);
+    await expect(calEvent(page, `Dentist at noon ${RUN}`)).toHaveCount(0);
+    await chip(primary.name).click();
+    await chip(brotherName).click();
+    await expect(calEvent(page, `Class block ${RUN}`)).toBeVisible();
+  } finally {
+    await apiSend(context, "DELETE", `/api/v1/people/${brother}`);
+  }
 });
 
 test("a school day's classes fold into one School block that expands and collapses (SCH-1)", async ({
@@ -181,11 +206,13 @@ test("a school day's classes fold into one School block that expands and collaps
   await expect(block).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Collapse school" })).toHaveCount(0);
 
-  // Hiding the School layer hides the block too (CAL-3a).
-  await page.getByRole("button", { name: "🏫 School" }).click();
+  // Hiding school classes hides the block too (CAL-3).
+  await page.getByRole("button", { name: "Filters" }).click();
+  const classes = page.getByRole("checkbox", { name: "🏫 School class" });
+  await classes.uncheck();
   await expect(page.getByTestId("school-block")).toHaveCount(0);
   await expect(calEvent(page, `Orthodontist ${RUN}`)).toHaveAttribute("data-clash", "hidden");
-  await page.getByRole("button", { name: "🏫 School" }).click();
+  await classes.check();
 });
 
 test("a repeating event keeps its local time across the daylight-saving change (CAL-5, CAL-9)", async ({

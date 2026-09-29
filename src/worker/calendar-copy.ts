@@ -109,13 +109,16 @@ export async function copyCalendar(db: Db, now = new Date()) {
   await guard(db, calendarId);
   const cal = encodeURIComponent(calendarId);
 
-  const { events } = await loadCalendar(
+  const { events, people } = await loadCalendar(
     db,
     new Date(now.getTime() - PAST_DAYS * 86_400_000),
     new Date(now.getTime() + FUTURE_DAYS * 86_400_000),
   );
+  // The copy is his calendar: only the primary person's events.
+  const primary = people.find((p) => p.isPrimary)?.id;
   const desired = events
     .filter((e) => e.status === "active" && !e.deletedAt && !e.override?.skip)
+    .filter((e) => !primary || e.owners.includes(primary))
     .map((e) => {
       const body: GoogleEventBody = googleEventBody(e, timeZone);
       return { eventId: e.id, body, hash: bodyHash(body) };

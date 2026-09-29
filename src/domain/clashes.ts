@@ -1,4 +1,5 @@
 import type { Attendance, Category } from "./constants";
+import { shareOwner } from "./people";
 import { localDate } from "./time";
 
 // Clash detection (plan M1.9, spec CON-1, CON-2, CAL-7). Pure and fast: a
@@ -13,6 +14,9 @@ export type ClashEvent = {
   id: string;
   category: Category;
   attendance: Attendance;
+  // Whose event (`people.id`s, resolved: never empty). Events clash only
+  // for a person they share.
+  owners: string[];
   // Effective times, after any override.
   start: Date;
   end: Date;
@@ -23,6 +27,8 @@ export type Clash = {
   a: string;
   b: string; // a < b
   overlapMin: number;
+  // The people both events belong to.
+  people: string[];
 };
 
 export const pairKey = (x: string, y: string): [string, string] => (x < y ? [x, y] : [y, x]);
@@ -46,7 +52,7 @@ export function closureDates(events: ClashEvent[], homeTz: string): Set<string> 
 const nextDay = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
 // Can this event take part in clashes at all?
-function needsJayden(e: ClashEvent, closed: Set<string>, homeTz: string): boolean {
+function takesPart(e: ClashEvent, closed: Set<string>, homeTz: string): boolean {
   if (e.attendance !== "required" || e.allDay || e.category === "school_closure") return false;
   // No classes on closure days (CAL-7).
   if (e.category === "school_class" && closed.has(localDate(e.start, homeTz))) return false;
@@ -62,7 +68,7 @@ export function detectClashes({ events, homeTimeZone }: ClashInput): Clash[] {
   const closed = closureDates(events, homeTimeZone);
   const toleranceMs = CLASH_TOLERANCE_MIN * 60_000;
   const candidates = events
-    .filter((e) => needsJayden(e, closed, homeTimeZone))
+    .filter((e) => takesPart(e, closed, homeTimeZone))
     .map((e) => ({ e, start: e.start.getTime(), end: e.end.getTime() }))
     .sort((x, y) => x.start - y.start);
 
@@ -74,10 +80,13 @@ export function detectClashes({ events, homeTimeZone }: ClashInput): Clash[] {
     for (const prev of active) {
       // Classes are the timetable itself; they don't clash with each other.
       if (prev.e.category === "school_class" && cur.e.category === "school_class") continue;
+      // Lei's dentist doesn't clash with Jayden's game.
+      if (!shareOwner(prev.e.owners, cur.e.owners)) continue;
       const overlapMs = Math.min(prev.end, cur.end) - cur.start;
       if (overlapMs > toleranceMs) {
         const [a, b] = pairKey(prev.e.id, cur.e.id);
-        clashes.push({ a, b, overlapMin: Math.round(overlapMs / 60_000) });
+        const people = prev.e.owners.filter((id) => cur.e.owners.includes(id));
+        clashes.push({ a, b, overlapMin: Math.round(overlapMs / 60_000), people });
       }
     }
     active.push(cur);

@@ -3,11 +3,13 @@ import { z } from "zod";
 import { changeLog, conflicts, eventOverrides, eventRevisions, events, eventSeries } from "@db/schema";
 import { pairKey } from "../../domain/clashes";
 import { ATTENDANCE, CATEGORIES, type Attendance } from "../../domain/constants";
+import { resolveOwners } from "../../domain/people";
 import { expandSeries } from "../../domain/series";
 import { isValidTimeZone, localDate } from "../../domain/time";
 import type { Undo } from "../../lib/calendar-types";
 import type { Db, Tx } from "../db/client";
 import { HttpError } from "../errors";
+import { listPeople } from "../people";
 import { getHomeTimeZone } from "../settings";
 import { syncRecords } from "../sync/apply";
 
@@ -24,6 +26,8 @@ export const eventInput = z
     title: z.string().trim().min(1).max(200),
     category: z.enum(CATEGORIES),
     attendance: z.enum(ATTENDANCE).default("required"),
+    // Whose event (`people.id`s); none means the primary person.
+    ownerIds: z.array(z.uuid()).max(20).optional(),
     start: when,
     end: when,
     allDay: z.boolean().default(false),
@@ -37,6 +41,7 @@ export const seriesInput = z
     title: z.string().trim().min(1).max(200),
     category: z.enum(CATEGORIES),
     attendance: z.enum(ATTENDANCE).default("required"),
+    ownerIds: z.array(z.uuid()).max(20).optional(),
     notes: z.string().max(2000).nullable().default(null),
     locationName: z.string().max(300).nullable().default(null),
     allDay: z.boolean().default(false),
@@ -70,6 +75,7 @@ const fieldsOf = (e: typeof events.$inferSelect) => ({
   title: e.title,
   category: e.category,
   attendance: e.attendance,
+  ownerIds: e.ownerIds,
   start: e.startUtc.toISOString(),
   end: e.endUtc.toISOString(),
   allDay: e.allDay,
@@ -95,6 +101,7 @@ export async function createEvent(
         title: input.title,
         category: input.category,
         attendance: input.attendance,
+        ownerIds: input.ownerIds ?? [],
         startUtc: input.start,
         endUtc: input.end,
         allDay: input.allDay,
@@ -118,6 +125,7 @@ export async function updateEvent(db: Db, actor: Actor, id: string, input: z.inf
         title: input.title,
         category: input.category,
         attendance: input.attendance,
+        ownerIds: input.ownerIds ?? before.ownerIds,
         startUtc: input.start,
         endUtc: input.end,
         allDay: input.allDay,
@@ -171,6 +179,7 @@ async function writeOverride(
     newEndUtc?: Date | null;
     skip?: boolean;
     attendance?: Attendance | null;
+    ownerIds?: string[] | null;
   },
 ): Promise<string> {
   const previous = await activeOverride(tx, e.id);
@@ -188,6 +197,7 @@ async function writeOverride(
       newEndUtc: change.newEndUtc !== undefined ? change.newEndUtc : (previous?.newEndUtc ?? null),
       skip: change.skip ?? previous?.skip ?? false,
       attendance: change.attendance !== undefined ? change.attendance : (previous?.attendance ?? null),
+      ownerIds: change.ownerIds !== undefined ? change.ownerIds : (previous?.ownerIds ?? null),
       createdBy: actor,
       // What the source said when the owner changed it (CON-5).
       sourceSnapshot: { start: e.startUtc.toISOString(), end: e.endUtc.toISOString(), title: e.title },
@@ -241,10 +251,9 @@ export async function skipEvent(db: Db, actor: Actor, id: string, skip: boolean)
   });
 }
 
-// Whose event it is (CON-1): e.g. a parent's dentist from the family
-// calendar is "parent only", so it never clashes with his day. Events added
-// here change directly; events from a source or a series get an override
-// that survives syncs.
+// Required or optional (CON-1): an optional event never clashes. Events
+// added here change directly; events from a source or a series get an
+// override that survives syncs.
 export const attendanceInput = z.object({ attendance: z.enum(ATTENDANCE) });
 
 export async function setAttendance(db: Db, actor: Actor, id: string, attendance: Attendance): Promise<Undo> {
@@ -260,6 +269,31 @@ export async function setAttendance(db: Db, actor: Actor, id: string, attendance
     const overrideId = await writeOverride(tx, actor, e, {
       attendance: attendance === e.attendance ? null : attendance,
     });
+    return { method: "POST", url: `/api/v1/overrides/${overrideId}/undo` };
+  });
+}
+
+// Whose event it is (owner, 2026-09-28): e.g. a parent's dentist from the
+// family calendar is Lei's, so it only clashes with Lei's day. Saved like
+// attendance: directly, or on an override that survives syncs.
+export const ownersInput = z.object({ ownerIds: z.array(z.uuid()).min(1).max(20) });
+
+const sameSet = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((id) => b.includes(id));
+
+export async function setOwners(db: Db, actor: Actor, id: string, ownerIds: string[]): Promise<Undo> {
+  return db.transaction(async (tx) => {
+    const e = await getEvent(tx, id);
+    if (isSingleManual(e)) {
+      await tx.update(events).set({ ownerIds, updatedAt: new Date() }).where(eq(events.id, id));
+      await revise(tx, id, actor, "owners", { ownerIds: e.ownerIds }, { ownerIds });
+      await note(tx, "event", id);
+      return { method: "POST", url: `/api/v1/events/${id}/owners`, body: { ownerIds: e.ownerIds } };
+    }
+    // Back to what the source says: no owners override.
+    const people = await listPeople(tx);
+    const same = sameSet(resolveOwners(ownerIds, people), resolveOwners(e.ownerIds, people));
+    const overrideId = await writeOverride(tx, actor, e, { ownerIds: same ? null : ownerIds });
     return { method: "POST", url: `/api/v1/overrides/${overrideId}/undo` };
   });
 }
@@ -289,8 +323,8 @@ export async function resetEvent(db: Db, actor: Actor, eventId: string) {
   return db.transaction(async (tx) => {
     const o = await activeOverride(tx, eventId);
     if (!o) return;
-    // Only the time goes back; "skip" and whose event it is stay.
-    if (o.skip || o.attendance) {
+    // Only the time goes back; "skip", attendance and whose event it is stay.
+    if (o.skip || o.attendance || o.ownerIds) {
       await writeOverride(tx, actor, await getEvent(tx, eventId), { newStartUtc: null, newEndUtc: null });
       return;
     }

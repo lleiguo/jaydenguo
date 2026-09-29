@@ -3,17 +3,18 @@
 import { useEffect, useState } from "react";
 import type { Category } from "@/domain/constants";
 
-// Filters and layer chips persist per device (CAL-3, CAL-3a). Browser
+// Filters and people chips persist per device (CAL-3, CAL-3a). Browser
 // storage is a convenience: if it's unavailable, defaults are used.
 
 export type Filters = {
   hiddenCategories: Category[];
   hiddenSources: string[];
-  school: boolean;
-  activities: boolean;
+  // `people.id`s whose events are hidden.
+  hiddenPeople: string[];
 };
-const KEY = "hub.calendar.filters.v1";
-const DEFAULTS: Filters = { hiddenCategories: [], hiddenSources: [], school: true, activities: true };
+// v2: people chips replaced the School and Activities chips.
+const KEY = "hub.calendar.filters.v2";
+const DEFAULTS: Filters = { hiddenCategories: [], hiddenSources: [], hiddenPeople: [] };
 
 export function usePersistentFilters(): [Filters, (f: Filters) => void] {
   const [filters, setFilters] = useState<Filters>(DEFAULTS);

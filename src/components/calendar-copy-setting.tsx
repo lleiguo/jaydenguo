@@ -36,9 +36,9 @@ export function CalendarCopySetting() {
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p className={muted}>
-        Copies every event, as it shows here, to a separate &quot;Jayden (hub)&quot; calendar in Google
-        Calendar, once a day and when you press Copy now. Only that calendar is ever written; the household
-        calendar never is.
+        Copies his events (the first person under People), as they show here, to a separate &quot;Jayden
+        (hub)&quot; calendar in Google Calendar, once a day and when you press Copy now. Only that calendar is
+        ever written; the household calendar never is.
       </p>
       {s.accounts.length === 0 ? (
         <p>
