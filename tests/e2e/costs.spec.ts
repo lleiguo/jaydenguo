@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 import pg from "pg";
 import { OWNER } from "./support/env";
 import { signInAs } from "./support/session";

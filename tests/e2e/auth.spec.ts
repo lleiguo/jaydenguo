@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import type { APIRequestContext } from "@playwright/test";
+import { expect, test } from "./support/test";
 import { APP_URL, INTRUDER, OWNER, soleOwner } from "./support/env";
 import { protectedRoutes } from "./support/routes";
 import { signInAs } from "./support/session";

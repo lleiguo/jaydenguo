@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 // Spec AUTH-3 and NFR-2: nothing is indexable and security headers are sent.
 test("the login page is marked noindex and has security headers", async ({ page }) => {

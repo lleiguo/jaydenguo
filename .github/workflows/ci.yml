@@ -71,6 +71,8 @@ jobs:
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
+      - name: openapi.json matches the API (intent 0004, API-4)
+        run: pnpm openapi --check
       - run: pnpm test
       # Integration tests drive Chromium too (the Commit Swimming adapter).
       # The browser is cached per lockfile; its system packages install each run.

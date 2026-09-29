@@ -21,7 +21,8 @@
     "db:migrate": "tsx src/worker/main.ts migrate",
     "job": "tsx src/worker/main.ts",
     "smoke": "tsx src/worker/main.ts smoke",
-    "seed": "tsx src/worker/main.ts seed"
+    "seed": "tsx src/worker/main.ts seed",
+    "openapi": "tsx scripts/openapi.ts"
   },
   "dependencies": {
     "@anthropic-ai/vertex-sdk": "^0.19.11",
@@ -50,6 +51,8 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.28.2",
     "eslint": "^9",

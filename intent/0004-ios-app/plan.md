@@ -1,5 +1,5 @@
 # Plan: a native iPhone app for the hub
-Source: [spec.md](spec.md). Status: draft (2026-09-28).
+Source: [spec.md](spec.md). Status: approved (2026-09-28).
 
 Same working agreement as [0001's plan](../0001-jayden-hub/plan.md) §1:
 one PR per milestone or smaller, each listing its task IDs; nothing merges
@@ -47,6 +47,36 @@ Results go in a `## Spikes` section of this file.
 | N0.1 | `pnpm openapi`: build `openapi.json` from the route zod schemas (every `/api/v1` route, request and response). CI step fails when the checked-in file is stale. | API-4 | CI green with the file; a deliberate schema change without regenerating fails CI. |
 | N0.2 | Audit every page under `src/app/(app)/` for direct database reads and server-only actions; list each gap in this file. | API-3 | Gap list merged here. |
 | N0.3 | Add routes for the gaps: `GET /api/v1/today` (school day, next up, waiting-on-owner items), tennis and swim overviews, people and general settings, video submit and Photos picker session. Web pages may switch to them where it's simpler. | API-3 | Integration test per route; route-list e2e covers them (401 signed out). |
+
+**N0 as built (2026-09-29):**
+- *Audit (N0.2).* Pages that read the database directly, and what the API
+  lacked: Today at school (no route); the Tennis page's "Upcoming
+  tournaments" rows, "Found for him" entries and the next matches'
+  predictions and explanations (the tournaments route had none of them);
+  explanations on the tournament and player routes. Everything else a page
+  shows already had a route (swim overview = meets + PBs; People, General,
+  Sessions, Costs, video settings and the Photos picker session, which
+  `POST /api/v1/videos` already starts, returning `pickerUri`).
+- *Routes (N0.3).* `GET /api/v1/today` (`src/server/today.ts`),
+  `GET /api/v1/school/today`, and `GET /api/v1/tennis/tournaments` now
+  returns the whole Tennis page (`src/server/tennis/overview.ts`); the
+  tournament and player routes add `explanations`/`explanation`. All
+  additive. One change that isn't: `GET /api/v1/events?deleted=1` answered
+  with a different shape from the same path, which a generated client
+  can't express, so deleted events moved to `GET /api/v1/events/deleted`
+  (the web's Deleted tab moved with it; no other client existed).
+- *Contract (N0.1).* The zod schemas only cover requests, so responses
+  come from named TypeScript types in `src/server/openapi/responses.ts`,
+  read by `scripts/openapi.ts` with the TypeScript checker (an off-the-shelf
+  generator couldn't read Drizzle-inferred types). The route registry is
+  `src/server/openapi/registry.ts`; a unit test fails if it and the route
+  files differ. CI runs `pnpm openapi --check`. Every `/api/v1` JSON
+  response the e2e suite sees is validated against `openapi.json`
+  (`tests/e2e/support/test.ts`), plus `api-contract.spec.ts` calls every
+  GET route. Review-round JSON (`output`, `combinedReview`) stays untyped
+  in the schema, with its shapes listed as `ReviewOutput`,
+  `CritiqueOutput`, `RebuttalOutput`, `FinalScoreOutput` and
+  `CombinedOutput` for the app to decode by `round`.
 
 ### N1: Device auth and app-facing backend (≈ 3 days)
 | Task | Description | Spec | Done when |
@@ -145,4 +175,7 @@ about 16 days in.
 ## 6. Status
 | Milestone | Status |
 |---|---|
-| N0–N9 | not started; intent, spec and plan in draft (2026-09-28) |
+| N0 | done 2026-09-29 (`ios/n0-api-contract`) |
+| N1 | not started |
+| N2–N8 | blocked on O-1 and O-4: Xcode isn't installed on the Mac yet (only the command line tools) |
+| N9 | not planned (owner kept the no-upload default) |

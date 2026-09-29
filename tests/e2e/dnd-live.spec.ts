@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./support/test";
 import { RUN, addEvent, calEvent, isolatedWeek, toronto } from "./support/calendar";
 import { OWNER } from "./support/env";
 import { signInAs } from "./support/session";

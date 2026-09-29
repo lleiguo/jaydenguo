@@ -1,4 +1,5 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
+import { expect, test } from "./support/test";
 import pg from "pg";
 import { apiSend } from "./support/api";
 import { FAKE_COMMIT_LOGIN } from "./support/fake-commit";
