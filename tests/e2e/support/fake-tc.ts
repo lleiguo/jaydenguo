@@ -80,12 +80,36 @@ export const ENTRY_FIXTURE = {
   selfCurrentTp: "1021",
 };
 
+// The signed-in entry flow (SP-7, M3b.6): the login the fake accepts, the
+// events each tournament's form offers, and which tournaments ask for
+// payment after Submit.
+export const TC_LOGIN = { username: "fake-tc-user", password: "fake-tc-pass" };
+export const ENTRY_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  [ENTRY_FIXTURE.a]: [
+    { value: "9006", label: "BU9 - Orange $30.00" },
+    { value: "9005", label: "BU10 - Orange $30.00" },
+  ],
+  [ENTRY_FIXTURE.b]: [{ value: "9105", label: "BS10 - Orange $45.00" }],
+};
+
+export type EntrySubmission = { tournament: string; eventId: string; agreed: boolean };
+
 type Options = {
   // Replace a page's HTML (e.g. a changed score) for one test.
   edit?: (file: string, html: string) => string;
   // Paths requested, for assertions.
   requests?: string[];
+  // Entry forms submitted, and tournaments whose entry asks for payment.
+  submissions?: EntrySubmission[];
+  paid?: Set<string>;
 };
+
+const readBody = async (req: import("node:http").IncomingMessage) => {
+  let raw = "";
+  for await (const c of req) raw += c;
+  return new URLSearchParams(raw);
+};
+const fixture = (file: string) => readFileSync(`${DIR}/${file}`, "utf8");
 
 export function createFakeTc(opts: Options = {}): Server {
   const table = routes();
@@ -95,8 +119,11 @@ export function createFakeTc(opts: Options = {}): Server {
       `/player-profile/${o.profileId}`,
     ]),
   );
-  return createServer((req, res) => {
+  // Entered tournaments (the fake's "My entry" state).
+  const entered = new Map<string, string>();
+  return createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    if (await entryFlow(req, res, url, entered, opts)) return;
     // The old /sport/*.aspx pages are told apart by their query string.
     const path = (url.pathname + (url.pathname.endsWith(".aspx") ? url.search : "")).toLowerCase();
     opts.requests?.push(url.pathname);
@@ -115,6 +142,103 @@ export function createFakeTc(opts: Options = {}): Server {
     });
     res.end(html);
   });
+}
+
+// The signed-in pages: log in, the entry form, Submit, "My entry", and a
+// payment page. True when the request was one of them.
+async function entryFlow(
+  req: import("node:http").IncomingMessage,
+  res: import("node:http").ServerResponse,
+  url: URL,
+  entered: Map<string, string>,
+  opts: Options,
+): Promise<boolean> {
+  const html = (body: string, status = 200, cookie?: string) => {
+    res.writeHead(status, {
+      "content-type": "text/html; charset=utf-8",
+      ...(cookie ? { "set-cookie": cookie } : {}),
+    });
+    res.end(body);
+  };
+  const redirect = (to: string, cookie?: string) => {
+    res.writeHead(302, { location: to, ...(cookie ? { "set-cookie": cookie } : {}) });
+    res.end();
+  };
+  const signedIn = /(?:^|;\s*)tc_auth=ok(?:;|$)/.test(req.headers.cookie ?? "");
+  const path = url.pathname.toLowerCase();
+
+  if (path === "/user/login" && req.method === "GET") {
+    html(fixture("entries/login.html").replace("{{RETURN_URL}}", url.searchParams.get("ReturnUrl") ?? "/"));
+    return true;
+  }
+  if (path === "/user" && req.method === "POST") {
+    const form = await readBody(req);
+    const ok =
+      form.get("__RequestVerificationToken") === "fake-login-token" &&
+      form.get("Login") === TC_LOGIN.username &&
+      form.get("Password") === TC_LOGIN.password;
+    if (!ok) redirect(`/user/login?ReturnUrl=${encodeURIComponent(form.get("ReturnUrl") ?? "/")}&error=1`);
+    else redirect(form.get("ReturnUrl") || "/", "tc_auth=ok; path=/; HttpOnly");
+    return true;
+  }
+  const entry = /^\/individual-entry\/([0-9a-f-]+)$/.exec(path);
+  if (entry && req.method === "GET") {
+    if (!signedIn) {
+      redirect(`/user/login?ReturnUrl=${encodeURIComponent(url.pathname)}`);
+      return true;
+    }
+    const t = entry[1];
+    const done = entered.get(t);
+    if (done) {
+      html(fixture("entries/my-entry.html").replace("{{EVENT}}", done));
+      return true;
+    }
+    const options = (ENTRY_OPTIONS[t] ?? [])
+      .map((o) => `<option value="${o.value}">${o.label}</option>`)
+      .join("\n");
+    html(
+      fixture("entries/entry-form.html")
+        .replace("{{TOURNAMENT}}", t)
+        .replace("{{OPTIONS}}", options)
+        .replace(
+          "{{ERRORS}}",
+          url.searchParams.get("error")
+            ? '<span class="field-validation-error">Please select at least one event.</span>'
+            : "",
+        ),
+    );
+    return true;
+  }
+  if (path === "/online-entry/individualentry/submitentry" && req.method === "POST") {
+    const form = await readBody(req);
+    const t = (form.get("TournamentCode") ?? "").toLowerCase();
+    const eventId = form.get("EventDetails.SelectedEvents[0].EventID") ?? "";
+    const agreed = form.getAll("DisclaimerAgree")[0] === "true";
+    const option = (ENTRY_OPTIONS[t] ?? []).find((o) => o.value === eventId);
+    if (!signedIn || form.get("__RequestVerificationToken") !== "fake-form-token") {
+      html("<main><h2>Something went wrong</h2></main>", 400);
+      return true;
+    }
+    opts.submissions?.push({ tournament: t, eventId, agreed });
+    if (!option || !agreed) {
+      redirect(`/individual-entry/${t}?error=1`);
+      return true;
+    }
+    if (opts.paid?.has(t)) {
+      redirect(`/online-entry/payment/${t}`);
+      return true;
+    }
+    entered.set(t, option.label.replace(/\s*\$.*$/, ""));
+    redirect(`/individual-entry/${t}`);
+    return true;
+  }
+  const pay = /^\/online-entry\/payment\/([0-9a-f-]+)$/.exec(path);
+  if (pay) {
+    const fee = (ENTRY_OPTIONS[pay[1]] ?? [])[0]?.label.match(/\$[\d.]+/)?.[0] ?? "";
+    html(fixture("entries/payment.html").replace("{{FEE}}", fee));
+    return true;
+  }
+  return false;
 }
 
 if (process.argv[1]?.endsWith("fake-tc.ts")) {

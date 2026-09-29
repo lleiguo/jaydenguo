@@ -44,7 +44,7 @@ function entryStatus(e: EntryView): UpcomingStatus {
     case "payment_needed":
       return {
         kind: "registered",
-        label: "Registered · payment needed",
+        label: "Payment required",
         action: e.entryUrl ? { text: "Pay on the site", url: e.entryUrl } : null,
       };
     default:

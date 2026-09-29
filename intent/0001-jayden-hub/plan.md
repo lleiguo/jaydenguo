@@ -373,7 +373,7 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
 | M3b.3 | `tennis:enter` (Thursday noon): search, pick his event, drive time, one per weekend, enter or list with the link. | TEN-9 | Integration test against the fake site. |
 | M3b.4 | `tennis:acceptance` (Friday 10:00): main draw or reserve list and place. | TEN-10 | Integration test. |
 | M3b.5 | `tennis:draw-watch` (hourly, Mon–Wed 07:00–21:00): find his draw, then the full sync; the sync reads entered tournaments before his profile lists them. Opponent level on the next-match card; no score band. | TEN-11, TEN-3, TEN-6 | Integration test: draw found → sync → watch stops; nothing to watch → no requests. e2e for the card. |
-| M3b.6 | Registrar: enter him on the site with the stored Tennis Canada login (the Accounts page option kept for this), and tell "entered" from "payment needed". | TEN-9, CRED-2 | **Open:** after the signed-in part of SP-7. Until then every entry is left to the owner with the link. |
+| M3b.6 | Registrar: enter him on the site with the stored Tennis Canada login (the Accounts page option kept for this), and tell "entered" from "payment needed". | TEN-9, CRED-2 | **Built 2026-09-28** (`m3b/6-auto-entry`): unit tests on the form and outcomes, integration tests against the fake site's signed-in pages. |
 | M3b.7 | Terraform: three Cloud Scheduler jobs, the Routes API, `ROUTES_PROJECT` and Service Usage Consumer for the worker. | TEN-9..11 | `terraform validate`; applied before the code merges. |
 
 **Build notes (M3b, 2026-09-27):**
@@ -403,6 +403,24 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   made that other source's sync fail (`src/server/tennis/apply.ts`).
 - Entry fixtures (`tests/fixtures/tennis-tc/entries/`) are hand-built
   from the real markup with invented names, not recorded pages.
+- M3b.6 (2026-09-28, owner: "submit the registration without my
+  involvement; for ones that require payment, flag them as payment
+  required"): `src/adapters/tennis-tc/registrar.ts` signs in with the
+  Tennis Canada login from the Accounts page (plain HTTP with a cookie jar,
+  2 s apart), opens `/individual-entry/<t>`, picks the form's event that
+  matches the search's event by ball colour and age (it won't guess
+  between several or across colours), agrees to the regulations and
+  submits. The page the site shows next decides the status: "My entry"
+  with "Entered" → entered; a pay button, a payment address or "unpaid /
+  payment pending" wording → payment_needed ("Payment required" with the
+  site's link on the Tennis page); the form coming back with an error →
+  left to the owner with the site's message; anything else →
+  payment_needed with "check the entry on the site", never counted as
+  entered. A tournament already showing "My entry" isn't submitted again.
+  The fee from the event's option text goes in the note. "Enter him on the
+  site automatically" on the Tennis source's entry settings (on by
+  default) switches it off. Without a stored login, entries stay "found"
+  with a note saying to add it.
 
 ### M4 (slice S4): School (≈ 6 days)
 | Task | Description | Spec | Done when |
@@ -675,8 +693,8 @@ or his opponents.
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
 | M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). M1.13 restore test done by the owner (2026-09-28). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6). |
 | M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
-| M3 Tennis (S3) | **merged 2026-09-27** (M3.1–M3.7, PRs #17, #18). Still open: M3.3 live smoke test, M3.6 recorded Claude response (waiting on Vertex quota), O-5 signed-in look. |
-| M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. Open: M3b.6 automatic entry (needs the signed-in part of SP-7 with the owner), Terraform apply before merge, live check after deploy. |
+| M3 Tennis (S3) | **done 2026-09-28** (M3.1–M3.7, PRs #17, #18). M3.3 live check passed: the tennis source syncs in production and the owner confirmed it (2026-09-28). Still open: M3.6 recorded Claude response (waiting on the Vertex quota); O-5 signed-in look done (spikes.md SP-7). |
+| M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. M3b.6 automatic entry built 2026-09-28 (`m3b/6-auto-entry`); needs the Tennis Canada login on the Accounts page, then the first Thursday run is the live check. |
 | M4 School (S4) | **deployed 2026-09-28** (PRs #22–#31). M4.1 Classroom connect and check built; the spike itself (consent with his school account) waits on the owner. M4.2 school blocks, key dates, Veracross timetable with sign-in codes: live. M4.3 (homework and grades) deferred by the owner. M4.4 links done. |
 | M5 Extras (S5) | **merged 2026-09-28** (PRs #32–#35; Terraform applied). M5.1–M5.6, M5.8, M5.9 built; video reviews work live in Gemini-only mode. Open: the Claude quota (debate mode, email suggestions, match explanations), M5.7 evaluation with the owner's clips (prompts still `video-1-draft`), SP-6's real-clip run, connecting Gmail and the calendar copy. |
 | M6 Go-live hardening | **done 2026-09-28 except owner items** (`m6/go-live`). M6.1 review in [security-review.md](security-review.md): two fixes, five accepted risks for the owner to confirm. M6.2 checklist there: owner confirms the allow-list's second address, 2-step verification and budgets. M6.3 runbook in the README, for the owner to review. |

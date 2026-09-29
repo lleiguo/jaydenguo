@@ -1,0 +1,17 @@
+<!doctype html>
+<html><head><title>Tennis Canada</title></head><body>
+<!-- Hand-built from the site's structure (spikes.md SP-7); invented values. -->
+<main>
+<h2>Log in</h2>
+<form id="form_login" action="/user" method="post">
+<input name="__RequestVerificationToken" type="hidden" value="fake-login-token">
+<input id="ReturnUrl" name="ReturnUrl" type="hidden" value="{{RETURN_URL}}">
+<input id="LogoUrl" name="LogoUrl" type="hidden" value="">
+<fieldset>
+<input id="Login" name="Login" type="text" value="">
+<input id="Password" name="Password" type="password" value="">
+<button type="button">Show</button>
+<button id="btnLogin" type="submit">Log in</button>
+</fieldset>
+</form>
+</main></body></html>

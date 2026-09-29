@@ -320,6 +320,52 @@ stored login.
 **Fixtures:** `tests/fixtures/tennis-tc/entries/*.html` are hand-built
 from these structures with invented names and IDs (not recorded pages).
 
+**Signed-in part, first look (2026-09-28):** the owner shared a
+screenshot of a finished entry's "My entry" page (structure recorded here
+only; its personal details are not). What it shows:
+- A status badge ("Entered") and an entry number (`E` + digits).
+- Sections filled in from the signed-in player's profile: Personal (name,
+  birthdate with age, gender, email), Address (postal code, city,
+  province, country, phone) and Sport (club, member ID). So an entry
+  mostly means choosing events and confirming; the personal details come
+  from the account.
+- Events: one row per event entered (e.g. "U10 (Orange Ball)") with a
+  "Withdraw" button.
+- No payment line on this page for this entry.
+
+**Signed-in part, the entry form (2026-09-28):** the owner signed in in
+the desktop app's browser pane (Claude typed nothing) and Claude read one
+open tournament's form (a "Rising Stars" BS10/GS10 event) without choosing,
+ticking or submitting anything.
+- Signed out, `/individual-entry/<t>` redirects to `/user/login`: form
+  `form_login` posting to `/user` with `Login`, `Password`, a hidden
+  `__RequestVerificationToken`, `ReturnUrl`, and the submit button
+  `btnLogin`.
+- Signed in, one page with three numbered sections and one form (`form0`,
+  POST `/online-entry/IndividualEntry/SubmitEntry`, anti-forgery token):
+  1. **My details:** contact and sport details from the account, each with
+     a "Change" link; nothing to fill in. Hidden `TournamentCode` and
+     `OrganizationPerson_Code` (the player).
+  2. **Events:** "filtered by your gender and date of birth"; a select
+     `EventDetails.SelectedEvents[0].EventID` whose options read
+     "<event code> - <ball colour> $<fee>" (here one option, $45.00), value
+     = the event ID. Required: "Please select at least one event."
+  3. **Remarks:** optional `CommentDetails.Comments`.
+  Then "I agree to the tournament regulations" (`DisclaimerAgree`, a
+  YES/NO toggle; the regulations link opens the tournament information),
+  and Submit / Back / Withdraw.
+- **No payment step on the form:** the fee is only in the event's option
+  text. What follows Submit (a payment page, or straight to "My entry" with
+  "Entered") wasn't seen, because nothing was submitted.
+
+**Decided (owner, 2026-09-28):** submit entries automatically; where the
+site requires payment during registration, flag them "Payment required"
+for the owner. Built in M3b.6. The page after Submit when a fee is due
+hasn't been seen yet, so the registrar recognises payment generously (a
+pay button or address, or unpaid wording) and flags anything it can't read
+for the owner instead of calling it entered. The first real paid entry is
+worth a look to tighten this.
+
 ## SP-5: Classroom access with Jayden's school account (M4.1, 2026-09-27, waiting on the owner)
 
 **Built for the test:** the Accounts page has "Connect school account

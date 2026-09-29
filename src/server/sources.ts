@@ -81,6 +81,8 @@ const configSchema = z.object({
       include: z.string().trim().max(200).optional(),
       prefer: z.string().trim().max(200).optional(),
       exclude: z.string().trim().max(200).optional(),
+      // M3b.6: enter him on the site (default), or leave entries to the owner.
+      autoEnter: z.boolean().optional(),
     })
     .optional(),
 });

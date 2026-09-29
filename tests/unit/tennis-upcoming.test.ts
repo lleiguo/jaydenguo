@@ -97,7 +97,7 @@ describe("upcoming tournaments (TEN-2, TEN-10)", () => {
       TODAY,
     );
     expect(rows.map((r) => [r.name, r.status.label])).toEqual([
-      ["Pay Classic", "Registered · payment needed"],
+      ["Pay Classic", "Payment required"],
       ["Reserve Cup", "Reserve list (3)"],
       ["Synced Open", "Registered"],
     ]);
