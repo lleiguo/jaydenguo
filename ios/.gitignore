@@ -1,0 +1,7 @@
+*.xcodeproj/
+HubApp/Info.plist
+HubKit/.build/
+HubKit/.swiftpm/
+build/
+DerivedData/
+*.log

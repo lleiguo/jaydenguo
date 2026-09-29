@@ -1,0 +1,64 @@
+{
+  "n": 0,
+  "accuracy": null,
+  "brier": null,
+  "brierBase": null,
+  "logLoss": null,
+  "buckets": [
+    {
+      "from": 0.5,
+      "to": 0.6,
+      "n": 0,
+      "predicted": 0,
+      "actual": 0
+    },
+    {
+      "from": 0.6,
+      "to": 0.7,
+      "n": 0,
+      "predicted": 0,
+      "actual": 0
+    },
+    {
+      "from": 0.7,
+      "to": 0.8,
+      "n": 0,
+      "predicted": 0,
+      "actual": 0
+    },
+    {
+      "from": 0.8,
+      "to": 0.9,
+      "n": 0,
+      "predicted": 0,
+      "actual": 0
+    },
+    {
+      "from": 0.9,
+      "to": 1,
+      "n": 0,
+      "predicted": 0,
+      "actual": 0
+    }
+  ],
+  "byConfidence": [
+    {
+      "confidence": "low",
+      "n": 0,
+      "accuracy": null,
+      "brier": null
+    },
+    {
+      "confidence": "medium",
+      "n": 0,
+      "accuracy": null,
+      "brier": null
+    },
+    {
+      "confidence": "high",
+      "n": 0,
+      "accuracy": null,
+      "brier": null
+    }
+  ]
+}

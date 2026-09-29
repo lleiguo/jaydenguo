@@ -1,0 +1,46 @@
+name: iOS
+
+# The iPhone app (intent 0004, plan N2.6): HubKit's tests and a Simulator
+# build of the app, whenever the app or the API contract changes. UI tests
+# need the local server and run on the owner's Mac before each TestFlight
+# build (ios/README.md).
+on:
+  pull_request:
+    paths: ["ios/**", "openapi.json", ".github/workflows/ios.yml"]
+  push:
+    branches: [main]
+    paths: ["ios/**", "openapi.json", ".github/workflows/ios.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the newest Xcode on the runner
+        run: |
+          xcode="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$xcode/Contents/Developer"
+          xcodebuild -version
+      - uses: actions/cache@v4
+        with:
+          path: ios/HubKit/.build
+          key: hubkit-${{ runner.os }}-${{ hashFiles('ios/HubKit/Package.resolved', 'ios/HubKit/Package.swift') }}
+      - name: HubKit tests
+        working-directory: ios/HubKit
+        run: swift test
+      - run: brew install xcodegen
+      - name: Build the app for the Simulator
+        working-directory: ios
+        run: |
+          xcodegen
+          xcodebuild -project JaydenHub.xcodeproj -scheme HubApp \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO build

@@ -125,6 +125,40 @@ Results go in a `## Spikes` section of this file.
 | N2.5 | Face ID lock and app-switcher blur. | SEC-2 | Manual check on device; unit test for the 5-minute rule. |
 | N2.6 | CI: `macos` job builds the app and runs HubKit tests on changes under `ios/` or `openapi.json`. First TestFlight build from Xcode. | §4.4, INFR-4 | CI green; the owner installs from TestFlight and signs in. |
 
+**N2 as built (2026-09-29):**
+- Tooling: Xcode 27 with the iOS 27 Simulator; XcodeGen generates
+  `JaydenHub.xcodeproj`, which isn't committed (`ios/project.yml`). The
+  app is called "Hub" on the home screen (AUTH-3).
+- HubKit: `HubAPI` is generated from `openapi.json` (a symlink) by Apple's
+  generator plugin; `HubKit` has the config, Keychain token store, PKCE,
+  sign-in request, `HubClient` (bearer and `X-App-Version` middleware;
+  401 → sign out and wipe, 426 → update screen), home-time formatting,
+  deep-link routes and the lock rule. 28 recorded responses decode
+  through the generated client.
+- Departure: `openapi.json` needed changes for the Swift generator, which
+  drops properties that are `anyOf [object, null]` and can't express lists
+  with nullable items. The generator now writes nullable scalars as
+  `type: [X, "null"]`, and nullable objects as optional properties marked
+  `x-nullable` (the e2e contract check reads that). A list with nullable
+  items fails `pnpm openapi`. The tennis `predictions` arrays became
+  `drawPredictions: { drawId, prediction, explanation }[]` (tournament
+  route and overview rows), which nothing on the web read.
+- Fixtures come from `scripts/record-api-fixtures.ts`, run against a
+  database holding only `pnpm seed`'s data. It replaces the signed-in
+  email and the primary person's name and fails if anything personal is
+  left.
+- App: sign-in (ephemeral `ASWebAuthenticationSession`), tab bar, Today
+  (a first version: today's events, school, the week's clashes, what's
+  waiting), Settings → App (account, Face ID lock, version, sign out),
+  lock with an app-switcher cover, update screen. UI tests: every tab,
+  Today with seed data, sign out leaves nothing behind.
+- Departure: the three extension targets come with their features (N5
+  widgets, N7 notifications, N8 share) rather than as empty targets now,
+  and so does the shared Keychain access group.
+- CI: `.github/workflows/ios.yml` runs HubKit's tests and a Simulator
+  build on changes to `ios/` or `openapi.json`. The first TestFlight build
+  waits on O-1/O-2 (the Apple Developer account).
+
 ### N3: Today and Calendar (≈ 7 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -203,7 +237,17 @@ about 16 days in.
 ## 6. Status
 | Milestone | Status |
 |---|---|
-| N0 | done 2026-09-29 (`ios/n0-api-contract`) |
-| N1 | built 2026-09-29 (`ios/n1-device-auth`); SP-N1 after deploy |
-| N2–N8 | blocked on O-1 and O-4: Xcode isn't installed on the Mac yet (only the command line tools) |
+| N0 | done 2026-09-29 (#45, deployed) |
+| N1 | done 2026-09-29 (#46, deployed); SP-N1 passed: Firebase Hosting forwards `Authorization` |
+| N2 | built 2026-09-29 (`ios/n2-skeleton`); first TestFlight build waits on O-1/O-2 |
+| N3–N8 | not started |
 | N9 | not planned (owner kept the no-upload default) |
+
+## Spikes
+
+| # | Result |
+|---|---|
+| SP-N1 | **Passed 2026-09-29.** In production, a POST with `Authorization: Bearer <unknown token>` and no Origin gets 401 (the proxy saw the header and skipped the Origin check), while the same POST without it gets 403. So Firebase Hosting forwards `Authorization` to Cloud Run, and the `__session` fallback isn't needed. |
+| SP-N2 | Covered by N2: the sign-in sheet is `ASWebAuthenticationSession` with the `jaydenguohub` custom scheme (the e2e test walks the same redirects). The first real Google sign-in in the app is checked on a device once TestFlight works. |
+| SP-N3 | Not run yet (N7). |
+| SP-N4 | Not run yet (N6.3). |

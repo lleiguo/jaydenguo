@@ -1,0 +1,393 @@
+{
+  "event": {
+    "distance": 50,
+    "stroke": "free",
+    "course": "SCM"
+  },
+  "key": "50-free-SCM",
+  "swims": [
+    {
+      "distance": 50,
+      "stroke": "free",
+      "course": "SCM",
+      "id": "e05be9af-bd65-466f-ac80-efade182f3ca",
+      "key": "50-free-SCM",
+      "meetId": "efcc8b02-ac56-492d-bf41-23312d0f2def",
+      "meetName": "Winter Invitational (sample)",
+      "swimDate": "2026-08-20",
+      "timeMs": 42010,
+      "place": 7,
+      "heat": 1,
+      "lane": 7,
+      "stage": "Final",
+      "dqReason": null,
+      "splits": [],
+      "notes": null,
+      "origin": "source",
+      "corrected": false,
+      "sourceDisagrees": false,
+      "source": {
+        "timeMs": 42010,
+        "dqReason": null
+      },
+      "isPb": true,
+      "previousBestMs": 43210,
+      "changeMs": -1200
+    },
+    {
+      "distance": 50,
+      "stroke": "free",
+      "course": "SCM",
+      "id": "7e30725d-58ea-4373-ae45-f17d23620fe1",
+      "key": "50-free-SCM",
+      "meetId": "f7904c4f-bf58-448c-8349-eed91b1dfaf2",
+      "meetName": "Summer Open (sample)",
+      "swimDate": "2026-04-22",
+      "timeMs": 43210,
+      "place": 5,
+      "heat": 1,
+      "lane": 5,
+      "stage": "Final",
+      "dqReason": null,
+      "splits": [],
+      "notes": null,
+      "origin": "source",
+      "corrected": false,
+      "sourceDisagrees": false,
+      "source": {
+        "timeMs": 43210,
+        "dqReason": null
+      },
+      "isPb": true,
+      "previousBestMs": 44450,
+      "changeMs": -1240
+    },
+    {
+      "distance": 50,
+      "stroke": "free",
+      "course": "SCM",
+      "id": "53fe370f-ec3d-4d5d-9143-11c772f465dc",
+      "key": "50-free-SCM",
+      "meetId": "348bbe93-9a60-4c69-8bf4-97522fbf6f73",
+      "meetName": "Spring Sprint (sample)",
+      "swimDate": "2025-12-23",
+      "timeMs": 44450,
+      "place": 3,
+      "heat": 1,
+      "lane": 3,
+      "stage": "Final",
+      "dqReason": null,
+      "splits": [],
+      "notes": null,
+      "origin": "source",
+      "corrected": false,
+      "sourceDisagrees": false,
+      "source": {
+        "timeMs": 44450,
+        "dqReason": null
+      },
+      "isPb": true,
+      "previousBestMs": 45850,
+      "changeMs": -1400
+    },
+    {
+      "distance": 50,
+      "stroke": "free",
+      "course": "SCM",
+      "id": "4a3c6f69-f68e-4e3b-a40c-334d1d0de5ca",
+      "key": "50-free-SCM",
+      "meetId": "9eafe27c-ab99-4892-9dda-51afd4da8301",
+      "meetName": "Winter Invitational (sample)",
+      "swimDate": "2025-10-24",
+      "timeMs": 45850,
+      "place": 8,
+      "heat": 1,
+      "lane": 2,
+      "stage": "Final",
+      "dqReason": null,
+      "splits": [],
+      "notes": null,
+      "origin": "source",
+      "corrected": false,
+      "sourceDisagrees": false,
+      "source": {
+        "timeMs": 45850,
+        "dqReason": null
+      },
+      "isPb": true,
+      "previousBestMs": 46000,
+      "changeMs": -150
+    },
+    {
+      "distance": 50,
+      "stroke": "free",
+      "course": "SCM",
+      "id": "965b9642-1fb3-480b-8f6b-d0a662a74e8f",
+      "key": "50-free-SCM",
+      "meetId": "65ea027b-e144-40dc-9e1e-6a7abba85a97",
+      "meetName": "Autumn Splash (sample)",
+      "swimDate": "2025-08-25",
+      "timeMs": 46000,
+      "place": 1,
+      "heat": 1,
+      "lane": 1,
+      "stage": "Final",
+      "dqReason": null,
+      "splits": [],
+      "notes": null,
+      "origin": "source",
+      "corrected": false,
+      "sourceDisagrees": false,
+      "source": {
+        "timeMs": 46000,
+        "dqReason": null
+      },
+      "isPb": true,
+      "previousBestMs": null,
+      "changeMs": null
+    }
+  ],
+  "points": [
+    {
+      "id": "965b9642-1fb3-480b-8f6b-d0a662a74e8f",
+      "swimDate": "2025-08-25",
+      "timeMs": 46000,
+      "isPb": true
+    },
+    {
+      "id": "4a3c6f69-f68e-4e3b-a40c-334d1d0de5ca",
+      "swimDate": "2025-10-24",
+      "timeMs": 45850,
+      "isPb": true
+    },
+    {
+      "id": "53fe370f-ec3d-4d5d-9143-11c772f465dc",
+      "swimDate": "2025-12-23",
+      "timeMs": 44450,
+      "isPb": true
+    },
+    {
+      "id": "7e30725d-58ea-4373-ae45-f17d23620fe1",
+      "swimDate": "2026-04-22",
+      "timeMs": 43210,
+      "isPb": true
+    },
+    {
+      "id": "e05be9af-bd65-466f-ac80-efade182f3ca",
+      "swimDate": "2026-08-20",
+      "timeMs": 42010,
+      "isPb": true
+    }
+  ],
+  "pbSteps": [
+    {
+      "swimDate": "2025-08-25",
+      "timeMs": 46000
+    },
+    {
+      "swimDate": "2025-10-24",
+      "timeMs": 45850
+    },
+    {
+      "swimDate": "2025-12-23",
+      "timeMs": 44450
+    },
+    {
+      "swimDate": "2026-04-22",
+      "timeMs": 43210
+    },
+    {
+      "swimDate": "2026-08-20",
+      "timeMs": 42010
+    }
+  ],
+  "forecast": {
+    "status": "ok",
+    "asymptoteMs": 28444,
+    "points": [
+      {
+        "months": 6,
+        "date": "2027-03-29",
+        "timeMs": 39926,
+        "lowMs": 38998,
+        "highMs": 40855
+      },
+      {
+        "months": 12,
+        "date": "2027-09-29",
+        "timeMs": 38456,
+        "lowMs": 37390,
+        "highMs": 39522
+      }
+    ],
+    "curve": [
+      {
+        "date": "2025-08-25",
+        "timeMs": 46143
+      },
+      {
+        "date": "2025-09-13",
+        "timeMs": 45893
+      },
+      {
+        "date": "2025-10-02",
+        "timeMs": 45646
+      },
+      {
+        "date": "2025-10-21",
+        "timeMs": 45403
+      },
+      {
+        "date": "2025-11-10",
+        "timeMs": 45163
+      },
+      {
+        "date": "2025-11-29",
+        "timeMs": 44926
+      },
+      {
+        "date": "2025-12-18",
+        "timeMs": 44693
+      },
+      {
+        "date": "2026-01-06",
+        "timeMs": 44463
+      },
+      {
+        "date": "2026-01-25",
+        "timeMs": 44237
+      },
+      {
+        "date": "2026-02-13",
+        "timeMs": 44014
+      },
+      {
+        "date": "2026-03-04",
+        "timeMs": 43793
+      },
+      {
+        "date": "2026-03-23",
+        "timeMs": 43576
+      },
+      {
+        "date": "2026-04-12",
+        "timeMs": 43362
+      },
+      {
+        "date": "2026-05-01",
+        "timeMs": 43151
+      },
+      {
+        "date": "2026-05-20",
+        "timeMs": 42943
+      },
+      {
+        "date": "2026-06-08",
+        "timeMs": 42738
+      },
+      {
+        "date": "2026-06-27",
+        "timeMs": 42536
+      },
+      {
+        "date": "2026-07-16",
+        "timeMs": 42337
+      },
+      {
+        "date": "2026-08-04",
+        "timeMs": 42140
+      },
+      {
+        "date": "2026-08-23",
+        "timeMs": 41947
+      },
+      {
+        "date": "2026-09-12",
+        "timeMs": 41756
+      },
+      {
+        "date": "2026-10-01",
+        "timeMs": 41568
+      },
+      {
+        "date": "2026-10-20",
+        "timeMs": 41382
+      },
+      {
+        "date": "2026-11-08",
+        "timeMs": 41199
+      },
+      {
+        "date": "2026-11-27",
+        "timeMs": 41019
+      },
+      {
+        "date": "2026-12-16",
+        "timeMs": 40841
+      },
+      {
+        "date": "2027-01-04",
+        "timeMs": 40665
+      },
+      {
+        "date": "2027-01-23",
+        "timeMs": 40493
+      },
+      {
+        "date": "2027-02-12",
+        "timeMs": 40322
+      },
+      {
+        "date": "2027-03-03",
+        "timeMs": 40154
+      },
+      {
+        "date": "2027-03-22",
+        "timeMs": 39989
+      },
+      {
+        "date": "2027-04-10",
+        "timeMs": 39825
+      },
+      {
+        "date": "2027-04-29",
+        "timeMs": 39664
+      },
+      {
+        "date": "2027-05-18",
+        "timeMs": 39506
+      },
+      {
+        "date": "2027-06-06",
+        "timeMs": 39349
+      },
+      {
+        "date": "2027-06-25",
+        "timeMs": 39195
+      },
+      {
+        "date": "2027-07-15",
+        "timeMs": 39043
+      },
+      {
+        "date": "2027-08-03",
+        "timeMs": 38893
+      },
+      {
+        "date": "2027-08-22",
+        "timeMs": 38745
+      },
+      {
+        "date": "2027-09-10",
+        "timeMs": 38600
+      },
+      {
+        "date": "2027-09-29",
+        "timeMs": 38456
+      }
+    ],
+    "swims": 5,
+    "spreadMs": 445
+  },
+  "today": "2026-09-29"
+}

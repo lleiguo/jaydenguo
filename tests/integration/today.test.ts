@@ -114,6 +114,6 @@ describe("Today", () => {
     expect(o.found.map((e) => e.tournamentName)).toEqual(["Found Open"]);
     const row = o.upcomingRows.find((r) => r.name === "Entered Open");
     expect(row?.status.kind).toBe("registered");
-    expect(row?.predictions).toEqual([]);
+    expect(row?.drawPredictions).toEqual([]);
   });
 });

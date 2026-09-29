@@ -199,6 +199,74 @@ export function responseSchemas(): { exported: Map<string, Schema>; components: 
   return { exported, components };
 }
 
+// ---------- nullability the Swift generator understands ----------
+
+// Apple's swift-openapi-generator (the iPhone app, API-4) drops a property
+// whose schema is `anyOf: [X, {type: "null"}]` when X is an object or a
+// $ref, and can't express a list with nullable items. So: a nullable scalar
+// becomes `type: [X, "null"]`; a nullable object or list is left out of its
+// parent's `required` and marked `x-nullable` (the client decodes null as
+// absent); a nullable list
+// item fails the build, and the type should change instead.
+const NULLABLE = "x-hub-nullable";
+const isNullSchema = (s: unknown) => !!s && typeof s === "object" && (s as Schema).type === "null";
+
+export function swiftFriendly(node: unknown, where: string): unknown {
+  if (Array.isArray(node)) return node.map((n, i) => swiftFriendly(n, `${where}[${i}]`));
+  if (!node || typeof node !== "object") return node;
+  const out: Schema = {};
+  for (const [k, v] of Object.entries(node as Schema)) out[k] = swiftFriendly(v, `${where}/${k}`);
+
+  if (out.items && typeof out.items === "object" && (out.items as Schema)[NULLABLE]) {
+    throw new Error(
+      `openapi: ${where}: a list with nullable items can't be decoded by the app; change the type`,
+    );
+  }
+  if (out.properties && typeof out.properties === "object") {
+    const props = out.properties as Record<string, Schema>;
+    let required = Array.isArray(out.required) ? (out.required as string[]) : undefined;
+    for (const [name, prop] of Object.entries(props)) {
+      if (!prop[NULLABLE]) continue;
+      const clean: Schema = { ...prop, "x-nullable": true };
+      delete clean[NULLABLE];
+      // Documented for other readers (the e2e contract check accepts null here).
+      props[name] = clean;
+      required = required?.filter((r) => r !== name);
+    }
+    if (required) {
+      if (required.length) out.required = required;
+      else delete out.required;
+    }
+  }
+  if (Array.isArray(out.anyOf) && out.anyOf.some(isNullSchema)) {
+    const others = (out.anyOf as Schema[]).filter((m) => !isNullSchema(m));
+    const rest: Schema = { ...out };
+    delete rest.anyOf;
+    const only = others.length === 1 ? others[0] : null;
+    if (only && typeof only.type === "string" && !["object", "array"].includes(only.type) && !only.$ref) {
+      const merged: Schema = { ...rest, ...only, type: [only.type, "null"] };
+      if (Array.isArray(only.enum)) merged.enum = [...only.enum, null];
+      return merged;
+    }
+    return { ...rest, ...(only ?? { anyOf: others }), [NULLABLE]: true };
+  }
+  if (Array.isArray(out.type) && out.type.includes("null")) {
+    const types = (out.type as string[]).filter((t) => t !== "null");
+    if (types.length === 1 && (types[0] === "object" || types[0] === "array")) {
+      return { ...out, type: types[0], [NULLABLE]: true };
+    }
+  }
+  return out;
+}
+
+function assertNoMarkers(node: unknown, where: string) {
+  if (Array.isArray(node)) return node.forEach((n, i) => assertNoMarkers(n, `${where}[${i}]`));
+  if (!node || typeof node !== "object") return;
+  if ((node as Schema)[NULLABLE])
+    throw new Error(`openapi: ${where}: a nullable value outside an object property`);
+  for (const [k, v] of Object.entries(node as Schema)) assertNoMarkers(v, `${where}/${k}`);
+}
+
 // ---------- the document ----------
 
 function jsonSchemaOf(schema: z.ZodType, io: "input" | "output" = "input"): Schema {
@@ -266,7 +334,7 @@ export function buildDocument(): Schema {
     };
     (paths[op.path] ??= {})[op.method.toLowerCase()] = operation;
   }
-  return {
+  const doc = {
     openapi: "3.1.0",
     info: {
       title: "Jayden Hub API",
@@ -285,6 +353,9 @@ export function buildDocument(): Schema {
       },
     },
   };
+  const friendly = swiftFriendly(doc, "#") as Schema;
+  assertNoMarkers(friendly, "#");
+  return friendly;
 }
 
 if (require.main === module) {

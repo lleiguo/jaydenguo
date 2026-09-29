@@ -1,0 +1,22 @@
+{
+  "sessions": [
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T08:44:25.301Z",
+      "lastSeenAt": "2026-09-29T08:44:25.312Z",
+      "expiresAt": "2026-10-29T08:44:25.312Z",
+      "kind": "device",
+      "current": false
+    },
+    {
+      "deviceName": "UI tests",
+      "userAgent": "DEV_LOGIN_SHORTCUT_ENABLED",
+      "createdAt": "2026-09-29T08:44:51.316Z",
+      "lastSeenAt": "2026-09-29T08:44:51.325Z",
+      "expiresAt": "2026-10-29T08:44:51.324Z",
+      "kind": "device",
+      "current": true
+    }
+  ]
+}

@@ -1,0 +1,244 @@
+{
+  "date": "2026-09-29",
+  "homeTimeZone": "America/Toronto",
+  "events": [
+    {
+      "id": "aeb23c1c-7558-4e2d-88a2-e93b3f2c795d",
+      "title": "School",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-29T12:30:00.000Z",
+      "end": "2026-09-29T19:10:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Elm Street School",
+      "sourceUrl": null,
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.608Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "0ed06731-c4bf-4af8-b7d1-372c4f2abd73",
+      "title": "Soccer practice",
+      "category": "soccer",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-29T21:00:00.000Z",
+      "end": "2026-09-29T22:30:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Oak Park Field 2",
+      "sourceUrl": null,
+      "source": {
+        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+        "name": "Soccer team (sample)",
+        "kind": "ical"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+      "override": null,
+      "schoolClosed": false
+    }
+  ],
+  "people": [
+    {
+      "id": "6d13c3b6-63c4-4078-983e-0e36257c13d6",
+      "name": "Child",
+      "isPrimary": true
+    },
+    {
+      "id": "df482782-a98c-45a9-b16b-3ee5616a15ab",
+      "name": "Parent",
+      "isPrimary": false
+    },
+    {
+      "id": "579a6c67-834b-401a-be17-84c893a80315",
+      "name": "Brother",
+      "isPrimary": false
+    }
+  ],
+  "closures": [],
+  "clashes": [
+    {
+      "a": "58aa7563-b921-4676-bcad-83f61b2e8403",
+      "b": "e69304e2-9dfe-49f2-aa4b-a1ca7f520ac8",
+      "overlapMin": 20,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "58aa7563-b921-4676-bcad-83f61b2e8403",
+        "title": "Fitness class",
+        "category": "fitness",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-09-30T21:10:00.000Z",
+        "end": "2026-09-30T21:55:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Cedar Rec Centre",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+        "lastSyncedAt": "2026-09-29T08:43:52.634Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "e69304e2-9dfe-49f2-aa4b-a1ca7f520ac8",
+        "title": "Tennis lesson",
+        "category": "tennis",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-09-30T20:30:00.000Z",
+        "end": "2026-09-30T21:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Maple Tennis Club",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+        "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    },
+    {
+      "a": "63d43f33-96a6-4858-a53f-749f2f0e9e7d",
+      "b": "ebe57760-e402-46df-8370-1f89702136ae",
+      "overlapMin": 90,
+      "people": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "acceptedId": null,
+      "eventA": {
+        "id": "63d43f33-96a6-4858-a53f-749f2f0e9e7d",
+        "title": "Game vs Red Rockets",
+        "category": "soccer",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-03T14:00:00.000Z",
+        "end": "2026-10-03T15:30:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Oak Park Field 1",
+        "sourceUrl": null,
+        "source": {
+          "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
+          "name": "Soccer team (sample)",
+          "kind": "ical"
+        },
+        "seriesId": null,
+        "lastSyncedAt": "2026-09-29T08:43:52.584Z",
+        "override": null,
+        "schoolClosed": false
+      },
+      "eventB": {
+        "id": "ebe57760-e402-46df-8370-1f89702136ae",
+        "title": "Chinese school",
+        "category": "chinese",
+        "attendance": "required",
+        "owners": [
+          "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+        ],
+        "start": "2026-10-03T14:00:00.000Z",
+        "end": "2026-10-03T16:00:00.000Z",
+        "allDay": false,
+        "status": "active",
+        "deletedAt": null,
+        "notes": null,
+        "locationName": "Willow Community Hall",
+        "sourceUrl": null,
+        "source": null,
+        "seriesId": "78b3674d-1c40-42c1-97d0-13c9fdb6fa22",
+        "lastSyncedAt": "2026-09-29T08:43:52.653Z",
+        "override": null,
+        "schoolClosed": false
+      }
+    }
+  ],
+  "cursor": 11,
+  "schoolDay": null,
+  "nextMatches": [],
+  "nextMeet": {
+    "id": "f7d58724-8a54-4aad-8de3-532801443fcc",
+    "name": "Fall Classic (sample)",
+    "course": "SCM",
+    "startDate": "2026-10-20",
+    "endDate": "2026-10-21",
+    "venue": "Birch Aquatic Centre",
+    "city": "Springfield",
+    "signup": "yes",
+    "sourceUrl": null,
+    "manual": false,
+    "entries": [
+      {
+        "distance": 200,
+        "stroke": "im",
+        "course": "SCM",
+        "key": "200-im-SCM",
+        "seedTimeMs": 232000,
+        "session": {
+          "date": "2026-10-20",
+          "time": "08:30"
+        }
+      },
+      {
+        "distance": 50,
+        "stroke": "free",
+        "course": "SCM",
+        "key": "50-free-SCM",
+        "seedTimeMs": 42100,
+        "session": {
+          "date": "2026-10-21",
+          "time": "16:00"
+        }
+      }
+    ],
+    "sessions": [
+      {
+        "date": "2026-10-20",
+        "time": "08:30"
+      },
+      {
+        "date": "2026-10-21",
+        "time": "16:00"
+      }
+    ],
+    "swims": 0,
+    "pbs": 0
+  },
+  "waiting": {
+    "entries": [],
+    "suggestions": 0,
+    "failingSources": []
+  }
+}

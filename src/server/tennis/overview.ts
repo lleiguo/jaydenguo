@@ -8,6 +8,7 @@ import {
   predictAgainst,
   type DrawView,
   type PredictionView,
+  type TennisData,
   type TournamentView,
 } from "./load";
 import { upcomingRows, type UpcomingRow } from "./upcoming";
@@ -23,6 +24,30 @@ export type TennisNextMatch = {
   explanation: string | null;
 };
 
+// A prediction for his next match in one draw (null when the draw has no
+// opponent yet), keyed by draw rather than by position, so clients never
+// see a list with holes in it.
+export type DrawPrediction = {
+  drawId: string;
+  prediction: PredictionView | null;
+  explanation: string | null;
+};
+
+// Predictions for the given draws, with Claude's explanations where written.
+export async function drawPredictions(
+  db: DbOrTx,
+  data: TennisData,
+  draws: { id: string; opponentKey: string | null }[],
+): Promise<DrawPrediction[]> {
+  const predictions = draws.map((d) => (d.opponentKey ? predictAgainst(data, d.opponentKey) : null));
+  const explanations = await explanationsFor(db, predictions);
+  return draws.map((d, i) => ({
+    drawId: d.id,
+    prediction: predictions[i],
+    explanation: (predictions[i] && explanations.get(predictions[i])) ?? null,
+  }));
+}
+
 export type TennisOverview = {
   today: string;
   selfName: string | null;
@@ -32,7 +57,7 @@ export type TennisOverview = {
   past: TournamentView[];
   // "Upcoming tournaments": every tournament he's registered for, with a
   // prediction per draw that has an opponent.
-  upcomingRows: (UpcomingRow & { predictions: (PredictionView | null)[] })[];
+  upcomingRows: (UpcomingRow & { drawPredictions: DrawPrediction[] })[];
   // "Found for him": entries he isn't registered for yet.
   found: EntryView[];
 };
@@ -57,10 +82,12 @@ export async function tennisOverview(db: DbOrTx): Promise<TennisOverview> {
     inProgress,
     upcoming,
     past,
-    upcomingRows: upcomingRows(data.tournaments, entries, today).map((r) => ({
-      ...r,
-      predictions: r.draws.map((d) => (d.opponentKey ? predictAgainst(data, d.opponentKey) : null)),
-    })),
+    upcomingRows: await Promise.all(
+      upcomingRows(data.tournaments, entries, today).map(async (r) => ({
+        ...r,
+        drawPredictions: await drawPredictions(db, data, r.draws),
+      })),
+    ),
     found: entries.filter((e) => !ACTIVE_ENTRY.includes(e.status as EntryStatus)),
   };
 }

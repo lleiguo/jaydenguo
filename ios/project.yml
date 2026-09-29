@@ -1,0 +1,77 @@
+# XcodeGen spec for the iPhone app (intent 0004, plan N2.1). The .xcodeproj
+# is generated (`xcodegen` in this folder) and not committed.
+name: JaydenHub
+options:
+  bundleIdPrefix: com.jaydenguo
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+packages:
+  HubKit:
+    path: HubKit
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # The owner's team, once the Apple Developer account exists (plan O-1).
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  HubApp:
+    type: application
+    platform: iOS
+    sources: [HubApp]
+    dependencies:
+      - package: HubKit
+        product: HubKit
+      - package: HubKit
+        product: HubAPI
+    info:
+      path: HubApp/Info.plist
+      properties:
+        # A generic name: nothing about Jayden on the home screen (AUTH-3).
+        CFBundleDisplayName: Hub
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        CFBundleURLTypes:
+          - CFBundleURLName: com.jaydenguo.hub
+            CFBundleURLSchemes: [jaydenguohub]
+        NSFaceIDUsageDescription: Face ID keeps the hub locked when someone else picks up your phone.
+        ITSAppUsesNonExemptEncryption: false
+        # Only for development builds pointed at a local server (release
+        # builds can't change the server).
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_STRICT_CONCURRENCY: complete
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+  HubAppUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [HubAppUITests]
+    dependencies:
+      - target: HubApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub.uitests
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  HubApp:
+    build:
+      targets:
+        HubApp: all
+        HubAppUITests: [test]
+    test:
+      targets: [HubAppUITests]
+      environmentVariables:
+        # The local development server the UI tests talk to.
+        HUB_TEST_SERVER: http://localhost:3200
