@@ -11,8 +11,8 @@ public enum HubEvent: Sendable, Equatable {
     case updateRequired(message: String)
 }
 
-/// Adds `Authorization: Bearer` and `X-App-Version` (API-2, API-6), and
-/// reports 401 and 426 responses.
+/// Adds `Authorization: Bearer` and `X-App-Version` (API-2, API-6), reports
+/// 401 and 426 responses, and turns every error response into a HubError.
 struct HubMiddleware: ClientMiddleware {
     let tokens: TokenStore
     let appVersion: String
@@ -32,17 +32,19 @@ struct HubMiddleware: ClientMiddleware {
         let token = try tokens.read()
         if let token { request.headerFields[.authorization] = "Bearer \(token)" }
         let (response, responseBody) = try await next(request, body, baseURL)
-        switch response.status.code {
+        let status = response.status.code
+        guard status >= 400 else { return (response, responseBody) }
+        // Every error becomes a HubError with the server's own words.
+        let message = (try? await ErrorBody.message(from: responseBody)) ?? nil
+        switch status {
         case 401 where token != nil && operationID != "exchangeDeviceCode":
             onEvent(.signedOut)
         case 426:
-            let message = try? await ErrorBody.message(from: responseBody)
             onEvent(.updateRequired(message: message ?? "This version of the app is too old."))
-            return (response, nil)
         default:
             break
         }
-        return (response, responseBody)
+        throw HubError.server(status: status, message: message ?? HubError.defaultMessage(status))
     }
 }
 

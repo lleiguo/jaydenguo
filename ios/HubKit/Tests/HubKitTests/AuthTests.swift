@@ -108,3 +108,14 @@ import Testing
         #expect(bad.baseURL == HubConfig.productionURL)
     }
 }
+
+@Suite struct UndoTests {
+    func undo(_ url: String) -> Undo {
+        try! JSONDecoder().decode(Undo.self, from: Data(#"{"method":"POST","url":"\#(url)"}"#.utf8))
+    }
+
+    @Test(arguments: ["https://evil.example/api/v1/x", "/auth/signout", "/api/v1/../auth/signout", "//evil.example/api/v1/x"])
+    func refusesAnythingButTheSitesAPI(_ url: String) async {
+        await #expect(throws: HubError.self) { try await testClient().perform(undo(url)) }
+    }
+}

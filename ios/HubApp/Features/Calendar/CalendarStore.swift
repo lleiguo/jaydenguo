@@ -1,0 +1,205 @@
+import Foundation
+import HubAPI
+import HubKit
+import Observation
+
+/// The calendar's data and actions (intent 0004, ICAL-1..7). The server
+/// decides clashes; after every action the store reloads and shows the
+/// server's undo for 10 seconds (CON-3).
+@MainActor @Observable
+final class CalendarStore {
+    enum Mode: String, CaseIterable, Identifiable {
+        case agenda = "Agenda", day = "Day", week = "Week", month = "Month"
+        var id: String { rawValue }
+    }
+
+    private(set) var index: CalendarIndex?
+    private(set) var error: String?
+    private(set) var isRefreshingSources = false
+    var mode: Mode = .agenda
+    /// The home date the day, week and month views show.
+    var anchor: String
+    var filters: CalendarFilters {
+        didSet { Self.saveFilters(filters) }
+    }
+    /// School days opened to show each class (SCH-1), for this visit.
+    var expandedSchoolDays: Set<String> = []
+
+    private let model: AppModel
+    private var loaded: (from: String, to: String)?
+
+    init(model: AppModel) {
+        self.model = model
+        anchor = model.homeTime.localDate(.now)
+        filters = Self.loadFilters()
+    }
+
+    var homeTime: HomeTime { model.homeTime }
+    var today: String { homeTime.localDate(.now) }
+    var shown: [CalendarEvent] { index?.shown(filters) ?? [] }
+    var people: [Person] { index?.payload.people ?? [] }
+    var closures: Set<String> { Set(index?.payload.closures ?? []) }
+
+    var sources: [(id: String, name: String)] {
+        var seen: [String: String] = [:]
+        for e in index?.payload.events ?? [] { if let s = e.source { seen[s.id] = s.name } }
+        return seen.map { ($0.key, $0.value) }.sorted { $0.name < $1.name }
+    }
+
+    // MARK: Loading
+
+    /// Loads a window around the anchor: from the Monday a week before, ten
+    /// weeks on. Reloads when the anchor leaves the window.
+    func ensureLoaded() async {
+        let from = CalendarDates.add(days: -7, to: CalendarDates.weekStart(min(anchor, today)))
+        let wanted = CalendarDates.add(days: 70, to: CalendarDates.weekStart(max(anchor, today)))
+        if let loaded, loaded.from <= from, wanted <= loaded.to, index != nil { return }
+        await load(from: from, to: max(wanted, CalendarDates.add(days: 42, to: from)))
+    }
+
+    func reload() async {
+        guard let loaded else { return await ensureLoaded() }
+        await load(from: loaded.from, to: loaded.to)
+    }
+
+    private func load(from: String, to: String) async {
+        guard let start = homeTime.startOfDay(from), let end = homeTime.startOfDay(to) else { return }
+        do {
+            let payload = try await model.client.api.listEvents(query: .init(from: start, to: end)).ok.body.json
+            index = CalendarIndex(payload)
+            loaded = (from, to)
+            error = nil
+        } catch {
+            if index == nil { self.error = "Couldn't load the calendar. Pull to try again." }
+        }
+    }
+
+    // MARK: What a day shows
+
+    struct DayItems {
+        var allDay: [CalendarEvent]
+        var timed: [CalendarEvent]
+        /// Days with two or more classes fold them into one block (SCH-1).
+        var school: SchoolBlock?
+    }
+
+    func items(on date: String) -> DayItems {
+        let (allDay, timed) = DayLayout.events(on: date, from: shown, homeTime: homeTime)
+        guard !expandedSchoolDays.contains(date),
+              let block = SchoolBlock.blocks(timed, homeTime: homeTime).first(where: { $0.date == date })
+        else { return DayItems(allDay: allDay, timed: timed) }
+        let folded = Set(block.classes.map(\.id))
+        return DayItems(allDay: allDay, timed: timed.filter { !folded.contains($0.id) }, school: block)
+    }
+
+    func mark(_ e: CalendarEvent) -> ClashMark { index?.mark(for: [e.id], filters: filters) ?? .none }
+    func mark(_ block: SchoolBlock) -> ClashMark { index?.mark(for: block.classes.map(\.id), filters: filters) ?? .none }
+    func clashes(of e: CalendarEvent) -> [CalendarIndex.ClashWith] { index?.clashes(of: e.id) ?? [] }
+    func ownerNames(_ e: CalendarEvent) -> String? { index?.ownerNames(e) }
+    func event(_ id: String) -> CalendarEvent? { index?.byId[id] }
+
+    // MARK: Actions
+
+    /// Runs an action, shows its message and undo, then reloads.
+    private func act(_ message: String, _ work: () async throws -> Undo?) async {
+        do {
+            let undo = try await work()
+            model.show(message, undo: undo)
+        } catch {
+            model.show(HubError.from(error)?.message ?? "That didn't work. Check your connection and try again.")
+        }
+        await model.dataChanged()
+        await reload()
+    }
+
+    func move(_ e: CalendarEvent, to span: (start: Date, end: Date)) async {
+        await act("Moved.") {
+            try await model.client.api.moveEvent(path: .init(id: e.id), body: .json(.init(start: span.start, end: span.end))).ok.body.json.undo
+        }
+    }
+
+    func setSkipped(_ e: CalendarEvent, _ skip: Bool) async {
+        await act(skip ? "Skipped." : "Not skipped any more.") {
+            try await model.client.api.skipEvent(path: .init(id: e.id), body: .json(.init(skip: skip))).ok.body.json.undo
+        }
+    }
+
+    func setAttendance(_ e: CalendarEvent, optional: Bool) async {
+        await act(optional ? "Marked optional; it won't clash." : "Marked required.") {
+            try await model.client.api.setAttendance(
+                path: .init(id: e.id), body: .json(.init(attendance: optional ? .optional : .required))
+            ).ok.body.json.undo
+        }
+    }
+
+    func setOwners(_ e: CalendarEvent, _ ownerIds: [String]) async {
+        let names = people.filter { ownerIds.contains($0.id) }.map(\.name).joined(separator: ", ")
+        await act("Now \(names)'s.") {
+            try await model.client.api.setOwners(path: .init(id: e.id), body: .json(.init(ownerIds: ownerIds))).ok.body.json.undo
+        }
+    }
+
+    func accept(_ clash: CalendarClash) async {
+        await act("Clash accepted.") {
+            try await model.client.api.acceptClash(body: .json(.init(a: clash.a, b: clash.b))).ok.body.json.undo
+        }
+    }
+
+    func unaccept(_ clash: CalendarClash) async {
+        guard let id = clash.acceptedId else { return }
+        await act("Clash no longer accepted.") {
+            _ = try await model.client.api.undoAcceptClash(path: .init(id: id)).noContent
+            return nil
+        }
+    }
+
+    func useSourceTime(_ e: CalendarEvent) async {
+        await act("Back to the source's time.") {
+            _ = try await model.client.api.resetEvent(path: .init(id: e.id)).noContent
+            return nil
+        }
+    }
+
+    func delete(_ e: CalendarEvent) async {
+        await act("Deleted.") {
+            try await model.client.api.deleteEvent(path: .init(id: e.id)).ok.body.json.undo
+        }
+    }
+
+    /// Syncs every source (SYNC-2) and follows along until they finish.
+    func refreshAllSources() async {
+        guard !isRefreshingSources else { return }
+        isRefreshingSources = true
+        defer { isRefreshingSources = false }
+        do {
+            _ = try await model.client.api.refreshAllSources().accepted
+            model.show("Refreshing every source…")
+            try await Task.sleep(for: .seconds(3))
+            for _ in 0..<60 {
+                let sources = try await model.client.api.listSources().ok.body.json.sources
+                if !sources.contains(where: \.running) { break }
+                try await Task.sleep(for: .seconds(3))
+            }
+            model.show("Sources refreshed.")
+        } catch {
+            model.show("Couldn't refresh the sources.")
+        }
+        await model.dataChanged()
+        await reload()
+    }
+
+    // MARK: Saved filters
+
+    private static let filtersKey = "calendarFilters.v1"
+
+    private static func loadFilters() -> CalendarFilters {
+        guard let data = UserDefaults.standard.data(forKey: filtersKey),
+              let f = try? JSONDecoder().decode(CalendarFilters.self, from: data)
+        else { return CalendarFilters() }
+        return f
+    }
+
+    private static func saveFilters(_ f: CalendarFilters) {
+        if let data = try? JSONEncoder().encode(f) { UserDefaults.standard.set(data, forKey: filtersKey) }
+    }
+}

@@ -169,6 +169,35 @@ Results go in a `## Spikes` section of this file.
 | N3.5 | Manual events and series editor. | ICAL-6 | UI test creates a weekly series and deletes one occurrence. |
 | N3.6 | Live updates every 10 s while open; pull to refresh; Refresh all with progress. | APP-4, APP-7 | UI test: a change made through the API appears within 10 s. |
 
+**N3 as built (2026-09-29):**
+- HubKit `Calendar/`: filters (people, categories, sources; closures
+  always shown), clash marks including "clash with a hidden event", school
+  blocks (SCH-1), events per home date (all-day by their UTC dates), side-
+  by-side placement of overlapping events, and 15-minute move maths.
+  `HubClient.perform(undo)` runs the server's undo, only for `/api/v1/…`
+  on the site.
+- Every API error now reaches the app as `HubError` with the server's own
+  words (the middleware throws; `HubError.from` unwraps the generated
+  client's wrapper).
+- `openapi.json`: `z.coerce.date()` request fields (event and move times)
+  are documented as `date-time` strings, so the client sends real dates.
+- App: one calendar store shared by Today and Calendar (filters saved per
+  device). Agenda (default) with swipe Skip/Move and Accept clash/Optional,
+  day and week time grids with long-press drag (15-minute haptic steps,
+  across days in the week view), month dots, closure shading, the event
+  sheet with every non-drag action and "Move to…", the editor for one-off
+  and weekly repeating events, filters, Refresh all sources with progress,
+  the 10-second undo banner, the open-clash badge on Calendar, and live
+  updates every 10 s while the app is open.
+- Today: people chips, closure banner, next up with a countdown, today's
+  events, clashes in the next 7 days, school, next match (win %), next
+  meet, and what's waiting (entries open the site's entry link; the rest
+  go to More until N6).
+- UI tests (6 new, 9 in all, against the seed server): drag then undo in the day view
+  (reached by deep link), skip then undo from the sheet, add then delete an
+  event (a failed run cleans up in `tearDown`), people chips remembered
+  across launches, the agenda's clash mark, Today's cards.
+
 ### N4: Tennis and Swimming (≈ 5 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -239,8 +268,9 @@ about 16 days in.
 |---|---|
 | N0 | done 2026-09-29 (#45, deployed) |
 | N1 | done 2026-09-29 (#46, deployed); SP-N1 passed: Firebase Hosting forwards `Authorization` |
-| N2 | built 2026-09-29 (`ios/n2-skeleton`); first TestFlight build waits on O-1/O-2 |
-| N3–N8 | not started |
+| N2 | done 2026-09-29 (#47); first TestFlight build waits on O-1/O-2 |
+| N3 | built 2026-09-29 (`ios/n3-calendar`) |
+| N4–N8 | not started |
 | N9 | not planned (owner kept the no-upload default) |
 
 ## Spikes
