@@ -128,6 +128,13 @@ test("people chips hide each person's events, closures stay, and hidden clashes 
     });
     await openWeek(page, monday);
 
+    // An all-day event sits on its own date, not the day before (stored as a
+    // UTC midnight; the home zone is behind UTC).
+    await expect(calEvent(page, `PD day ${RUN}`).locator("xpath=ancestor::*[@data-date][1]")).toHaveAttribute(
+      "data-date",
+      wed,
+    );
+
     await expect(calEvent(page, `Dentist at noon ${RUN}`)).toHaveAttribute("data-clash", "visible");
     await expect(calEvent(page, `Piano ${RUN}`)).toHaveAttribute("data-clash", "none");
     await expect(calEvent(page, `Piano ${RUN}`)).toContainText(brotherName);
