@@ -105,7 +105,10 @@ describe("Tennis Canada sync", () => {
       .select()
       .from(tennisTournaments)
       .where(
-        and(eq(tennisTournaments.sourceId, id), eq(tennisTournaments.externalId, TC_FIXTURE.currentTournament)),
+        and(
+          eq(tennisTournaments.sourceId, id),
+          eq(tennisTournaments.externalId, TC_FIXTURE.currentTournament),
+        ),
       );
     // Stored by an earlier sync, before draws he isn't in were skipped.
     await db.insert(tennisDraws).values({
