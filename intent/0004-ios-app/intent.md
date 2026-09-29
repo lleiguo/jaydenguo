@@ -1,6 +1,6 @@
 # Intent: a native iPhone app for the hub
-Status: draft (2026-09-28). Drafted by Claude from the owner's request in
-chat; the owner approves or edits it.
+Status: approved (owner, 2026-09-28, in chat: "go ahead with building",
+with the defaults below). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "I'd like to develop a native iOS app … I want all the same
@@ -73,6 +73,10 @@ the same backend, not a replacement.
 - Same allow-list and same data as the website; nothing app-only.
 
 ## Open questions
+Answered 2026-09-28 by going ahead with the defaults: 1. no uploads for
+now (N9 not built); 2. TestFlight; 3. all kinds on except new email
+suggestions. Any of these can be revisited in a later intent.
+
 1. Many clips will be filmed on the iPhone and live in Apple Photos, not
    Google Photos. Should the app be allowed to upload a clip from the
    iPhone's library for review? That reverses 0001's "no direct upload"

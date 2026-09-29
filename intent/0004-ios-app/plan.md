@@ -1,5 +1,5 @@
 # Plan: a native iPhone app for the hub
-Source: [spec.md](spec.md). Status: draft (2026-09-28).
+Source: [spec.md](spec.md). Status: approved (2026-09-28).
 
 Same working agreement as [0001's plan](../0001-jayden-hub/plan.md) §1:
 one PR per milestone or smaller, each listing its task IDs; nothing merges
@@ -145,4 +145,7 @@ about 16 days in.
 ## 6. Status
 | Milestone | Status |
 |---|---|
-| N0–N9 | not started; intent, spec and plan in draft (2026-09-28) |
+| N0 | in progress (2026-09-28) |
+| N1 | not started |
+| N2–N8 | blocked on O-1 and O-4: Xcode isn't installed on the Mac yet (only the command line tools) |
+| N9 | not planned (owner kept the no-upload default) |

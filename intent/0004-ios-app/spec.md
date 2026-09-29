@@ -1,6 +1,6 @@
 # Spec: a native iPhone app for the hub
-Source: [intent.md](intent.md). Status: draft (2026-09-28), for the owner
-to review with the intent.
+Source: [intent.md](intent.md). Status: approved (owner, 2026-09-28, in chat,
+with the defaults: N-1 and N-6 accepted, N-5 TestFlight, N-7 no uploads).
 
 The app is a second client of the existing backend. It does everything
 the website does (parity table in §3), plus notifications, widgets,
