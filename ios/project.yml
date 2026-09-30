@@ -34,16 +34,6 @@ targets:
         product: HubAPI
       - target: HubWidgets
       - target: HubNotify
-    entitlements:
-      path: HubApp/HubApp.entitlements
-      properties:
-        # The offline cache, widget data and the shared device token live
-        # here (OFF-3, EXT-2, PUSH-2).
-        com.apple.security.application-groups: [$(HUB_APP_GROUP)]
-        # Push notifications (PUSH-6). Archives for TestFlight switch to
-        # production. A free Personal Team can't sign this: see
-        # Signing.xcconfig.
-        aps-environment: development
     info:
       path: HubApp/Info.plist
       properties:
@@ -78,6 +68,9 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_STRICT_CONCURRENCY: complete
         ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        # HubApp.entitlements (app group and push) or, for Personal Team
+        # phone builds, HubApp-NoPush.entitlements: see Signing.xcconfig.
+        # Both are kept by hand, not generated.
         CODE_SIGN_ENTITLEMENTS: $(HUB_APP_ENTITLEMENTS)
   HubWidgets:
     type: app-extension

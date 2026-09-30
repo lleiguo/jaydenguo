@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The app group holds the offline cache, the widgets' data and the shared
+     device token (OFF-3, EXT-2, PUSH-2). Push (PUSH-6): archives for
+     TestFlight switch to production. Keep HubApp-NoPush.entitlements in
+     step. -->
 <plist version="1.0">
 <dict>
 	<key>aps-environment</key>
