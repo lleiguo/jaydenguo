@@ -296,6 +296,42 @@ Results go in a `## Spikes` section of this file.
 | N6.5 | Suggestions: approve (with edits) and reject, swipe actions. | IEML-1 | UI test. |
 | N6.6 | Settings: Sources (refresh, progress, history, per-source settings), Accounts (secure fields, test, remove, codes, Google connect via handoff), People, General, Clashes, Costs (Swift Charts + table), Deleted, Sessions. | APP-3, SEC-5, API-5 | UI test per screen; a saved password never appears in any response or on screen. |
 
+**N6 part 1 as built (2026-09-29): School, Suggestions, Settings** (Videos,
+N6.2–N6.4, follow in part 2):
+- Seed: the sample school calendar is now a sample Veracross portal with
+  four classes a day (rooms, teachers, links), because "Today at school"
+  reads only enabled Veracross sources; the calendar still folds a day's
+  classes into one "School" block. Two coach-email suggestions (a new
+  practice, a moved game) reset to pending, and events approved from them
+  removed, on every `pnpm seed`.
+- School: today's or the next school day's periods (tap one for Veracross),
+  key dates and closures from the calendar, and the portal link. Today's
+  school card links here.
+- Suggestions: each with its quote and "check the …" for low-confidence
+  fields; tap to edit and approve, or swipe to approve or reject. The
+  More tab counts pending ones; Today's "waiting" row opens the list.
+- Settings: General (home time zone, copy to Google Calendar), People,
+  Sources (state, refresh with live progress, run history, on/off, name,
+  default category), Accounts (per provider; add, update, test with the
+  sign-in code step, remove; secrets in secure fields and never shown;
+  Google connected through the handoff in the browser sheet), Clashes,
+  Costs (Swift Charts with the same numbers as rows), Deleted (restore),
+  Sessions (this phone first; "Sign out everywhere" signs this phone out
+  too), and App.
+- `HubClient.post` joins `patch` for bodies with explicit nulls (approving
+  with no start time, adding an account).
+- More has its own navigation path, so links to School, Suggestions,
+  Sources, Accounts and Settings open inside it.
+- Departure: adding a source and editing its category rules or
+  kind-specific settings stay on the website.
+- Fixed while testing: swiping a row away with a "destructive" button, or
+  swapping the last row for an empty-state view, could crash the list when
+  the reload arrived; empty states are overlays and swipe buttons are
+  tinted instead.
+- Tests: HubKit (5 new); UI tests (4 new): the school day and a key date;
+  approve an edited suggestion and reject another; a saved password is
+  never on screen or in any API response; every settings screen opens.
+
 ### N7: Notifications (≈ 4 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -347,8 +383,9 @@ about 16 days in.
 | N2 | done 2026-09-29 (#47); first TestFlight build waits on O-1/O-2 |
 | N3 | done 2026-09-29 (#49) |
 | N4 | done 2026-09-29 (#50) |
-| N5 | built 2026-09-29 (`ios/n5-offline-widgets`) |
-| N6–N8 | not started |
+| N5 | done 2026-09-29 (#52) |
+| N6 | part 1 built 2026-09-29 (`ios/n6-school-settings`); Videos next |
+| N7–N8 | not started |
 | N9 | not planned (owner kept the no-upload default) |
 
 ## Spikes

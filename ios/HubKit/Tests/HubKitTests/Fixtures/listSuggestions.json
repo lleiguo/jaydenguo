@@ -1,4 +1,73 @@
 {
-  "suggestions": [],
-  "pending": 0
+  "suggestions": [
+    {
+      "id": "aaf501d7-2ec2-4df5-8018-50dd851fb560",
+      "sourceId": "dc9159ab-d8ac-4767-8a88-114faa8d9811",
+      "kind": "change",
+      "status": "pending",
+      "extracted": {
+        "date": "2026-10-10",
+        "notes": null,
+        "title": "Game vs Green Giants",
+        "endTime": "12:30",
+        "category": "soccer",
+        "location": "Oak Park Field 2",
+        "startTime": "11:00"
+      },
+      "confidence": {
+        "date": "high",
+        "time": "high",
+        "title": "high",
+        "overall": "high",
+        "location": "medium"
+      },
+      "quote": "Heads up: Saturday's game is now at 11am, same field.",
+      "messageUrl": "https://mail.google.com/mail/u/0/#inbox/seed-mail-2",
+      "from": "owner@example.test",
+      "subject": "Saturday's game moved",
+      "receivedAt": "2026-09-30T02:20:21.965Z",
+      "sourceName": "Coach email (sample)",
+      "target": {
+        "id": "ec5c9ca0-2337-4523-ab3e-c9caafc755a7",
+        "title": "Game vs Green Giants",
+        "start": "2026-10-10T14:00:00.000Z",
+        "end": "2026-10-10T15:30:00.000Z",
+        "allDay": false
+      },
+      "eventId": null,
+      "decidedAt": null
+    },
+    {
+      "id": "3f87c810-73e2-4060-a72a-a5cf63e9ab20",
+      "sourceId": "dc9159ab-d8ac-4767-8a88-114faa8d9811",
+      "kind": "new",
+      "status": "pending",
+      "extracted": {
+        "date": "2026-10-07",
+        "notes": null,
+        "title": "Extra soccer practice",
+        "endTime": "19:30",
+        "category": "soccer",
+        "location": "Oak Park Field 2",
+        "startTime": "18:00"
+      },
+      "confidence": {
+        "date": "high",
+        "time": "medium",
+        "title": "high",
+        "overall": "medium",
+        "location": "low"
+      },
+      "quote": "We'll add an extra practice next Wednesday, 6 to 7:30, probably at Oak Park.",
+      "messageUrl": "https://mail.google.com/mail/u/0/#inbox/seed-mail-1",
+      "from": "owner@example.test",
+      "subject": "Extra practice next week",
+      "receivedAt": "2026-09-30T02:20:21.964Z",
+      "sourceName": "Coach email (sample)",
+      "target": null,
+      "eventId": null,
+      "decidedAt": null
+    }
+  ],
+  "pending": 2
 }

@@ -22,6 +22,7 @@ final class AppModel {
     /// The Tennis and Swimming stacks, so links can open a page in them.
     var tennisPath: [Route] = []
     var swimmingPath: [Route] = []
+    var morePath: [Route] = []
     /// Source kinds being refreshed from a sport screen (APP-7).
     private(set) var refreshing: Set<String> = []
     var signInError: String?
@@ -115,6 +116,9 @@ final class AppModel {
         openClashes = 0
         toast = nil
         selectedTab = .today
+        tennisPath = []
+        swimmingPath = []
+        morePath = []
         phase = .signedOut
     }
 
@@ -184,16 +188,35 @@ final class AppModel {
         if let zone = await settings?.homeTimeZone { homeTime = HomeTime(identifier: zone) }
     }
 
+    /// Settings → General: every time follows the new zone (CAL-9).
+    func setHomeTimeZone(_ zone: String) async {
+        do {
+            let saved = try await client.api.updateSettings(body: .json(.init(homeTimeZone: zone))).ok.body.json
+            homeTime = HomeTime(identifier: saved.homeTimeZone)
+            show("Times are now in \(saved.homeTimeZone).")
+        } catch {
+            show(HubError.from(error)?.message ?? "Couldn't change the time zone.")
+        }
+        await dataChanged()
+    }
+
     // MARK: Links
 
     func open(_ url: URL) {
         guard let route = Route(url: url) else { return }
+        go(route)
+    }
+
+    /// Opens a page in its tab (links, Today's cards).
+    func go(_ route: Route) {
         selectedTab = route.tab
         switch route {
         case .tennis: tennisPath = []
         case .tournament, .player, .tennisResults, .tennisAccuracy: tennisPath = [route]
         case .swimming: swimmingPath = []
         case .meet, .swimEvent: swimmingPath = [route]
+        case .school, .suggestions, .sources, .accounts, .settings: morePath = [route]
+        case .videos, .video: morePath = []
         default: pendingRoute = route
         }
     }
@@ -239,21 +262,35 @@ final class AppModel {
     /// Syncs the sources of one kind (e.g. `tennis_tc`) and follows along
     /// until they finish. Refusals (SYNC-5) show the server's reason.
     func refreshSources(kind: String, site: String) async {
-        guard !refreshing.contains(kind) else { return }
-        refreshing.insert(kind)
-        defer { refreshing.remove(kind) }
+        guard let sources = try? await client.api.listSources().ok.body.json.sources else {
+            show("Couldn't refresh from \(site).")
+            return
+        }
+        let ids = sources.filter { $0.kind == kind }.map(\.id)
+        guard !ids.isEmpty else {
+            show("Add a \(site) source on the website's Sources page first.")
+            return
+        }
+        await refresh(ids: ids, key: kind, site: site)
+    }
+
+    /// Syncs one source (Settings → Sources) and follows it.
+    func refreshSource(id: String, name: String) async {
+        await refresh(ids: [id], key: id, site: name)
+    }
+
+    private func refresh(ids: [String], key: String, site: String) async {
+        guard !refreshing.contains(key) else { return }
+        refreshing.insert(key)
+        defer { refreshing.remove(key) }
         do {
-            let ids = try await client.api.listSources().ok.body.json.sources.filter { $0.kind == kind }.map(\.id)
-            guard !ids.isEmpty else {
-                show("Add a \(site) source on the website's Sources page first.")
-                return
-            }
             for id in ids { _ = try await client.api.refreshSource(path: .init(id: id)).accepted }
             show("Refreshing from \(site). This takes a minute or two.")
             try await Task.sleep(for: .seconds(3))
             for _ in 0..<60 {
                 let sources = try await client.api.listSources().ok.body.json.sources
                 if !sources.contains(where: { ids.contains($0.id) && $0.running }) { break }
+                await dataChanged()
                 try await Task.sleep(for: .seconds(3))
             }
             show("Updated from \(site).")

@@ -1,27 +1,55 @@
 import HubKit
 import SwiftUI
 
-/// More: Videos, School, Suggestions and Settings (intent 0004, APP-1). N2
-/// has Settings → App; the rest arrive in N6.
+/// More: School, Suggestions, Videos and Settings (intent 0004, APP-1,
+/// APP-3). Videos arrive with the rest of N6.
 struct MoreScreen: View {
+    @Environment(AppModel.self) private var model
+    @State private var pending = 0
+
     var body: some View {
         List {
             Section {
+                NavigationLink(value: Route.school) { Label("School", systemImage: "graduationcap") }
+                NavigationLink(value: Route.suggestions) {
+                    Label("Suggestions", systemImage: "envelope")
+                        .badge(pending)
+                }
                 Label("Videos", systemImage: "video").foregroundStyle(.secondary)
-                Label("School", systemImage: "graduationcap").foregroundStyle(.secondary)
-                Label("Suggestions", systemImage: "envelope").foregroundStyle(.secondary)
-            } footer: {
-                Text("Coming in a later build.")
+                    .badge(Text("soon"))
             }
             Section("Settings") {
-                NavigationLink {
-                    AppSettingsScreen()
-                } label: {
-                    Label("App", systemImage: "iphone")
-                }
+                NavigationLink(value: Route.settings) { Label("General", systemImage: "gearshape") }
+                NavigationLink { PeopleScreen() } label: { Label("People", systemImage: "person.2") }
+                NavigationLink(value: Route.sources) { Label("Sources", systemImage: "arrow.triangle.2.circlepath") }
+                NavigationLink(value: Route.accounts) { Label("Accounts", systemImage: "key") }
+                NavigationLink { ClashesScreen() } label: { Label("Clashes", systemImage: "exclamationmark.triangle") }
+                NavigationLink { CostsScreen() } label: { Label("Costs", systemImage: "dollarsign.circle") }
+                NavigationLink { DeletedScreen() } label: { Label("Deleted", systemImage: "trash") }
+                NavigationLink { SessionsScreen() } label: { Label("Sessions", systemImage: "iphone.and.arrow.forward") }
+                NavigationLink { AppSettingsScreen() } label: { Label("App", systemImage: "iphone") }
             }
         }
         .navigationTitle("More")
+        .task(id: model.changes) {
+            if let n = try? await model.client.api.listSuggestions().ok.body.json.pending { pending = Int(n) }
+        }
+    }
+}
+
+/// The pages the More tab's links open.
+struct MoreDestination: View {
+    let route: Route
+
+    var body: some View {
+        switch route {
+        case .school: SchoolScreen()
+        case .suggestions: SuggestionsScreen()
+        case .sources: SourcesScreen()
+        case .accounts: AccountsScreen()
+        case .settings: GeneralSettingsScreen()
+        default: EmptyView()
+        }
     }
 }
 

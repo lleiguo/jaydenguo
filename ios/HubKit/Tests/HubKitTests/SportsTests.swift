@@ -88,7 +88,8 @@ import Testing
     }
 }
 
-/// `patch` sends explicit nulls, which the generated client can't.
+/// `patch` and `post` send explicit nulls, which the generated client can't.
+/// One serialized suite: they share the stub's state.
 @Suite(.serialized) struct PatchTests {
     @Test func sendsNullsAndTheToken() async throws {
         let client = testClient()
@@ -100,6 +101,14 @@ import Testing
         #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer ") == true)
         let body = try #require(StubProtocol.lastBody)
         #expect(String(decoding: body, as: UTF8.self) == #"{"dqReason":null,"place":null,"time":"1:02.35"}"#)
+    }
+
+    @Test func postSendsNullsAndReturnsTheBody() async throws {
+        let session = StubProtocol.session(status: 200, body: #"{"eventId":null}"#)
+        let data = try await testClient().post("/api/v1/suggestions/s1/approve", ["title": .string("Practice"), "startTime": .null], session: session)
+        #expect(String(decoding: data, as: UTF8.self) == #"{"eventId":null}"#)
+        #expect(StubProtocol.last?.httpMethod == "POST")
+        #expect(String(decoding: try #require(StubProtocol.lastBody), as: UTF8.self) == #"{"startTime":null,"title":"Practice"}"#)
     }
 
     @Test func refusesOtherPathsAndReportsErrors() async throws {

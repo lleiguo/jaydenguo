@@ -1,3 +1,45 @@
 {
-  "schoolDay": null
+  "schoolDay": {
+    "date": "2026-09-30",
+    "today": false,
+    "timeZone": "America/Toronto",
+    "periods": [
+      {
+        "id": "128820ce-931f-45b1-bf2d-3f285ecf9e7a",
+        "start": "2026-09-30T12:30:00.000Z",
+        "end": "2026-09-30T13:40:00.000Z",
+        "title": "Math",
+        "room": "Elm Street School, Room 12",
+        "teachers": "Ms Rivera",
+        "url": "https://example.test/portal/classes/1"
+      },
+      {
+        "id": "41dd340c-cbdb-4d20-a136-c5b0d73ac8d9",
+        "start": "2026-09-30T13:45:00.000Z",
+        "end": "2026-09-30T14:55:00.000Z",
+        "title": "English",
+        "room": "Elm Street School, Room 4",
+        "teachers": "Mr Okafor",
+        "url": "https://example.test/portal/classes/2"
+      },
+      {
+        "id": "2b0884a0-c768-439c-bf8a-3b4e0fd407f8",
+        "start": "2026-09-30T15:40:00.000Z",
+        "end": "2026-09-30T16:50:00.000Z",
+        "title": "Science",
+        "room": "Elm Street School, Lab 2",
+        "teachers": "Dr Chen",
+        "url": "https://example.test/portal/classes/3"
+      },
+      {
+        "id": "7f3be191-1014-458e-a7a1-432357e226ca",
+        "start": "2026-09-30T17:55:00.000Z",
+        "end": "2026-09-30T19:10:00.000Z",
+        "title": "French",
+        "room": "Elm Street School, Room 9",
+        "teachers": "Mme Laurent",
+        "url": "https://example.test/portal/classes/4"
+      }
+    ]
+  }
 }
