@@ -52,4 +52,18 @@ describe("ownersFor", () => {
     expect(ownersFor("Swim practice", mapping)).toEqual([JAYDEN]);
     expect(ownersFor("Swim practice", parseMapping({ default: "other" }))).toEqual([]);
   });
+
+  it("gives an event to everyone named in its title", () => {
+    const none = parseMapping({ default: "other" });
+    expect(ownersFor("Jayden swimming", none, people)).toEqual([JAYDEN]);
+    expect(ownersFor("LEI's dentist", none, people)).toEqual([LEI]);
+    expect(ownersFor("Ethan and Jayden: haircut", none, people)).toEqual([JAYDEN, ETHAN]);
+    expect(ownersFor("Dentist (Lei)", mapping, people)).toEqual([LEI]);
+  });
+
+  it("only matches whole names", () => {
+    const none = parseMapping({ default: "other" });
+    expect(ownersFor("Leighton Park walk", none, people)).toEqual([]);
+    expect(ownersFor("Leighton Park walk", mapping, people)).toEqual([JAYDEN]);
+  });
 });

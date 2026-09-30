@@ -773,7 +773,10 @@ primary (Jayden, seeded by 0019), and an event with no owners is his.
 `events.owner_ids`, `event_series.owner_ids` and `event_overrides.owner_ids`
 hold `people.id`s; a change to a synced event is an override, like
 attendance. A source's mapping has default `owners` and rules can name a
-person ("(Lei) = Lei"), applied at sync by `ownersFor` in the worker;
+person ("(Lei) = Lei"), applied at sync by `ownersFor` in the worker.
+A person named in the title as a whole word ("Jayden swimming", "Lei's
+dentist") also owns it (owner, 2026-09-29); with neither, the source's
+default owners apply, and none means Jayden;
 owners count in the record hash only when set, so existing events kept
 their hash. Clashes are per person (`Clash.people`), the Google copy holds
 the primary person's events only, and removing a person takes them off

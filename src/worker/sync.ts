@@ -6,6 +6,7 @@ import { ownersFor, parseMapping } from "../domain/categories";
 import type { Db } from "../server/db/client";
 import type { Logger } from "../server/log";
 import { extendAllSeries } from "../server/calendar/mutations";
+import { listPeople } from "../server/people";
 import { getHomeTimeZone } from "../server/settings";
 import { syncSwim } from "../server/swim/apply";
 import { syncTennis } from "../server/tennis/apply";
@@ -138,8 +139,13 @@ async function runLocked(
     };
     const raw = await withTimeout(adapter.fetchRaw(ctx), SOURCE_TIMEOUT_MS);
     const batch = adapter.normalise(raw, ctx);
-    // Whose events, from the source's default owners and title rules.
-    const records = batch.records.map((r) => ({ ...r, ownerIds: ownersFor(r.title, ctx.source.mapping) }));
+    // Whose events, from title rules, names in the title and the source's
+    // default owners.
+    const people = await listPeople(db);
+    const records = batch.records.map((r) => ({
+      ...r,
+      ownerIds: ownersFor(r.title, ctx.source.mapping, people),
+    }));
     const plan = await syncRecords(db, { sourceId }, records, batch.window, {
       actor: "sync",
       syncRunId: run.id,

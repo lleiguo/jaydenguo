@@ -45,15 +45,29 @@ export function categorise(
   return { category: category ?? mapping.default, attendance: attendance ?? "required" };
 }
 
-// Whose event: every matching rule's owner, else the source's default
-// owners. Empty means the primary person.
-export function ownersFor(title: string, mapping: CategoryMapping): string[] {
+// Whose event (owner, 2026-09-29): every matching rule's owner plus anyone
+// named in the title as a whole word ("Jayden swimming", "Lei's dentist"),
+// else the source's default owners. Empty means the primary person.
+export function ownersFor(
+  title: string,
+  mapping: CategoryMapping,
+  people: readonly { id: string; name: string }[] = [],
+): string[] {
   const t = title.toLowerCase();
-  const matched = (mapping.rules ?? [])
+  const byRule = (mapping.rules ?? [])
     .filter((r) => r.owner && t.includes(r.match.trim().toLowerCase()))
     .map((r) => r.owner!);
+  const byName = people.filter((p) => namedIn(title, p.name)).map((p) => p.id);
+  const matched = [...byRule, ...byName];
   return [...new Set(matched.length ? matched : (mapping.owners ?? []))];
 }
+
+const namedIn = (title: string, name: string) => {
+  const n = name.trim();
+  if (!n) return false;
+  const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "iu").test(title);
+};
 
 // Suggested rules for a school's key dates page (SCH-2): closures become
 // banners (CAL-7); everything else is a school event.
