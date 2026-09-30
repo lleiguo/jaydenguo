@@ -12,6 +12,7 @@ import { createLogger } from "@/server/log";
 import { fakeModels } from "@/server/video/fake";
 import { localMediaStore, playbackKey, type MediaStore } from "@/server/video/media-store";
 import {
+  changeVideoSport,
   createVideoReview,
   deletePlayback,
   deleteVideoReview,
@@ -264,6 +265,177 @@ describe("video reviews", () => {
     await retryVideoReview(db, id, launcher);
     expect(started).toEqual([["video:review", id]]);
     expect((await getVideoReview(db, id))!.status).toBe("queued");
+  });
+
+  // Intent 0005: the sport worked out from the video, and changed later.
+  describe("sport", () => {
+    const DRIVE = "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view";
+    const detecting = { url: DRIVE, sport: "other" as const, sportSource: "detecting" };
+
+    it("works out the sport before the review (SPT-2)", async () => {
+      const models = fakeModels({ detect: { sport: "swimming", sure: true, reason: "A pool." } });
+      const id = await saved(detecting);
+      await videoReviewJob([id], ctx(), deps({ models: () => models }));
+      const r = (await getVideoReview(db, id))!;
+      expect(r.status).toBe("done");
+      expect(r).toMatchObject({ sport: "swimming", sportSource: "detected" });
+      expect(r.rounds[0]).toMatchObject({ round: "detect", model: "gemini" });
+      expect(r.costUsd).toBeCloseTo(0.1, 5);
+      // The review used the swimming checklist.
+      const review = models.gemini.requests.find((q) => q.purpose === "review")!;
+      expect(review.prompt).toContain("Sport: swimming.");
+      expect(models.gemini.requests[0].media).toMatchObject({ kind: "video", fps: 1 });
+    });
+
+    it("asks Claude with frames in Claude-only mode", async () => {
+      const models = fakeModels();
+      const id = await saved({ ...detecting, mode: "claude" });
+      await videoReviewJob([id], ctx(), deps({ models: () => models }));
+      expect((await getVideoReview(db, id))!.rounds.map((x) => `${x.round}:${x.model}`)).toEqual([
+        "detect:claude",
+        "review:claude",
+      ]);
+      expect(models.claude.requests[0].media?.kind).toBe("frames");
+    });
+
+    it("carries on as Other when unsure, or when detection fails (SPT-3)", async () => {
+      const unsure = fakeModels({ detect: { sport: "tennis", sure: false, reason: "Too dark." } });
+      const a = await saved(detecting);
+      await videoReviewJob([a], ctx(), deps({ models: () => unsure }));
+      expect(await getVideoReview(db, a)).toMatchObject({
+        status: "done",
+        sport: "other",
+        sportSource: "unsure",
+      });
+
+      const models = fakeModels();
+      const { LlmError } = await import("@/server/llm/types");
+      const failing = {
+        ...models,
+        gemini: {
+          ...models.gemini,
+          call: async <T>(req: Parameters<typeof models.gemini.call<T>>[0]) => {
+            if (req.purpose === "detect") throw new LlmError("unavailable", "Gemini is busy.");
+            return models.gemini.call(req);
+          },
+        },
+      };
+      const b = await saved(detecting);
+      await videoReviewJob([b], ctx(), deps({ models: () => failing }));
+      const r = (await getVideoReview(db, b))!;
+      expect(r).toMatchObject({ status: "done", sport: "other", sportSource: "unsure" });
+      expect(r.rounds.some((x) => x.round === "detect")).toBe(false);
+    });
+
+    it("skips detection when the owner sets the sport first (SPT-5)", async () => {
+      const models = fakeModels();
+      const id = await saved(detecting);
+      await changeVideoSport(db, id, { sport: "hockey", reviewAgain: false }, launcher);
+      await videoReviewJob([id], ctx(), deps({ models: () => models }));
+      const r = (await getVideoReview(db, id))!;
+      expect(r).toMatchObject({ status: "done", sport: "hockey", sportSource: "chosen" });
+      expect(models.gemini.requests.some((q) => q.purpose === "detect")).toBe(false);
+    });
+
+    it("saves an auto link it can't watch as Other, not set (SPT-1)", async () => {
+      const r = await createVideoReview(
+        db,
+        input("https://youtu.be/dQw4w9WgXcQ", { sport: "auto" }),
+        launcher,
+      );
+      expect(await getVideoReview(db, r.id)).toMatchObject({ sport: "other", sportSource: "unsure" });
+    });
+
+    it("refuses a change while the review runs, and relabels a finished one (SPT-5)", async () => {
+      const running = await saved({ url: DRIVE, status: "analysing" });
+      await expect(
+        changeVideoSport(db, running, { sport: "soccer", reviewAgain: false }, launcher),
+      ).rejects.toMatchObject({ status: 409 });
+
+      const id = await saved({ url: DRIVE });
+      await videoReviewJob([id], ctx(), deps());
+      await voteVideoReview(db, id, "claude");
+      const changed = await changeVideoSport(db, id, { sport: "soccer", reviewAgain: false }, launcher);
+      expect(changed).toMatchObject({
+        sport: "soccer",
+        sportSource: "chosen",
+        status: "done",
+        parentVote: "claude",
+      });
+      expect((await getVideoReview(db, id))!.rounds).toHaveLength(9);
+      expect(started).toEqual([]);
+      expect((await scoreboard(db)).map((b) => b.sport)).toEqual(["soccer"]);
+    });
+
+    it("takes a new sport on a failed review, and can try it again", async () => {
+      const id = await saved({ url: "https://drive.google.com/file/d/missing12345678/view" });
+      await videoReviewJob([id], ctx(), deps());
+      const r = await changeVideoSport(db, id, { sport: "swimming", reviewAgain: true }, launcher);
+      expect(r).toMatchObject({ sport: "swimming", status: "queued" });
+      expect(started).toEqual([["video:review", id]]);
+    });
+
+    it("runs a finished review again from the playback copy (SPT-6, SPT-7)", async () => {
+      const dir = await mkdtemp(`${tmpdir()}/media-`);
+      try {
+        const store = localMediaStore(dir);
+        const id = await saved({ url: DRIVE });
+        await videoReviewJob([id], ctx(), deps({ media: () => store }));
+        await voteVideoReview(db, id, "gemini");
+        const r = await changeVideoSport(db, id, { sport: "swimming", reviewAgain: true }, launcher);
+        expect(r).toMatchObject({ status: "queued", sport: "swimming", parentVote: null });
+        expect(started).toEqual([["video:review", id]]);
+        expect((await getVideoReview(db, id))!.rounds).toEqual([]);
+
+        // The Drive file is gone: the copy must be what's reviewed.
+        await db
+          .update(videoReviews)
+          .set({ url: "https://drive.google.com/file/d/missing12345678/view" })
+          .where(eq(videoReviews.id, id));
+        const models = fakeModels();
+        await videoReviewJob([id], ctx(), deps({ media: () => store, models: () => models }));
+        const again = (await getVideoReview(db, id))!;
+        expect(again).toMatchObject({
+          status: "done",
+          sport: "swimming",
+          hasPlayback: true,
+          parentVote: null,
+        });
+        expect(again.rounds).toHaveLength(9);
+        expect(models.gemini.requests[0].prompt).toContain("Sport: swimming.");
+        // Both runs count.
+        expect(again.costUsd).toBeCloseTo(0.18, 5);
+        const all = await db.select().from(videoReviewRounds).where(eq(videoReviewRounds.reviewId, id));
+        expect(all).toHaveLength(18);
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    });
+
+    it("picks again when a Photos review has no copy", async () => {
+      const id = await saved({ provider: "photos", url: null, status: "done", mediaItemId: "item-1" });
+      const r = await changeVideoSport(db, id, { sport: "tennis", reviewAgain: true }, launcher);
+      expect(r).toMatchObject({ status: "picking" });
+    });
+
+    it("keeps a failed attempt's rounds when it's tried again", async () => {
+      const models = fakeModels();
+      const broken = {
+        ...models,
+        claude: {
+          ...models.claude,
+          call: async () => {
+            throw new Error("boom");
+          },
+        },
+      };
+      const id = await saved({ url: DRIVE });
+      await videoReviewJob([id], ctx(), deps({ models: () => broken }));
+      await retryVideoReview(db, id, launcher);
+      expect((await getVideoReview(db, id))!.rounds).toEqual([]);
+      const all = await db.select().from(videoReviewRounds).where(eq(videoReviewRounds.reviewId, id));
+      expect(all.length).toBeGreaterThan(0);
+    });
   });
 
   // Intent 0003: a playback copy of the reviewed clip.

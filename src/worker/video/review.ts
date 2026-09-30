@@ -1,6 +1,9 @@
+import { createWriteStream } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { credentials, videoReviewRounds, videoReviews } from "@db/schema";
 import {
@@ -23,6 +26,7 @@ import { geminiModel } from "../../server/llm/gemini";
 import { LlmError, type StructuredModel } from "../../server/llm/types";
 import { registerSecret } from "../../server/log";
 import { runDebate, type Models } from "../../server/video/debate";
+import { detectSport } from "../../server/video/detect";
 import { fakeModels } from "../../server/video/fake";
 import { mediaStore, playbackKey, type MediaStore } from "../../server/video/media-store";
 import { PROMPT_VERSION } from "../../server/video/prompts";
@@ -33,9 +37,11 @@ import { MediaError, prepareMedia } from "./media";
 
 // The review job (plan M5.2-M5.5, spec VID-2, VID-5): `video:review <id>`.
 // Fetches the video through the owner's Google account into a temp folder,
-// prepares it, runs the debate (or one model), stores every round as it
-// finishes, keeps the clip as a playback copy if the review worked (intent
-// 0003), and always deletes the temp folder, whether it worked or not.
+// prepares it, works out the sport if asked (intent 0005), runs the debate
+// (or one model), stores every round as it finishes, keeps the clip as a
+// playback copy if the review worked (intent 0003), and always deletes the
+// temp folder, whether it worked or not. A review run again for another
+// sport starts from its playback copy when there is one (SPT-6).
 
 // How long the owner has to pick in Google Photos.
 const PICK_TIMEOUT_MS = () => Number(process.env.PHOTOS_PICK_TIMEOUT_MS ?? 15 * 60_000);
@@ -123,12 +129,29 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
     await db.update(videoReviews).set(values).where(eq(videoReviews.id, id));
   };
   const progress = (text: string) => set({ progress: text });
+  // Every call made for this review, earlier runs included (SPT-7).
+  const totalCost = async () => {
+    const [cost] = await db
+      .select({ sum: sql<number>`coalesce(sum(${videoReviewRounds.costUsd}), 0)::float` })
+      .from(videoReviewRounds)
+      .where(eq(videoReviewRounds.reviewId, id));
+    return Math.round((cost?.sum ?? 0) * 10_000) / 10_000;
+  };
+  // The playback copy is already the reviewed part: no segment, not saved again.
+  const copy = row.playbackKey && store ? row.playbackKey : null;
 
   const dir = await mkdtemp(join(tmpdir(), "video-review-"));
   const src = join(dir, "source");
   try {
     // 1. The video, into the temp folder.
-    if (row.provider === "drive") {
+    if (copy && store) {
+      await set({ status: "analysing", startedAt: new Date(), progress: "Opening the saved video" });
+      const stream = await store.read(copy, null);
+      await pipeline(
+        Readable.fromWeb(stream as import("node:stream/web").ReadableStream),
+        createWriteStream(src),
+      );
+    } else if (row.provider === "drive") {
       await set({
         status: "analysing",
         startedAt: new Date(),
@@ -182,23 +205,45 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
     const media = await prepareMedia(
       src,
       dir,
-      { start: row.segmentStart, end: row.segmentEnd },
+      copy ? { start: null, end: null } : { start: row.segmentStart, end: row.segmentEnd },
       mode !== "gemini",
     );
     await set({ durationSec: media.durationSec, promptVersion: PROMPT_VERSION });
+    const reviewers = models();
 
-    // 3. The review.
+    // 3. The sport, read again: the owner may have set it while picking.
+    const [current] = await db
+      .select({ sport: videoReviews.sport, source: videoReviews.sportSource })
+      .from(videoReviews)
+      .where(eq(videoReviews.id, id));
+    let sport = current.sport as VideoSport;
+    if (current.source === "detecting") {
+      await progress("Working out the sport");
+      const found = await detectSport(
+        mode,
+        reviewers,
+        mode === "claude"
+          ? { kind: "frames", frames: media.frames }
+          : { kind: "video", data: media.clip, mimeType: "video/mp4", fps: 1 },
+        (message, fields) => ctx.log(message, { id, ...fields }, "WARNING"),
+      );
+      if (found.round) await db.insert(videoReviewRounds).values({ reviewId: id, ...found.round });
+      sport = found.sport;
+      await set({ sport, sportSource: found.source });
+    }
+
+    // 4. The review.
     const result = await runDebate(
       mode,
-      models(),
+      reviewers,
       {
-        context: { sport: row.sport as VideoSport, note: row.note },
+        context: { sport, note: row.note },
         media: {
           gemini: {
             kind: "video",
             data: media.clip,
             mimeType: "video/mp4",
-            fps: geminiFps(row.sport, media.durationSec),
+            fps: geminiFps(sport, media.durationSec),
           },
           claude: { kind: "frames", frames: media.frames },
         },
@@ -210,31 +255,27 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
         },
       },
     );
-    // 4. The playback copy (PLAY-1). The review stands without it.
-    const playback = store ? await savePlayback(store, id, media.clip, ctx) : null;
+    // 5. The playback copy (PLAY-1). The review stands without it.
+    const playback = copy ?? (store ? await savePlayback(store, id, media.clip, ctx) : null);
     await set({
       status: "done",
       progress: null,
       verdict: result.verdict,
       combinedReview: result.combined,
-      costUsd: result.costUsd,
+      costUsd: await totalCost(),
       finishedAt: new Date(),
       playbackKey: playback,
-      playbackBytes: playback ? media.clip.length : null,
+      playbackBytes: copy ? row.playbackBytes : playback ? media.clip.length : null,
     });
     ctx.log("video review done", { id, mode, costUsd: result.costUsd, playback: !!playback });
   } catch (err) {
     const message = failureMessage(err);
-    const cost = await db
-      .select({ sum: sql<number>`coalesce(sum(${videoReviewRounds.costUsd}), 0)::float` })
-      .from(videoReviewRounds)
-      .where(eq(videoReviewRounds.reviewId, id));
     await set({
       status: "failed",
       progress: null,
       errorMessage: message,
       finishedAt: new Date(),
-      costUsd: cost[0]?.sum ?? 0,
+      costUsd: await totalCost(),
     });
     ctx.log("video review failed", { id, error: err }, "WARNING");
   } finally {

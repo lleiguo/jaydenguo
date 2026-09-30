@@ -87,6 +87,35 @@ test("a Drive video is reviewed in debate mode, and the vote is kept once", asyn
   await expect(page.getByTestId("video-row").filter({ hasText: note })).toHaveCount(1);
 });
 
+// Intent 0005: the sport is worked out from the video, and can be changed
+// (SPT-1, SPT-2, SPT-5, SPT-6).
+test("the sport is detected, relabelled, then reviewed again", async ({ page, context }, info) => {
+  test.setTimeout(180_000);
+  await signInAs(context, OWNER);
+  await connectVideos(page, info.project.name);
+
+  await expect(page.getByRole("combobox", { name: "Sport" })).toHaveValue("auto");
+  await page.getByLabel("Video link").fill(DRIVE_LINK);
+  await page.getByLabel("Note (what to look at)").fill(`sport ${info.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Review" }).click();
+  await expect(page).toHaveURL(/\/videos\/[0-9a-f-]{36}$/);
+  await expect(page.getByTestId("review-status")).toHaveText("Done", { timeout: 90_000 });
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(heading).toContainText("Tennis (detected)");
+
+  const sport = page.getByRole("combobox", { name: "Sport" });
+  await sport.selectOption("swimming");
+  await page.getByRole("button", { name: "Only change the label" }).click();
+  await expect(heading).toContainText("Swimming");
+  await expect(heading).not.toContainText("detected");
+
+  await sport.selectOption("soccer");
+  await page.getByRole("button", { name: "Review again as Soccer" }).click();
+  await expect(heading).toContainText("Soccer");
+  await expect(page.getByTestId("review-status")).toHaveText("Done", { timeout: 90_000 });
+  await expect(page.getByRole("heading", { name: "The advice" })).toBeVisible();
+});
+
 test("a video picked in Google Photos is reviewed (F-4)", async ({ page, context }, info) => {
   test.setTimeout(120_000);
   await signInAs(context, OWNER);

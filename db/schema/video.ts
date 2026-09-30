@@ -21,6 +21,7 @@ import {
   REVIEW_MODELS,
   REVIEW_MODES,
   REVIEW_ROUNDS,
+  SPORT_SOURCES,
   VIDEO_PROVIDERS,
   VIDEO_SPORTS,
   VIDEO_STATUSES,
@@ -34,6 +35,8 @@ export const videoReviews = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     sport: text("sport").notNull(),
+    // intent 0005, SPT-4: chosen, detecting, detected or unsure.
+    sportSource: text("sport_source").notNull().default("chosen"),
     // The pasted link, or for Google Photos the picked item's product URL
     // once known (null while the owner is picking).
     url: text("url"),
@@ -77,6 +80,7 @@ export const videoReviews = pgTable(
   (t) => [
     index("video_reviews_sport_created_idx").on(t.sport, t.createdAt),
     check("video_reviews_sport_chk", sql`${t.sport} in (${inList(VIDEO_SPORTS)})`),
+    check("video_reviews_sport_source_chk", sql`${t.sportSource} in (${inList(SPORT_SOURCES)})`),
     check("video_reviews_provider_chk", sql`${t.provider} in (${inList(VIDEO_PROVIDERS)})`),
     check("video_reviews_status_chk", sql`${t.status} in (${inList(VIDEO_STATUSES)})`),
     check("video_reviews_mode_chk", sql`${t.mode} in (${inList(REVIEW_MODES)})`),
@@ -115,6 +119,9 @@ export const videoReviewRounds = pgTable(
     outputTokens: integer("output_tokens"),
     costUsd: numeric("cost_usd", { precision: 10, scale: 4, mode: "number" }),
     createdAt: ts("created_at").notNull().defaultNow(),
+    // An earlier run's round (retry, or review again for another sport:
+    // intent 0005, SPT-6): kept for the costs page, not shown.
+    supersededAt: ts("superseded_at"),
   },
   (t) => [
     index("video_review_rounds_review_idx").on(t.reviewId, t.createdAt),

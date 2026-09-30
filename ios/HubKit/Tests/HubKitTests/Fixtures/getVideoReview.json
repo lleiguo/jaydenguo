@@ -1,6 +1,7 @@
 {
   "id": "5eed0000-0000-4000-8000-000000000001",
   "sport": "tennis",
+  "sportSource": "chosen",
   "url": null,
   "provider": "drive",
   "note": "Forehand rally (sample)",
@@ -92,7 +93,7 @@
   },
   "costUsd": 0.09,
   "votedAt": null,
-  "finishedAt": "2026-09-30T05:56:55.099Z",
+  "finishedAt": "2026-09-30T12:46:15.877Z",
   "hasPlayback": true,
   "rounds": [
     {

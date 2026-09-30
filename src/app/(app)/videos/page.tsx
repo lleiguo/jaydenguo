@@ -53,11 +53,7 @@ export default async function VideosPage({ searchParams }: PageProps<"/videos">)
           <h2 id="add" className="text-lg font-semibold">
             Add a video
           </h2>
-          <NewVideoForm
-            today={localDate(new Date(), tz)}
-            defaultSport={sport ?? "tennis"}
-            connected={connected}
-          />
+          <NewVideoForm today={localDate(new Date(), tz)} connected={connected} />
         </section>
       )}
 

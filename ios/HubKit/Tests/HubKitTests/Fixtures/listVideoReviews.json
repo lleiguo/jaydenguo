@@ -3,6 +3,7 @@
     {
       "id": "5eed0000-0000-4000-8000-000000000001",
       "sport": "tennis",
+      "sportSource": "chosen",
       "url": null,
       "provider": "drive",
       "note": "Forehand rally (sample)",
@@ -22,6 +23,7 @@
     {
       "id": "5eed0000-0000-4000-8000-000000000002",
       "sport": "tennis",
+      "sportSource": "detected",
       "url": null,
       "provider": "drive",
       "note": "Forehand, early season (sample)",

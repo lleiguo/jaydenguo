@@ -10,7 +10,7 @@ import { personInput } from "../people";
 import { createSourceInput, updateSourceInput } from "../sources";
 import { addResultInput, correctResultInput, createMeetInput } from "../swim/mutations";
 import { addMatchInput, correctMatchInput } from "../tennis/mutations";
-import { createVideoInput, voteInput } from "../video/store";
+import { changeSportInput, createVideoInput, voteInput } from "../video/store";
 
 // Every /api/v1 operation, for openapi.json (intent 0004, API-4). `response`
 // names a type exported from ./responses.ts; null means an empty body
@@ -775,6 +775,15 @@ export const operations: Operation[] = [
     spec: "VID-4",
     status: 204,
     response: null,
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/videos/{id}",
+    operationId: "changeVideoSport",
+    summary: "Set the sport; a finished review can be run again for it.",
+    spec: "SPT-5, SPT-6",
+    body: changeSportInput,
+    response: "VideoReviewSummary",
   },
   {
     method: "POST",

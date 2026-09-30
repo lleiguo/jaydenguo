@@ -654,6 +654,8 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     }
     const values = {
       sport: "tennis",
+      // The older one's sport was worked out from the video (intent 0005).
+      sportSource: v.mode === "gemini" ? "detected" : "chosen",
       url: null,
       provider: "drive",
       note: v.note,

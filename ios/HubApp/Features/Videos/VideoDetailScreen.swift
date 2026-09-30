@@ -17,6 +17,9 @@ struct VideoDetailScreen: View {
     @State private var clip = ClipPlayer()
     @State private var confirmDelete = false
     @State private var confirmDeleteVideo = false
+    /// A new sport for a finished review, waiting for "review again" or
+    /// "only the label" (intent 0005, SPT-6).
+    @State private var newSport: String?
 
     var body: some View {
         Group {
@@ -28,7 +31,7 @@ struct VideoDetailScreen: View {
                 ProgressView()
             }
         }
-        .navigationTitle(review.map { "\(VideoSport.label($0.sport.rawValue)) · \($0.filmedOn)" } ?? "Review")
+        .navigationTitle(review.map { "\(VideoSport.text($0.sport.rawValue, source: $0.sportSource.rawValue)) · \($0.filmedOn)" } ?? "Review")
         .navigationBarTitleDisplayMode(.inline)
         // VID-5: follow the job while it runs.
         .task(id: model.changes) {
@@ -50,6 +53,16 @@ struct VideoDetailScreen: View {
         }
         .confirmationDialog("Delete the video copy? The review stays.", isPresented: $confirmDeleteVideo, titleVisibility: .visible) {
             Button("Delete video", role: .destructive) { Task { await deleteVideo() } }
+        }
+        .confirmationDialog(newSport.map { "Review it again as \(VideoSport.label($0))?" } ?? "",
+                            isPresented: Binding(get: { newSport != nil }, set: { if !$0 { newSport = nil } }),
+                            titleVisibility: .visible, presenting: newSport) { sport in
+            Button("Review again as \(VideoSport.label(sport))") { Task { await changeSport(sport, again: true) } }
+            Button("Only change the label") { Task { await changeSport(sport, again: false) } }
+        } message: { _ in
+            Text(review?.parentVote.map { $0 != ._empty_ } == true
+                 ? "That runs the whole review again and clears your vote, which was about this review."
+                 : "That runs the whole review again.")
         }
     }
 
@@ -104,6 +117,7 @@ struct VideoDetailScreen: View {
     @ViewBuilder
     private func header(_ r: VideoDetail) -> some View {
         Section {
+            sportRow(r)
             if let note = r.note { Text(note) }
             Label(r.progress.map { "\(VideoStatus.label(r.status)): \($0)" } ?? VideoStatus.label(r.status),
                   systemImage: r.status == "failed" ? "exclamationmark.triangle.fill" : r.isRunning ? "hourglass" : "checkmark.circle")
@@ -123,6 +137,34 @@ struct VideoDetailScreen: View {
             if let url = r.url.flatMap(URL.init(string:)), url.scheme == "https" {
                 Button("Open the video") { openURL(url) }
             }
+        }
+    }
+
+    /// intent 0005, SPT-5: set the sport. A finished review asks first.
+    @ViewBuilder
+    private func sportRow(_ r: VideoDetail) -> some View {
+        let source = r.sportSource.rawValue
+        let unset = VideoSport.unset(source: source, running: r.isRunning)
+        let blank = unset || source == "detecting"
+        Picker("Sport", selection: Binding(
+            get: { blank ? "" : r.sport.rawValue },
+            set: { sport in
+                guard !sport.isEmpty, sport != r.sport.rawValue || blank else { return }
+                if r.status == "done" { newSport = sport } else { Task { await changeSport(sport, again: false) } }
+            })) {
+            if blank { Text(source == "detecting" ? "Detect automatically" : "Not set").tag("") }
+            ForEach(VideoSport.all, id: \.self) { Text(VideoSport.label($0)).tag($0) }
+        }
+        .disabled(r.status == "analysing")
+        .accessibilityIdentifier("sportPicker")
+        if r.status == "analysing" {
+            Caption("Change the sport when the review has finished.")
+        } else if unset {
+            Label("The sport couldn't be worked out from the video, so the review used a general checklist. Set it here.",
+                  systemImage: "questionmark.circle")
+                .foregroundStyle(.orange)
+        } else if source == "detected" {
+            Caption("Worked out from the video.")
         }
     }
 
@@ -265,6 +307,15 @@ struct VideoDetailScreen: View {
 
     private func vote(_ m: VideoModel) async {
         await act("Vote saved.") { _ = try await model.client.api.voteVideoReview(path: .init(id: id), body: .json(.init(vote: .init(rawValue: m.rawValue)!))).ok }
+    }
+
+    private func changeSport(_ sport: String, again: Bool) async {
+        newSport = nil
+        await act(again ? "Reviewing again as \(VideoSport.label(sport))." : "Sport changed to \(VideoSport.label(sport)).") {
+            try await model.client.patch("/api/v1/videos/\(id)", ["sport": .string(sport), "reviewAgain": .bool(again)])
+        }
+        if again { clip.close() }
+        await refresh()
     }
 
     private func retry() async {

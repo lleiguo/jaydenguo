@@ -155,6 +155,23 @@ public enum VideoStatus {
 
 public enum VideoSport {
     public static let all = ["tennis", "swimming", "soccer", "hockey", "other"]
+    /// The New review choice "Detect automatically" (intent 0005, SPT-1).
+    public static let auto = "auto"
+
+    /// How a review's sport is named, by where it came from (SPT-4).
+    public static func text(_ sport: String, source: String) -> String {
+        switch source {
+        case "detecting", "unsure": "Sport not set"
+        case "detected": "\(label(sport)) (detected)"
+        default: label(sport)
+        }
+    }
+
+    /// Whether the owner still has to set the sport (SPT-3).
+    public static func unset(source: String, running: Bool) -> Bool {
+        source == "unsure" || (source == "detecting" && !running)
+    }
+
     public static func label(_ sport: String) -> String {
         switch sport {
         case "tennis": "Tennis"

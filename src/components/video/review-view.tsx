@@ -3,7 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { call } from "@/components/calendar/api";
-import { MODEL_LABEL, REVIEW_MODELS, SPORT_LABEL, type ReviewModel } from "@/domain/video-constants";
+import {
+  MODEL_LABEL,
+  REVIEW_MODELS,
+  SPORT_LABEL,
+  sportText,
+  VIDEO_SPORTS,
+  type ReviewModel,
+  type VideoSport,
+} from "@/domain/video-constants";
 import { timelinePoints } from "@/domain/review-timeline";
 import { formatClockTime } from "@/domain/video-links";
 import type { Verdict } from "@/server/video/debate";
@@ -62,8 +70,9 @@ export function ReviewView({ initial }: { initial: VideoReviewDetail }) {
       <div className="flex flex-col gap-4">
         <header className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold">
-            {SPORT_LABEL[r.sport]} · {r.filmedOn}
+            {sportText(r.sport, r.sportSource)} · {r.filmedOn}
           </h1>
+          <SportControl r={r} onChanged={setR} />
           {r.note && <p>{r.note}</p>}
           <p className={`text-sm ${muted}`}>
             <span data-testid="review-status" className={statusTone(r.status)}>
@@ -213,6 +222,103 @@ export function ReviewView({ initial }: { initial: VideoReviewDetail }) {
         </div>
       </div>
     </PlaybackProvider>
+  );
+}
+
+// intent 0005, SPT-5, SPT-6: set the sport. A finished review asks whether
+// to run it again for the new sport or only change the label.
+function SportControl({ r, onChanged }: { r: VideoReviewDetail; onChanged: (r: VideoReviewDetail) => void }) {
+  const [pending, setPending] = useState<VideoSport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const running = r.status === "analysing";
+  const unset = r.sportSource === "unsure" || (r.sportSource === "detecting" && !inProgress(r.status));
+
+  async function change(sport: VideoSport, reviewAgain: boolean) {
+    setError(null);
+    setBusy(true);
+    try {
+      await call(`/api/v1/videos/${r.id}`, "PATCH", { sport, reviewAgain });
+      const res = await fetch(`/api/v1/videos/${r.id}`);
+      if (res.ok) onChanged((await res.json()) as VideoReviewDetail);
+      setPending(null);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 text-sm">
+      {unset && (
+        <p className="text-amber-700 dark:text-amber-400">
+          The sport couldn&apos;t be worked out from the video, so the review used a general checklist. Set it
+          here.
+        </p>
+      )}
+      <label className="flex flex-wrap items-center gap-2">
+        Sport
+        <select
+          aria-label="Sport"
+          value={pending ?? (unset || r.sportSource === "detecting" ? "" : r.sport)}
+          disabled={running || busy}
+          onChange={(e) => {
+            const sport = e.target.value as VideoSport;
+            if (!sport || sport === r.sport) return setPending(null);
+            if (r.status === "done") setPending(sport);
+            else void change(sport, false);
+          }}
+          className="rounded border px-2 py-1 dark:bg-neutral-900"
+        >
+          {(unset || r.sportSource === "detecting") && (
+            <option value="">{r.sportSource === "detecting" ? "Detect automatically" : "Not set"}</option>
+          )}
+          {VIDEO_SPORTS.map((s) => (
+            <option key={s} value={s}>
+              {SPORT_LABEL[s]}
+            </option>
+          ))}
+        </select>
+        {running && <span className={muted}>Change the sport when the review has finished.</span>}
+      </label>
+      {pending && (
+        <div className={`${card} flex flex-col gap-2`} role="group" aria-label="Change the sport">
+          <p>
+            The review was written for{" "}
+            {r.sportSource === "unsure" ? "no particular sport" : SPORT_LABEL[r.sport]}. Review it again as{" "}
+            {SPORT_LABEL[pending]}? That runs the whole review again
+            {r.parentVote ? " and clears your vote, which was about this review" : ""}.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              className="rounded-md border bg-neutral-900 px-3 py-1 text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+              onClick={() => change(pending, true)}
+            >
+              Review again as {SPORT_LABEL[pending]}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              className="rounded border px-3 py-1"
+              onClick={() => change(pending, false)}
+            >
+              Only change the label
+            </button>
+            <button type="button" className="rounded border px-3 py-1" onClick={() => setPending(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="text-red-700 dark:text-red-400">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 

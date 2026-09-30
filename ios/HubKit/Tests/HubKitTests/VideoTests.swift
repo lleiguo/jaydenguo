@@ -54,4 +54,15 @@ import Testing
         #expect(VideoStatus.running("analysing"))
         #expect(!VideoStatus.running("done"))
     }
+
+    /// intent 0005, SPT-4: where the sport came from.
+    @Test func sportInWords() async throws {
+        let list = try await client.api.listVideoReviews().ok.body.json.reviews
+        let older = try #require(list.first { $0.mode == .gemini })
+        #expect(VideoSport.text(older.sport.rawValue, source: older.sportSource.rawValue) == "Tennis (detected)")
+        #expect(VideoSport.text("other", source: "unsure") == "Sport not set")
+        #expect(VideoSport.text("hockey", source: "chosen") == "Hockey")
+        #expect(VideoSport.unset(source: "detecting", running: false))
+        #expect(!VideoSport.unset(source: "detecting", running: true))
+    }
 }

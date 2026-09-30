@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { VideoSport } from "../../domain/video-constants";
+import { VIDEO_SPORTS, type VideoSport } from "../../domain/video-constants";
 
 // Prompts and answer schemas for the video review (spec VID-3, §6.3, plan
 // M5.4-M5.5). Judges only ever see "Review A" and "Review B": no prompt a
@@ -126,6 +126,14 @@ export const combinedSchema = z.object({
 });
 export type Combined = z.infer<typeof combinedSchema>;
 
+// intent 0005, SPT-2: which sport the video shows, before the review.
+export const detectSchema = z.object({
+  sport: z.enum(VIDEO_SPORTS).describe('The sport shown, or "other" for any sport not listed'),
+  sure: z.boolean().describe("True only if the video clearly shows this sport"),
+  reason: z.string().describe("What in the video shows it, in one sentence"),
+});
+export type Detected = z.infer<typeof detectSchema>;
+
 // --- Prompts ---------------------------------------------------------------
 
 export type ReviewContext = { sport: VideoSport; note: string | null; input: "video" | "frames" };
@@ -142,6 +150,17 @@ function context(c: ReviewContext) {
     `What to look at (${c.sport}): ${RUBRIC[c.sport]}`,
     mediaLine(c.input),
   ].join("\n");
+}
+
+export function detectSystem() {
+  return `You identify which sport a short video of a young athlete shows. Answer only from what is visible: the court, pool, field or rink, the equipment and the movement. If it isn't clear, say you aren't sure.`;
+}
+
+export function detectPrompt(input: ReviewContext["input"]) {
+  const sports = VIDEO_SPORTS.filter((s) => s !== "other").join(", ");
+  return `${mediaLine(input)}
+
+Which sport does this video show? The choices are: ${sports}, or "other" for any other sport.`;
 }
 
 export function reviewerSystem() {

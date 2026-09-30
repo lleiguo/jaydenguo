@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { call } from "@/components/calendar/api";
-import { MODEL_LABEL, SPORT_LABEL, type VideoSport } from "@/domain/video-constants";
+import { MODEL_LABEL, sportText, type VideoSport } from "@/domain/video-constants";
 import type { VideoReviewSummary } from "@/server/video/store";
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -98,7 +98,7 @@ export function VideoHistory({
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex flex-wrap items-baseline gap-x-2">
                 <Link href={`/videos/${r.id}`} className="font-medium underline">
-                  {SPORT_LABEL[r.sport]} · {r.filmedOn}
+                  {sportText(r.sport, r.sportSource)} · {r.filmedOn}
                 </Link>
                 <span data-testid="video-status" className={statusTone(r.status)}>
                   {STATUS_LABEL[r.status] ?? r.status}
