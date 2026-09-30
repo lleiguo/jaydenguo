@@ -8,7 +8,7 @@
     {
       "match": {
         "id": "33688cd3-83f7-4a15-b3dc-aa64542bbd2d",
-        "matchDate": "2026-08-12",
+        "matchDate": "2026-08-13",
         "scheduledAt": null,
         "tournamentId": "2693a815-d8d3-40fc-9b43-c280b1f9bdf9",
         "tournamentName": "Blossom Open (sample)",
@@ -81,7 +81,7 @@
     {
       "match": {
         "id": "a3e137ac-45ec-46c0-b80c-666a1a6dac89",
-        "matchDate": "2026-08-12",
+        "matchDate": "2026-08-13",
         "scheduledAt": null,
         "tournamentId": "2693a815-d8d3-40fc-9b43-c280b1f9bdf9",
         "tournamentName": "Blossom Open (sample)",
@@ -154,7 +154,7 @@
     {
       "match": {
         "id": "158d3b49-38c6-4db8-92cf-ab3189246866",
-        "matchDate": "2026-08-11",
+        "matchDate": "2026-08-12",
         "scheduledAt": null,
         "tournamentId": "2693a815-d8d3-40fc-9b43-c280b1f9bdf9",
         "tournamentName": "Blossom Open (sample)",
@@ -227,7 +227,7 @@
     {
       "match": {
         "id": "26e60bff-a97b-4513-b50b-7accfe85b837",
-        "matchDate": "2026-08-10",
+        "matchDate": "2026-08-11",
         "scheduledAt": null,
         "tournamentId": "2693a815-d8d3-40fc-9b43-c280b1f9bdf9",
         "tournamentName": "Blossom Open (sample)",
@@ -300,7 +300,7 @@
     {
       "match": {
         "id": "f2a6904c-bc6f-4b81-b53a-c9bca8347cc0",
-        "matchDate": "2026-06-03",
+        "matchDate": "2026-06-04",
         "scheduledAt": null,
         "tournamentId": "8dcb57c6-5a66-4015-8683-705c4ea3451e",
         "tournamentName": "Thaw Invitational (sample)",
@@ -381,7 +381,7 @@
     {
       "match": {
         "id": "59e7a03a-b444-4a33-8f5c-23dffda1a1da",
-        "matchDate": "2026-06-02",
+        "matchDate": "2026-06-03",
         "scheduledAt": null,
         "tournamentId": "8dcb57c6-5a66-4015-8683-705c4ea3451e",
         "tournamentName": "Thaw Invitational (sample)",
@@ -454,7 +454,7 @@
     {
       "match": {
         "id": "535dbdfa-2406-413f-9925-7faf309da16f",
-        "matchDate": "2026-06-01",
+        "matchDate": "2026-06-02",
         "scheduledAt": null,
         "tournamentId": "8dcb57c6-5a66-4015-8683-705c4ea3451e",
         "tournamentName": "Thaw Invitational (sample)",
@@ -527,7 +527,7 @@
     {
       "match": {
         "id": "5352dd81-2faf-404c-98c8-dc38a1dbdd55",
-        "matchDate": "2026-03-25",
+        "matchDate": "2026-03-26",
         "scheduledAt": null,
         "tournamentId": "2dbdb526-3aab-4a7e-8f2b-7fec60fa6096",
         "tournamentName": "Frost Classic (sample)",
@@ -608,7 +608,7 @@
     {
       "match": {
         "id": "b76ffaa0-2cbb-4931-8895-15e0e4d312b9",
-        "matchDate": "2026-03-24",
+        "matchDate": "2026-03-25",
         "scheduledAt": null,
         "tournamentId": "2dbdb526-3aab-4a7e-8f2b-7fec60fa6096",
         "tournamentName": "Frost Classic (sample)",
@@ -681,7 +681,7 @@
     {
       "match": {
         "id": "7c1cb42e-671e-4366-9c5c-2f6e5c14aeb0",
-        "matchDate": "2026-03-23",
+        "matchDate": "2026-03-24",
         "scheduledAt": null,
         "tournamentId": "2dbdb526-3aab-4a7e-8f2b-7fec60fa6096",
         "tournamentName": "Frost Classic (sample)",
@@ -754,7 +754,7 @@
     {
       "match": {
         "id": "4ae4423f-0e69-4983-9202-f5d7170cb072",
-        "matchDate": "2026-01-13",
+        "matchDate": "2026-01-14",
         "scheduledAt": null,
         "tournamentId": "fd1c0f91-457e-4887-af27-71f896aca68c",
         "tournamentName": "Harvest Cup (sample)",
@@ -835,7 +835,7 @@
     {
       "match": {
         "id": "89edcd30-2434-4351-a206-5366ccf99f95",
-        "matchDate": "2026-01-12",
+        "matchDate": "2026-01-13",
         "scheduledAt": null,
         "tournamentId": "fd1c0f91-457e-4887-af27-71f896aca68c",
         "tournamentName": "Harvest Cup (sample)",
@@ -908,7 +908,7 @@
     {
       "match": {
         "id": "831f5046-8665-4507-acb9-7f7d3bc1d3e8",
-        "matchDate": "2025-11-04",
+        "matchDate": "2025-11-05",
         "scheduledAt": null,
         "tournamentId": "563942ba-56e9-45f3-be73-42ad562efd26",
         "tournamentName": "Maple Open (sample)",
@@ -989,7 +989,7 @@
     {
       "match": {
         "id": "534372ab-4c3e-4fc4-a0b1-261601ef845b",
-        "matchDate": "2025-11-03",
+        "matchDate": "2025-11-04",
         "scheduledAt": null,
         "tournamentId": "563942ba-56e9-45f3-be73-42ad562efd26",
         "tournamentName": "Maple Open (sample)",

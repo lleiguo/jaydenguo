@@ -68,7 +68,10 @@ async function main() {
   if (tournamentId) save("getTournament", await get(`/api/v1/tennis/tournaments/${tournamentId}`));
   if (next?.draw.opponentKey)
     save("getTennisPlayer", await get(`/api/v1/tennis/players/${next.draw.opponentKey}`));
-  console.log(`recorded ${Object.keys(saved).length + 6} fixtures in ${path.relative(process.cwd(), out)}`);
+  const videos = saved.listVideoReviews as { reviews: { id: string; mode: string }[] };
+  const debate = videos.reviews.find((v) => v.mode === "debate");
+  if (debate) save("getVideoReview", await get(`/api/v1/videos/${debate.id}`));
+  console.log(`recorded ${Object.keys(saved).length + 7} fixtures in ${path.relative(process.cwd(), out)}`);
 }
 
 if (require.main === module)

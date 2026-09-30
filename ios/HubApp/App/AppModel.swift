@@ -215,8 +215,8 @@ final class AppModel {
         case .tournament, .player, .tennisResults, .tennisAccuracy: tennisPath = [route]
         case .swimming: swimmingPath = []
         case .meet, .swimEvent: swimmingPath = [route]
-        case .school, .suggestions, .sources, .accounts, .settings: morePath = [route]
-        case .videos, .video: morePath = []
+        case .school, .suggestions, .sources, .accounts, .settings, .videos: morePath = [route]
+        case .video: morePath = [.videos, route]
         default: pendingRoute = route
         }
     }

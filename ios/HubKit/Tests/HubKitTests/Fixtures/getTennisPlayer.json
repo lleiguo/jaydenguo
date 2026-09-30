@@ -11,7 +11,7 @@
       {
         "match": {
           "id": "59e7a03a-b444-4a33-8f5c-23dffda1a1da",
-          "matchDate": "2026-06-02",
+          "matchDate": "2026-06-03",
           "scheduledAt": null,
           "tournamentId": "8dcb57c6-5a66-4015-8683-705c4ea3451e",
           "tournamentName": "Thaw Invitational (sample)",
@@ -80,7 +80,7 @@
       {
         "match": {
           "id": "831f5046-8665-4507-acb9-7f7d3bc1d3e8",
-          "matchDate": "2025-11-04",
+          "matchDate": "2025-11-05",
           "scheduledAt": null,
           "tournamentId": "563942ba-56e9-45f3-be73-42ad562efd26",
           "tournamentName": "Maple Open (sample)",
@@ -165,7 +165,7 @@
       {
         "match": {
           "id": "59e7a03a-b444-4a33-8f5c-23dffda1a1da",
-          "matchDate": "2026-06-02",
+          "matchDate": "2026-06-03",
           "scheduledAt": null,
           "tournamentId": "8dcb57c6-5a66-4015-8683-705c4ea3451e",
           "tournamentName": "Thaw Invitational (sample)",
@@ -234,7 +234,7 @@
       {
         "match": {
           "id": "831f5046-8665-4507-acb9-7f7d3bc1d3e8",
-          "matchDate": "2025-11-04",
+          "matchDate": "2025-11-05",
           "scheduledAt": null,
           "tournamentId": "563942ba-56e9-45f3-be73-42ad562efd26",
           "tournamentName": "Maple Open (sample)",
@@ -331,7 +331,7 @@
         "seed": "3",
         "status": "active",
         "next": {
-          "date": "2026-10-11",
+          "date": "2026-10-12",
           "time": "10:30",
           "round": "Round of 16",
           "status": "next",

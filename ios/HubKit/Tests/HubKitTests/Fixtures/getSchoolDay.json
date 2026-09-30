@@ -1,7 +1,7 @@
 {
   "schoolDay": {
     "date": "2026-09-30",
-    "today": false,
+    "today": true,
     "timeZone": "America/Toronto",
     "periods": [
       {

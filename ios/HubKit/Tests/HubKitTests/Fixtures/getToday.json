@@ -1,17 +1,17 @@
 {
-  "date": "2026-09-29",
+  "date": "2026-09-30",
   "homeTimeZone": "America/Toronto",
   "events": [
     {
-      "id": "3715ec07-136d-4116-bd52-f8923586160f",
+      "id": "128820ce-931f-45b1-bf2d-3f285ecf9e7a",
       "title": "Math",
       "category": "school_class",
       "attendance": "required",
       "owners": [
         "6d13c3b6-63c4-4078-983e-0e36257c13d6"
       ],
-      "start": "2026-09-29T12:30:00.000Z",
-      "end": "2026-09-29T13:40:00.000Z",
+      "start": "2026-09-30T12:30:00.000Z",
+      "end": "2026-09-30T13:40:00.000Z",
       "allDay": false,
       "status": "active",
       "deletedAt": null,
@@ -24,20 +24,20 @@
         "kind": "veracross"
       },
       "seriesId": null,
-      "lastSyncedAt": "2026-09-30T02:20:21.867Z",
+      "lastSyncedAt": "2026-09-30T05:56:55.032Z",
       "override": null,
       "schoolClosed": false
     },
     {
-      "id": "084cc09b-0315-4a72-9685-d39b63f04d4c",
+      "id": "41dd340c-cbdb-4d20-a136-c5b0d73ac8d9",
       "title": "English",
       "category": "school_class",
       "attendance": "required",
       "owners": [
         "6d13c3b6-63c4-4078-983e-0e36257c13d6"
       ],
-      "start": "2026-09-29T13:45:00.000Z",
-      "end": "2026-09-29T14:55:00.000Z",
+      "start": "2026-09-30T13:45:00.000Z",
+      "end": "2026-09-30T14:55:00.000Z",
       "allDay": false,
       "status": "active",
       "deletedAt": null,
@@ -50,20 +50,20 @@
         "kind": "veracross"
       },
       "seriesId": null,
-      "lastSyncedAt": "2026-09-30T02:20:21.867Z",
+      "lastSyncedAt": "2026-09-30T05:56:55.032Z",
       "override": null,
       "schoolClosed": false
     },
     {
-      "id": "c71a2540-b1b9-4ece-9e6e-f0f541689dcd",
+      "id": "2b0884a0-c768-439c-bf8a-3b4e0fd407f8",
       "title": "Science",
       "category": "school_class",
       "attendance": "required",
       "owners": [
         "6d13c3b6-63c4-4078-983e-0e36257c13d6"
       ],
-      "start": "2026-09-29T15:40:00.000Z",
-      "end": "2026-09-29T16:50:00.000Z",
+      "start": "2026-09-30T15:40:00.000Z",
+      "end": "2026-09-30T16:50:00.000Z",
       "allDay": false,
       "status": "active",
       "deletedAt": null,
@@ -76,20 +76,20 @@
         "kind": "veracross"
       },
       "seriesId": null,
-      "lastSyncedAt": "2026-09-30T02:20:21.867Z",
+      "lastSyncedAt": "2026-09-30T05:56:55.032Z",
       "override": null,
       "schoolClosed": false
     },
     {
-      "id": "5eaa9172-b0cd-45f3-857b-cdf4bafde6ff",
+      "id": "7f3be191-1014-458e-a7a1-432357e226ca",
       "title": "French",
       "category": "school_class",
       "attendance": "required",
       "owners": [
         "6d13c3b6-63c4-4078-983e-0e36257c13d6"
       ],
-      "start": "2026-09-29T17:55:00.000Z",
-      "end": "2026-09-29T19:10:00.000Z",
+      "start": "2026-09-30T17:55:00.000Z",
+      "end": "2026-09-30T19:10:00.000Z",
       "allDay": false,
       "status": "active",
       "deletedAt": null,
@@ -102,33 +102,51 @@
         "kind": "veracross"
       },
       "seriesId": null,
-      "lastSyncedAt": "2026-09-30T02:20:21.867Z",
+      "lastSyncedAt": "2026-09-30T05:56:55.032Z",
       "override": null,
       "schoolClosed": false
     },
     {
-      "id": "0ed06731-c4bf-4af8-b7d1-372c4f2abd73",
-      "title": "Soccer practice",
-      "category": "soccer",
+      "id": "e69304e2-9dfe-49f2-aa4b-a1ca7f520ac8",
+      "title": "Tennis lesson",
+      "category": "tennis",
       "attendance": "required",
       "owners": [
         "6d13c3b6-63c4-4078-983e-0e36257c13d6"
       ],
-      "start": "2026-09-29T21:00:00.000Z",
-      "end": "2026-09-29T22:30:00.000Z",
+      "start": "2026-09-30T20:30:00.000Z",
+      "end": "2026-09-30T21:30:00.000Z",
       "allDay": false,
       "status": "active",
       "deletedAt": null,
       "notes": null,
-      "locationName": "Oak Park Field 2",
+      "locationName": "Maple Tennis Club",
       "sourceUrl": null,
-      "source": {
-        "id": "4f8d151a-cf3e-4e03-aad5-68efb6097bfa",
-        "name": "Soccer team (sample)",
-        "kind": "ical"
-      },
-      "seriesId": null,
-      "lastSyncedAt": "2026-09-30T02:20:21.857Z",
+      "source": null,
+      "seriesId": "1a3ee9fc-fffc-4e38-bc2f-d82f580b497e",
+      "lastSyncedAt": "2026-09-29T08:43:52.629Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "58aa7563-b921-4676-bcad-83f61b2e8403",
+      "title": "Fitness class",
+      "category": "fitness",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-30T21:10:00.000Z",
+      "end": "2026-09-30T21:55:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": null,
+      "locationName": "Cedar Rec Centre",
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": "f9a37f96-5d9a-4abc-bad9-ebdb3273909a",
+      "lastSyncedAt": "2026-09-29T08:43:52.634Z",
       "override": null,
       "schoolClosed": false
     }
@@ -235,7 +253,7 @@
           "kind": "ical"
         },
         "seriesId": null,
-        "lastSyncedAt": "2026-09-30T02:20:21.857Z",
+        "lastSyncedAt": "2026-09-30T05:56:55.018Z",
         "override": null,
         "schoolClosed": false
       },
@@ -263,10 +281,10 @@
       }
     }
   ],
-  "cursor": 66,
+  "cursor": 85,
   "schoolDay": {
     "date": "2026-09-30",
-    "today": false,
+    "today": true,
     "timeZone": "America/Toronto",
     "periods": [
       {
@@ -323,7 +341,7 @@
         "seed": "3",
         "status": "active",
         "next": {
-          "date": "2026-10-11",
+          "date": "2026-10-12",
           "time": "10:30",
           "round": "Round of 16",
           "status": "next",
@@ -390,8 +408,8 @@
     "id": "f7d58724-8a54-4aad-8de3-532801443fcc",
     "name": "Fall Classic (sample)",
     "course": "SCM",
-    "startDate": "2026-10-20",
-    "endDate": "2026-10-21",
+    "startDate": "2026-10-21",
+    "endDate": "2026-10-22",
     "venue": "Birch Aquatic Centre",
     "city": "Springfield",
     "signup": "yes",
@@ -405,7 +423,7 @@
         "key": "200-im-SCM",
         "seedTimeMs": 232000,
         "session": {
-          "date": "2026-10-20",
+          "date": "2026-10-21",
           "time": "08:30"
         }
       },
@@ -416,18 +434,18 @@
         "key": "50-free-SCM",
         "seedTimeMs": 42100,
         "session": {
-          "date": "2026-10-21",
+          "date": "2026-10-22",
           "time": "16:00"
         }
       }
     ],
     "sessions": [
       {
-        "date": "2026-10-20",
+        "date": "2026-10-21",
         "time": "08:30"
       },
       {
-        "date": "2026-10-21",
+        "date": "2026-10-22",
         "time": "16:00"
       }
     ],

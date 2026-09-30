@@ -1,5 +1,5 @@
 {
-  "today": "2026-09-29",
+  "today": "2026-09-30",
   "selfName": "Sam Sample",
   "nextMatches": [
     {
@@ -17,7 +17,7 @@
         "seed": "3",
         "status": "active",
         "next": {
-          "date": "2026-10-11",
+          "date": "2026-10-12",
           "time": "10:30",
           "round": "Round of 16",
           "status": "next",
@@ -85,8 +85,8 @@
     {
       "id": "e9119fcf-0ef4-4c31-96fe-66c6423a01d9",
       "name": "Autumn Championship (sample)",
-      "startDate": "2026-10-11",
-      "endDate": "2026-10-13",
+      "startDate": "2026-10-12",
+      "endDate": "2026-10-14",
       "venue": "Maple Tennis Club",
       "city": "Springfield",
       "region": null,
@@ -110,7 +110,7 @@
           "seed": "3",
           "status": "active",
           "next": {
-            "date": "2026-10-11",
+            "date": "2026-10-12",
             "time": "10:30",
             "round": "Round of 16",
             "status": "next",
@@ -139,8 +139,8 @@
     {
       "id": "2693a815-d8d3-40fc-9b43-c280b1f9bdf9",
       "name": "Blossom Open (sample)",
-      "startDate": "2026-08-10",
-      "endDate": "2026-08-12",
+      "startDate": "2026-08-11",
+      "endDate": "2026-08-13",
       "venue": "Maple Tennis Club",
       "city": "Springfield",
       "region": null,
@@ -166,8 +166,8 @@
     {
       "id": "8dcb57c6-5a66-4015-8683-705c4ea3451e",
       "name": "Thaw Invitational (sample)",
-      "startDate": "2026-06-01",
-      "endDate": "2026-06-03",
+      "startDate": "2026-06-02",
+      "endDate": "2026-06-04",
       "venue": "Maple Tennis Club",
       "city": "Springfield",
       "region": null,
@@ -193,8 +193,8 @@
     {
       "id": "2dbdb526-3aab-4a7e-8f2b-7fec60fa6096",
       "name": "Frost Classic (sample)",
-      "startDate": "2026-03-23",
-      "endDate": "2026-03-25",
+      "startDate": "2026-03-24",
+      "endDate": "2026-03-26",
       "venue": "Maple Tennis Club",
       "city": "Springfield",
       "region": null,
@@ -220,8 +220,8 @@
     {
       "id": "fd1c0f91-457e-4887-af27-71f896aca68c",
       "name": "Harvest Cup (sample)",
-      "startDate": "2026-01-12",
-      "endDate": "2026-01-14",
+      "startDate": "2026-01-13",
+      "endDate": "2026-01-15",
       "venue": "Maple Tennis Club",
       "city": "Springfield",
       "region": null,
@@ -247,8 +247,8 @@
     {
       "id": "563942ba-56e9-45f3-be73-42ad562efd26",
       "name": "Maple Open (sample)",
-      "startDate": "2025-11-03",
-      "endDate": "2025-11-05",
+      "startDate": "2025-11-04",
+      "endDate": "2025-11-06",
       "venue": "Maple Tennis Club",
       "city": "Springfield",
       "region": null,
@@ -278,8 +278,8 @@
       "name": "Autumn Championship (sample)",
       "tournamentId": "e9119fcf-0ef4-4c31-96fe-66c6423a01d9",
       "url": null,
-      "startDate": "2026-10-11",
-      "endDate": "2026-10-13",
+      "startDate": "2026-10-12",
+      "endDate": "2026-10-14",
       "venue": "Maple Tennis Club, Springfield",
       "driveMinutes": null,
       "events": [
@@ -301,7 +301,7 @@
           "seed": "3",
           "status": "active",
           "next": {
-            "date": "2026-10-11",
+            "date": "2026-10-12",
             "time": "10:30",
             "round": "Round of 16",
             "status": "next",

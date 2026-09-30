@@ -1,3 +1,28 @@
 {
-  "sports": []
+  "sports": [
+    {
+      "sport": "tennis",
+      "debates": 1,
+      "ties": 0,
+      "judgeWins": {
+        "gemini": 1,
+        "claude": 0
+      },
+      "parentWins": {
+        "gemini": 0,
+        "claude": 0
+      },
+      "voted": 0,
+      "agreed": 0,
+      "comparable": 0,
+      "selfPreference": {
+        "gemini": -5,
+        "claude": 5
+      },
+      "input": {
+        "gemini": "whole video",
+        "claude": "frames"
+      }
+    }
+  ]
 }

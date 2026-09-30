@@ -2,7 +2,7 @@ import HubKit
 import SwiftUI
 
 /// More: School, Suggestions, Videos and Settings (intent 0004, APP-1,
-/// APP-3). Videos arrive with the rest of N6.
+/// APP-3).
 struct MoreScreen: View {
     @Environment(AppModel.self) private var model
     @State private var pending = 0
@@ -15,8 +15,7 @@ struct MoreScreen: View {
                     Label("Suggestions", systemImage: "envelope")
                         .badge(pending)
                 }
-                Label("Videos", systemImage: "video").foregroundStyle(.secondary)
-                    .badge(Text("soon"))
+                NavigationLink(value: Route.videos) { Label("Videos", systemImage: "video") }
             }
             Section("Settings") {
                 NavigationLink(value: Route.settings) { Label("General", systemImage: "gearshape") }
@@ -48,6 +47,8 @@ struct MoreDestination: View {
         case .sources: SourcesScreen()
         case .accounts: AccountsScreen()
         case .settings: GeneralSettingsScreen()
+        case .videos: VideosScreen()
+        case .video(let id): VideoDetailScreen(id: id)
         default: EmptyView()
         }
     }

@@ -2,8 +2,8 @@
   "tournament": {
     "id": "e9119fcf-0ef4-4c31-96fe-66c6423a01d9",
     "name": "Autumn Championship (sample)",
-    "startDate": "2026-10-11",
-    "endDate": "2026-10-13",
+    "startDate": "2026-10-12",
+    "endDate": "2026-10-14",
     "venue": "Maple Tennis Club",
     "city": "Springfield",
     "region": null,
@@ -27,7 +27,7 @@
         "seed": "3",
         "status": "active",
         "next": {
-          "date": "2026-10-11",
+          "date": "2026-10-12",
           "time": "10:30",
           "round": "Round of 16",
           "status": "next",

@@ -1,6 +1,50 @@
 {
   "events": [
     {
+      "id": "0ad4b01a-b9f0-4e2d-8eb1-eca2267f8f98",
+      "title": "UI test event 4702",
+      "category": "other",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-29T21:00:00.000Z",
+      "end": "2026-09-29T22:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": "2026-09-30T02:58:03.639Z",
+      "notes": null,
+      "locationName": null,
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": null,
+      "lastSyncedAt": null,
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "7a56e9b8-96fe-4ad9-b1c7-c11c7b34aaf9",
+      "title": "UI test event 8073",
+      "category": "other",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-29T21:00:00.000Z",
+      "end": "2026-09-29T22:00:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": "2026-09-30T02:46:51.447Z",
+      "notes": null,
+      "locationName": null,
+      "sourceUrl": null,
+      "source": null,
+      "seriesId": null,
+      "lastSyncedAt": null,
+      "override": null,
+      "schoolClosed": false
+    },
+    {
       "id": "ff7e7a4b-610a-4809-90ac-dabe8bd33019",
       "title": "UI test event 7330",
       "category": "other",

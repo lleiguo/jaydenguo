@@ -1,3 +1,42 @@
 {
-  "reviews": []
+  "reviews": [
+    {
+      "id": "5eed0000-0000-4000-8000-000000000001",
+      "sport": "tennis",
+      "url": null,
+      "provider": "drive",
+      "note": "Forehand rally (sample)",
+      "filmedOn": "2026-09-27",
+      "status": "done",
+      "mode": "debate",
+      "progress": null,
+      "errorMessage": null,
+      "pickerUri": null,
+      "mediaName": "forehand.mp4",
+      "winner": "gemini",
+      "tie": false,
+      "parentVote": null,
+      "createdAt": "2026-09-30T05:56:55.100Z",
+      "deletedAt": null
+    },
+    {
+      "id": "5eed0000-0000-4000-8000-000000000002",
+      "sport": "tennis",
+      "url": null,
+      "provider": "drive",
+      "note": "Forehand, early season (sample)",
+      "filmedOn": "2026-08-01",
+      "status": "done",
+      "mode": "gemini",
+      "progress": null,
+      "errorMessage": null,
+      "pickerUri": null,
+      "mediaName": "forehand.mp4",
+      "winner": null,
+      "tie": false,
+      "parentVote": null,
+      "createdAt": "2026-09-30T05:56:55.105Z",
+      "deletedAt": null
+    }
+  ]
 }

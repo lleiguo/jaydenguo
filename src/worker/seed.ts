@@ -12,6 +12,8 @@ import {
   people,
   sources,
   tennisEntries,
+  videoReviewRounds,
+  videoReviews,
 } from "@db/schema";
 import type { Category } from "../domain/constants";
 import { addDays, localDate, weekday, zonedToUtc } from "../domain/time";
@@ -24,6 +26,11 @@ import type { Stroke } from "../domain/swim-constants";
 import type { SwimMeetRecord, SwimResultRecord } from "../domain/swim-upsert";
 import type { TennisMatchRecord, TennisTournamentRecord } from "../domain/tennis-upsert";
 import { syncTennis } from "../server/tennis/apply";
+import { copyFile, mkdir, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { runDebate, type RoundRecord } from "../server/video/debate";
+import { fakeModels } from "../server/video/fake";
+import { playbackKey } from "../server/video/media-store";
 import type { JobContext } from "./context";
 
 // `pnpm seed` (plan M1.14, spec §5.2): a realistic fake season so the app
@@ -603,6 +610,89 @@ export async function seedJob(_args: string[], ctx: JobContext) {
         gmailMessageId: sg.key,
         messageUrl: `https://mail.google.com/mail/u/0/#inbox/${sg.key}`,
         ...values,
+      });
+  }
+
+  // Video reviews (VID, PLAY): a finished debate on a forehand with a
+  // playback copy (the 6-second test pattern, when MEDIA_DIR is set), and an
+  // older Gemini-only review to compare it with. Fixed ids so a new seed
+  // resets them, the vote included (it can only be cast once).
+  const reviews = [
+    {
+      id: "5eed0000-0000-4000-8000-000000000001",
+      mode: "debate" as const,
+      filmedOn: addDays(today, -3),
+      note: "Forehand rally (sample)",
+    },
+    {
+      id: "5eed0000-0000-4000-8000-000000000002",
+      mode: "gemini" as const,
+      filmedOn: addDays(today, -60),
+      note: "Forehand, early season (sample)",
+    },
+  ];
+  const clip = "tests/fixtures/video/test-pattern-6s.mp4";
+  for (const v of reviews) {
+    const rounds: RoundRecord[] = [];
+    const result = await runDebate(
+      v.mode,
+      fakeModels({
+        critique: { gemini: { gemini: 4, claude: 3 }, claude: { gemini: 4, claude: 4 } },
+        final: { gemini: { gemini: 4, claude: 3 }, claude: { gemini: 5, claude: 4 } },
+      }),
+      { context: { sport: "tennis", note: v.note }, media: { gemini: undefined, claude: undefined } },
+      { saveRound: (r) => void rounds.push(r), random: () => 0.3 },
+    );
+    let key: string | null = null;
+    let bytes: number | null = null;
+    if (process.env.MEDIA_DIR && v.mode === "debate") {
+      key = playbackKey(v.id);
+      const target = join(process.env.MEDIA_DIR, key);
+      await mkdir(dirname(target), { recursive: true });
+      await copyFile(clip, target);
+      bytes = (await stat(target)).size;
+    }
+    const values = {
+      sport: "tennis",
+      url: null,
+      provider: "drive",
+      note: v.note,
+      filmedOn: v.filmedOn,
+      status: "done",
+      mode: v.mode,
+      progress: null,
+      errorMessage: null,
+      mediaName: "forehand.mp4",
+      durationSec: 6,
+      playbackKey: key,
+      playbackBytes: bytes,
+      promptVersion: rounds[0]?.promptVersion ?? null,
+      verdict: result.verdict,
+      combinedReview: result.combined,
+      parentVote: null,
+      votedAt: null,
+      costUsd: result.costUsd,
+      finishedAt: new Date(),
+      deletedAt: null,
+    };
+    await db.delete(videoReviewRounds).where(eq(videoReviewRounds.reviewId, v.id));
+    await db
+      .insert(videoReviews)
+      .values({ id: v.id, ...values })
+      .onConflictDoUpdate({ target: videoReviews.id, set: values });
+    for (const r of rounds)
+      await db.insert(videoReviewRounds).values({
+        reviewId: v.id,
+        round: r.round,
+        model: r.model,
+        modelVersion: r.modelVersion,
+        promptVersion: r.promptVersion,
+        labels: r.labels,
+        output: r.output,
+        scores: r.scores,
+        inputTokens: r.inputTokens,
+        outputTokens: r.outputTokens,
+        costUsd: r.costUsd,
       });
   }
 
