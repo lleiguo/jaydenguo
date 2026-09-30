@@ -3,23 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { call } from "@/components/calendar/api";
-import { SPORT_LABEL, VIDEO_SPORTS, type VideoSport } from "@/domain/video-constants";
+import { AUTO_SPORT, SPORT_LABEL, VIDEO_SPORTS } from "@/domain/video-constants";
 import { parseClockTime } from "@/domain/video-links";
 
 const field = "rounded border px-2 py-1.5 dark:bg-neutral-900";
 
 // VID-1: a link (Google Drive, or YouTube kept without review, F-3) or a
-// pick from Google Photos (F-4), with sport, date filmed, note, and an
-// optional segment to review.
-export function NewVideoForm({
-  today,
-  defaultSport,
-  connected,
-}: {
-  today: string;
-  defaultSport: VideoSport;
-  connected: boolean;
-}) {
+// pick from Google Photos (F-4), with sport (worked out from the video by
+// default: intent 0005, SPT-1), date filmed, note, and an optional segment
+// to review.
+export function NewVideoForm({ today, connected }: { today: string; connected: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -88,7 +81,8 @@ export function NewVideoForm({
       <div className="flex flex-wrap gap-3">
         <label className="flex flex-col gap-1">
           Sport
-          <select name="sport" defaultValue={defaultSport} className={field}>
+          <select name="sport" defaultValue={AUTO_SPORT} className={field}>
+            <option value={AUTO_SPORT}>Detect automatically</option>
             {VIDEO_SPORTS.map((s) => (
               <option key={s} value={s}>
                 {SPORT_LABEL[s]}

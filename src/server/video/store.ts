@@ -2,12 +2,14 @@ import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { credentials, settings, videoReviewRounds, videoReviews } from "@db/schema";
 import {
+  AUTO_SPORT,
   MODEL_LABEL,
   REVIEW_MODELS,
   REVIEW_MODES,
   VIDEO_SPORTS,
   type ReviewMode,
   type ReviewModel,
+  type SportSource,
   type VideoSport,
 } from "../../domain/video-constants";
 import { isReviewable, parseVideoLink } from "../../domain/video-links";
@@ -63,7 +65,8 @@ export const createVideoInput = z
   .object({
     // A pasted link, or null to pick from Google Photos (F-4).
     url: z.string().trim().max(2000).nullable(),
-    sport: z.enum(VIDEO_SPORTS),
+    // "auto": the job works out the sport (intent 0005, SPT-1).
+    sport: z.enum([...VIDEO_SPORTS, AUTO_SPORT]),
     filmedOn: z.iso.date("Enter the date it was filmed"),
     note: z.string().trim().max(500).nullable().default(null),
     segmentStart: clock,
@@ -96,11 +99,14 @@ export async function createVideoReview(
       throw new HttpError(409, "Connect Google Drive and Photos first (the button above the form).");
   }
   const mode = await getReviewMode(db);
+  // SPT-1: a link the site can't watch can't be detected either.
+  const auto = input.sport === AUTO_SPORT;
   // VID-1: the link is saved before any analysis runs.
   const [row] = await db
     .insert(videoReviews)
     .values({
-      sport: input.sport,
+      sport: auto ? "other" : input.sport,
+      sportSource: !auto ? "chosen" : reviewable ? "detecting" : "unsure",
       url,
       provider,
       note: input.note || null,
@@ -145,8 +151,74 @@ export async function retryVideoReview(db: Db, id: string, launcher: JobLauncher
       mode: await getReviewMode(db),
     })
     .where(eq(videoReviews.id, id));
-  await db.delete(videoReviewRounds).where(eq(videoReviewRounds.reviewId, id));
+  await supersedeRounds(db, id);
   await startReview(db, id, launcher);
+}
+
+// An earlier run's rounds stay for the costs page (intent 0005, SPT-7).
+async function supersedeRounds(db: DbOrTx, id: string) {
+  await db
+    .update(videoReviewRounds)
+    .set({ supersededAt: new Date() })
+    .where(and(eq(videoReviewRounds.reviewId, id), isNull(videoReviewRounds.supersededAt)));
+}
+
+export const changeSportInput = z.object({
+  sport: z.enum(VIDEO_SPORTS),
+  // A finished review: run it again for the new sport (SPT-6), or only
+  // change the label.
+  reviewAgain: z.boolean().default(false),
+});
+
+// intent 0005, SPT-5, SPT-6: the owner sets the sport.
+export async function changeVideoSport(
+  db: Db,
+  id: string,
+  input: z.infer<typeof changeSportInput>,
+  launcher: JobLauncher,
+): Promise<VideoReviewSummary> {
+  const [row] = await db.select().from(videoReviews).where(eq(videoReviews.id, id));
+  if (!row || row.deletedAt) throw new HttpError(404, "not found");
+  if (row.status === "analysing")
+    throw new HttpError(409, "The review is running. Change the sport when it has finished.");
+  const again = input.reviewAgain && row.status === "done";
+  if (!again) {
+    const [updated] = await db
+      .update(videoReviews)
+      .set({ sport: input.sport, sportSource: "chosen" })
+      .where(and(eq(videoReviews.id, id), sql`${videoReviews.status} <> 'analysing'`))
+      .returning();
+    if (!updated) throw new HttpError(409, "The review is running. Change the sport when it has finished.");
+    if (input.reviewAgain && row.status === "failed") await retryVideoReview(db, id, launcher);
+    return summary((await db.select().from(videoReviews).where(eq(videoReviews.id, id)))[0]);
+  }
+  // Run again from the playback copy; without one, fetch or pick again.
+  const repick = row.provider === "photos" && !row.playbackKey;
+  const [updated] = await db
+    .update(videoReviews)
+    .set({
+      sport: input.sport,
+      sportSource: "chosen",
+      status: repick ? "picking" : "queued",
+      progress: repick ? "Opening Google Photos" : "Waiting to start",
+      errorMessage: null,
+      verdict: null,
+      combinedReview: null,
+      // The vote judged the reviews being replaced (S-2).
+      parentVote: null,
+      votedAt: null,
+      startedAt: null,
+      finishedAt: null,
+      pickerSessionId: repick ? null : row.pickerSessionId,
+      pickerUri: null,
+      mode: await getReviewMode(db),
+    })
+    .where(and(eq(videoReviews.id, id), eq(videoReviews.status, "done")))
+    .returning();
+  if (!updated) throw new HttpError(409, "The review changed meanwhile. Reload and try again.");
+  await supersedeRounds(db, id);
+  await startReview(db, id, launcher);
+  return summary((await db.select().from(videoReviews).where(eq(videoReviews.id, id)))[0]);
 }
 
 // --- Read -----------------------------------------------------------------
@@ -154,6 +226,7 @@ export async function retryVideoReview(db: Db, id: string, launcher: JobLauncher
 export type VideoReviewSummary = {
   id: string;
   sport: VideoSport;
+  sportSource: SportSource;
   url: string | null;
   provider: string;
   note: string | null;
@@ -178,6 +251,7 @@ const summary = (r: Row): VideoReviewSummary => {
   return {
     id: r.id,
     sport: r.sport as VideoSport,
+    sportSource: r.sportSource as SportSource,
     url: r.url,
     provider: r.provider,
     note: r.note,
@@ -243,7 +317,7 @@ export async function getVideoReview(db: DbOrTx, id: string): Promise<VideoRevie
   const rounds = await db
     .select()
     .from(videoReviewRounds)
-    .where(eq(videoReviewRounds.reviewId, id))
+    .where(and(eq(videoReviewRounds.reviewId, id), isNull(videoReviewRounds.supersededAt)))
     .orderBy(asc(videoReviewRounds.createdAt));
   return {
     ...summary(row),

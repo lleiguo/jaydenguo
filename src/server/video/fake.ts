@@ -2,7 +2,7 @@ import type { ReviewModel } from "../../domain/video-constants";
 import { scriptedModel, type ScriptedModel } from "../llm/scripted";
 import type { ModelRequest } from "../llm/types";
 import type { Models } from "./debate";
-import type { Combined, Critique, FinalScore, Rebuttal, Review, Scores } from "./prompts";
+import type { Combined, Critique, Detected, FinalScore, Rebuttal, Review, Scores } from "./prompts";
 
 // Stand-in models that answer every debate step with fixed, valid output:
 // for tests, and for trying the video pages locally without Vertex AI
@@ -41,6 +41,8 @@ export type FakeOptions = {
   critique?: Record<ReviewModel, Record<ReviewModel, number>>;
   final?: Record<ReviewModel, Record<ReviewModel, number>>;
   concede?: boolean;
+  // What detection answers (intent 0005); tennis, sure, by default.
+  detect?: Detected;
 };
 
 const DEFAULT = { gemini: { gemini: 4, claude: 3 }, claude: { gemini: 4, claude: 4 } };
@@ -62,6 +64,12 @@ export function fakeScript(judge: ReviewModel, opts: FakeOptions = {}) {
     const scores = (table: Record<ReviewModel, Record<ReviewModel, number>>, label: "A" | "B") =>
       flat(table[judge][whoIs(req.prompt, label)]);
     switch (req.purpose) {
+      case "detect":
+        return (opts.detect ?? {
+          sport: "tennis",
+          sure: true,
+          reason: "A racket and a tennis court.",
+        }) satisfies Detected;
       case "review":
         return fakeReview(judge);
       case "critique":

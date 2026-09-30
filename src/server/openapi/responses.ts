@@ -26,7 +26,7 @@ import type {
 } from "../tennis/load";
 import type { DrawPrediction, TennisOverview } from "../tennis/overview";
 import type { TodayView } from "../today";
-import type { Combined, Critique, FinalScore, Rebuttal, Review } from "../video/prompts";
+import type { Combined, Critique, Detected, FinalScore, Rebuttal, Review } from "../video/prompts";
 import type { ScoreboardRow, VideoReviewDetail, VideoReviewSummary } from "../video/store";
 
 // Small acknowledgements shared by many routes.
@@ -106,6 +106,7 @@ export type TennisAccuracyResponse = Awaited<ReturnType<typeof loadCalibration>>
 // Video reviews (VID, PLAY)
 export type { VideoReviewDetail };
 export type VideosResponse = { reviews: VideoReviewSummary[] };
+export type { VideoReviewSummary };
 export type VideoCreated = { id: string; status: string };
 export type VideoVoteResponse = { vote: ReviewModel };
 export type VideoRestored = { restored: true };
@@ -115,9 +116,10 @@ export type VideoModeResponse = { mode: ReviewMode };
 
 // The JSON a review round holds, by `round` (VideoReviewDetail.rounds[].output
 // and .combinedReview are sent as stored). Listed so the app can decode them:
-// review → ReviewOutput, critique → CritiqueOutput, rebuttal →
+// detect → DetectOutput, review → ReviewOutput, critique → CritiqueOutput, rebuttal →
 // RebuttalOutput, final_score → FinalScoreOutput, combine and
 // combinedReview → CombinedOutput (or ReviewOutput in single-model mode).
+export type DetectOutput = Detected;
 export type ReviewOutput = Review;
 export type CritiqueOutput = Critique;
 export type RebuttalOutput = Rebuttal;

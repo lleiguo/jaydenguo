@@ -4192,7 +4192,8 @@
                       "swimming",
                       "soccer",
                       "hockey",
-                      "other"
+                      "other",
+                      "auto"
                     ]
                   },
                   "filmedOn": {
@@ -4315,6 +4316,72 @@
         "responses": {
           "204": {
             "description": "Done."
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "changeVideoSport",
+        "summary": "Set the sport; a finished review can be run again for it.",
+        "description": "Spec: SPT-5, SPT-6",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sport": {
+                    "type": "string",
+                    "enum": [
+                      "tennis",
+                      "swimming",
+                      "soccer",
+                      "hockey",
+                      "other"
+                    ]
+                  },
+                  "reviewAgain": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "sport"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoReviewSummary"
+                }
+              }
+            }
           },
           "default": {
             "description": "An error, in words the app can show.",
@@ -5812,6 +5879,32 @@
         },
         "required": [
           "events"
+        ]
+      },
+      "DetectOutput": {
+        "type": "object",
+        "properties": {
+          "sport": {
+            "type": "string",
+            "enum": [
+              "tennis",
+              "swimming",
+              "soccer",
+              "hockey",
+              "other"
+            ]
+          },
+          "sure": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sport",
+          "sure",
+          "reason"
         ]
       },
       "DeviceTokenResponse": {
@@ -9677,6 +9770,15 @@
               "other"
             ]
           },
+          "sportSource": {
+            "type": "string",
+            "enum": [
+              "chosen",
+              "detecting",
+              "detected",
+              "unsure"
+            ]
+          },
           "url": {
             "type": [
               "string",
@@ -9871,6 +9973,7 @@
         "required": [
           "id",
           "sport",
+          "sportSource",
           "url",
           "provider",
           "note",
@@ -9912,6 +10015,15 @@
               "soccer",
               "hockey",
               "other"
+            ]
+          },
+          "sportSource": {
+            "type": "string",
+            "enum": [
+              "chosen",
+              "detecting",
+              "detected",
+              "unsure"
             ]
           },
           "url": {
@@ -10005,6 +10117,7 @@
         "required": [
           "id",
           "sport",
+          "sportSource",
           "url",
           "provider",
           "note",

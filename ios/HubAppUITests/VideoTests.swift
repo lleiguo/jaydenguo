@@ -2,8 +2,9 @@ import XCTest
 
 /// N6 part 2 (intent 0004, IVID-1..3) against the local seed server: the
 /// seeded debate with its playback copy (MEDIA_DIR, see ios/README.md) and
-/// an older single-model review. The vote can only be cast once: `pnpm
-/// seed` resets it.
+/// an older single-model review whose sport was detected. The vote can
+/// only be cast once, and relabelling clears "detected": `pnpm seed` resets
+/// both.
 final class VideoTests: XCTestCase {
     private var server: String { ProcessInfo.processInfo.environment["HUB_TEST_SERVER"] ?? "http://localhost:3200" }
     private let debate = "5eed0000-0000-4000-8000-000000000001"
@@ -101,6 +102,42 @@ final class VideoTests: XCTestCase {
         if voted.exists { throw XCTSkip("Already voted: run `pnpm seed` to reset the sample vote.") }
         claude.tap()
         XCTAssertTrue(app.staticTexts["You found Claude's review more useful."].waitForExistence(timeout: 10))
+    }
+
+    /// intent 0005, SPT-4..6: the seeded older review's sport was detected;
+    /// change only its label, then change it back.
+    func testChangeTheSportLabel() throws {
+        let older = "5eed0000-0000-4000-8000-000000000002"
+        cleanups.append { [self] in
+            var r = URLRequest(url: URL(string: "\(server)/api/v1/videos/\(older)")!)
+            r.httpMethod = "PATCH"
+            r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            r.httpBody = #"{"sport":"tennis"}"#.data(using: .utf8)
+            _ = fetch(r)
+        }
+        let app = launch()
+        app.open(URL(string: "jaydenguohub://open/videos/\(older)")!)
+        let title = app.navigationBars.matching(NSPredicate(format: "identifier BEGINSWITH 'Tennis'")).firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 20))
+        if !title.identifier.hasPrefix("Tennis (detected)") {
+            throw XCTSkip("Already relabelled: run `pnpm seed` to reset the sample's detected sport.")
+        }
+        XCTAssertTrue(app.staticTexts["Worked out from the video."].exists)
+
+        func choose(_ sport: String) {
+            element(app, "sportPicker").tap()
+            app.buttons[sport].firstMatch.tap()
+            let label = app.buttons["Only change the label"]
+            XCTAssertTrue(label.waitForExistence(timeout: 5), "a finished review asks first")
+            XCTAssertTrue(app.buttons["Review again as \(sport)"].exists)
+            label.tap()
+        }
+        choose("Swimming")
+        XCTAssertTrue(app.navigationBars.matching(NSPredicate(format: "identifier BEGINSWITH 'Swimming ·'")).firstMatch.waitForExistence(timeout: 10))
+        choose("Tennis")
+        XCTAssertTrue(app.navigationBars.matching(NSPredicate(format: "identifier BEGINSWITH 'Tennis ·'")).firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["Worked out from the video."].exists)
     }
 
     func testSaveALinkThenDeleteAndRestore() throws {

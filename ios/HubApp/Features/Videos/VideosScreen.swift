@@ -66,7 +66,7 @@ struct VideosScreen: View {
             }
         }
         .sheet(isPresented: $adding) {
-            NewReviewSheet(defaultSport: sport ?? "tennis") { id in model.morePath.append(.video(id: id)) }
+            NewReviewSheet { id in model.morePath.append(.video(id: id)) }
         }
     }
 
@@ -121,7 +121,7 @@ struct VideoRow: View {
                 Image(systemName: picked ? "checkmark.circle.fill" : "circle").foregroundStyle(picked ? Color.accentColor : .secondary)
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text("\(VideoSport.label(r.sport.rawValue)) · \(r.filmedOn)").font(.headline)
+                Text("\(VideoSport.text(r.sport.rawValue, source: r.sportSource.rawValue)) · \(r.filmedOn)").font(.headline)
                 if let note = r.note { Text(note).font(.subheadline).lineLimit(2) }
                 HStack(spacing: 6) {
                     Text(VideoStatus.label(r.status))
@@ -142,18 +142,18 @@ struct VideoRow: View {
 }
 
 /// Start a review (IVID-3; VID-1, VID-2): a Google Drive link, or a pick
-/// from Google Photos; the sport, when it was filmed, a note, and an
-/// optional part of the video.
+/// from Google Photos; the sport (worked out from the video by default:
+/// intent 0005, SPT-1), when it was filmed, a note, and an optional part of
+/// the video.
 struct NewReviewSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    let defaultSport: String
     let opened: (String) -> Void
 
     enum Source: String, CaseIterable { case link = "Paste a link", photos = "Google Photos" }
     @State private var source: Source = .link
     @State private var url = ""
-    @State private var sport: String
+    @State private var sport = VideoSport.auto
     @State private var filmedOn = Date.now
     @State private var note = ""
     @State private var start = ""
@@ -161,12 +161,6 @@ struct NewReviewSheet: View {
     @State private var error: String?
     @State private var busy = false
     @State private var google: (drive: Bool, photos: Bool)?
-
-    init(defaultSport: String, opened: @escaping (String) -> Void) {
-        self.defaultSport = defaultSport
-        self.opened = opened
-        _sport = State(initialValue: defaultSport)
-    }
 
     var body: some View {
         NavigationStack {
@@ -193,6 +187,7 @@ struct NewReviewSheet: View {
                 }
                 Section {
                     Picker("Sport", selection: $sport) {
+                        Text("Detect automatically").tag(VideoSport.auto)
                         ForEach(VideoSport.all, id: \.self) { Text(VideoSport.label($0)).tag($0) }
                     }
                     DatePicker("Filmed on", selection: $filmedOn, in: ...Date.now, displayedComponents: .date)
@@ -268,7 +263,7 @@ struct CompareScreen: View {
         }) { reviews in
             List {
                 ForEach(reviews, id: \.id) { r in
-                    Section("\(VideoSport.label(r.sport.rawValue)) · \(r.filmedOn)") {
+                    Section("\(VideoSport.text(r.sport.rawValue, source: r.sportSource.rawValue)) · \(r.filmedOn)") {
                         if let note = r.note { Caption(note) }
                         if let advice = r.advice {
                             Text(advice.summary)

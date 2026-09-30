@@ -417,7 +417,7 @@ about 16 days in.
 | N3 | done 2026-09-29 (#49) |
 | N4 | done 2026-09-29 (#50) |
 | N5 | done 2026-09-29 (#52) |
-| N6 | part 1 done 2026-09-30 (#53); part 2 (Videos) built on `ios/n6-videos`; SP-N4 waits for the owner |
+| N6 | done 2026-09-30 (#53, #55); SP-N4 waits for the owner. Intent 0005 (sport detected, and changed on the review screen) added to the Videos screens on `video/sport-detect` |
 | N7–N8 | not started |
 | N9 | not planned (owner kept the no-upload default) |
 
