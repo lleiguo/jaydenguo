@@ -46,7 +46,13 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
-        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # Portrait everywhere except the video player (AppDelegate).
+        UISupportedInterfaceOrientations:
+          [
+            UIInterfaceOrientationPortrait,
+            UIInterfaceOrientationLandscapeLeft,
+            UIInterfaceOrientationLandscapeRight,
+          ]
         CFBundleURLTypes:
           - CFBundleURLName: com.jaydenguo.hub
             CFBundleURLSchemes: [jaydenguohub]

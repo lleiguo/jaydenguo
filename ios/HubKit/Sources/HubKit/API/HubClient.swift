@@ -85,9 +85,36 @@ public final class HubClient: Sendable {
         return try await send("POST", path, body: body, session: session, fallback: "That didn't work.")
     }
 
+    /// Downloads a file (the playback copy of a clip, IVID-2) with the device
+    /// token to a temporary file readable only while the phone is unlocked.
+    /// The caller deletes it when done; it's never cached.
+    public func download(_ path: String, session: URLSession = .shared) async throws -> URL {
+        let request = try request("GET", path, body: nil)
+        let temp: URL, response: URLResponse
+        do {
+            (temp, response) = try await session.download(for: request)
+        } catch {
+            throw HubError.from(error) ?? HubError.server(status: 0, message: "The video couldn't be loaded.")
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status) else {
+            try? FileManager.default.removeItem(at: temp)
+            if status == 401 { onEvent(.signedOut) }
+            throw HubError.server(status: status, message: HubError.defaultMessage(status))
+        }
+        let target = FileManager.default.temporaryDirectory.appendingPathComponent("playback-\(UUID().uuidString).mp4")
+        try FileManager.default.moveItem(at: temp, to: target)
+        #if os(iOS)
+        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: target.path)
+        #endif
+        return target
+    }
+
     /// A request to a relative `/api/v1/…` path on this server with the
     /// device token, turning errors into HubError like the middleware does.
-    private func send(_ method: String, _ path: String, body: Data?, session: URLSession, fallback: String) async throws -> Data {
+    /// A request to this server's `/api/v1/…` with the token; anything else
+    /// is refused.
+    private func request(_ method: String, _ path: String, body: Data?) throws -> URLRequest {
         guard path.hasPrefix("/api/v1/"), !path.contains(".."),
               let url = URL(string: path, relativeTo: config.baseURL)?.absoluteURL,
               url.host() == config.baseURL.host()
@@ -100,6 +127,11 @@ public final class HubClient: Sendable {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = body
         }
+        return request
+    }
+
+    private func send(_ method: String, _ path: String, body: Data?, session: URLSession, fallback: String) async throws -> Data {
+        let request = try request(method, path, body: body)
         let data: Data, response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
@@ -121,6 +153,7 @@ public final class HubClient: Sendable {
 public enum JSONField: Sendable, Equatable {
     case string(String)
     case int(Int)
+    case double(Double)
     case bool(Bool)
     case null
 
@@ -128,6 +161,7 @@ public enum JSONField: Sendable, Equatable {
         switch self {
         case .string(let s): s
         case .int(let i): i
+        case .double(let d): d
         case .bool(let b): b
         case .null: NSNull()
         }

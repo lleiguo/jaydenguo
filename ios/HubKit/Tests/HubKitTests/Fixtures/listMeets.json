@@ -1,12 +1,12 @@
 {
-  "today": "2026-09-29",
+  "today": "2026-09-30",
   "upcoming": [
     {
       "id": "f7d58724-8a54-4aad-8de3-532801443fcc",
       "name": "Fall Classic (sample)",
       "course": "SCM",
-      "startDate": "2026-10-20",
-      "endDate": "2026-10-21",
+      "startDate": "2026-10-21",
+      "endDate": "2026-10-22",
       "venue": "Birch Aquatic Centre",
       "city": "Springfield",
       "signup": "yes",
@@ -20,7 +20,7 @@
           "key": "200-im-SCM",
           "seedTimeMs": 232000,
           "session": {
-            "date": "2026-10-20",
+            "date": "2026-10-21",
             "time": "08:30"
           }
         },
@@ -31,18 +31,18 @@
           "key": "50-free-SCM",
           "seedTimeMs": 42100,
           "session": {
-            "date": "2026-10-21",
+            "date": "2026-10-22",
             "time": "16:00"
           }
         }
       ],
       "sessions": [
         {
-          "date": "2026-10-20",
+          "date": "2026-10-21",
           "time": "08:30"
         },
         {
-          "date": "2026-10-21",
+          "date": "2026-10-22",
           "time": "16:00"
         }
       ],
@@ -55,8 +55,8 @@
       "id": "efcc8b02-ac56-492d-bf41-23312d0f2def",
       "name": "Winter Invitational (sample)",
       "course": "SCM",
-      "startDate": "2026-08-20",
-      "endDate": "2026-08-20",
+      "startDate": "2026-08-21",
+      "endDate": "2026-08-21",
       "venue": "Birch Aquatic Centre",
       "city": "Springfield",
       "signup": "yes",
@@ -71,8 +71,8 @@
       "id": "9cdc43b3-cad1-4c40-b737-4d967ff81c5c",
       "name": "Autumn Splash (sample)",
       "course": "LCM",
-      "startDate": "2026-06-21",
-      "endDate": "2026-06-21",
+      "startDate": "2026-06-22",
+      "endDate": "2026-06-22",
       "venue": "Birch Aquatic Centre",
       "city": "Springfield",
       "signup": "yes",
@@ -87,8 +87,8 @@
       "id": "f7904c4f-bf58-448c-8349-eed91b1dfaf2",
       "name": "Summer Open (sample)",
       "course": "SCM",
-      "startDate": "2026-04-22",
-      "endDate": "2026-04-22",
+      "startDate": "2026-04-23",
+      "endDate": "2026-04-23",
       "venue": "Birch Aquatic Centre",
       "city": "Springfield",
       "signup": "yes",
@@ -103,8 +103,8 @@
       "id": "5eec00c7-d393-43e9-8515-1e5b30857833",
       "name": "Development Meet (sample)",
       "course": "SCM",
-      "startDate": "2026-02-21",
-      "endDate": "2026-02-21",
+      "startDate": "2026-02-22",
+      "endDate": "2026-02-22",
       "venue": "Birch Aquatic Centre",
       "city": "Springfield",
       "signup": "yes",
@@ -119,8 +119,8 @@
       "id": "348bbe93-9a60-4c69-8bf4-97522fbf6f73",
       "name": "Spring Sprint (sample)",
       "course": "SCM",
-      "startDate": "2025-12-23",
-      "endDate": "2025-12-23",
+      "startDate": "2025-12-24",
+      "endDate": "2025-12-24",
       "venue": "Birch Aquatic Centre",
       "city": "Springfield",
       "signup": "yes",
@@ -135,8 +135,8 @@
       "id": "9eafe27c-ab99-4892-9dda-51afd4da8301",
       "name": "Winter Invitational (sample)",
       "course": "SCM",
-      "startDate": "2025-10-24",
-      "endDate": "2025-10-24",
+      "startDate": "2025-10-25",
+      "endDate": "2025-10-25",
       "venue": "Birch Aquatic Centre",
       "city": "Springfield",
       "signup": "yes",
@@ -151,8 +151,8 @@
       "id": "65ea027b-e144-40dc-9e1e-6a7abba85a97",
       "name": "Autumn Splash (sample)",
       "course": "SCM",
-      "startDate": "2025-08-25",
-      "endDate": "2025-08-25",
+      "startDate": "2025-08-26",
+      "endDate": "2025-08-26",
       "venue": "Birch Aquatic Centre",
       "city": "Springfield",
       "signup": "yes",

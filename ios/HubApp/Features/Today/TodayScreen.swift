@@ -102,11 +102,18 @@ struct TodayScreen: View {
                 Text(today.events.isEmpty ? "Nothing on today." : "Nothing on for the people shown.")
                     .foregroundStyle(.secondary)
             }
-            ForEach(events, id: \.id) { e in
-                Button { selected = EventRef(id: e.id) } label: {
-                    CalendarEventRow(event: e, homeTime: homeTime, mark: calendar.mark(e), owners: calendar.ownerNames(e))
+            // A school day is one "School" row (SCH-1): its classes are in
+            // the school card below.
+            ForEach(TodayRow.rows(events, date: today.date, homeTime: homeTime)) { row in
+                switch row {
+                case .school(let block):
+                    SchoolBlockRow(block: block, homeTime: homeTime, mark: calendar.mark(block)) { model.go(.school) }
+                case .event(let e):
+                    Button { selected = EventRef(id: e.id) } label: {
+                        CalendarEventRow(event: e, homeTime: homeTime, mark: calendar.mark(e), owners: calendar.ownerNames(e))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -228,5 +235,35 @@ struct TodayScreen: View {
     private func dayAndTime(_ e: CalendarEvent) -> String {
         guard let s = e.startDate else { return e.start }
         return "\(homeTime.dayTitle(homeTime.localDate(s))), \(e.allDay ? "all day" : homeTime.time(e.start))"
+    }
+}
+
+/// Today's list: events in time order, a school day's classes as one row.
+enum TodayRow: Identifiable {
+    case event(CalendarEvent)
+    case school(SchoolBlock)
+
+    var id: String {
+        switch self {
+        case .event(let e): e.id
+        case .school(let b): b.id
+        }
+    }
+
+    /// All-day events first, as the list had them, then by start.
+    private var order: (Int, String) {
+        switch self {
+        case .event(let e): (e.allDay ? 0 : 1, e.start)
+        case .school(let b): (1, b.start)
+        }
+    }
+
+    static func rows(_ events: [CalendarEvent], date: String, homeTime: HomeTime) -> [TodayRow] {
+        guard let block = SchoolBlock.blocks(events, homeTime: homeTime).first(where: { $0.date == date }) else {
+            return events.map(TodayRow.event)
+        }
+        let folded = Set(block.classes.map(\.id))
+        let rest = events.filter { !folded.contains($0.id) }.map(TodayRow.event)
+        return (rest + [.school(block)]).sorted { $0.order < $1.order }
     }
 }

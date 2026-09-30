@@ -332,6 +332,39 @@ N6.2–N6.4, follow in part 2):
   approve an edited suggestion and reject another; a saved password is
   never on screen or in any API response; every settings screen opens.
 
+**N6 part 2 as built (2026-09-30): Videos**
+- Seed: two made-up tennis reviews built by the real debate code with the
+  fake models (a finished debate with the 6-second test pattern as its
+  playback copy when `MEDIA_DIR` is set, and an older Gemini-only review
+  to compare with); fixed ids, so each seed resets them and the vote.
+- HubKit `Video/`: the reviews, critiques, replies and scores the API sends
+  as schemaless JSON, decoded into Swift types; the timeline (cited times,
+  the point on screen, m:ss) as on the web. `HubClient.download` fetches
+  the playback copy with the device token into a temporary file protected
+  until the phone is unlocked.
+- History per sport with deleted reviews to restore, swipe to delete or
+  restore, compare two, the scoreboard and the review mode.
+- The review page: progress while it runs (every 3 s), the Google Photos
+  pick button, retry; the player (AVKit, muted) with point markers, the
+  current point following playback, jump buttons in the advice,
+  0.25×/0.5×/1×, frame steps, landscape on this screen only, and "Delete
+  video"; the combined advice with agreed and disputed points, the
+  verdict, the one-time vote, both models' reviews, scores, critiques and
+  replies. The temporary file is deleted when the screen closes.
+- Starting a review: a Drive (or YouTube, saved only) link or a Google
+  Photos pick, sport, date filmed, note and an optional part.
+- SP-N4 (Photos picker on the phone) needs the owner: the app opens the
+  picker link, which iOS hands to the Google Photos app or Safari; the
+  worker notices the pick as on the web.
+- Tests: HubKit (6 new); UI tests (4 new): history and the review page, a
+  jump button that seeks to 0:02 and shows "Fix 1", the vote, and saving a
+  link then deleting and restoring it. "No clip file left after closing"
+  was checked by hand in the Simulator: leaving the review deletes its
+  file, and files left by an app killed mid-review are deleted at the next
+  launch (found in that check).
+- Today: a school day's classes are one "School" row (they're listed in
+  the school card), found when the seed gained real periods.
+
 ### N7: Notifications (≈ 4 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -384,7 +417,7 @@ about 16 days in.
 | N3 | done 2026-09-29 (#49) |
 | N4 | done 2026-09-29 (#50) |
 | N5 | done 2026-09-29 (#52) |
-| N6 | part 1 built 2026-09-29 (`ios/n6-school-settings`); Videos next |
+| N6 | part 1 done 2026-09-30 (#53); part 2 (Videos) built on `ios/n6-videos`; SP-N4 waits for the owner |
 | N7–N8 | not started |
 | N9 | not planned (owner kept the no-upload default) |
 

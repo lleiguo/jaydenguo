@@ -1,0 +1,532 @@
+{
+  "id": "5eed0000-0000-4000-8000-000000000001",
+  "sport": "tennis",
+  "url": null,
+  "provider": "drive",
+  "note": "Forehand rally (sample)",
+  "filmedOn": "2026-09-27",
+  "status": "done",
+  "mode": "debate",
+  "progress": null,
+  "errorMessage": null,
+  "pickerUri": null,
+  "mediaName": "forehand.mp4",
+  "winner": "gemini",
+  "tie": false,
+  "parentVote": null,
+  "createdAt": "2026-09-30T05:56:55.100Z",
+  "deletedAt": null,
+  "segmentStart": null,
+  "segmentEnd": null,
+  "durationSec": 6,
+  "promptVersion": "video-1-draft",
+  "verdict": {
+    "tie": false,
+    "margin": 5,
+    "totals": {
+      "claude": 17.5,
+      "gemini": 22.5
+    },
+    "winner": "gemini",
+    "selfScores": {
+      "claude": {
+        "own": 20,
+        "other": 15,
+        "preference": 5
+      },
+      "gemini": {
+        "own": 20,
+        "other": 25,
+        "preference": -5
+      }
+    },
+    "finalScores": {
+      "claude": {
+        "claude": 20,
+        "gemini": 25
+      },
+      "gemini": {
+        "claude": 15,
+        "gemini": 20
+      }
+    }
+  },
+  "combinedReview": {
+    "fix": [
+      {
+        "at": "0:02",
+        "why": "Late take-back",
+        "text": "Turn the shoulders sooner",
+        "sides": null,
+        "status": "agreed"
+      },
+      {
+        "at": "0:04",
+        "why": "Short finish",
+        "text": "Finish over the shoulder",
+        "sides": {
+          "for": "The swing stops early.",
+          "against": "The finish is out of frame."
+        },
+        "status": "disputed"
+      }
+    ],
+    "good": [
+      {
+        "at": "0:03",
+        "why": "Head still at contact",
+        "text": "Watches the ball onto the strings",
+        "sides": null,
+        "status": "agreed"
+      }
+    ],
+    "drills": [
+      {
+        "how": "Turn, swing, freeze",
+        "name": "Shadow swings",
+        "reps": "3 sets of 10"
+      }
+    ],
+    "summary": "Good contact; prepare earlier.",
+    "filmNext": "Film from the side."
+  },
+  "costUsd": 0.09,
+  "votedAt": null,
+  "finishedAt": "2026-09-30T05:56:55.099Z",
+  "hasPlayback": true,
+  "rounds": [
+    {
+      "round": "review",
+      "model": "gemini",
+      "modelVersion": "gemini-scripted",
+      "labels": null,
+      "output": {
+        "fix": [
+          {
+            "at": "0:02",
+            "why": "The racket starts back late",
+            "text": "Turn the shoulders sooner"
+          },
+          {
+            "at": "0:04",
+            "why": "The swing stops at the waist",
+            "text": "Finish over the shoulder"
+          }
+        ],
+        "good": [
+          {
+            "at": "0:03",
+            "why": "Head stays still through contact",
+            "text": "Watches the ball onto the strings"
+          }
+        ],
+        "drills": [
+          {
+            "how": "Turn, swing and freeze at the finish",
+            "name": "Shadow swings",
+            "reps": "3 sets of 10"
+          }
+        ],
+        "summary": "[gemini-review] A steady, balanced swing with room to prepare earlier.",
+        "filmNext": "Film from the side, level with the hitting zone."
+      },
+      "scores": null,
+      "inputTokens": 1000,
+      "outputTokens": 500,
+      "costUsd": 0.01
+    },
+    {
+      "round": "review",
+      "model": "claude",
+      "modelVersion": "claude-scripted",
+      "labels": null,
+      "output": {
+        "fix": [
+          {
+            "at": "0:02",
+            "why": "The racket starts back late",
+            "text": "Turn the shoulders sooner"
+          },
+          {
+            "at": "0:04",
+            "why": "The swing stops at the waist",
+            "text": "Finish over the shoulder"
+          }
+        ],
+        "good": [
+          {
+            "at": "0:03",
+            "why": "Head stays still through contact",
+            "text": "Watches the ball onto the strings"
+          }
+        ],
+        "drills": [
+          {
+            "how": "Turn, swing and freeze at the finish",
+            "name": "Shadow swings",
+            "reps": "3 sets of 10"
+          }
+        ],
+        "summary": "[claude-review] A steady, balanced swing with room to prepare earlier.",
+        "filmNext": "Film from the side, level with the hitting zone."
+      },
+      "scores": null,
+      "inputTokens": 1000,
+      "outputTokens": 500,
+      "costUsd": 0.01
+    },
+    {
+      "round": "critique",
+      "model": "gemini",
+      "modelVersion": "gemini-scripted",
+      "labels": {
+        "A": "gemini",
+        "B": "claude"
+      },
+      "output": {
+        "reviews": [
+          {
+            "label": "A",
+            "errors": [
+              {
+                "point": "Finish over the shoulder",
+                "reason": "The finish isn't in frame at 0:04"
+              }
+            ],
+            "missed": [
+              "The ready position between shots"
+            ],
+            "scores": {
+              "correct": 4,
+              "grounded": 4,
+              "actionable": 4,
+              "prioritised": 4,
+              "ageAppropriate": 4
+            },
+            "comment": "Clear and mostly grounded.",
+            "unsupported": []
+          },
+          {
+            "label": "B",
+            "errors": [
+              {
+                "point": "Finish over the shoulder",
+                "reason": "The finish isn't in frame at 0:04"
+              }
+            ],
+            "missed": [
+              "The ready position between shots"
+            ],
+            "scores": {
+              "correct": 3,
+              "grounded": 3,
+              "actionable": 3,
+              "prioritised": 3,
+              "ageAppropriate": 3
+            },
+            "comment": "Clear and mostly grounded.",
+            "unsupported": []
+          }
+        ]
+      },
+      "scores": {
+        "claude": {
+          "total": 15,
+          "correct": 3,
+          "grounded": 3,
+          "actionable": 3,
+          "prioritised": 3,
+          "ageAppropriate": 3
+        },
+        "gemini": {
+          "total": 20,
+          "correct": 4,
+          "grounded": 4,
+          "actionable": 4,
+          "prioritised": 4,
+          "ageAppropriate": 4
+        }
+      },
+      "inputTokens": 1000,
+      "outputTokens": 500,
+      "costUsd": 0.01
+    },
+    {
+      "round": "critique",
+      "model": "claude",
+      "modelVersion": "claude-scripted",
+      "labels": {
+        "A": "gemini",
+        "B": "claude"
+      },
+      "output": {
+        "reviews": [
+          {
+            "label": "A",
+            "errors": [
+              {
+                "point": "Finish over the shoulder",
+                "reason": "The finish isn't in frame at 0:04"
+              }
+            ],
+            "missed": [
+              "The ready position between shots"
+            ],
+            "scores": {
+              "correct": 4,
+              "grounded": 4,
+              "actionable": 4,
+              "prioritised": 4,
+              "ageAppropriate": 4
+            },
+            "comment": "Clear and mostly grounded.",
+            "unsupported": []
+          },
+          {
+            "label": "B",
+            "errors": [
+              {
+                "point": "Finish over the shoulder",
+                "reason": "The finish isn't in frame at 0:04"
+              }
+            ],
+            "missed": [
+              "The ready position between shots"
+            ],
+            "scores": {
+              "correct": 4,
+              "grounded": 4,
+              "actionable": 4,
+              "prioritised": 4,
+              "ageAppropriate": 4
+            },
+            "comment": "Clear and mostly grounded.",
+            "unsupported": []
+          }
+        ]
+      },
+      "scores": {
+        "claude": {
+          "total": 20,
+          "correct": 4,
+          "grounded": 4,
+          "actionable": 4,
+          "prioritised": 4,
+          "ageAppropriate": 4
+        },
+        "gemini": {
+          "total": 20,
+          "correct": 4,
+          "grounded": 4,
+          "actionable": 4,
+          "prioritised": 4,
+          "ageAppropriate": 4
+        }
+      },
+      "inputTokens": 1000,
+      "outputTokens": 500,
+      "costUsd": 0.01
+    },
+    {
+      "round": "rebuttal",
+      "model": "gemini",
+      "modelVersion": "gemini-scripted",
+      "labels": null,
+      "output": {
+        "replies": [
+          {
+            "at": "0:04",
+            "point": "Finish over the shoulder",
+            "argument": "The follow-through shows at 0:04.",
+            "response": "defend"
+          }
+        ]
+      },
+      "scores": null,
+      "inputTokens": 1000,
+      "outputTokens": 500,
+      "costUsd": 0.01
+    },
+    {
+      "round": "rebuttal",
+      "model": "claude",
+      "modelVersion": "claude-scripted",
+      "labels": null,
+      "output": {
+        "replies": [
+          {
+            "at": "0:04",
+            "point": "Finish over the shoulder",
+            "argument": "The follow-through shows at 0:04.",
+            "response": "defend"
+          }
+        ]
+      },
+      "scores": null,
+      "inputTokens": 1000,
+      "outputTokens": 500,
+      "costUsd": 0.01
+    },
+    {
+      "round": "final_score",
+      "model": "gemini",
+      "modelVersion": "gemini-scripted",
+      "labels": {
+        "A": "gemini",
+        "B": "claude"
+      },
+      "output": {
+        "reviews": [
+          {
+            "label": "A",
+            "reason": "After the replies.",
+            "scores": {
+              "correct": 4,
+              "grounded": 4,
+              "actionable": 4,
+              "prioritised": 4,
+              "ageAppropriate": 4
+            }
+          },
+          {
+            "label": "B",
+            "reason": "After the replies.",
+            "scores": {
+              "correct": 3,
+              "grounded": 3,
+              "actionable": 3,
+              "prioritised": 3,
+              "ageAppropriate": 3
+            }
+          }
+        ]
+      },
+      "scores": {
+        "claude": {
+          "total": 15,
+          "correct": 3,
+          "grounded": 3,
+          "actionable": 3,
+          "prioritised": 3,
+          "ageAppropriate": 3
+        },
+        "gemini": {
+          "total": 20,
+          "correct": 4,
+          "grounded": 4,
+          "actionable": 4,
+          "prioritised": 4,
+          "ageAppropriate": 4
+        }
+      },
+      "inputTokens": 1000,
+      "outputTokens": 500,
+      "costUsd": 0.01
+    },
+    {
+      "round": "final_score",
+      "model": "claude",
+      "modelVersion": "claude-scripted",
+      "labels": {
+        "A": "gemini",
+        "B": "claude"
+      },
+      "output": {
+        "reviews": [
+          {
+            "label": "A",
+            "reason": "After the replies.",
+            "scores": {
+              "correct": 5,
+              "grounded": 5,
+              "actionable": 5,
+              "prioritised": 5,
+              "ageAppropriate": 5
+            }
+          },
+          {
+            "label": "B",
+            "reason": "After the replies.",
+            "scores": {
+              "correct": 4,
+              "grounded": 4,
+              "actionable": 4,
+              "prioritised": 4,
+              "ageAppropriate": 4
+            }
+          }
+        ]
+      },
+      "scores": {
+        "claude": {
+          "total": 20,
+          "correct": 4,
+          "grounded": 4,
+          "actionable": 4,
+          "prioritised": 4,
+          "ageAppropriate": 4
+        },
+        "gemini": {
+          "total": 25,
+          "correct": 5,
+          "grounded": 5,
+          "actionable": 5,
+          "prioritised": 5,
+          "ageAppropriate": 5
+        }
+      },
+      "inputTokens": 1000,
+      "outputTokens": 500,
+      "costUsd": 0.01
+    },
+    {
+      "round": "combine",
+      "model": "gemini",
+      "modelVersion": "gemini-scripted",
+      "labels": null,
+      "output": {
+        "fix": [
+          {
+            "at": "0:02",
+            "why": "Late take-back",
+            "text": "Turn the shoulders sooner",
+            "sides": null,
+            "status": "agreed"
+          },
+          {
+            "at": "0:04",
+            "why": "Short finish",
+            "text": "Finish over the shoulder",
+            "sides": {
+              "for": "The swing stops early.",
+              "against": "The finish is out of frame."
+            },
+            "status": "disputed"
+          }
+        ],
+        "good": [
+          {
+            "at": "0:03",
+            "why": "Head still at contact",
+            "text": "Watches the ball onto the strings",
+            "sides": null,
+            "status": "agreed"
+          }
+        ],
+        "drills": [
+          {
+            "how": "Turn, swing, freeze",
+            "name": "Shadow swings",
+            "reps": "3 sets of 10"
+          }
+        ],
+        "summary": "Good contact; prepare earlier.",
+        "filmNext": "Film from the side."
+      },
+      "scores": null,
+      "inputTokens": 1000,
+      "outputTokens": 500,
+      "costUsd": 0.01
+    }
+  ]
+}

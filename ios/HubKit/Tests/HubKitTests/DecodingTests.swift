@@ -54,6 +54,7 @@ import Testing
         "getTennisPlayer": { _ = try await $0.api.getTennisPlayer(path: .init(key: "1")).ok.body.json },
         "getTennisAccuracy": { _ = try await $0.api.getTennisAccuracy().ok.body.json },
         "listVideoReviews": { _ = try await $0.api.listVideoReviews().ok.body.json },
+        "getVideoReview": { _ = try await $0.api.getVideoReview(path: .init(id: id)).ok.body.json },
         "getScoreboard": { _ = try await $0.api.getScoreboard().ok.body.json },
         "getVideoSettings": { _ = try await $0.api.getVideoSettings().ok.body.json },
     ]

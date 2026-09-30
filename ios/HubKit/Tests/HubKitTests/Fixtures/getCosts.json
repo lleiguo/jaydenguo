@@ -6,15 +6,9 @@
     "currency": null
   },
   "currency": "USD",
-  "today": "2026-09-29",
+  "today": "2026-09-30",
   "summary": {
     "days": [
-      {
-        "day": "2026-07-02",
-        "infra": 0,
-        "ai": 0,
-        "total": 0
-      },
       {
         "day": "2026-07-03",
         "infra": 0,
@@ -548,6 +542,12 @@
         "infra": 0,
         "ai": 0,
         "total": 0
+      },
+      {
+        "day": "2026-09-30",
+        "infra": 0,
+        "ai": 0,
+        "total": 0
       }
     ],
     "latestDay": null,
@@ -572,10 +572,16 @@
         "video": 0,
         "email": 0,
         "explanation": 0
+      },
+      {
+        "day": "2026-09-30",
+        "video": 0.1,
+        "email": 0,
+        "explanation": 0
       }
     ],
     "month": {
-      "video": 0,
+      "video": 0.1,
       "email": 0,
       "explanation": 0
     }

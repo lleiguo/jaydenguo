@@ -111,6 +111,18 @@ import Testing
         #expect(String(decoding: try #require(StubProtocol.lastBody), as: UTF8.self) == #"{"startTime":null,"title":"Practice"}"#)
     }
 
+    @Test func downloadsToAProtectedTemporaryFile() async throws {
+        let session = StubProtocol.session(status: 200, body: "not really a video")
+        let file = try await testClient().download("/api/v1/videos/v1/video", session: session)
+        defer { try? FileManager.default.removeItem(at: file) }
+        #expect(file.path.hasPrefix(FileManager.default.temporaryDirectory.path))
+        #expect(try String(contentsOf: file, encoding: .utf8) == "not really a video")
+        #expect(StubProtocol.last?.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer ") == true)
+        await #expect(throws: HubError.self) {
+            _ = try await testClient().download("/api/v1/videos/v1/video", session: StubProtocol.session(status: 404))
+        }
+    }
+
     @Test func refusesOtherPathsAndReportsErrors() async throws {
         let client = testClient()
         await #expect(throws: HubError.self) { try await client.patch("https://evil.example/x", [:]) }
