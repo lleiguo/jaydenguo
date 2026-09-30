@@ -66,8 +66,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Video media prep runs ffmpeg in unit, integration and e2e tests.
+      # Video media prep runs ffmpeg in unit, integration and e2e tests. A
+      # stalled package mirror once hung this step until the job's 20-minute
+      # limit; fail fast instead, so a re-run can pick another mirror.
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg
+        timeout-minutes: 5
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
