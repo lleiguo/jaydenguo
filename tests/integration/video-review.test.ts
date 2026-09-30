@@ -32,8 +32,10 @@ import { createGoogleMediaFake } from "../e2e/support/fake-google-media";
 // Video reviews end to end in the worker (plan M5.2-M5.5): link saved,
 // video fetched from a fake Drive or Photos, media prepared with ffmpeg,
 // the debate run with stand-in models, every round stored, temp files gone.
+// Each job really runs ffmpeg, which takes ~4 s on CI: more than vitest's
+// default 5 s once a test runs two jobs.
 
-describe("video reviews", () => {
+describe("video reviews", { timeout: 60_000 }, () => {
   let handle: PoolHandle;
   let db: ReturnType<typeof createDb>;
   let server: Server;
