@@ -1,26 +1,26 @@
 {
-  "id": "dfe25c58-6197-46a8-88ce-ea2ecccb4db6",
-  "title": "School",
+  "id": "3a2fe264-b34d-4677-9de2-cc043911419b",
+  "title": "Math",
   "category": "school_class",
   "attendance": "required",
   "owners": [
     "6d13c3b6-63c4-4078-983e-0e36257c13d6"
   ],
-  "start": "2026-09-22T12:30:00.000Z",
-  "end": "2026-09-22T19:10:00.000Z",
+  "start": "2026-09-23T12:30:00.000Z",
+  "end": "2026-09-23T13:40:00.000Z",
   "allDay": false,
   "status": "active",
   "deletedAt": null,
-  "notes": null,
-  "locationName": "Elm Street School",
-  "sourceUrl": null,
+  "notes": "With Ms Rivera",
+  "locationName": "Elm Street School, Room 12",
+  "sourceUrl": "https://example.test/portal/classes/1",
   "source": {
     "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
     "name": "School calendar (sample)",
-    "kind": "ical"
+    "kind": "veracross"
   },
   "seriesId": null,
-  "lastSyncedAt": "2026-09-29T17:19:35.754Z",
+  "lastSyncedAt": "2026-09-30T02:20:21.867Z",
   "override": null,
   "schoolClosed": false
 }

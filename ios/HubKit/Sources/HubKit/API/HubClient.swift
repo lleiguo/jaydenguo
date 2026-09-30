@@ -77,6 +77,14 @@ public final class HubClient: Sendable {
         _ = try await send("PATCH", path, body: body, session: session, fallback: "Couldn't save that.")
     }
 
+    /// A POST with the same null handling as `patch`, returning the body
+    /// (e.g. approving a suggestion with no start time).
+    @discardableResult
+    public func post(_ path: String, _ fields: [String: JSONField], session: URLSession = .shared) async throws -> Data {
+        let body = try JSONSerialization.data(withJSONObject: fields.mapValues(\.object), options: [.sortedKeys])
+        return try await send("POST", path, body: body, session: session, fallback: "That didn't work.")
+    }
+
     /// A request to a relative `/api/v1/…` path on this server with the
     /// device token, turning errors into HubError like the middleware does.
     private func send(_ method: String, _ path: String, body: Data?, session: URLSession, fallback: String) async throws -> Data {

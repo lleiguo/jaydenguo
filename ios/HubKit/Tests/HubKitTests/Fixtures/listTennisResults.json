@@ -7,79 +7,6 @@
   "rows": [
     {
       "match": {
-        "id": "a3e137ac-45ec-46c0-b80c-666a1a6dac89",
-        "matchDate": "2026-08-12",
-        "scheduledAt": null,
-        "tournamentId": "2693a815-d8d3-40fc-9b43-c280b1f9bdf9",
-        "tournamentName": "Blossom Open (sample)",
-        "eventName": "U12 Boys Singles",
-        "round": "Final",
-        "drawNo": "1",
-        "sides": [
-          [
-            {
-              "key": "91000",
-              "name": "Sam Sample"
-            }
-          ],
-          [
-            {
-              "key": "92006",
-              "name": "Avery Holt"
-            }
-          ]
-        ],
-        "winner": 1,
-        "sets": [
-          [
-            6,
-            2
-          ],
-          [
-            6,
-            4
-          ]
-        ],
-        "outcome": "played",
-        "origin": "source",
-        "corrected": false,
-        "sourceDisagrees": false,
-        "notes": null,
-        "source": {
-          "winner": 1,
-          "sets": [
-            [
-              6,
-              2
-            ],
-            [
-              6,
-              4
-            ]
-          ],
-          "outcome": "played",
-          "scheduledAt": null
-        }
-      },
-      "view": {
-        "side": 1,
-        "partner": null,
-        "opponents": [
-          {
-            "key": "92006",
-            "name": "Avery Holt"
-          }
-        ],
-        "result": "W",
-        "score": "6–2 6–4"
-      },
-      "running": {
-        "wins": 10,
-        "losses": 4
-      }
-    },
-    {
-      "match": {
         "id": "33688cd3-83f7-4a15-b3dc-aa64542bbd2d",
         "matchDate": "2026-08-12",
         "scheduledAt": null,
@@ -145,6 +72,79 @@
         ],
         "result": "W",
         "score": "6–1 6–3"
+      },
+      "running": {
+        "wins": 10,
+        "losses": 4
+      }
+    },
+    {
+      "match": {
+        "id": "a3e137ac-45ec-46c0-b80c-666a1a6dac89",
+        "matchDate": "2026-08-12",
+        "scheduledAt": null,
+        "tournamentId": "2693a815-d8d3-40fc-9b43-c280b1f9bdf9",
+        "tournamentName": "Blossom Open (sample)",
+        "eventName": "U12 Boys Singles",
+        "round": "Final",
+        "drawNo": "1",
+        "sides": [
+          [
+            {
+              "key": "91000",
+              "name": "Sam Sample"
+            }
+          ],
+          [
+            {
+              "key": "92006",
+              "name": "Avery Holt"
+            }
+          ]
+        ],
+        "winner": 1,
+        "sets": [
+          [
+            6,
+            2
+          ],
+          [
+            6,
+            4
+          ]
+        ],
+        "outcome": "played",
+        "origin": "source",
+        "corrected": false,
+        "sourceDisagrees": false,
+        "notes": null,
+        "source": {
+          "winner": 1,
+          "sets": [
+            [
+              6,
+              2
+            ],
+            [
+              6,
+              4
+            ]
+          ],
+          "outcome": "played",
+          "scheduledAt": null
+        }
+      },
+      "view": {
+        "side": 1,
+        "partner": null,
+        "opponents": [
+          {
+            "key": "92006",
+            "name": "Avery Holt"
+          }
+        ],
+        "result": "W",
+        "score": "6–2 6–4"
       },
       "running": {
         "wins": 9,

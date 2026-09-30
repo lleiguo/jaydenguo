@@ -32,7 +32,9 @@ struct MainTabs: View {
                         }
                     }
                     Tab("More", systemImage: "ellipsis.circle", value: Route.Tab.more) {
-                        NavigationStack { MoreScreen() }
+                        NavigationStack(path: $model.morePath) {
+                            MoreScreen().navigationDestination(for: Route.self) { MoreDestination(route: $0) }
+                        }
                     }
                 }
                 .environment(calendar)

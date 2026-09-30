@@ -85,6 +85,8 @@ struct CalendarEventRow: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, 2)
+        // The whole row takes the tap, not only its text.
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 

@@ -142,6 +142,7 @@ struct TodayScreen: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                Button("School page") { model.go(.school) }
             }
         }
     }
@@ -210,12 +211,12 @@ struct TodayScreen: View {
                     }
                 }
                 if w.suggestions > 0 {
-                    Button { model.selectedTab = .more } label: {
+                    Button { model.go(.suggestions) } label: {
                         Label("\(Int(w.suggestions)) email suggestion\(w.suggestions == 1 ? "" : "s") to review", systemImage: "envelope.badge")
                     }
                 }
                 ForEach(w.failingSources, id: \.id) { source in
-                    Button { model.selectedTab = .more } label: {
+                    Button { model.go(.sources) } label: {
                         Label("\(source.name) isn't syncing (\(Int(source.consecutiveFailures)) tries)", systemImage: "exclamationmark.arrow.triangle.2.circlepath")
                             .foregroundStyle(.red)
                     }

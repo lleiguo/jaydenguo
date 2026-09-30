@@ -40,9 +40,9 @@
     },
     {
       "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
-      "kind": "ical",
+      "kind": "veracross",
       "name": "School calendar (sample)",
-      "enabled": false,
+      "enabled": true,
       "credentialId": null,
       "credentialLabel": null,
       "config": {},
@@ -86,6 +86,25 @@
       "config": {},
       "categoryMapping": {
         "default": "tennis",
+        "owners": [],
+        "rules": []
+      },
+      "lastSuccessAt": null,
+      "consecutiveFailures": 0,
+      "lastRun": null,
+      "running": false,
+      "nextRefreshAt": null
+    },
+    {
+      "id": "dc9159ab-d8ac-4767-8a88-114faa8d9811",
+      "kind": "gmail",
+      "name": "Coach email (sample)",
+      "enabled": false,
+      "credentialId": null,
+      "credentialLabel": null,
+      "config": {},
+      "categoryMapping": {
+        "default": "soccer",
         "owners": [],
         "rules": []
       },

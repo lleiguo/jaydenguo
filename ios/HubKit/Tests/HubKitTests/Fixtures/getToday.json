@@ -3,28 +3,106 @@
   "homeTimeZone": "America/Toronto",
   "events": [
     {
-      "id": "aeb23c1c-7558-4e2d-88a2-e93b3f2c795d",
-      "title": "School",
+      "id": "3715ec07-136d-4116-bd52-f8923586160f",
+      "title": "Math",
       "category": "school_class",
       "attendance": "required",
       "owners": [
         "6d13c3b6-63c4-4078-983e-0e36257c13d6"
       ],
       "start": "2026-09-29T12:30:00.000Z",
+      "end": "2026-09-29T13:40:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": "With Ms Rivera",
+      "locationName": "Elm Street School, Room 12",
+      "sourceUrl": "https://example.test/portal/classes/1",
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "veracross"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-30T02:20:21.867Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "084cc09b-0315-4a72-9685-d39b63f04d4c",
+      "title": "English",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-29T13:45:00.000Z",
+      "end": "2026-09-29T14:55:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": "With Mr Okafor",
+      "locationName": "Elm Street School, Room 4",
+      "sourceUrl": "https://example.test/portal/classes/2",
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "veracross"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-30T02:20:21.867Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "c71a2540-b1b9-4ece-9e6e-f0f541689dcd",
+      "title": "Science",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-29T15:40:00.000Z",
+      "end": "2026-09-29T16:50:00.000Z",
+      "allDay": false,
+      "status": "active",
+      "deletedAt": null,
+      "notes": "With Dr Chen",
+      "locationName": "Elm Street School, Lab 2",
+      "sourceUrl": "https://example.test/portal/classes/3",
+      "source": {
+        "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
+        "name": "School calendar (sample)",
+        "kind": "veracross"
+      },
+      "seriesId": null,
+      "lastSyncedAt": "2026-09-30T02:20:21.867Z",
+      "override": null,
+      "schoolClosed": false
+    },
+    {
+      "id": "5eaa9172-b0cd-45f3-857b-cdf4bafde6ff",
+      "title": "French",
+      "category": "school_class",
+      "attendance": "required",
+      "owners": [
+        "6d13c3b6-63c4-4078-983e-0e36257c13d6"
+      ],
+      "start": "2026-09-29T17:55:00.000Z",
       "end": "2026-09-29T19:10:00.000Z",
       "allDay": false,
       "status": "active",
       "deletedAt": null,
-      "notes": null,
-      "locationName": "Elm Street School",
-      "sourceUrl": null,
+      "notes": "With Mme Laurent",
+      "locationName": "Elm Street School, Room 9",
+      "sourceUrl": "https://example.test/portal/classes/4",
       "source": {
         "id": "109c0efc-2d16-4634-b317-cae0e56e64b0",
         "name": "School calendar (sample)",
-        "kind": "ical"
+        "kind": "veracross"
       },
       "seriesId": null,
-      "lastSyncedAt": "2026-09-29T17:19:35.754Z",
+      "lastSyncedAt": "2026-09-30T02:20:21.867Z",
       "override": null,
       "schoolClosed": false
     },
@@ -50,7 +128,7 @@
         "kind": "ical"
       },
       "seriesId": null,
-      "lastSyncedAt": "2026-09-29T17:19:35.745Z",
+      "lastSyncedAt": "2026-09-30T02:20:21.857Z",
       "override": null,
       "schoolClosed": false
     }
@@ -157,7 +235,7 @@
           "kind": "ical"
         },
         "seriesId": null,
-        "lastSyncedAt": "2026-09-29T17:19:35.745Z",
+        "lastSyncedAt": "2026-09-30T02:20:21.857Z",
         "override": null,
         "schoolClosed": false
       },
@@ -185,8 +263,50 @@
       }
     }
   ],
-  "cursor": 32,
-  "schoolDay": null,
+  "cursor": 66,
+  "schoolDay": {
+    "date": "2026-09-30",
+    "today": false,
+    "timeZone": "America/Toronto",
+    "periods": [
+      {
+        "id": "128820ce-931f-45b1-bf2d-3f285ecf9e7a",
+        "start": "2026-09-30T12:30:00.000Z",
+        "end": "2026-09-30T13:40:00.000Z",
+        "title": "Math",
+        "room": "Elm Street School, Room 12",
+        "teachers": "Ms Rivera",
+        "url": "https://example.test/portal/classes/1"
+      },
+      {
+        "id": "41dd340c-cbdb-4d20-a136-c5b0d73ac8d9",
+        "start": "2026-09-30T13:45:00.000Z",
+        "end": "2026-09-30T14:55:00.000Z",
+        "title": "English",
+        "room": "Elm Street School, Room 4",
+        "teachers": "Mr Okafor",
+        "url": "https://example.test/portal/classes/2"
+      },
+      {
+        "id": "2b0884a0-c768-439c-bf8a-3b4e0fd407f8",
+        "start": "2026-09-30T15:40:00.000Z",
+        "end": "2026-09-30T16:50:00.000Z",
+        "title": "Science",
+        "room": "Elm Street School, Lab 2",
+        "teachers": "Dr Chen",
+        "url": "https://example.test/portal/classes/3"
+      },
+      {
+        "id": "7f3be191-1014-458e-a7a1-432357e226ca",
+        "start": "2026-09-30T17:55:00.000Z",
+        "end": "2026-09-30T19:10:00.000Z",
+        "title": "French",
+        "room": "Elm Street School, Room 9",
+        "teachers": "Mme Laurent",
+        "url": "https://example.test/portal/classes/4"
+      }
+    ]
+  },
   "nextMatches": [
     {
       "tournament": {
@@ -345,7 +465,7 @@
         "updatedAt": "2026-09-29T17:07:16.226Z"
       }
     ],
-    "suggestions": 0,
+    "suggestions": 2,
     "failingSources": []
   }
 }

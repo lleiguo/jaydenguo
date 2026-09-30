@@ -1,5 +1,18 @@
-import { eq } from "drizzle-orm";
-import { eventSeries, locationBuffers, locations, people, sources, tennisEntries } from "@db/schema";
+import { and, eq, inArray, or } from "drizzle-orm";
+import {
+  conflicts,
+  emailMessages,
+  emailSuggestions,
+  eventOverrides,
+  eventRevisions,
+  events,
+  eventSeries,
+  locationBuffers,
+  locations,
+  people,
+  sources,
+  tennisEntries,
+} from "@db/schema";
 import type { Category } from "../domain/constants";
 import { addDays, localDate, weekday, zonedToUtc } from "../domain/time";
 import type { SourceRecord } from "../domain/upsert";
@@ -79,7 +92,11 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     return row.id;
   };
 
-  type Draft = Pick<SourceRecord, "externalId" | "title" | "startUtc" | "endUtc" | "allDay" | "locationName">;
+  type Draft = Pick<
+    SourceRecord,
+    "externalId" | "title" | "startUtc" | "endUtc" | "allDay" | "locationName"
+  > &
+    Partial<Pick<SourceRecord, "notes" | "sourceUrl">>;
   const records = (category: Category, make: (week: number, monday: string) => Draft[]): SourceRecord[] => {
     const out: SourceRecord[] = [];
     for (let w = -1; w < WEEKS; w++) {
@@ -143,8 +160,19 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     { actor: "seed" },
   );
 
-  const school = await source("School calendar (sample)", "ical", "school_class");
+  // School (SCH-1): a sample Veracross portal with four classes a day, so
+  // "Today at school" has periods, rooms and teachers. Enabled because the
+  // school day reads only enabled Veracross sources; nothing syncs it
+  // locally unless `sync all` is run (it would fail: no login).
+  const school = await source("School calendar (sample)", "veracross", "school_class");
+  await db.update(sources).set({ kind: "veracross", enabled: true }).where(eq(sources.id, school));
   const pdDay = addDays(monday, 7 + 4); // next Friday
+  const periods: [string, string, string, string, string][] = [
+    ["Math", "08:30", "09:40", "Room 12", "Ms Rivera"],
+    ["English", "09:45", "10:55", "Room 4", "Mr Okafor"],
+    ["Science", "11:40", "12:50", "Lab 2", "Dr Chen"],
+    ["French", "13:55", "15:10", "Room 9", "Mme Laurent"],
+  ];
   await syncRecords(
     db,
     { sourceId: school },
@@ -153,14 +181,18 @@ export async function seedJob(_args: string[], ctx: JobContext) {
         [0, 1, 2, 3, 4]
           .map((d) => addDays(mon, d))
           .filter((d) => d !== pdDay)
-          .map((d) => ({
-            externalId: `school-${d}`,
-            title: "School",
-            startUtc: at(d, "08:30"),
-            endUtc: at(d, "15:10"),
-            allDay: false,
-            locationName: "Elm Street School",
-          })),
+          .flatMap((d) =>
+            periods.map(([title, start, end, room, teacher], i) => ({
+              externalId: `school-${d}-${i}`,
+              title,
+              startUtc: at(d, start),
+              endUtc: at(d, end),
+              allDay: false,
+              locationName: `Elm Street School, ${room}`,
+              notes: `With ${teacher}`,
+              sourceUrl: `https://example.test/portal/classes/${i + 1}`,
+            })),
+          ),
       ),
       {
         externalId: `pd-${pdDay}`,
@@ -473,6 +505,106 @@ export async function seedJob(_args: string[], ctx: JobContext) {
       entryUrl: "https://example.test/tournament/seed-t-found/enter",
     })
     .onConflictDoNothing();
+
+  // Email suggestions (EML): a new practice and a moved game from a made-up
+  // coach, back to pending on every run so the app's tests can use them.
+  const gmail = await source("Coach email (sample)", "gmail", "soccer");
+  // Approving a suggestion adds an event from this source, which the app
+  // can't delete (source events are only skipped): clear those so a fresh
+  // seed starts over.
+  await db.transaction(async (tx) => {
+    const fromMail = (await tx.select({ id: events.id }).from(events).where(eq(events.sourceId, gmail))).map(
+      (e) => e.id,
+    );
+    if (!fromMail.length) return;
+    await tx
+      .delete(conflicts)
+      .where(or(inArray(conflicts.eventA, fromMail), inArray(conflicts.eventB, fromMail)));
+    await tx.delete(eventOverrides).where(inArray(eventOverrides.eventId, fromMail));
+    await tx.delete(eventRevisions).where(inArray(eventRevisions.eventId, fromMail));
+    await tx.delete(events).where(inArray(events.id, fromMail));
+  });
+  const [game] = await db
+    .select({ id: events.id, start: events.startUtc })
+    .from(events)
+    .where(and(eq(events.sourceId, soccer), eq(events.externalId, "game-1")));
+  const wednesday = addDays(monday, 7 + 2);
+  const suggestions = [
+    {
+      key: "seed-mail-1",
+      subject: "Extra practice next week",
+      kind: "new",
+      target: null,
+      extracted: {
+        title: "Extra soccer practice",
+        date: wednesday,
+        startTime: "18:00",
+        endTime: "19:30",
+        location: "Oak Park Field 2",
+        category: "soccer",
+        notes: null,
+      },
+      confidence: { title: "high", date: "high", time: "medium", location: "low", overall: "medium" },
+      quote: "We'll add an extra practice next Wednesday, 6 to 7:30, probably at Oak Park.",
+    },
+    {
+      key: "seed-mail-2",
+      subject: "Saturday's game moved",
+      kind: "change",
+      target: game?.id ?? null,
+      extracted: {
+        title: "Game vs Green Giants",
+        date: game ? localDate(game.start, tz) : addDays(monday, 12),
+        startTime: "11:00",
+        endTime: "12:30",
+        location: "Oak Park Field 2",
+        category: "soccer",
+        notes: null,
+      },
+      confidence: { title: "high", date: "high", time: "high", location: "medium", overall: "high" },
+      quote: "Heads up: Saturday's game is now at 11am, same field.",
+    },
+  ];
+  for (const sg of suggestions) {
+    const [message] = await db
+      .insert(emailMessages)
+      .values({
+        sourceId: gmail,
+        gmailMessageId: sg.key,
+        receivedAt: new Date(),
+        fromAddress: "coach@example.test",
+        subject: sg.subject,
+        suggestions: 1,
+      })
+      .onConflictDoUpdate({
+        target: [emailMessages.sourceId, emailMessages.gmailMessageId],
+        set: { subject: sg.subject },
+      })
+      .returning({ id: emailMessages.id });
+    const values = {
+      kind: sg.kind,
+      targetEventId: sg.target,
+      extracted: sg.extracted,
+      confidence: sg.confidence,
+      quote: sg.quote,
+      status: "pending",
+      eventId: null,
+      decidedAt: null,
+    };
+    const [existing] = await db
+      .select({ id: emailSuggestions.id })
+      .from(emailSuggestions)
+      .where(eq(emailSuggestions.messageId, message.id));
+    if (existing) await db.update(emailSuggestions).set(values).where(eq(emailSuggestions.id, existing.id));
+    else
+      await db.insert(emailSuggestions).values({
+        sourceId: gmail,
+        messageId: message.id,
+        gmailMessageId: sg.key,
+        messageUrl: `https://mail.google.com/mail/u/0/#inbox/${sg.key}`,
+        ...values,
+      });
+  }
 
   ctx.log("seeded", { weeks: WEEKS, from: monday });
 }
