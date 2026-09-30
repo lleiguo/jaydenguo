@@ -24,6 +24,7 @@ import {
 import { addDays, localDate } from "../../domain/time";
 import type { Db, DbOrTx } from "../db/client";
 import type { Logger } from "../log";
+import { notifyEntryActions, notifyEntryChange } from "../push/kinds";
 import type { DriveTimer } from "./drive";
 
 // The tournament-entry jobs (TEN-9..11, plan M3b):
@@ -413,6 +414,8 @@ export async function runEnter(
       .onConflictDoNothing({
         target: [tennisEntries.sourceId, tennisEntries.tournamentExternalId, tennisEntries.eventNo],
       });
+  // TEN-9: the ones the owner has to enter or pay for (once each).
+  await notifyEntryActions(db, source.id, { log, now });
   log("tennis entries found", { source: source.name, ...result, requests: client.requests });
   return result;
 }
@@ -441,6 +444,7 @@ export async function runAcceptance(ctx: EntryContext, source: TcSource) {
       if (!page) continue;
       const update = listUpdate(e, page, name, ctx.now);
       await db.update(tennisEntries).set(update).where(eq(tennisEntries.id, e.id));
+      await notifyEntryChange(db, e, update.status, { log, now: ctx.now });
       counts[update.status] = (counts[update.status] ?? 0) + 1;
     }
   } catch (err) {
@@ -529,6 +533,7 @@ export async function runDrawWatch(
         }
       }
       await db.update(tennisEntries).set(set).where(eq(tennisEntries.id, e.id));
+      await notifyEntryChange(db, e, update.status, { log, now: ctx.now });
     }
   } catch (err) {
     if (!(err instanceof Budget)) throw err;

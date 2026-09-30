@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { credentials, settings, videoReviewRounds, videoReviews } from "@db/schema";
+import { credentials, notifications, settings, videoReviewRounds, videoReviews } from "@db/schema";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import type { JobLauncher } from "@/server/jobs/launcher";
@@ -125,6 +125,12 @@ describe("video reviews", { timeout: 60_000 }, () => {
       ].sort(),
     );
     expect(r.costUsd).toBeCloseTo(0.09, 5);
+    // PUSH-1: the review is done.
+    const [done] = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.target, `videos/${id}`));
+    expect(done).toMatchObject({ kind: "video", title: "Video review ready" });
     // VID-2: nothing kept after the review.
     expect(await tempDirs()).toEqual(before);
   });

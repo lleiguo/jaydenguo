@@ -23,6 +23,8 @@ public enum Route: Equatable, Sendable, Hashable {
     case sources
     case accounts
     case settings
+    /// Settings → App → Notifications (PUSH-3).
+    case notifications
 
     public init?(url: URL, siteHost: String = "jaydenguo.com") {
         let parts: [String]
@@ -55,6 +57,7 @@ public enum Route: Equatable, Sendable, Hashable {
         case (1, "suggestions", _, _), (2, "settings", "suggestions", _): self = .suggestions
         case (1, "sources", _, _), (2, "settings", "sources", _): self = .sources
         case (1, "accounts", _, _), (2, "settings", "accounts", _): self = .accounts
+        case (2, "settings", "notifications", _): self = .notifications
         case (1, "settings", _, _): self = .settings
         default: return nil
         }
@@ -67,7 +70,7 @@ public enum Route: Equatable, Sendable, Hashable {
         case .calendar, .event, .clashes: .calendar
         case .tennis, .tournament, .player, .tennisResults, .tennisAccuracy: .tennis
         case .swimming, .meet, .swimEvent: .swimming
-        case .videos, .video, .school, .suggestions, .sources, .accounts, .settings: .more
+        case .videos, .video, .school, .suggestions, .sources, .accounts, .settings, .notifications: .more
         }
     }
 

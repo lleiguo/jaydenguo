@@ -35,11 +35,14 @@ project picks the team in Signing & Capabilities):
 ```
 DEVELOPMENT_TEAM = ABCDE12345
 HUB_BUNDLE_SUFFIX = .dev
+HUB_APP_ENTITLEMENTS[sdk=iphoneos*] = HubApp/HubApp-NoPush.entitlements
 ```
 
 Keep `.dev` on a free Personal Team: its builds stop opening after 7 days
 and it can't use `com.jaydenguo.hub`, which belongs to the paid team
-(TestFlight). With the paid team, drop the suffix. Then, with the phone
+(TestFlight). A Personal Team can't sign push notifications either, so the
+last line leaves them out of phone builds (Simulator builds keep them).
+With the paid team, drop the suffix and that line. Then, with the phone
 plugged in and Developer Mode on:
 
 ```bash

@@ -373,6 +373,62 @@ N6.2–N6.4, follow in part 2):
 | N7.3 | `notify()` calls with dedup keys from clash detection, tennis draw watch, entries and acceptance, the video worker, the sync runner (3 failures, once a day) and email extraction. | PUSH-1, PUSH-5 | Integration test per kind; a repeated sync doesn't notify twice. |
 | N7.4 | App: permission prompt (after sign-in, explained first), device registration, notification settings screen, Notification Service Extension fetching the text, deep links on tap. | PUSH-2..4 | Manual check on device for each kind; the generic text shows with the network off. |
 
+**N7 as built (2026-09-30), against a fake APNs** (real pushes need the
+paid team and the key, O-1 and O-3):
+- Tables (migration 0023): `devices` (one per device session, deleted with
+  it; token, sandbox or production, the bundle ID as the APNs topic, the
+  kinds) and `notifications` (kind, dedup key, title, body, target; pruned
+  after 90 days by the daily sync).
+- Routes: `GET`/`POST`/`PATCH /api/v1/devices/current` (settings, register
+  the token after each launch, choose kinds; device sessions only) and
+  `GET /api/v1/notifications/{id}`.
+- `src/server/push/`: `apns.ts` signs an ES256 JWT with the `.p8` key
+  (refreshed every 50 minutes) and posts over HTTP/2 with `node:http2`;
+  410 or `BadDeviceToken` drops the device. Without `APNS_KEY` it only
+  logs. `notify()` stores the notification once per dedup key and sends
+  each phone that wants the kind `{aps: {alert: "Hub" / "New update",
+  mutable-content}, id, kind}`, nothing else.
+- Kinds (`kinds.ts`) and where they fire:
+  - clash: after every source's sync, for clashes in the next 14 days the
+    owner hasn't accepted (key: the event pair);
+  - draw: after a tennis sync, each new next opponent (key: draw, round,
+    opponent), so the first is "the draw is out";
+  - entry_action: after the Thursday entry job, entries found or waiting
+    for payment (key: entry and status);
+  - entry_change: reserve to main draw, or off the list, from the
+    acceptance and draw-watch jobs;
+  - video: when a review finishes or fails (key: review and finish time,
+    so a review run again notifies again);
+  - sync_failed: at the third failure in a row, once a day per source;
+  - suggestion: one per mailbox read with new suggestions (off by
+    default).
+- Departures from the spec: the generic text is "Hub" / "New update", not
+  "Jayden Hub" (AUTH-3: nothing about him on the lock screen); only the
+  worker sends (every kind is noticed by a job), so the key goes to the
+  worker alone.
+- Terraform: the `apns-key` secret (worker only), `apns_key_id` and
+  `apns_team_id`. The worker gets the key only once `apns_key_id` is set,
+  so an apply before the secret has a version doesn't break the job.
+  Steps in `infra/README.md`.
+- App: "Turn on notifications?" explained once after sign-in, then iOS's
+  prompt; the token registered after each launch; Settings → App →
+  Notifications (also `jaydenguohub://open/settings/notifications`) with a
+  switch per kind; taps open the target, or fetch it first when the
+  extension couldn't. `HubNotify`, a Notification Service Extension,
+  fetches the text with the device token, which now lives in the app group
+  (moved there once at launch) so the extension can read it.
+- Signing: `aps-environment` is in the app's entitlements. A free Personal
+  Team can't sign push for a phone, so `Local.xcconfig` picks
+  `HubApp-NoPush.entitlements` for phone builds; the app says "this build
+  can't get notifications" there.
+- Checked in the Simulator: the prompt, a real sandbox token registered
+  with the server, the settings screen, and a tap on a pushed id opening
+  the video review. `simctl push` skips service extensions, so the text
+  rewrite waits for the first real push (TestFlight).
+- Tests: integration (push, 6: registration and kinds, the payload and
+  JWT, dedup, who gets it, dead tokens, clashes, entry changes, once a day;
+  video review notifies); HubKit (4 new).
+
 ### N8: Share extension, Shortcuts and polish (≈ 4 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -418,7 +474,8 @@ about 16 days in.
 | N4 | done 2026-09-29 (#50) |
 | N5 | done 2026-09-29 (#52) |
 | N6 | done 2026-09-30 (#53, #55); SP-N4 waits for the owner. Intent 0005 (sport detected, and changed on the review screen) added to the Videos screens on `video/sport-detect` |
-| N7–N8 | not started |
+| N7 | built 2026-09-30 on `ios/n7-notifications` against a fake APNs; the owner adds the APNs key (O-3) and checks each kind on the phone once TestFlight works |
+| N8 | not started |
 | N9 | not planned (owner kept the no-upload default) |
 
 ## Spikes
@@ -427,5 +484,5 @@ about 16 days in.
 |---|---|
 | SP-N1 | **Passed 2026-09-29.** In production, a POST with `Authorization: Bearer <unknown token>` and no Origin gets 401 (the proxy saw the header and skipped the Origin check), while the same POST without it gets 403. So Firebase Hosting forwards `Authorization` to Cloud Run, and the `__session` fallback isn't needed. |
 | SP-N2 | Covered by N2: the sign-in sheet is `ASWebAuthenticationSession` with the `jaydenguohub` custom scheme (the e2e test walks the same redirects). The first real Google sign-in in the app is checked on a device once TestFlight works. |
-| SP-N3 | Not run yet (N7). |
+| SP-N3 | Partly: the APNs client (ES256 JWT, `node:http2`) works against a fake APNs over HTTP/2 in the integration tests, and a Simulator build gets a real sandbox token. Sending through Apple waits for the key (O-3). |
 | SP-N4 | Not run yet (N6.3). |

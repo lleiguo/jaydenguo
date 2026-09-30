@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- HubApp.entitlements without push, for phone builds signed by a free
+     Personal Team (Signing.xcconfig). Keep the app group in step. -->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>$(HUB_APP_GROUP)</string>
+	</array>
+</dict>
+</plist>

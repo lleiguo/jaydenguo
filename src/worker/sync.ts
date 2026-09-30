@@ -16,6 +16,8 @@ import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
 import { defaultEmailExtractor, syncEmails } from "../server/email/apply";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
+import { notifyClashes, notifyNextMatches, notifySuggestions, notifySyncFailed } from "../server/push/kinds";
+import { pruneNotifications } from "../server/push/notify";
 import type { JobContext } from "./context";
 import { workerBrowserSession } from "./browser-session";
 import { calendarCopyJob } from "./calendar-copy";
@@ -173,6 +175,7 @@ async function runLocked(
         log,
       });
       counts.added += read.suggestions;
+      await notifySuggestions(db, source, run.id, read.suggestions, { log, now: now() });
     }
     await db
       .update(syncRuns)
@@ -182,6 +185,15 @@ async function runLocked(
       .update(sources)
       .set({ lastSuccessAt: sql`now()`, consecutiveFailures: 0 })
       .where(eq(sources.id, sourceId));
+    // Notifications (intent 0004, PUSH-1): new clashes after any source,
+    // his next opponents after tennis. Never fails the run.
+    await notifyClashes(db, { log, now: now() }).catch((err) =>
+      log("clash notifications failed", { error: err }, "WARNING"),
+    );
+    if (batch.tennis)
+      await notifyNextMatches(db, { log, now: now() }).catch((err) =>
+        log("match notifications failed", { error: err }, "WARNING"),
+      );
     // TEN-6: Claude's paragraph for his next matches' predictions. Best
     // effort, after the run is recorded, so it never fails a sync.
     if (batch.tennis) {
@@ -223,6 +235,7 @@ async function runLocked(
         { alert: "sync_failed_repeatedly", source: source.name, message },
         "ERROR",
       );
+      await notifySyncFailed(db, source, message, { log, now: now() });
     }
     return { status: "failed", error: message };
   }
@@ -244,6 +257,8 @@ export async function syncJob(args: string[], ctx: JobContext) {
   if (target === "all") ctx.log("series extended", { series: await extendAllSeries(db) });
   // GCO-1: the Google Calendar copy follows the daily sync.
   if (target === "all") await calendarCopyJob([], ctx);
+  // Notifications are kept 90 days.
+  if (target === "all") ctx.log("notifications pruned", { removed: await pruneNotifications(db) });
   ctx.log("sync job done", { results });
 }
 

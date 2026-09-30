@@ -8,6 +8,12 @@
 // stays free for the paid team and TestFlight.
 DEVELOPMENT_TEAM =
 HUB_BUNDLE_SUFFIX =
-// Shared by the app and its widgets: the offline cache (OFF-3).
+// Shared by the app and its extensions: the offline cache (OFF-3) and the
+// device token (PUSH-2).
 HUB_APP_GROUP = group.com.jaydenguo.hub$(HUB_BUNDLE_SUFFIX)
+// The app's entitlements, with push (PUSH-6). A free Personal Team can't
+// sign push for a phone, so its Local.xcconfig picks the file without it:
+//
+//   HUB_APP_ENTITLEMENTS[sdk=iphoneos*] = HubApp/HubApp-NoPush.entitlements
+HUB_APP_ENTITLEMENTS = HubApp/HubApp.entitlements
 #include? "Local.xcconfig"

@@ -5,6 +5,8 @@ locals {
     "auth-secret"                = [google_service_account.web.member]
     "google-oauth-client-id"     = [google_service_account.web.member, google_service_account.worker.member]
     "google-oauth-client-secret" = [google_service_account.web.member, google_service_account.worker.member]
+    # The APNs .p8 key (intent 0004, PUSH-6): the worker sends the pushes.
+    "apns-key" = [google_service_account.worker.member]
   }
   secret_access = merge([
     for name, members in local.secrets : { for m in members : "${name}|${m}" => { name = name, member = m } }

@@ -4,6 +4,7 @@ import HubAPI
 import HubKit
 import Observation
 import UIKit
+import UserNotifications
 import WidgetKit
 
 /// App-wide state (intent 0004, §4.1): whether we're signed in, the home
@@ -37,6 +38,13 @@ final class AppModel {
     var toast: Toast?
     /// Set while screens show cached answers: when they were fetched (OFF-1).
     private(set) var offlineSince: Date?
+    /// Shows the "turn on notifications?" explanation (PUSH-3).
+    var askForNotifications = false
+    /// This phone's notification kinds, once registered.
+    private(set) var notificationSettings: Components.Schemas.DeviceSettings?
+    /// Set when iOS can't give this build a push token (a Personal Team
+    /// build on a phone).
+    private(set) var pushProblem: String?
     private var widgetItems: [WidgetSnapshot.Item]?
     private var cursor: Double?
 
@@ -50,7 +58,12 @@ final class AppModel {
         Task { [weak self] in
             for await event in events { self?.handle(event) }
         }
-        if phase == .signedIn { Task { await loadAccount() } }
+        if phase == .signedIn {
+            Task {
+                await loadAccount()
+                await settleNotifications()
+            }
+        }
     }
 
     static func live() -> AppModel {
@@ -66,7 +79,14 @@ final class AppModel {
             allowOverride: debug
         )
         let (events, continuation) = AsyncStream<HubEvent>.makeStream()
-        let tokens = KeychainTokenStore()
+        // The device token lives in the app group, so the notification
+        // extension can fetch a notification's text (PUSH-2).
+        let group = ResponseCache.bundleAppGroup
+        if let group, !UserDefaults.standard.bool(forKey: "tokenInAppGroup") {
+            try? KeychainTokenStore.moveIntoGroup(group)
+            UserDefaults.standard.set(true, forKey: "tokenInAppGroup")
+        }
+        let tokens = KeychainTokenStore(accessGroup: group)
         let arguments = ProcessInfo.processInfo.arguments
         if debug, let i = arguments.firstIndex(of: "-HubUITestToken"), arguments.indices.contains(i + 1) {
             // UI tests sign in with a token from the local server's dev route.
@@ -75,7 +95,10 @@ final class AppModel {
         let cache = ResponseCache.shared(appGroup: ResponseCache.bundleAppGroup)
         let client = HubClient(config: config, tokens: tokens, cache: cache, onEvent: { continuation.yield($0) })
         let lock = AppLock(forceOff: debug && arguments.contains("-HubNoLock"))
-        return AppModel(client: client, events: events, lock: lock)
+        SharedSettings(appGroup: group).baseURL = config.baseURL
+        let model = AppModel(client: client, events: events, lock: lock)
+        AppDelegate.model = model
+        return model
     }
 
     // MARK: Sign-in
@@ -91,6 +114,7 @@ final class AppModel {
             phase = .signedIn
             lock.didSignIn()
             await loadAccount()
+            await settleNotifications()
         } catch let error as SignInError {
             if error != .cancelled { signInError = error.message }
         } catch let error as HubError {
@@ -115,6 +139,8 @@ final class AppModel {
         cursor = nil
         openClashes = 0
         toast = nil
+        notificationSettings = nil
+        askForNotifications = false
         selectedTab = .today
         tennisPath = []
         swimmingPath = []
@@ -215,9 +241,82 @@ final class AppModel {
         case .tournament, .player, .tennisResults, .tennisAccuracy: tennisPath = [route]
         case .swimming: swimmingPath = []
         case .meet, .swimEvent: swimmingPath = [route]
-        case .school, .suggestions, .sources, .accounts, .settings, .videos: morePath = [route]
+        case .school, .suggestions, .sources, .accounts, .settings, .videos, .notifications: morePath = [route]
         case .video: morePath = [.videos, route]
         default: pendingRoute = route
+        }
+    }
+
+    // MARK: Notifications (PUSH-2..4)
+
+    /// After sign-in and at each launch: register again if allowed, or
+    /// explain and ask once (the UI tests skip the question).
+    func settleNotifications() async {
+        guard phase == .signedIn else { return }
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            UIApplication.shared.registerForRemoteNotifications()
+        case .notDetermined:
+            let testing = ProcessInfo.processInfo.arguments.contains("-HubUITestToken")
+            if !UserDefaults.standard.bool(forKey: "askedForNotifications"), !testing { askForNotifications = true }
+        default:
+            break
+        }
+    }
+
+    /// The owner said yes to the explanation: iOS asks.
+    func enableNotifications() async {
+        askForNotifications = false
+        UserDefaults.standard.set(true, forKey: "askedForNotifications")
+        let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+        if granted { UIApplication.shared.registerForRemoteNotifications() }
+    }
+
+    func declineNotifications() {
+        askForNotifications = false
+        UserDefaults.standard.set(true, forKey: "askedForNotifications")
+    }
+
+    func registerPush(token: String) async {
+        guard phase == .signedIn else { return }
+        pushProblem = nil
+        do {
+            notificationSettings = try await client.api.registerDevice(body: .json(.init(
+                token: token,
+                environment: .init(rawValue: Push.environment)!,
+                topic: Bundle.main.bundleIdentifier ?? "com.jaydenguo.hub"
+            ))).ok.body.json
+        } catch {
+            pushProblem = HubError.from(error)?.message ?? "Couldn't turn on notifications for this phone."
+        }
+    }
+
+    func pushUnavailable() {
+        pushProblem = "This build of the app can't get notifications. The TestFlight build can."
+    }
+
+    func loadNotificationSettings() async {
+        notificationSettings = try? await client.api.getDeviceSettings().ok.body.json
+    }
+
+    func setNotificationKinds(_ kinds: [String]) async {
+        do {
+            notificationSettings = try await client.api.setDeviceKinds(body: .json(.init(
+                kinds: kinds.compactMap { .init(rawValue: $0) }
+            ))).ok.body.json
+        } catch {
+            show(HubError.from(error)?.message ?? "Couldn't save that.")
+        }
+    }
+
+    /// PUSH-4: the target the extension saved, or asked for now when it
+    /// couldn't (offline when the notification came).
+    func openNotification(id: String?, target: String?) {
+        if let target, let route = Push.route(target: target) { return go(route) }
+        guard let id else { return }
+        Task {
+            if let text = await Push.text(id: id, client: client), let route = Push.route(target: text.target) { go(route) }
         }
     }
 

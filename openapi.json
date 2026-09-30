@@ -4113,6 +4113,190 @@
         }
       }
     },
+    "/api/v1/devices/current": {
+      "get": {
+        "operationId": "getDeviceSettings",
+        "summary": "This phone's notification settings.",
+        "description": "Spec: PUSH-3",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "registerDevice",
+        "summary": "Register this phone's APNs token.",
+        "description": "Spec: PUSH-3, PUSH-6",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{32,200}$"
+                  },
+                  "environment": {
+                    "type": "string",
+                    "enum": [
+                      "sandbox",
+                      "production"
+                    ]
+                  },
+                  "topic": {
+                    "type": "string",
+                    "pattern": "^com\\.jaydenguo\\.hub(\\.dev)?$"
+                  }
+                },
+                "required": [
+                  "token",
+                  "environment",
+                  "topic"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "setDeviceKinds",
+        "summary": "Choose which kinds of notification this phone gets.",
+        "description": "Spec: PUSH-3",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kinds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "clash",
+                        "draw",
+                        "entry_action",
+                        "entry_change",
+                        "video",
+                        "sync_failed",
+                        "suggestion"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "kinds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{id}": {
+      "get": {
+        "operationId": "getNotification",
+        "summary": "A notification's text and where a tap goes.",
+        "description": "Spec: PUSH-2, PUSH-4",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/videos": {
       "get": {
         "operationId": "listVideoReviews",
@@ -5907,6 +6091,61 @@
           "reason"
         ]
       },
+      "DeviceSettings": {
+        "type": "object",
+        "properties": {
+          "registered": {
+            "type": "boolean"
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "clash",
+                "draw",
+                "entry_action",
+                "entry_change",
+                "video",
+                "sync_failed",
+                "suggestion"
+              ]
+            }
+          },
+          "available": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "clash",
+                    "draw",
+                    "entry_action",
+                    "entry_change",
+                    "video",
+                    "sync_failed",
+                    "suggestion"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "label"
+              ]
+            }
+          }
+        },
+        "required": [
+          "registered",
+          "kinds",
+          "available"
+        ]
+      },
       "DeviceTokenResponse": {
         "type": "object",
         "properties": {
@@ -7005,6 +7244,46 @@
         },
         "required": [
           "email"
+        ]
+      },
+      "NotificationView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "clash",
+              "draw",
+              "entry_action",
+              "entry_change",
+              "video",
+              "sync_failed",
+              "suggestion"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "target",
+          "createdAt"
         ]
       },
       "Ok": {

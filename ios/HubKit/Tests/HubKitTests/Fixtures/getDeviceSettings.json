@@ -1,0 +1,41 @@
+{
+  "registered": false,
+  "kinds": [
+    "clash",
+    "draw",
+    "entry_action",
+    "entry_change",
+    "video",
+    "sync_failed"
+  ],
+  "available": [
+    {
+      "kind": "clash",
+      "label": "New clash in the next two weeks"
+    },
+    {
+      "kind": "draw",
+      "label": "Tennis draw out and next opponent"
+    },
+    {
+      "kind": "entry_action",
+      "label": "Tournament entry to finish or pay"
+    },
+    {
+      "kind": "entry_change",
+      "label": "Moved into the main draw, or off the entry list"
+    },
+    {
+      "kind": "video",
+      "label": "Video review done or failed"
+    },
+    {
+      "kind": "sync_failed",
+      "label": "A source keeps failing"
+    },
+    {
+      "kind": "suggestion",
+      "label": "New email suggestion"
+    }
+  ]
+}

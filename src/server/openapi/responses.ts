@@ -103,6 +103,9 @@ export type TennisPlayerResponse = {
 export type TennisResultsResponse = Omit<Awaited<ReturnType<typeof loadResults>>, "data">;
 export type TennisAccuracyResponse = Awaited<ReturnType<typeof loadCalibration>>;
 
+// Notifications (intent 0004, PUSH-2, PUSH-3)
+export type { DeviceSettings, NotificationView } from "../push/notify";
+
 // Video reviews (VID, PLAY)
 export type { VideoReviewDetail };
 export type VideosResponse = { reviews: VideoReviewSummary[] };
