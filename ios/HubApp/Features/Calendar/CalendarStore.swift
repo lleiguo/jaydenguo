@@ -15,7 +15,6 @@ final class CalendarStore {
 
     private(set) var index: CalendarIndex?
     private(set) var error: String?
-    private(set) var isRefreshingSources = false
     var mode: Mode = .agenda
     /// The home date the day, week and month views show.
     var anchor: String
@@ -27,6 +26,8 @@ final class CalendarStore {
     }
     /// School days opened to show each class (SCH-1), for this visit.
     var expandedSchoolDays: Set<String> = []
+    /// The agenda hides what's already over unless asked, for this visit.
+    var showPast = false
 
     private let model: AppModel
     private var loaded: (from: String, to: String)?
@@ -38,6 +39,7 @@ final class CalendarStore {
     }
 
     var homeTime: HomeTime { model.homeTime }
+    var isRefreshingSources: Bool { model.refreshing.contains("all") }
     var today: String { homeTime.localDate(.now) }
     var shown: [CalendarEvent] { index?.shown(filters) ?? [] }
     var people: [Person] { index?.payload.people ?? [] }
@@ -86,6 +88,8 @@ final class CalendarStore {
         var timed: [CalendarEvent]
         /// Days with two or more classes fold them into one block (SCH-1).
         var school: SchoolBlock?
+
+        var isEmpty: Bool { allDay.isEmpty && timed.isEmpty && school == nil }
     }
 
     func items(on date: String) -> DayItems {
@@ -95,6 +99,27 @@ final class CalendarStore {
         else { return DayItems(allDay: allDay, timed: timed) }
         let folded = Set(block.classes.map(\.id))
         return DayItems(allDay: allDay, timed: timed.filter { !folded.contains($0.id) }, school: block)
+    }
+
+    /// Over already: timed events that have ended, all-day ones from
+    /// earlier days.
+    func isPast(_ e: CalendarEvent, now: Date = .now) -> Bool {
+        if e.allDay { return e.allDayDates.lastExclusive <= homeTime.localDate(now) }
+        return (e.endDate ?? .distantFuture) <= now
+    }
+
+    func isPast(_ block: SchoolBlock, now: Date = .now) -> Bool {
+        (HomeTime.parse(block.end) ?? .distantFuture) <= now
+    }
+
+    /// The agenda's day: everything, or only what isn't over yet.
+    func upcomingItems(on date: String, now: Date = .now) -> DayItems {
+        var items = items(on: date)
+        guard !showPast else { return items }
+        items.allDay.removeAll { isPast($0, now: now) }
+        items.timed.removeAll { isPast($0, now: now) }
+        if let block = items.school, isPast(block, now: now) { items.school = nil }
+        return items
     }
 
     func mark(_ e: CalendarEvent) -> ClashMark { index?.mark(for: [e.id], filters: filters) ?? .none }
@@ -126,6 +151,14 @@ final class CalendarStore {
     func setSkipped(_ e: CalendarEvent, _ skip: Bool) async {
         await act(skip ? "Skipped." : "Not skipped any more.") {
             try await model.client.api.skipEvent(path: .init(id: e.id), body: .json(.init(skip: skip))).ok.body.json.undo
+        }
+    }
+
+    /// Skips (or un-skips) every occurrence still to come (CON-4).
+    func setSkippedRepeats(_ e: CalendarEvent, _ skip: Bool) async {
+        await act(skip ? "Skipped every repeat." : "Repeats not skipped any more.") {
+            let answer = try await model.client.api.skipRepeats(path: .init(id: e.id), body: .json(.init(skip: skip))).ok.body.json
+            return answer.undo
         }
     }
 
@@ -171,25 +204,9 @@ final class CalendarStore {
         }
     }
 
-    /// Syncs every source (SYNC-2) and follows along until they finish.
+    /// Syncs every source (SYNC-2); the calendar reloads as each lands.
     func refreshAllSources() async {
-        guard !isRefreshingSources else { return }
-        isRefreshingSources = true
-        defer { isRefreshingSources = false }
-        do {
-            _ = try await model.client.api.refreshAllSources().accepted
-            model.show("Refreshing every source…")
-            try await Task.sleep(for: .seconds(3))
-            for _ in 0..<60 {
-                let sources = try await model.client.api.listSources().ok.body.json.sources
-                if !sources.contains(where: \.running) { break }
-                try await Task.sleep(for: .seconds(3))
-            }
-            model.show("Sources refreshed.")
-        } catch {
-            model.show("Couldn't refresh the sources.")
-        }
-        await model.dataChanged()
+        await model.refreshAllSources()
         await reload()
     }
 

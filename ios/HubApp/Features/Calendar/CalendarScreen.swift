@@ -123,34 +123,49 @@ private struct CalendarContent: View {
     }
 }
 
-/// Agenda (the default, ICAL-1): day by day from today, with swipe actions
-/// (ICAL-5).
+/// Agenda (the default, ICAL-1): day by day from now, with swipe actions
+/// (ICAL-5). What's already over stays hidden until "Show earlier".
 struct AgendaView: View {
     @Bindable var store: CalendarStore
     @Binding var selected: EventRef?
+    @State private var confirmSkip: CalendarEvent?
 
     var body: some View {
-        let start = min(store.anchor, store.today)
+        let start = store.showPast ? min(store.anchor, CalendarDates.add(days: -7, to: store.today)) : store.today
         let days = CalendarDates.days(from: start, count: 60)
+        let now = Date.now
         ScrollViewReader { proxy in
             List {
+                Section {
+                    Button {
+                        withAnimation { store.showPast.toggle() }
+                    } label: {
+                        Label(
+                            store.showPast ? "Hide what's over" : "Show earlier",
+                            systemImage: store.showPast ? "chevron.down" : "chevron.up"
+                        )
+                        .font(.subheadline)
+                    }
+                    .accessibilityIdentifier("agenda-show-earlier")
+                }
                 ForEach(days, id: \.self) { date in
-                    let items = store.items(on: date)
-                    if date == store.today || !items.allDay.isEmpty || !items.timed.isEmpty || items.school != nil {
+                    let items = store.upcomingItems(on: date, now: now)
+                    if date == store.today || !items.isEmpty {
                         Section {
                             if store.closures.contains(date) {
                                 Label("School closed", systemImage: "xmark.octagon.fill").foregroundStyle(.secondary)
                             }
-                            if items.allDay.isEmpty && items.timed.isEmpty && items.school == nil {
-                                Text("Nothing on.").foregroundStyle(.secondary)
+                            if items.isEmpty {
+                                Text(store.showPast || store.items(on: date).isEmpty ? "Nothing on." : "Nothing else today.")
+                                    .foregroundStyle(.secondary)
                             }
-                            ForEach(items.allDay, id: \.id) { row($0) }
+                            ForEach(items.allDay, id: \.id) { row($0, now: now) }
                             if let block = items.school {
                                 SchoolBlockRow(block: block, homeTime: store.homeTime, mark: store.mark(block)) {
                                     store.expandedSchoolDays.insert(block.date)
                                 }
                             }
-                            ForEach(items.timed, id: \.id) { row($0) }
+                            ForEach(items.timed, id: \.id) { row($0, now: now) }
                         } header: {
                             Text(dayHeader(date)).foregroundStyle(date == store.today ? Color.accentColor : .secondary)
                         }
@@ -160,8 +175,23 @@ struct AgendaView: View {
             }
             .listStyle(.insetGrouped)
             .accessibilityIdentifier("agenda")
-            .refreshable { await store.reload() }
+            .refreshable {
+                await store.reload()
+                // Pulling also asks the sources for news (SYNC-2); the
+                // calendar reloads as each one lands.
+                Task { await store.refreshAllSources() }
+            }
             .onChange(of: store.anchor) { _, date in withAnimation { proxy.scrollTo(date, anchor: .top) } }
+            .onChange(of: store.showPast) { _, _ in proxy.scrollTo(store.today, anchor: .top) }
+        }
+        .confirmationDialog(
+            "Skip which?",
+            isPresented: Binding(get: { confirmSkip != nil }, set: { if !$0 { confirmSkip = nil } }),
+            titleVisibility: .hidden,
+            presenting: confirmSkip
+        ) { e in
+            Button("Skip this one") { Task { await store.setSkipped(e, true) } }
+            Button("Skip every repeat") { Task { await store.setSkippedRepeats(e, true) } }
         }
     }
 
@@ -172,15 +202,20 @@ struct AgendaView: View {
         return title
     }
 
-    private func row(_ e: CalendarEvent) -> some View {
+    private func row(_ e: CalendarEvent, now: Date) -> some View {
         Button { selected = EventRef(id: e.id) } label: {
             CalendarEventRow(event: e, homeTime: store.homeTime, mark: store.mark(e), owners: store.ownerNames(e))
+                .opacity(store.isPast(e, now: now) ? 0.5 : 1)
         }
         .buttonStyle(.plain)
         .listRowBackground(store.mark(e) == .clash ? Color.red.opacity(0.08) : nil)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button {
-                Task { await store.setSkipped(e, !e.isSkipped) }
+                if e.repeats == true && !e.isSkipped {
+                    confirmSkip = e
+                } else {
+                    Task { await store.setSkipped(e, !e.isSkipped) }
+                }
             } label: {
                 Label(e.isSkipped ? "Don't skip" : "Skip", systemImage: e.isSkipped ? "arrow.uturn.backward" : "forward.end")
             }

@@ -130,6 +130,11 @@ struct EventEditor: View {
         case .new(let date):
             let base = homeTime.startOfDay(date) ?? .now
             start = base.addingTimeInterval(17 * 3600)
+            // Later today, once 5 pm has gone: the next whole hour, so a new
+            // event doesn't land among the hidden past ones.
+            if date == homeTime.localDate(.now), start < .now {
+                start = base.addingTimeInterval(((Date.now.timeIntervalSince(base) / 3600).rounded(.down) + 1) * 3600)
+            }
             end = start.addingTimeInterval(3600)
             owners = primary.map { [$0] } ?? []
             weekdays = [CalendarDates.weekday(date)]

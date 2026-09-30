@@ -73,14 +73,9 @@ describe("syncSource", () => {
     expect(lines.join("\n")).not.toContain(token);
   });
 
-  it("allows one run per source per hour, and a re-run changes nothing (SYNC-3, SYNC-5)", async () => {
+  it("a feed refreshes again straight away, and a re-run changes nothing (SYNC-3, SYNC-5)", async () => {
     const id = await newSource("ical/b.ics");
     await syncSource(db, id, "manual", log, now);
-    expect(await syncSource(db, id, "manual", log, now)).toEqual({
-      status: "skipped",
-      reason: "ran recently",
-    });
-    process.env.SYNC_MIN_GAP_MINUTES = "0";
     expect(await syncSource(db, id, "manual", log, now)).toEqual({
       status: "succeeded",
       added: 0,

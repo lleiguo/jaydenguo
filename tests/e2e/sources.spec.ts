@@ -6,7 +6,7 @@ import { OWNER } from "./support/env";
 import { signInAs } from "./support/session";
 
 // Plan M1.5-M1.6: add sources, refresh on demand with live progress, run
-// history, readable failures, one run per hour.
+// history, readable failures; feeds can refresh again straight away.
 
 function sourceCard(page: Page, name: string) {
   return page.getByTestId("source").filter({ has: page.getByRole("heading", { name }) });
@@ -22,7 +22,7 @@ async function addFeedSource(page: Page, name: string, credLabel: string, catego
   await expect(sourceCard(page, name)).toBeVisible();
 }
 
-test("a feed source syncs on demand, shows its history, and a second refresh is refused", async ({
+test("a feed source syncs on demand, shows its history, and can refresh again straight away", async ({
   page,
   context,
 }, testInfo) => {
@@ -38,15 +38,14 @@ test("a feed source syncs on demand, shows its history, and a second refresh is 
   await expect(card).toContainText("3 added, 0 changed, 0 cancelled", { timeout: 30_000 });
   await expect(card).toContainText("OK");
 
-  // SYNC-2/5: a second refresh within the hour doesn't start another run.
+  // SYNC-5: feeds aren't held to the hourly limit; the re-run changes nothing.
   await card.getByRole("button", { name: "Refresh" }).click();
-  // The reason shows on the card, with when it can run again.
-  await expect(card.getByTestId("refresh-message")).toContainText("Synced recently");
-  await expect(card).toContainText("The next refresh is possible after");
+  await expect(card).toContainText("0 added, 0 changed, 0 cancelled", { timeout: 30_000 });
+  await expect(card).not.toContainText("The next refresh is possible after");
   await card.getByRole("button", { name: "History" }).click();
-  await expect(card.getByRole("table").locator("tbody tr")).toHaveCount(1);
-  await expect(card.getByRole("table")).toContainText("succeeded (manual)");
+  await expect(card.getByRole("table").locator("tbody tr")).toHaveCount(2);
   await expect(card.getByRole("table")).toContainText("3 / 0 / 0");
+  await expect(card.getByRole("table")).toContainText("0 / 0 / 0");
 });
 
 test("a school's public key dates page becomes school events and closure banners (SCH-2, CAL-7)", async ({

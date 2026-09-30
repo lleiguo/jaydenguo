@@ -23,6 +23,10 @@ export type EventView = {
   // Null for events added on this site.
   source: { id: string; name: string; kind: string } | null;
   seriesId: string | null;
+  // One occurrence of a repeating event (a series here, or a feed's), so
+  // "skip every repeat" applies. Optional so the app still reads answers
+  // cached before the field existed.
+  repeats?: boolean;
   lastSyncedAt: string | null;
   override: {
     id: string;

@@ -35,6 +35,8 @@ export type Accepted = { accepted: true };
 export type Ok = { ok: true };
 export type Created = { id: string };
 export type UndoResponse = { undo: Undo };
+// How many occurrences changed.
+export type SkipRepeatsResponse = { undo: Undo; count: number };
 export type ErrorResponse = { error: string; issues?: unknown };
 
 // Calendar (CAL, CON)

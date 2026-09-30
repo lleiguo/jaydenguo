@@ -359,7 +359,7 @@ final class AppModel {
     // MARK: Refresh (APP-7, SYNC-2)
 
     /// Syncs the sources of one kind (e.g. `tennis_tc`) and follows along
-    /// until they finish. Refusals (SYNC-5) show the server's reason.
+    /// until they finish.
     func refreshSources(kind: String, site: String) async {
         guard let sources = try? await client.api.listSources().ok.body.json.sources else {
             show("Couldn't refresh from \(site).")
@@ -378,27 +378,91 @@ final class AppModel {
         await refresh(ids: [id], key: id, site: name)
     }
 
+    /// Syncs every source that's switched on (Calendar, Settings → Sources).
+    func refreshAllSources() async {
+        guard let sources = try? await client.api.listSources().ok.body.json.sources else {
+            show("Couldn't refresh the sources.")
+            return
+        }
+        await refresh(ids: sources.filter(\.enabled).map(\.id), key: "all", site: "every source")
+    }
+
+    /// Starts each source's sync side by side (SYNC-2) and follows them
+    /// until each has a new finished run, telling the screens as each one
+    /// lands. A source synced within the hour is left alone (SYNC-5) and
+    /// named, so a refresh never claims more than it did.
     private func refresh(ids: [String], key: String, site: String) async {
         guard !refreshing.contains(key) else { return }
         refreshing.insert(key)
         defer { refreshing.remove(key) }
         do {
-            for id in ids { _ = try await client.api.refreshSource(path: .init(id: id)).accepted }
-            show("Refreshing from \(site). This takes a minute or two.")
-            try await Task.sleep(for: .seconds(3))
-            for _ in 0..<60 {
-                let sources = try await client.api.listSources().ok.body.json.sources
-                if !sources.contains(where: { ids.contains($0.id) && $0.running }) { break }
-                await dataChanged()
-                try await Task.sleep(for: .seconds(3))
+            let before = try await client.api.listSources().ok.body.json.sources.filter { ids.contains($0.id) && $0.enabled }
+            let now = Date.now
+            let recent = before.filter { s in
+                !s.running && (s.nextRefreshAt.flatMap(HomeTime.parse).map { $0 > now } ?? false)
             }
-            show("Updated from \(site).")
+            let due = before.filter { s in !s.running && !recent.contains { $0.id == s.id } }
+            var notStarted: Set<String> = []
+            await withTaskGroup(of: String?.self) { group in
+                for s in due {
+                    group.addTask { [client] in
+                        (try? await client.api.refreshSource(path: .init(id: s.id)).accepted) == nil ? s.id : nil
+                    }
+                }
+                for await id in group { if let id { notStarted.insert(id) } }
+            }
+            let started = Set(due.map(\.id)).subtracting(notStarted)
+            let failedToStart = due.filter { notStarted.contains($0.id) }.map(\.name)
+            var waiting = started.union(before.filter(\.running).map(\.id))
+            guard !waiting.isEmpty || !failedToStart.isEmpty else {
+                show(Self.recentMessage(recent, homeTime: homeTime, everything: true))
+                return
+            }
+            if !waiting.isEmpty { show("Refreshing from \(site). This takes a minute or two.") }
+            let baseline = Dictionary(before.map { ($0.id, $0.lastRun?.id) }, uniquingKeysWith: { a, _ in a })
+            let wasRunning = Set(before.filter(\.running).map(\.id))
+            var failed = failedToStart
+            // Ten minutes; the slowest sites take about four.
+            for _ in 0..<200 where !waiting.isEmpty {
+                try await Task.sleep(for: .seconds(3))
+                let current = try await client.api.listSources().ok.body.json.sources
+                var landed = false
+                for s in current where waiting.contains(s.id) && !s.running {
+                    guard wasRunning.contains(s.id) || s.lastRun?.id != baseline[s.id] ?? nil else { continue }
+                    waiting.remove(s.id)
+                    landed = true
+                    if s.lastRun?.status == "failed" { failed.append(s.name) }
+                }
+                if landed { await dataChanged() }
+            }
+            var message = !waiting.isEmpty
+                ? "Still refreshing from \(site); changes will show when it's done."
+                : failed.isEmpty ? "Updated from \(site)." : "Couldn't refresh \(Self.names(failed))."
+            if !recent.isEmpty { message += " " + Self.recentMessage(recent, homeTime: homeTime, everything: false) }
+            show(message)
         } catch is CancellationError {
             return
         } catch {
             show(HubError.from(error)?.message ?? "Couldn't refresh from \(site).")
         }
         await dataChanged()
+    }
+
+    private static func names(_ list: [String]) -> String {
+        list.count <= 1 ? list.joined() : list.dropLast().joined(separator: ", ") + " and " + list.last!
+    }
+
+    /// Sources refresh at most once an hour (SYNC-5).
+    private static func recentMessage(_ recent: [SourceView], homeTime: HomeTime, everything: Bool) -> String {
+        guard !recent.isEmpty else { return "Nothing to refresh." }
+        let next = recent.compactMap { $0.nextRefreshAt.flatMap(HomeTime.parse) }.min()
+        let after = next.map { " Try again after \(homeTime.time($0))." } ?? ""
+        if everything {
+            let who = recent.count == 1 ? recent[0].name : "Everything"
+            return "\(who) synced within the last hour.\(after)"
+        }
+        let verb = recent.count == 1 ? "was" : "were"
+        return "\(names(recent.map(\.name))) synced within the hour, so \(recent.count == 1 ? "it" : "they") \(verb) left as is."
     }
 }
 

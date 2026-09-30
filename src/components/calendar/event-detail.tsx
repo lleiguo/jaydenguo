@@ -31,11 +31,12 @@ export function EventDetail(props: {
   const info = CATEGORY_INFO[e.category];
   const o = e.override;
   const fromSource = !!e.source;
-  const act = async (fn: () => Promise<{ undo?: Undo } | null>, message: string) => {
+  type Result = { undo?: Undo; count?: number } | null;
+  const act = async (fn: () => Promise<Result>, message: string | ((res: Result) => string)) => {
     setError(null);
     try {
       const res = await fn();
-      props.onAction(message, res?.undo);
+      props.onAction(typeof message === "string" ? message : message(res), res?.undo);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -206,6 +207,22 @@ export function EventDetail(props: {
         >
           {o?.skip ? "Don't skip" : "Skip this one"}
         </button>
+        {e.repeats && (
+          <button
+            className="rounded border px-3 py-1"
+            onClick={() =>
+              act(
+                () =>
+                  call<{ undo: Undo; count: number }>(`/api/v1/events/${e.id}/skip-repeats`, "POST", {
+                    skip: !o?.skip,
+                  }),
+                (res) => repeatsMessage(!o?.skip, res?.count ?? 0),
+              )
+            }
+          >
+            {o?.skip ? "Don't skip any repeats" : "Skip every repeat"}
+          </button>
+        )}
         {o?.moved && (
           <button
             className="rounded border px-3 py-1"
@@ -305,3 +322,9 @@ const ATTENDANCE_LABEL: Record<Attendance, string> = {
   required: "required",
   optional: "optional",
 };
+
+// After "skip every repeat" or its reverse.
+function repeatsMessage(skip: boolean, count: number) {
+  const n = count === 1 ? "1 occurrence" : `${count} occurrences`;
+  return skip ? `Skipped ${n}.` : `${n[0].toUpperCase()}${n.slice(1)} not skipped any more.`;
+}

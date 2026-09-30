@@ -1057,6 +1057,61 @@
         }
       }
     },
+    "/api/v1/events/{id}/skip-repeats": {
+      "post": {
+        "operationId": "skipRepeats",
+        "summary": "Skip every upcoming occurrence of a repeating event, or un-skip them.",
+        "description": "Spec: CON-4",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "skip": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkipRepeatsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/events/{id}/attendance": {
       "post": {
         "operationId": "setAttendance",
@@ -1228,6 +1283,52 @@
             }
           }
         ],
+        "responses": {
+          "204": {
+            "description": "Done."
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/overrides/undo": {
+      "post": {
+        "operationId": "undoOverrides",
+        "summary": "Undo several overrides at once (skip every repeat).",
+        "description": "Spec: CON-3",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "maxItems": 2000,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "ids"
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "204": {
             "description": "Done."
@@ -6521,6 +6622,9 @@
               "null"
             ]
           },
+          "repeats": {
+            "type": "boolean"
+          },
           "lastSyncedAt": {
             "type": [
               "string",
@@ -8370,6 +8474,21 @@
           "ratedMatches",
           "last",
           "gameShare"
+        ]
+      },
+      "SkipRepeatsResponse": {
+        "type": "object",
+        "properties": {
+          "undo": {
+            "$ref": "#/components/schemas/Undo"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "undo",
+          "count"
         ]
       },
       "SourceCreated": {

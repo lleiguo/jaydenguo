@@ -30,7 +30,7 @@ struct TimeGridView: View {
                     GeometryReader { geo in
                         let columnWidth = (geo.size.width - gutter) / CGFloat(days.count)
                         ZStack(alignment: .topLeading) {
-                            // One anchor per hour, so the grid can open at 7:00.
+                            // One anchor per hour, so the grid can open where it matters.
                             VStack(spacing: 0) {
                                 ForEach(0..<24) { h in Color.clear.frame(height: hourHeight).id(h) }
                             }
@@ -44,10 +44,35 @@ struct TimeGridView: View {
                     }
                     .frame(height: hourHeight * 24)
                 }
-                .onAppear { proxy.scrollTo(7, anchor: .top) }
+                .onAppear { proxy.scrollTo(focusHour(), anchor: .top) }
+                .onChange(of: days) { _, _ in withAnimation { proxy.scrollTo(focusHour(), anchor: .top) } }
+                .refreshable {
+                    await store.reload()
+                    Task { await store.refreshAllSources() }
+                }
             }
         }
         .sensoryFeedback(.selection, trigger: drag.map { Int($0.minuteDelta) * 10 + $0.dayDelta })
+    }
+
+    /// The hour to open at: on today, the event on now or next (else now);
+    /// on other days, the first event (else 7:00).
+    private func focusHour(now: Date = .now) -> Int {
+        let spans: [(date: String, start: Date, end: Date)] = days.flatMap { date -> [(String, Date, Date)] in
+            let items = store.items(on: date)
+            var spans = items.timed.compactMap { e in e.startDate.flatMap { s in e.endDate.map { (date, s, $0) } } }
+            if let b = items.school, let s = HomeTime.parse(b.start), let e = HomeTime.parse(b.end) { spans.append((date, s, e)) }
+            return spans
+        }
+        let focus: (date: String, at: Date)?
+        if days.contains(store.today) {
+            let next = spans.filter { $0.date == store.today && $0.end > now }.map(\.start).min()
+            focus = (store.today, next ?? now)
+        } else {
+            focus = spans.min { $0.start < $1.start }.map { ($0.date, $0.start) }
+        }
+        guard let focus, let midnight = store.homeTime.startOfDay(focus.date) else { return 7 }
+        return min(max(Int(focus.at.timeIntervalSince(midnight) / 3600), 0), 23)
     }
 
     // MARK: Header and all-day row
