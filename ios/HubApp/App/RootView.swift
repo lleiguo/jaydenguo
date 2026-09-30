@@ -6,6 +6,7 @@ struct RootView: View {
     @Environment(AppLock.self) private var lock
 
     var body: some View {
+        @Bindable var model = model
         ZStack {
             switch model.phase {
             case .signedOut:
@@ -19,6 +20,10 @@ struct RootView: View {
                 PrivacyCover()
             }
         }
+        .sheet(isPresented: Binding(
+            get: { model.askForNotifications && model.phase == .signedIn && !lock.isLocked },
+            set: { if !$0 { model.declineNotifications() } }
+        )) { NotificationsPrompt() }
     }
 }
 

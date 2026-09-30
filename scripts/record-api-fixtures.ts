@@ -71,7 +71,9 @@ async function main() {
   const videos = saved.listVideoReviews as { reviews: { id: string; mode: string }[] };
   const debate = videos.reviews.find((v) => v.mode === "debate");
   if (debate) save("getVideoReview", await get(`/api/v1/videos/${debate.id}`));
-  console.log(`recorded ${Object.keys(saved).length + 7} fixtures in ${path.relative(process.cwd(), out)}`);
+  // The seed's sample notification (PUSH-2).
+  save("getNotification", await get("/api/v1/notifications/5eed0000-0000-4000-8000-000000000101"));
+  console.log(`recorded ${Object.keys(saved).length + 8} fixtures in ${path.relative(process.cwd(), out)}`);
 }
 
 if (require.main === module)

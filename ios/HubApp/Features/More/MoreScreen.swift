@@ -49,12 +49,14 @@ struct MoreDestination: View {
         case .settings: GeneralSettingsScreen()
         case .videos: VideosScreen()
         case .video(let id): VideoDetailScreen(id: id)
+        case .notifications: NotificationsScreen()
         default: EmptyView()
         }
     }
 }
 
-/// Settings → App: the account, the lock, the version and signing out.
+/// Settings → App: the account, notifications, the lock, the version and
+/// signing out.
 struct AppSettingsScreen: View {
     @Environment(AppModel.self) private var model
     @Environment(AppLock.self) private var lock
@@ -66,6 +68,9 @@ struct AppSettingsScreen: View {
             Section("Account") {
                 LabeledContent("Signed in as", value: model.email ?? "…")
                 LabeledContent("Home time zone", value: model.homeTime.timeZone.identifier)
+            }
+            Section {
+                NavigationLink { NotificationsScreen() } label: { Label("Notifications", systemImage: "bell") }
             }
             Section {
                 Toggle("Lock with Face ID", isOn: $lock.enabled)

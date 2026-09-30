@@ -141,6 +141,27 @@ picker at the top).
 8. Check your Google account has 2-step verification on (spec NFR-2):
    <https://myaccount.google.com/signinoptions/twosv>.
 
+## iPhone push notifications (intent 0004, plan O-3, PUSH-6)
+
+Needs the paid Apple Developer account. Until these steps are done the
+worker only logs what it would have sent.
+
+1. developer.apple.com → **Certificates, Identifiers & Profiles** → **Keys**
+   → **+**: name `hub-apns`, tick **Apple Push Notifications service
+   (APNs)**, **Continue**, **Register**, then **Download** the `.p8` file
+   (Apple lets you download it once). Note the **Key ID**, and your **Team
+   ID** (top right of the page).
+2. Store the key, then delete the download:
+   ```bash
+   gcloud secrets versions add apns-key --data-file="$HOME/Downloads/AuthKey_<KEY_ID>.p8"
+   rm "$HOME/Downloads/AuthKey_<KEY_ID>.p8"
+   ```
+3. In `infra/prod.tfvars` set `apns_key_id` and `apns_team_id`, then apply.
+   The worker gets the key only after this, so the order matters: a secret
+   without a version would stop the job from starting.
+4. Rotating: make a new key, add it as a new version of `apns-key`, change
+   `apns_key_id`, apply, then revoke the old key on the Keys page.
+
 ## Backups and restore (M1.13, spec NFR-3)
 
 Two layers keep the data safe:

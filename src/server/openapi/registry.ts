@@ -7,6 +7,7 @@ import { attendanceInput, eventInput, moveInput, ownersInput, seriesInput } from
 import { createCredentialInput, signInCodeInput, updateCredentialInput } from "../credentials/store";
 import { approveInput } from "../email/suggestions";
 import { personInput } from "../people";
+import { deviceKindsInput, registerDeviceInput } from "../push/notify";
 import { createSourceInput, updateSourceInput } from "../sources";
 import { addResultInput, correctResultInput, createMeetInput } from "../swim/mutations";
 import { addMatchInput, correctMatchInput } from "../tennis/mutations";
@@ -737,6 +738,42 @@ export const operations: Operation[] = [
     spec: "TEN-8",
     status: 204,
     response: null,
+  },
+
+  // Notifications (intent 0004, PUSH-2, PUSH-3)
+  {
+    method: "GET",
+    path: "/api/v1/devices/current",
+    operationId: "getDeviceSettings",
+    summary: "This phone's notification settings.",
+    spec: "PUSH-3",
+    response: "DeviceSettings",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/devices/current",
+    operationId: "registerDevice",
+    summary: "Register this phone's APNs token.",
+    spec: "PUSH-3, PUSH-6",
+    body: registerDeviceInput,
+    response: "DeviceSettings",
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/devices/current",
+    operationId: "setDeviceKinds",
+    summary: "Choose which kinds of notification this phone gets.",
+    spec: "PUSH-3",
+    body: deviceKindsInput,
+    response: "DeviceSettings",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/notifications/{id}",
+    operationId: "getNotification",
+    summary: "A notification's text and where a tap goes.",
+    spec: "PUSH-2, PUSH-4",
+    response: "NotificationView",
   },
 
   // Video reviews

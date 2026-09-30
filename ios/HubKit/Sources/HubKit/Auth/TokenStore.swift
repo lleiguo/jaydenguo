@@ -61,6 +61,17 @@ public struct KeychainTokenStore: TokenStore {
         let status = SecItemDelete(query() as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw TokenStoreError.keychain(status) }
     }
+
+    /// Moves a token saved before the extensions needed it (the app's own
+    /// group) into the shared group, so the notification extension can read
+    /// it (PUSH-2). Every copy is removed first, so signing out later can't
+    /// leave one behind.
+    public static func moveIntoGroup(_ group: String, service: String = "com.jaydenguo.hub") throws {
+        let any = KeychainTokenStore(service: service)
+        guard let token = try any.read() else { return }
+        try any.delete()
+        try KeychainTokenStore(service: service, accessGroup: group).save(token)
+    }
 }
 
 public final class MemoryTokenStore: TokenStore, @unchecked Sendable {

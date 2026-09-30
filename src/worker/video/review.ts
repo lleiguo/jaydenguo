@@ -19,7 +19,7 @@ import { googleAccessToken } from "../../adapters/google-calendar";
 import { SyncError } from "../../adapters/types";
 import { geminiFps } from "../../domain/frames";
 import { parseVideoLink } from "../../domain/video-links";
-import type { ReviewMode, VideoSport } from "../../domain/video-constants";
+import type { ReviewMode, ReviewModel, SportSource, VideoSport } from "../../domain/video-constants";
 import type { Db } from "../../server/db/client";
 import { claudeModel } from "../../server/llm/claude";
 import { geminiModel } from "../../server/llm/gemini";
@@ -27,6 +27,7 @@ import { LlmError, type StructuredModel } from "../../server/llm/types";
 import { registerSecret } from "../../server/log";
 import { runDebate, type Models } from "../../server/video/debate";
 import { detectSport } from "../../server/video/detect";
+import { notifyVideo } from "../../server/push/kinds";
 import { fakeModels } from "../../server/video/fake";
 import { mediaStore, playbackKey, type MediaStore } from "../../server/video/media-store";
 import { PROMPT_VERSION } from "../../server/video/prompts";
@@ -136,6 +137,24 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       .from(videoReviewRounds)
       .where(eq(videoReviewRounds.reviewId, id));
     return Math.round((cost?.sum ?? 0) * 10_000) / 10_000;
+  };
+  // PUSH-1: done or failed, with the review's current sport and verdict.
+  const notifyReview = async (status: "done" | "failed", error: string | null) => {
+    const [r] = await db.select().from(videoReviews).where(eq(videoReviews.id, id));
+    await notifyVideo(
+      db,
+      {
+        id,
+        status,
+        sport: r.sport as VideoSport,
+        sportSource: r.sportSource as SportSource,
+        filmedOn: r.filmedOn,
+        finishedAt: r.finishedAt ?? new Date(),
+        winner: (r.verdict as { winner?: ReviewModel } | null)?.winner ?? null,
+        error,
+      },
+      { log: ctx.log },
+    );
   };
   // The playback copy is already the reviewed part: no segment, not saved again.
   const copy = row.playbackKey && store ? row.playbackKey : null;
@@ -268,6 +287,7 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       playbackBytes: copy ? row.playbackBytes : playback ? media.clip.length : null,
     });
     ctx.log("video review done", { id, mode, costUsd: result.costUsd, playback: !!playback });
+    await notifyReview("done", null);
   } catch (err) {
     const message = failureMessage(err);
     await set({
@@ -278,6 +298,7 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       costUsd: await totalCost(),
     });
     ctx.log("video review failed", { id, error: err }, "WARNING");
+    await notifyReview("failed", message);
   } finally {
     // Nothing else is kept after the review (VID-2, intent 0003).
     await rm(dir, { recursive: true, force: true });

@@ -168,3 +168,15 @@ variable "costs_sync_schedule" {
   type        = string
   default     = "30 6 * * *"
 }
+
+variable "apns_key_id" {
+  description = "The APNs key's ID (intent 0004, PUSH-6). Empty until the key's secret has a version; pushes are only logged until then."
+  type        = string
+  default     = ""
+}
+
+variable "apns_team_id" {
+  description = "The Apple Developer team ID that owns the APNs key."
+  type        = string
+  default     = ""
+}

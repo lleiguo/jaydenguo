@@ -5,9 +5,17 @@ locals {
     GOOGLE_CLIENT_SECRET = "google-oauth-client-secret"
   }
 
-  worker_secret_env = {
+  # APNS_KEY only once apns_key_id is set: a secret without a version would
+  # stop the job from starting (intent 0004, PUSH-6; infra/README.md).
+  worker_secret_env = merge({
     GOOGLE_CLIENT_ID     = "google-oauth-client-id"
     GOOGLE_CLIENT_SECRET = "google-oauth-client-secret"
+  }, var.apns_key_id == "" ? {} : { APNS_KEY = "apns-key" })
+
+  # Push notifications to the iPhone app; without them pushes are logged.
+  apns_env = var.apns_key_id == "" ? {} : {
+    APNS_KEY_ID  = var.apns_key_id
+    APNS_TEAM_ID = var.apns_team_id
   }
 
   db_env = {
@@ -151,7 +159,7 @@ resource "google_cloud_run_v2_job" "worker" {
             BILLING_PROJECT      = var.project_id
             # Routes API for drive times to tournaments (TEN-9).
             ROUTES_PROJECT = var.project_id
-          })
+          }, local.apns_env)
           content {
             name  = env.key
             value = env.value

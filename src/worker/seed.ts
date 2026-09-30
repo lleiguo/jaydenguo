@@ -14,6 +14,7 @@ import {
   tennisEntries,
   videoReviewRounds,
   videoReviews,
+  notifications,
 } from "@db/schema";
 import type { Category } from "../domain/constants";
 import { addDays, localDate, weekday, zonedToUtc } from "../domain/time";
@@ -612,6 +613,20 @@ export async function seedJob(_args: string[], ctx: JobContext) {
         ...values,
       });
   }
+
+  // A notification about the sample review (intent 0004, PUSH-2), for the
+  // app's decoding tests and trying a tap: the push carries only this id.
+  await db
+    .insert(notifications)
+    .values({
+      id: "5eed0000-0000-4000-8000-000000000101",
+      kind: "video",
+      dedupKey: "sample:video-review",
+      title: "Video review ready",
+      body: "Tennis video (sample): Gemini's review won.",
+      target: "videos/5eed0000-0000-4000-8000-000000000001",
+    })
+    .onConflictDoNothing();
 
   // Video reviews (VID, PLAY): a finished debate on a forehand with a
   // playback copy (the 6-second test pattern, when MEDIA_DIR is set), and an
