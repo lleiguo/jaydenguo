@@ -28,7 +28,7 @@ import { notifyEntryActions, notifyEntryChange } from "../push/kinds";
 import type { DriveTimer } from "./drive";
 
 // The tournament-entry jobs (TEN-9..11, plan M3b):
-// - Thursday noon (`tennis:enter`): find Rookie tournaments open for entry
+// - Thursday noon (`tennis:enter`): find U10 tournaments open for entry
 //   near home, pick his event (e.g. U9 orange), keep those within the
 //   drive limit, one per weekend, and enter him, or list them with the
 //   site's entry link for the owner.
@@ -46,9 +46,10 @@ import type { DriveTimer } from "./drive";
 
 type EntryRow = typeof tennisEntries.$inferSelect;
 
-// Tennis Canada's "Rookie" tournament category (U10 and younger), the
-// site's "Online entry open" status, as the search form names them.
-const ROOKIE_CATEGORY = "7207";
+// The site's "U10" age group and "Online entry open" status, as the search
+// form names them. The age group, not a tournament category: his events sit
+// in Rookie tournaments and in Provincial ones ("Rising Stars") alike.
+const U10_AGE_GROUP = "10";
 const ENTRY_OPEN = "2";
 const MAX_SEARCH_PAGES = 5;
 const ENTER_REQUESTS = 150;
@@ -153,11 +154,11 @@ const searchForm = (settings: EntrySettings, radiusKm: number) => ({
   "TournamentFilter.DateFilterType": "0",
   "TournamentFilter.PostalCode": settings.postalCode!,
   "TournamentFilter.Distance": String(radiusKm),
-  "TournamentExtendedFilter.TournamentCategoryIDList[0]": ROOKIE_CATEGORY,
+  "TournamentExtendedFilter.AgeGroupID": U10_AGE_GROUP,
 });
 
 // Tournaments in the coming weeks he's on an entry list for that the app
-// doesn't know about yet: every Rookie tournament near home, entry open or
+// doesn't know about yet: every U10 tournament near home, entry open or
 // closed, and every event's list. Records each with where he stands.
 // Tournaments already being followed (found or entered) are left to the
 // list checks.
@@ -486,10 +487,11 @@ export async function runAcceptance(ctx: EntryContext, source: TcSource) {
   return { ...counts, listed };
 }
 
-// Rookie tournaments near home in the coming months that the app hasn't
+// U10 tournaments near home in the coming months that the app hasn't
 // seen. One that fits him and opens for entry later is kept as "not open
 // yet" (the Thursday job enters him once it opens); one that doesn't fit is
-// kept as skipped, with why. One open now is left to the Thursday job.
+// kept as skipped, with why. One open now is left to the Thursday job, and
+// one with no events yet is read again next time.
 async function discover(
   ctx: EntryContext,
   source: TcSource,
@@ -523,6 +525,7 @@ async function discover(
       known.add(t.id);
       const list = await client.get(`/sport/events.aspx?id=${t.id}`);
       const events = list ? parseEventList(list.html) : [];
+      if (!events.length) continue;
       const event = pickEvent(events, settings.prefs);
       const overview = await client.get(`/tournament/${t.id}`);
       const d = overview ? parseTournament(overview.html, t.id) : null;
@@ -534,9 +537,7 @@ async function discover(
       let driveMinutes: number | null = null;
       if (!event) {
         status = "skipped";
-        note = events.length
-          ? `No event for him: ${events.map((e) => e.name).join(", ")}.`
-          : "No events listed yet.";
+        note = `No event for him: ${events.map((e) => e.name).join(", ")}.`;
       } else {
         const where = [d?.venue ?? t.venue, d?.city, d?.region].filter(Boolean).join(", ");
         if (drive && where) {
@@ -549,7 +550,9 @@ async function discover(
         if (driveMinutes !== null && driveMinutes > settings.prefs.maxDriveMinutes) {
           status = "skipped";
           note = `About ${driveMinutes} min away, over the ${settings.prefs.maxDriveMinutes} min limit.`;
-        } else if (d?.entryOpens && d.entryOpens > today) {
+        } else if (d?.entryOpens && (d.entryOpens > today || (d.entryOpens === today && !t.entryOpen))) {
+          // Entry opens at a time of day: on the day itself the search says
+          // whether it has.
           status = "not_open";
         }
       }

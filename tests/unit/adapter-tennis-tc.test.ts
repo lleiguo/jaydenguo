@@ -50,7 +50,7 @@ describe("tennis_tc parsers", () => {
     expect(parseTournament(page("tournament-current.html"), currentTournament)).toMatchObject({
       startDate: "2024-09-26",
       endDate: "2024-09-30",
-      venue: "Fixture Courts 27",
+      venue: "Fixture Courts 19",
       entryDeadline: "2024-09-17",
     });
   });

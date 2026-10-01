@@ -210,7 +210,7 @@ test.describe("tennis", () => {
     await page.goto("/tennis");
     await page.getByRole("link", { name: "Fixture Open 11" }).first().click();
     await expect(page.getByRole("heading", { name: "Fixture Open 11" })).toBeVisible();
-    await expect(page.getByText("2024-09-26 – 2024-09-30 · Fixture Courts 27")).toBeVisible();
+    await expect(page.getByText("2024-09-26 – 2024-09-30 · Fixture Courts 19")).toBeVisible();
     await expect(page.getByTestId("draw")).toContainText("Next: Semi final vs Casey Brackenridge");
     const qf = page.getByTestId("tennis-match").filter({ hasText: "Quarter final" });
     await expect(qf).toContainText("W 6–1 6–1");

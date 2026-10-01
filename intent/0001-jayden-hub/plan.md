@@ -750,6 +750,19 @@ tournament near home in the next 28 days, open or closed (the search's
 and record the ones he's on with main draw or reserve status. The
 acceptance job's request cap is 100 (was 60).
 
+Rising Stars tournaments missed (owner, 2026-10-01): the searches asked for
+the site's "Rookie" category, but Rising Stars tournaments (U9 orange
+included) are in "Provincial", so they never showed. All three searches now
+filter on the site's U10 age group instead of a category
+(`TournamentExtendedFilter.AgeGroupID=10`), which holds both. "mixed" left
+the default "never" words (migration 0025 for settings saved with the old
+default): "double" covers mixed doubles, and it kept out "U9 Mixed - Orange",
+a singles event for boys and girls. A tournament whose entry opens later
+today is "not open yet" too (the overview's date has no time; the search's
+entry button says whether it has opened). One with no events listed yet is
+read again at the next refresh rather than kept as skipped. The overview's
+venue is the venue's title, not the "Route" button above it.
+
 Whose event (owner, 2026-09-28): a parent's own appointment on the family
 calendar (e.g. Lei's dentist) shouldn't clash with Jayden's day. The event
 detail has a "Jayden's attendance" menu on every event. For events from a
