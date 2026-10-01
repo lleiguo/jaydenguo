@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { credentials, sources, tennisEntries } from "@db/schema";
 import { TcLoginError, tcRegistrarClient } from "@/adapters/tennis-tc/registrar";
@@ -133,7 +133,13 @@ describe("tennis registrar", () => {
         registrar,
       });
       expect(result).toMatchObject({ entered: 1, left: 0 });
-      const [a] = await db.select().from(tennisEntries).where(eq(tennisEntries.sourceId, s.id));
+      // The sync's own entry refresh may have recorded others (e.g. skipped).
+      const [a] = await db
+        .select()
+        .from(tennisEntries)
+        .where(
+          and(eq(tennisEntries.sourceId, s.id), eq(tennisEntries.tournamentExternalId, ENTRY_FIXTURE.a)),
+        );
       expect(a).toMatchObject({ tournamentExternalId: ENTRY_FIXTURE.a, status: "entered" });
       expect(a.note).toContain("Entered in BU9 - Orange");
 

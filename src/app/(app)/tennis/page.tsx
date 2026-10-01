@@ -3,9 +3,7 @@ import { eq } from "drizzle-orm";
 import { sources } from "@db/schema";
 import { RefreshButton } from "@/components/sport/refresh-button";
 import { dates, DrawLine, muted, NextMatchLine, pct, PredictionBox } from "@/components/tennis/bits";
-import { formatRecord } from "@/domain/tennis";
-import { ACTIVE_ENTRY } from "@/domain/tennis-entry";
-import type { EntryStatus } from "@/domain/tennis-constants";
+import { firstName, formatRecord } from "@/domain/tennis";
 import { getDb } from "@/server/db";
 import {
   listTournaments,
@@ -16,10 +14,13 @@ import {
 } from "@/server/tennis/load";
 import { explanationsFor } from "@/server/tennis/explain";
 import { listEntries, type EntryView } from "@/server/tennis/entries";
+import { entrySections, tennisLastUpdated } from "@/server/tennis/overview";
 import { upcomingRows, type UpcomingRow } from "@/server/tennis/upcoming";
 
-// Tennis (TEN-2, TEN-3, TEN-6): his next matches with a prediction, and
-// tournaments in progress, coming up and past.
+// Tennis (TEN-2, TEN-3, TEN-6, TEN-9, TEN-10): his next matches with a
+// prediction; tournaments in progress and the ones he's entered in;
+// matching ones not open for entry yet and skipped ones (refreshed with
+// every sync); past tournaments.
 export default async function TennisPage() {
   const db = await getDb();
   const [list, tc] = await Promise.all([
@@ -30,16 +31,22 @@ export default async function TennisPage() {
   const predictions = nextMatches.map((n) =>
     n.draw.opponentKey ? predictAgainst(data, n.draw.opponentKey) : null,
   );
-  const [explanations, entries] = await Promise.all([
+  const [explanations, entries, lastUpdated] = await Promise.all([
     explanationsFor(db, predictions),
     listEntries(db, data.today),
+    tennisLastUpdated(db),
   ]);
+  const sections = entrySections(entries, data.today);
+  const name = firstName(data.self?.name);
   return (
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-xl font-semibold">🎾 Tennis</h1>
         <RefreshButton sourceIds={tc.map((s) => s.id)} site="Tennis Canada" what="tournaments and matches" />
       </div>
+      <p className={`text-sm ${muted}`} data-testid="last-updated">
+        Last updated: {lastUpdated ? updatedAt(lastUpdated, data.timeZone) : "not synced yet"}
+      </p>
       <nav className="flex flex-wrap gap-3 text-sm">
         <Link href="/tennis/results" className="underline">
           Results and W–L
@@ -79,8 +86,14 @@ export default async function TennisPage() {
       )}
 
       <TournamentList id="in-progress" title="In progress" list={inProgress} empty={null} />
-      <Upcoming rows={upcomingRows(data.tournaments, entries, data.today)} data={data} />
-      <Entries entries={entries.filter((e) => !ACTIVE_ENTRY.includes(e.status as EntryStatus))} />
+      <Upcoming
+        rows={upcomingRows(data.tournaments, entries, data.today)}
+        data={data}
+        title={name ? `Tournaments ${name} is entered in` : "Tournaments he's entered in"}
+      />
+      <Entries entries={sections.found} />
+      <NotOpen entries={sections.notOpen} />
+      <Skipped entries={sections.skipped} />
       <TournamentList id="past" title="Past tournaments" list={past} empty="No past tournaments." />
     </main>
   );
@@ -142,17 +155,17 @@ function TournamentCard({ t }: { t: TournamentView }) {
 
 // TEN-2, TEN-10: every tournament he's registered for, before and after the
 // acceptance list and the draw, with his next opponent and the prediction.
-function Upcoming({ rows, data }: { rows: UpcomingRow[]; data: TennisData }) {
+function Upcoming({ rows, data, title }: { rows: UpcomingRow[]; data: TennisData; title: string }) {
   const th = "py-1 pr-3 font-medium";
   const td = "py-1.5 pr-3 align-top";
   return (
     <section aria-labelledby="upcoming" className="flex flex-col gap-2">
       <h2 id="upcoming" className="text-lg font-semibold">
-        Upcoming tournaments
+        {title}
       </h2>
       {rows.length ? (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm" aria-label="Upcoming tournaments">
+          <table className="w-full text-left text-sm" aria-label={title}>
             <thead className={muted}>
               <tr>
                 <th className={th}>Tournament</th>
@@ -238,7 +251,7 @@ function Upcoming({ rows, data }: { rows: UpcomingRow[]; data: TennisData }) {
           </table>
         </div>
       ) : (
-        <p className={`text-sm ${muted}`}>No upcoming tournaments.</p>
+        <p className={`text-sm ${muted}`}>Not entered in any upcoming tournament.</p>
       )}
     </section>
   );
@@ -323,6 +336,104 @@ function Entries({ entries }: { entries: EntryView[] }) {
             </li>
           );
         })}
+      </ul>
+    </section>
+  );
+}
+
+// "Wed Sept 30, 4:05 p.m." in the home time zone.
+function updatedAt(iso: string, timeZone: string) {
+  return new Date(iso).toLocaleString("en-CA", {
+    timeZone,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+const entryWindow = (e: EntryView) =>
+  [e.entryOpens && `opens ${e.entryOpens}`, e.entryDeadline && `closes ${e.entryDeadline}`]
+    .filter(Boolean)
+    .join(" · ") || "—";
+
+// Matching tournaments whose online entry hasn't opened yet; the Thursday
+// job enters him once it does (TEN-9).
+function NotOpen({ entries }: { entries: EntryView[] }) {
+  const th = "py-1 pr-3 font-medium";
+  const td = "py-1.5 pr-3 align-top";
+  return (
+    <section aria-labelledby="not-open" className="flex flex-col gap-2">
+      <h2 id="not-open" className="text-lg font-semibold">
+        Upcoming matching tournaments (not yet open)
+      </h2>
+      {entries.length ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm" aria-label="Upcoming matching tournaments">
+            <thead className={muted}>
+              <tr>
+                <th className={th}>Tournament</th>
+                <th className={th}>Date</th>
+                <th className={th}>Venue</th>
+                <th className="py-1 font-medium">Entry</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((e) => (
+                <tr
+                  key={e.id}
+                  data-testid="not-open"
+                  className="border-t border-neutral-200 dark:border-neutral-800"
+                >
+                  <td className={td}>
+                    <a
+                      href={e.tournamentUrl}
+                      className="font-semibold underline"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {e.tournamentName}
+                    </a>
+                    {e.eventName && <div className={muted}>{e.eventName}</div>}
+                  </td>
+                  <td className={`${td} whitespace-nowrap tabular-nums`}>{dates(e.startDate, e.endDate)}</td>
+                  <td className={td}>
+                    {[e.venue, e.city].filter(Boolean).join(", ") || "—"}
+                    {e.driveMinutes !== null && <div className={muted}>{e.driveMinutes} min drive</div>}
+                  </td>
+                  <td className="py-1.5 align-top tabular-nums">{entryWindow(e)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className={`text-sm ${muted}`}>None found yet.</p>
+      )}
+    </section>
+  );
+}
+
+// Tournaments near home that don't fit him (wrong ball or age, too far, or
+// the same weekend as one he's in), with why.
+function Skipped({ entries }: { entries: EntryView[] }) {
+  if (!entries.length) return null;
+  return (
+    <section aria-labelledby="skipped" className="flex flex-col gap-2">
+      <h2 id="skipped" className="text-lg font-semibold">
+        Skipped
+      </h2>
+      <ul className="flex flex-col gap-1 text-sm">
+        {entries.map((e) => (
+          <li key={e.id} data-testid="skipped">
+            <a href={e.tournamentUrl} className="underline" target="_blank" rel="noreferrer">
+              {e.tournamentName}
+            </a>{" "}
+            <span className="tabular-nums">({dates(e.startDate, e.endDate)})</span>
+            {e.note && <span className={muted}> – {e.note}</span>}
+          </li>
+        ))}
       </ul>
     </section>
   );

@@ -10,7 +10,9 @@ import { listPeople } from "../server/people";
 import { getHomeTimeZone } from "../server/settings";
 import { syncSwim } from "../server/swim/apply";
 import { syncTennis } from "../server/tennis/apply";
-import { syncEntries } from "../server/tennis/entries";
+import { runRefresh, syncEntries } from "../server/tennis/entries";
+import { routesDriveTimer } from "../server/tennis/drive";
+import { tennisTestNow } from "../adapters/tennis-tc";
 import { localDate } from "../domain/time";
 import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
@@ -194,6 +196,20 @@ async function runLocked(
       await notifyNextMatches(db, { log, now: now() }).catch((err) =>
         log("match notifications failed", { error: err }, "WARNING"),
       );
+    // Tournament entries (TEN-9, TEN-10) on every Tennis refresh: entry
+    // lists, matching tournaments not open yet, and skipped ones. Best
+    // effort, like the explanations below.
+    if (batch.tennis) {
+      try {
+        await runRefresh(
+          { db, log, now: tennisTestNow() ?? now(), timeZone: homeTimeZone },
+          { id: source.id, name: source.name, config: source.config },
+          { drive: routesDriveTimer() },
+        );
+      } catch (err) {
+        log("tennis entries refresh failed", { error: err }, "WARNING");
+      }
+    }
     // TEN-6: Claude's paragraph for his next matches' predictions. Best
     // effort, after the run is recorded, so it never fails a sync.
     if (batch.tennis) {

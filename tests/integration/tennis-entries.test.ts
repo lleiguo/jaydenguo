@@ -11,6 +11,7 @@ import {
   runAcceptance,
   runDrawWatch,
   runEnter,
+  runRefresh,
   type EntryContext,
   type Registrar,
 } from "@/server/tennis/entries";
@@ -28,6 +29,8 @@ describe("tennis tournament entries", () => {
   const requests: string[] = [];
   // Tests set his row on tournament A's entry list here.
   let selfRow = "";
+  // And when online entry opens for tournament A ("" = no date shown).
+  let opensA = "";
   const log = createLogger((l) => process.env.DEBUG_LOG && console.log(l));
   const ctx = (): EntryContext => ({ db, log, now: TC_NOW, timeZone: "America/Toronto" });
   const drive = async (_from: string, to: string) => (to.includes("Faraway") ? 100 : 30);
@@ -42,8 +45,10 @@ describe("tennis tournament entries", () => {
         categoryMapping: { default: "tennis" },
       })
       .returning();
-    // His name comes from the first sync.
+    // His name comes from the first sync. The sync also refreshes entries
+    // (tested on its own below); the job tests start without them.
     expect((await syncSource(db, s.id, "manual", log, () => TC_NOW)).status).toBe("succeeded");
+    await db.delete(tennisEntries).where(eq(tennisEntries.sourceId, s.id));
     return s;
   }
   const entriesOf = (sourceId: string) =>
@@ -61,7 +66,15 @@ describe("tennis tournament entries", () => {
     process.env.FETCH_MIN_GAP_MS = "0";
     server = createFakeTc({
       requests,
-      edit: (file, html) => (file === "entries/event-a6.html" ? html.replace("<!--SELF-->", selfRow) : html),
+      edit: (file, html) =>
+        file === "entries/event-a6.html"
+          ? html.replace("<!--SELF-->", selfRow)
+          : file === "entries/tournament-a.html" && opensA
+            ? html.replace(
+                '<ul class="list">',
+                `<ul class="list"><li class="list__item"><span class="list__value">Entry opens</span><time datetime="${opensA}T08:00:00">${opensA}</time></li>`,
+              )
+            : html,
     });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -98,6 +111,33 @@ describe("tennis tournament entries", () => {
     // A second run adds nothing: known tournaments are skipped.
     expect(await runEnter(ctx(), s, { drive, registrar: manualRegistrar })).toMatchObject({ found: 0 });
     expect(await entriesOf(s.id)).toHaveLength(2);
+  });
+
+  it("every refresh: keeps a matching tournament not open yet, and skipped ones with why; Thursday enters it once open", async () => {
+    selfRow = "";
+    opensA = "2024-10-03";
+    try {
+      const s = await newSource();
+      expect(await runRefresh(ctx(), s, { drive })).toMatchObject({ notOpen: 1, skipped: 1 });
+      const rows = await entriesOf(s.id);
+      const a = rows.find((r) => r.tournamentExternalId === ENTRY_FIXTURE.a);
+      expect(a).toMatchObject({ status: "not_open", entryOpens: "2024-10-03", eventName: "U9 Orange Boys" });
+      const c = rows.find((r) => r.tournamentExternalId === ENTRY_FIXTURE.c);
+      expect(c).toMatchObject({ status: "skipped", eventName: "" });
+      expect(c!.note).toMatch(/^No event for him: /);
+      // B is open now: left to the Thursday job.
+      expect(rows.some((r) => r.tournamentExternalId === ENTRY_FIXTURE.b)).toBe(false);
+      // A second refresh reads nothing it already knows.
+      expect(await runRefresh(ctx(), s, { drive })).toMatchObject({ notOpen: 0, skipped: 0 });
+
+      // Entry opened: Thursday picks it up.
+      opensA = "";
+      await runEnter(ctx(), s, { drive, registrar: manualRegistrar });
+      const [after] = (await entriesOf(s.id)).filter((r) => r.tournamentExternalId === ENTRY_FIXTURE.a);
+      expect(after.status).not.toBe("not_open");
+    } finally {
+      opensA = "";
+    }
   });
 
   it("Thursday: records an entry the registrar made, and drops tournaments beyond the drive limit", async () => {

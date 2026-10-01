@@ -237,6 +237,8 @@ export const tennisEntries = pgTable(
     city: text("city"),
     region: text("region"),
     entryDeadline: date("entry_deadline"),
+    // When online entry opens (from the tournament page).
+    entryOpens: date("entry_opens"),
     eventNo: text("event_no").notNull(),
     eventName: text("event_name").notNull(),
     // Driving time from home, and whether it's an estimate (no route found).

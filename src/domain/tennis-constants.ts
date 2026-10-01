@@ -20,5 +20,7 @@ export const ENTRY_STATUSES = [
   "reserve",
   "withdrawn",
   "skipped",
+  // A matching tournament whose online entry hasn't opened yet.
+  "not_open",
 ] as const;
 export type EntryStatus = (typeof ENTRY_STATUSES)[number];

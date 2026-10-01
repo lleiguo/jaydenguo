@@ -375,6 +375,7 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
 | M3b.5 | `tennis:draw-watch` (hourly, Mon–Wed 07:00–21:00): find his draw, then the full sync; the sync reads entered tournaments before his profile lists them. Opponent level on the next-match card; no score band. | TEN-11, TEN-3, TEN-6 | Integration test: draw found → sync → watch stops; nothing to watch → no requests. e2e for the card. |
 | M3b.6 | Registrar: enter him on the site with the stored Tennis Canada login (the Accounts page option kept for this), and tell "entered" from "payment needed". | TEN-9, CRED-2 | **Built 2026-09-28** (`m3b/6-auto-entry`): unit tests on the form and outcomes, integration tests against the fake site's signed-in pages. |
 | M3b.7 | Terraform: three Cloud Scheduler jobs, the Routes API, `ROUTES_PROJECT` and Service Usage Consumer for the worker. | TEN-9..11 | `terraform validate`; applied before the code merges. |
+| M3b.8 | Entries refresh after every Tennis sync: entry lists, his own entries, matching tournaments not open yet (`not_open`, `entry_opens`, migration 0024) and skipped ones with why; Tennis page sections. | TEN-12 | **Built 2026-09-30** (`tennis/tournaments-report`): integration test against the fake site (not open → Thursday picks it up; skipped with reason), e2e for the sections. |
 
 **Build notes (M3b, 2026-09-27):**
 - Everything but entering is read from **public** pages (spikes.md SP-7):

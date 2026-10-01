@@ -178,3 +178,11 @@ export function parseSets(text: string): SetScore[] | null {
 }
 
 export const flipSets = (sets: SetScore[]): SetScore[] => sets.map(([a, b]) => [b, a]);
+
+// "Guo, Jayden" or "Jayden Guo" → "Jayden", for headings.
+export function firstName(name: string | null | undefined): string | null {
+  const n = name?.trim();
+  if (!n) return null;
+  const first = n.includes(",") ? n.split(",")[1].trim().split(/\s+/)[0] : n.split(/\s+/)[0];
+  return first || null;
+}

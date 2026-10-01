@@ -125,6 +125,15 @@ test.describe("tennis", () => {
       await row("e2e-pay", "Entry Pay Classic", "payment_needed", null);
       await row("e2e-reserve", "Entry Reserve Cup", "reserve", 2);
       await row("e2e-entered", "Entry Waiting Open", "entered", null);
+      await row("e2e-not-open", "Entry Later Cup", "not_open", null);
+      await pool.query(
+        `update tennis_entries set entry_opens = '2024-10-01', entry_deadline = '2024-10-03'
+         where tournament_external_id = 'e2e-not-open'`,
+      );
+      await row("e2e-skipped", "Entry Green Ball Open", "skipped", null);
+      await pool.query(
+        `update tennis_entries set note = 'No event for him: U10 Green Boys.' where tournament_external_id = 'e2e-skipped'`,
+      );
     } finally {
       await pool.end();
     }
@@ -136,10 +145,17 @@ test.describe("tennis", () => {
       "href",
       `${base}/individual-entry/e2e-found`,
     );
-    // Registered ones are under "Upcoming tournaments", before any draw.
+    // Registered ones are under "Tournaments … is entered in", before any draw.
     await expect(entries).toHaveCount(1);
+    await expect(page.getByTestId("last-updated")).toContainText("Last updated:");
+    const notOpen = page.getByTestId("not-open");
+    await expect(notOpen).toHaveCount(1);
+    await expect(notOpen).toContainText("Entry Later Cup");
+    await expect(notOpen).toContainText("opens 2024-10-01 · closes 2024-10-03");
+    await expect(page.getByTestId("skipped")).toContainText("Entry Green Ball Open");
+    await expect(page.getByTestId("skipped")).toContainText("No event for him: U10 Green Boys.");
     const upcoming = page
-      .getByRole("region", { name: "Upcoming tournaments" })
+      .getByRole("region", { name: /^Tournaments .* entered in$/ })
       .getByTestId("upcoming-tournament");
     const pay = upcoming.filter({ hasText: "Entry Pay Classic" });
     await expect(pay).toContainText("Payment required");
