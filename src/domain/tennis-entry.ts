@@ -18,7 +18,9 @@ export type EntryPrefs = {
 
 export const DEFAULT_ENTRY_PREFS: EntryPrefs = {
   include: ["orange"],
-  exclude: ["girl", "women", "double", "mixed"],
+  // Not "mixed": "double" covers mixed doubles, and a U9 singles event for
+  // boys and girls together is called e.g. "U9 Mixed - Orange".
+  exclude: ["girl", "women", "double"],
   prefer: ["u9"],
   maxDriveMinutes: 120,
 };

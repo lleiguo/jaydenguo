@@ -79,6 +79,14 @@ describe("entry rules", () => {
     expect(pickEvent([{ name: "U10 (Orange Ball)" }], DEFAULT_ENTRY_PREFS)?.name).toBe("U10 (Orange Ball)");
     expect(pickEvent([{ name: "RT 9 - 12 (Green)" }], DEFAULT_ENTRY_PREFS)).toBeNull();
     expect(pickEvent([{ name: "U9 Orange Doubles" }], DEFAULT_ENTRY_PREFS)).toBeNull();
+    expect(pickEvent([{ name: "U9 Orange Mixed Doubles" }], DEFAULT_ENTRY_PREFS)).toBeNull();
+    // Boys and girls together in one singles event (Rising Stars).
+    expect(
+      pickEvent(
+        [{ name: "BS 10 - Green" }, { name: "U9 Mixed - Orange" }, { name: "GS 10 - Green" }],
+        DEFAULT_ENTRY_PREFS,
+      )?.name,
+    ).toBe("U9 Mixed - Orange");
     // "u9" doesn't match "U19".
     expect(pickEvent([{ name: "U19 Orange" }, { name: "U10 Orange" }], DEFAULT_ENTRY_PREFS)?.name).toBe(
       "U19 Orange",
