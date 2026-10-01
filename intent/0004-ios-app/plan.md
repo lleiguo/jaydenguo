@@ -434,7 +434,7 @@ paid team and the key, O-1 and O-3):
 |---|---|---|---|
 | N8.1 | Share extension for URLs; Google Photos links hand over to the app's picker. | EXT-3 | Manual check from Safari, Drive and Google Photos. |
 | N8.2 | App Intents: what's next, today's schedule, refresh all. | EXT-4 | Runs from Shortcuts and Siri on device. |
-| N8.3 | Accessibility pass (Dynamic Type sizes, VoiceOver, contrast), performance check (INFR-2), app icon and launch screen with no personal details. | APP-6, INFR-2, AUTH-3 | Accessibility Inspector audit clean on every screen; launch timing noted here. |
+| N8.3 | Accessibility pass (Dynamic Type sizes, VoiceOver, contrast), performance check (INFR-2), app icon and launch screen with no personal details. (App icon done early, 2026-09-30, for the first TestFlight build: a cartoon of the family dog.) | APP-6, INFR-2, AUTH-3 | Accessibility Inspector audit clean on every screen; launch timing noted here. |
 | N8.4 | Security review of the app and new backend routes, added to [0001's security-review.md](../0001-jayden-hub/security-review.md) or a new file here. | SEC-1..5, API-1..6 | Review merged; fixes done or risks accepted by the owner. |
 | N8.5 | Runbook in `ios/README.md`: release steps, the 60-day TestFlight reminder, rotating the APNs key, what to do if a phone is lost (Sign out everywhere). | N-5 | Owner has read it. |
 | N8.6 | Live Activity for tournament and meet days, only if the owner asks for it after N7. | EXT-5 | Manual check on a real event day. |
@@ -488,8 +488,8 @@ paid team and the key, O-1 and O-3):
   4.7 s there.
 - The "Turn on notifications?" sheet scrolls and opens full height (its
   text was cut short in the half-height sheet).
-- App icon: a generic calendar page on blue (`ios/scripts/make-icon.py`),
-  nothing about the family; the launch screen stays the plain system one.
+- App icon: the owner's (the family dog, #60); the launch screen stays the
+  plain system one.
 - Security review: [security-review.md](security-review.md).
 - Runbook in `ios/README.md`: first TestFlight setup, each release, the
   60-day reminder, push and key rotation (pointing to `infra/README.md`),

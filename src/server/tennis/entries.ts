@@ -58,6 +58,10 @@ const WATCH_REQUESTS = 40;
 const WATCH_DAYS = 7;
 // How far ahead the search for entries he already has looks.
 const LISTED_DAYS = 28;
+// Every refresh: how far ahead to look for matching tournaments, and the
+// request cap for the whole refresh.
+const DISCOVER_DAYS = 120;
+const REFRESH_REQUESTS = 150;
 
 // Enters him in one event on the site. "unavailable": the app can't do it
 // (not built yet, or no Tennis Canada login), so the owner uses the link.
@@ -262,7 +266,10 @@ export async function runEnter(
   const base = client.base;
   const alreadyListed = await findListed(ctx, source, client, name, settings);
   const known = await db.select().from(tennisEntries).where(eq(tennisEntries.sourceId, source.id));
-  const knownTournaments = new Set(known.map((e) => e.tournamentExternalId));
+  // Ones found before entry opened are looked at again now.
+  const knownTournaments = new Set(
+    known.filter((e) => e.status !== "not_open").map((e) => e.tournamentExternalId),
+  );
   const radius = deps.drive
     ? searchRadiusKm(settings.prefs.maxDriveMinutes)
     : fallbackRadiusKm(settings.prefs.maxDriveMinutes);
@@ -276,6 +283,7 @@ export async function runEnter(
     city: string | null;
     region: string | null;
     entryDeadline: string | null;
+    entryOpens: string | null;
     eventNo: string;
     eventName: string;
     driveMinutes: number | null;
@@ -317,6 +325,7 @@ export async function runEnter(
         city: d?.city ?? null,
         region: d?.region ?? null,
         entryDeadline: d?.entryDeadline ?? null,
+        entryOpens: d?.entryOpens ?? null,
         eventNo: event.eventNo,
         eventName: event.name,
         driveMinutes,
@@ -350,6 +359,7 @@ export async function runEnter(
     city: f.city,
     region: f.region,
     entryDeadline: f.entryDeadline,
+    entryOpens: f.entryOpens,
     eventNo: f.eventNo,
     eventName: f.eventName,
     driveMinutes: f.driveMinutes,
@@ -411,8 +421,23 @@ export async function runEnter(
     await db
       .insert(tennisEntries)
       .values(values)
-      .onConflictDoNothing({
+      .onConflictDoUpdate({
         target: [tennisEntries.sourceId, tennisEntries.tournamentExternalId, tennisEntries.eventNo],
+        // Only a "not open yet" row gives way to what the job decided now.
+        set: {
+          status: sql`excluded.status`,
+          note: sql`excluded.note`,
+          reservePosition: sql`excluded.reserve_position`,
+          tournamentPlayerId: sql`excluded.tournament_player_id`,
+          listCheckedAt: sql`excluded.list_checked_at`,
+          enteredAt: sql`excluded.entered_at`,
+          entryDeadline: sql`excluded.entry_deadline`,
+          entryOpens: sql`excluded.entry_opens`,
+          driveMinutes: sql`excluded.drive_minutes`,
+          driveEstimated: sql`excluded.drive_estimated`,
+          updatedAt: now,
+        },
+        setWhere: eq(tennisEntries.status, "not_open"),
       });
   // TEN-9: the ones the owner has to enter or pay for (once each).
   await notifyEntryActions(db, source.id, { log, now });
@@ -420,11 +445,9 @@ export async function runEnter(
   return result;
 }
 
-// Friday: where does he stand on each entry list?
-export async function runAcceptance(ctx: EntryContext, source: TcSource) {
+// Where does he stand on each entry list still to come?
+async function checkLists(ctx: EntryContext, source: TcSource, client: TcClient, name: string) {
   const { db, log } = ctx;
-  const name = await selfName(db, source.id);
-  if (!name) return { skipped: "no tennis sync yet (his name isn't known)" };
   const today = localDate(ctx.now, ctx.timeZone);
   const rows = await db
     .select()
@@ -436,7 +459,6 @@ export async function runAcceptance(ctx: EntryContext, source: TcSource) {
         gte(tennisEntries.endDate, today),
       ),
     );
-  const client = newClient(ctx, LIST_REQUESTS);
   const counts: Record<string, number> = {};
   try {
     for (const e of rows) {
@@ -450,9 +472,147 @@ export async function runAcceptance(ctx: EntryContext, source: TcSource) {
   } catch (err) {
     if (!(err instanceof Budget)) throw err;
   }
+  return { entries: rows.length, ...counts };
+}
+
+// Friday: where does he stand on each entry list?
+export async function runAcceptance(ctx: EntryContext, source: TcSource) {
+  const name = await selfName(ctx.db, source.id);
+  if (!name) return { skipped: "no tennis sync yet (his name isn't known)" };
+  const client = newClient(ctx, LIST_REQUESTS);
+  const counts = await checkLists(ctx, source, client, name);
   const listed = await findListed(ctx, source, client, name, entrySettingsOf(source.config));
-  log("tennis acceptance lists read", { source: source.name, entries: rows.length, listed, ...counts });
+  ctx.log("tennis acceptance lists read", { source: source.name, listed, ...counts });
   return { ...counts, listed };
+}
+
+// Rookie tournaments near home in the coming months that the app hasn't
+// seen. One that fits him and opens for entry later is kept as "not open
+// yet" (the Thursday job enters him once it opens); one that doesn't fit is
+// kept as skipped, with why. One open now is left to the Thursday job.
+async function discover(
+  ctx: EntryContext,
+  source: TcSource,
+  client: TcClient,
+  settings: EntrySettings,
+  drive: DriveTimer | null,
+): Promise<{ notOpen: number; skipped: number }> {
+  const out = { notOpen: 0, skipped: 0 };
+  if (!settings.postalCode) return out;
+  const { db, log } = ctx;
+  const today = localDate(ctx.now, ctx.timeZone);
+  const known = new Set(
+    (
+      await db
+        .select({ id: tennisEntries.tournamentExternalId })
+        .from(tennisEntries)
+        .where(eq(tennisEntries.sourceId, source.id))
+    ).map((r) => r.id),
+  );
+  const radius = drive
+    ? searchRadiusKm(settings.prefs.maxDriveMinutes)
+    : fallbackRadiusKm(settings.prefs.maxDriveMinutes);
+  try {
+    const results = await search(client, {
+      ...searchForm(settings, radius),
+      "TournamentFilter.StartDate": `${today}T00:00`,
+      "TournamentFilter.EndDate": `${addDays(today, DISCOVER_DAYS)}T00:00`,
+    });
+    for (const t of results) {
+      if (known.has(t.id) || (t.startDate && t.startDate < today)) continue;
+      known.add(t.id);
+      const list = await client.get(`/sport/events.aspx?id=${t.id}`);
+      const events = list ? parseEventList(list.html) : [];
+      const event = pickEvent(events, settings.prefs);
+      const overview = await client.get(`/tournament/${t.id}`);
+      const d = overview ? parseTournament(overview.html, t.id) : null;
+      const startDate = d?.startDate ?? t.startDate;
+      if (!startDate || startDate < today) continue;
+      const endDate = d?.endDate ?? t.endDate ?? startDate;
+      let status: EntryStatus | null = null;
+      let note: string | null = null;
+      let driveMinutes: number | null = null;
+      if (!event) {
+        status = "skipped";
+        note = events.length
+          ? `No event for him: ${events.map((e) => e.name).join(", ")}.`
+          : "No events listed yet.";
+      } else {
+        const where = [d?.venue ?? t.venue, d?.city, d?.region].filter(Boolean).join(", ");
+        if (drive && where) {
+          try {
+            driveMinutes = await drive(`${settings.postalCode}, Canada`, `${where}, Canada`);
+          } catch (err) {
+            log("drive time failed", { error: err }, "WARNING");
+          }
+        }
+        if (driveMinutes !== null && driveMinutes > settings.prefs.maxDriveMinutes) {
+          status = "skipped";
+          note = `About ${driveMinutes} min away, over the ${settings.prefs.maxDriveMinutes} min limit.`;
+        } else if (d?.entryOpens && d.entryOpens > today) {
+          status = "not_open";
+        }
+      }
+      if (!status) continue;
+      out[status === "skipped" ? "skipped" : "notOpen"]++;
+      await db
+        .insert(tennisEntries)
+        .values({
+          sourceId: source.id,
+          tournamentExternalId: t.id,
+          tournamentName: d?.name ?? t.name,
+          startDate,
+          endDate: endDate < startDate ? startDate : endDate,
+          venue: d?.venue ?? t.venue,
+          city: d?.city ?? null,
+          region: d?.region ?? null,
+          entryDeadline: d?.entryDeadline ?? null,
+          entryOpens: d?.entryOpens ?? null,
+          eventNo: event?.eventNo ?? "",
+          eventName: event?.name ?? "",
+          driveMinutes,
+          driveEstimated: driveMinutes === null,
+          status,
+          note,
+          tournamentUrl: `${client.base}/tournament/${t.id}`,
+          entryUrl: `${client.base}/individual-entry/${t.id}`,
+        })
+        .onConflictDoNothing({
+          target: [tennisEntries.sourceId, tennisEntries.tournamentExternalId, tennisEntries.eventNo],
+        });
+    }
+  } catch (err) {
+    if (!(err instanceof Budget)) throw err;
+    log(
+      "tennis entries: reached the page limit; the rest are read next time",
+      { source: source.name },
+      "WARNING",
+    );
+  }
+  return out;
+}
+
+export type RefreshResult = Record<string, number>;
+
+// After every Tennis sync (owner, 2026-09-30): where he stands on each
+// entry list, entries he has that the app didn't make, and matching
+// tournaments still to open (or skipped, with why). Never enters him:
+// that stays with the Thursday job.
+export async function runRefresh(
+  ctx: EntryContext,
+  source: TcSource,
+  deps: { drive: DriveTimer | null },
+): Promise<RefreshResult | { skipped: string }> {
+  const name = await selfName(ctx.db, source.id);
+  if (!name) return { skipped: "no tennis sync yet (his name isn't known)" };
+  const settings = entrySettingsOf(source.config);
+  const client = newClient(ctx, REFRESH_REQUESTS);
+  const lists = await checkLists(ctx, source, client, name);
+  const listed = await findListed(ctx, source, client, name, settings);
+  const found = await discover(ctx, source, client, settings, deps.drive);
+  const result = { ...lists, listed, ...found };
+  ctx.log("tennis entries refreshed", { source: source.name, ...result, requests: client.requests });
+  return result;
 }
 
 // Is he in one of these draws? Knockout draws come as a bracket, round

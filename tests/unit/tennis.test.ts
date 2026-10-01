@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  firstName,
   form,
   formatScore,
   headToHead,
@@ -132,5 +133,14 @@ describe("parseSets", () => {
     ]);
     expect(parseSets("")).toEqual([]);
     expect(parseSets("six three")).toBeNull();
+  });
+});
+
+describe("firstName", () => {
+  it("takes the given name either way round", () => {
+    expect(firstName("Casey, Alex")).toBe("Alex");
+    expect(firstName("Alex Casey")).toBe("Alex");
+    expect(firstName("  ")).toBeNull();
+    expect(firstName(null)).toBeNull();
   });
 });
