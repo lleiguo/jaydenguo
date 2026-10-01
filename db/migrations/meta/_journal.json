@@ -180,8 +180,15 @@
     {
       "idx": 25,
       "version": "7",
-      "when": 1790863548003,
-      "tag": "0025_video_gemini_only",
+      "when": 1790839677275,
+      "tag": "0025_tennis_mixed_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790864852031,
+      "tag": "0026_video_gemini_only",
       "breakpoints": true
     }
   ]

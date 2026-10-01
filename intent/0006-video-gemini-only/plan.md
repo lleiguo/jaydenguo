@@ -11,4 +11,4 @@ Source: [spec.md](spec.md). Status: built 2026-10-01.
 ## Status
 | Task | Status |
 |---|---|
-| G.1–G.4 | built 2026-10-01. Migration 0025. Owner steps: install an app build made from this change before the server deploys (G-2). |
+| G.1–G.4 | built 2026-10-01. Migration 0026. Owner steps: install an app build made from this change before the server deploys (G-2). |

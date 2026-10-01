@@ -29,7 +29,7 @@ explanations (TEN-6). Nothing about those changes.
   The Claude client keeps text requests only.
 - The review prompt is unchanged, so the prompt version stays
   `video-1-draft`.
-- Database: one migration (0025) drops `video_reviews.mode`, `verdict`,
+- Database: one migration (0026) drops `video_reviews.mode`, `verdict`,
   `parent_vote` and `voted_at`, and `video_review_rounds.labels` and
   `scores`. The rounds of older two-model reviews stay as rows (their
   cost still counts on the costs page), so the checks on a round's `round`

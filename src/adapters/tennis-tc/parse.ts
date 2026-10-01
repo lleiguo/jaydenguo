@@ -263,7 +263,10 @@ export function parseTournament(html: string, id: string): TcTournament {
   let region: string | null = null;
   for (const mod of root.querySelectorAll(".module")) {
     if (text(mod.querySelector(".module__title-main")) !== "Venue") continue;
-    venue = text(mod.querySelector(".nav-link__value"));
+    // The title, not the "Route" button above it.
+    venue = text(
+      mod.querySelector(".media__title .nav-link__value") ?? mod.querySelector(".nav-link__value"),
+    );
     city = text(mod.querySelector(".p-locality"));
     region = text(mod.querySelector(".p-region"));
     break;

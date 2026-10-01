@@ -31,6 +31,8 @@ describe("tennis tournament entries", () => {
   let selfRow = "";
   // And when online entry opens for tournament A ("" = no date shown).
   let opensA = "";
+  // And whether the search still shows no "Online Entry" button for A.
+  let closedA = false;
   const log = createLogger((l) => process.env.DEBUG_LOG && console.log(l));
   const ctx = (): EntryContext => ({ db, log, now: TC_NOW, timeZone: "America/Toronto" });
   const drive = async (_from: string, to: string) => (to.includes("Faraway") ? 100 : 30);
@@ -69,12 +71,17 @@ describe("tennis tournament entries", () => {
       edit: (file, html) =>
         file === "entries/event-a6.html"
           ? html.replace("<!--SELF-->", selfRow)
-          : file === "entries/tournament-a.html" && opensA
+          : file === "entries/search.html" && closedA
             ? html.replace(
-                '<ul class="list">',
-                `<ul class="list"><li class="list__item"><span class="list__value">Entry opens</span><time datetime="${opensA}T08:00:00">${opensA}</time></li>`,
+                /<a role="button" href="\/onlineentry\/onlineentry\.aspx\?id=a0000000[^]*?<\/a>/,
+                "",
               )
-            : html,
+            : file === "entries/tournament-a.html" && opensA
+              ? html.replace(
+                  '<ul class="list">',
+                  `<ul class="list"><li class="list__item"><span class="list__value">Entry opens</span><time datetime="${opensA}T08:00:00">${opensA}</time></li>`,
+                )
+              : html,
     });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -137,6 +144,22 @@ describe("tennis tournament entries", () => {
       expect(after.status).not.toBe("not_open");
     } finally {
       opensA = "";
+    }
+  });
+
+  it("every refresh: on the day entry opens, a tournament not open yet is still kept", async () => {
+    selfRow = "";
+    // TC_NOW's day; entry opens later that morning, so the search shows no entry button yet.
+    opensA = "2024-09-28";
+    closedA = true;
+    try {
+      const s = await newSource();
+      expect(await runRefresh(ctx(), s, { drive })).toMatchObject({ notOpen: 1 });
+      const a = (await entriesOf(s.id)).find((r) => r.tournamentExternalId === ENTRY_FIXTURE.a);
+      expect(a).toMatchObject({ status: "not_open", entryOpens: "2024-09-28" });
+    } finally {
+      opensA = "";
+      closedA = false;
     }
   });
 
