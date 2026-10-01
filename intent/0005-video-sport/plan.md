@@ -12,4 +12,4 @@ Source: [spec.md](spec.md). Status: approved (2026-09-30).
 ## Status
 | Task | Status |
 |---|---|
-| S.1–S.5 | built on `video/sport-detect` (2026-09-30), waiting for review. Migration 0022. Retry now keeps a failed attempt's rounds (superseded) instead of deleting them, so the costs page counts them. |
+| S.1–S.5 | done: merged in #56 and deployed (2026-09-30). Migration 0022. Retry now keeps a failed attempt's rounds (superseded) instead of deleting them, so the costs page counts them. |

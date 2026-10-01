@@ -1,5 +1,5 @@
 # Plan: costs dashboard
-Source: [spec.md](spec.md). Status: draft (2026-09-28).
+Source: [spec.md](spec.md). Status: approved (owner, 2026-09-28: merged in #38).
 
 | Task | Description | Spec | Done when |
 |---|---|---|---|
@@ -12,4 +12,4 @@ Source: [spec.md](spec.md). Status: draft (2026-09-28).
 ## Status
 | Task | Status |
 |---|---|
-| C.1–C.5 | built on `costs/dashboard` (2026-09-28), not merged |
+| C.1–C.5 | done: merged in #38 (2026-09-28). The page has data once the owner turns on the Billing export to BigQuery and applies Terraform with `billing_export_dataset` and `billing_export_table` (C.5). |

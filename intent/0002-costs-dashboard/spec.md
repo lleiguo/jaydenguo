@@ -1,6 +1,5 @@
 # Spec: costs dashboard
-Source: [intent.md](intent.md). Status: draft (2026-09-28), built on
-`costs/dashboard` for review with the PR.
+Source: [intent.md](intent.md). Status: approved (owner, 2026-09-28: merged in #38).
 
 ## Requirements
 
