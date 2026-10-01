@@ -1,9 +1,18 @@
-import { and, eq, gte, isNull } from "drizzle-orm";
+import { and, eq, gt, gte, isNull, like } from "drizzle-orm";
 import { z } from "zod";
-import { changeLog, conflicts, eventOverrides, eventRevisions, events, eventSeries } from "@db/schema";
+import {
+  changeLog,
+  conflicts,
+  eventOverrides,
+  eventRevisions,
+  events,
+  eventSeries,
+  sources,
+} from "@db/schema";
 import { pairKey } from "../../domain/clashes";
 import { ATTENDANCE, CATEGORIES, type Attendance } from "../../domain/constants";
 import { resolveOwners } from "../../domain/people";
+import { repeatKey, sameRepeat } from "../../domain/repeats";
 import { expandSeries } from "../../domain/series";
 import { isValidTimeZone, localDate } from "../../domain/time";
 import type { Undo } from "../../lib/calendar-types";
@@ -251,6 +260,51 @@ export async function skipEvent(db: Db, actor: Actor, id: string, skip: boolean)
   });
 }
 
+// CON-4 "skip every repeat": skips each occurrence of a repeating event
+// that hasn't ended yet (or un-skips them). Each gets its own override, so
+// one occurrence can still be un-skipped, and undo clears them together.
+// Occurrences a later sync adds, a year or more ahead, aren't skipped.
+export async function skipRepeats(
+  db: Db,
+  actor: Actor,
+  id: string,
+  skip: boolean,
+): Promise<{ undo: Undo; count: number }> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ event: events, sourceKind: sources.kind })
+      .from(events)
+      .leftJoin(sources, eq(sources.id, events.sourceId))
+      .where(eq(events.id, id));
+    if (!row) throw new HttpError(404, "event not found");
+    const key = repeatKey({ ...row.event, sourceKind: row.sourceKind });
+    if (!key) throw new HttpError(409, "this event doesn't repeat");
+    const escaped = "prefix" in key ? key.prefix.replace(/[\\%_]/g, "\\$&") : "";
+    const candidates = await tx
+      .select({ event: events, override: eventOverrides })
+      .from(events)
+      .leftJoin(eventOverrides, and(eq(eventOverrides.eventId, events.id), isNull(eventOverrides.clearedAt)))
+      .where(
+        and(
+          "seriesId" in key
+            ? eq(events.seriesId, key.seriesId)
+            : and(eq(events.sourceId, key.sourceId), like(events.externalId, `${escaped}%`)),
+          gt(events.endUtc, new Date()),
+          isNull(events.deletedAt),
+          eq(events.status, "active"),
+        ),
+      )
+      .orderBy(events.startUtc);
+    const ids: string[] = [];
+    for (const { event: e, override: o } of candidates) {
+      const k = repeatKey({ ...e, sourceKind: row.sourceKind });
+      if (!k || !sameRepeat(k, key) || (o?.skip ?? false) === skip) continue;
+      ids.push(await writeOverride(tx, actor, e, { skip }));
+    }
+    return { undo: { method: "POST", url: "/api/v1/overrides/undo", body: { ids } }, count: ids.length };
+  });
+}
+
 // Required or optional (CON-1): an optional event never clashes. Events
 // added here change directly; events from a source or a series get an
 // override that survives syncs.
@@ -301,21 +355,37 @@ export async function setOwners(db: Db, actor: Actor, id: string, ownerIds: stri
 // Undo: clear this override and bring back the one it replaced.
 export async function undoOverride(db: Db, actor: Actor, overrideId: string) {
   return db.transaction(async (tx) => {
-    const [o] = await tx.select().from(eventOverrides).where(eq(eventOverrides.id, overrideId));
-    if (!o || o.clearedAt) throw new HttpError(409, "nothing to undo");
+    if (!(await undoOne(tx, actor, overrideId))) throw new HttpError(409, "nothing to undo");
+  });
+}
+
+// Undo for "skip every repeat": the overrides it wrote, together.
+export const undoOverridesInput = z.object({ ids: z.array(z.uuid()).max(2000) });
+
+export async function undoOverrides(db: Db, actor: Actor, ids: string[]) {
+  return db.transaction(async (tx) => {
+    let undone = 0;
+    for (const id of ids) if (await undoOne(tx, actor, id)) undone++;
+    if (ids.length && !undone) throw new HttpError(409, "nothing to undo");
+  });
+}
+
+async function undoOne(tx: Tx, actor: Actor, overrideId: string): Promise<boolean> {
+  const [o] = await tx.select().from(eventOverrides).where(eq(eventOverrides.id, overrideId));
+  if (!o || o.clearedAt) return false;
+  await tx
+    .update(eventOverrides)
+    .set({ clearedAt: new Date(), clearedBy: actor })
+    .where(eq(eventOverrides.id, o.id));
+  if (o.replacesId) {
     await tx
       .update(eventOverrides)
-      .set({ clearedAt: new Date(), clearedBy: actor })
-      .where(eq(eventOverrides.id, o.id));
-    if (o.replacesId) {
-      await tx
-        .update(eventOverrides)
-        .set({ clearedAt: null, clearedBy: null })
-        .where(eq(eventOverrides.id, o.replacesId));
-    }
-    await revise(tx, o.eventId, actor, "override_undone", o, null);
-    await note(tx, "override", o.eventId);
-  });
+      .set({ clearedAt: null, clearedBy: null })
+      .where(eq(eventOverrides.id, o.replacesId));
+  }
+  await revise(tx, o.eventId, actor, "override_undone", o, null);
+  await note(tx, "override", o.eventId);
+  return true;
 }
 
 // "Use the source's time": drop the override altogether.

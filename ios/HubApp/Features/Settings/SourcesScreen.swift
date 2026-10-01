@@ -27,15 +27,10 @@ struct SourcesScreen: View {
                 if model.refreshing.contains("all") {
                     ProgressView()
                 } else {
-                    Button("Refresh all") { Task { await refreshAll() } }
+                    Button("Refresh all") { Task { await model.refreshAllSources() } }
                 }
             }
         }
-    }
-
-    private func refreshAll() async {
-        guard let ids = try? await model.client.api.listSources().ok.body.json.sources.filter(\.enabled).map(\.id) else { return }
-        for id in ids { await model.refreshSource(id: id, name: "every source") }
     }
 }
 

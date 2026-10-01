@@ -50,6 +50,13 @@ struct EventSheet: View {
                 } label: {
                     Label(e.isSkipped ? "Don't skip" : "Skip this one", systemImage: "forward.end")
                 }
+                if e.repeats == true {
+                    Button {
+                        run { await store.setSkippedRepeats(e, !e.isSkipped) }
+                    } label: {
+                        Label(e.isSkipped ? "Don't skip any repeats" : "Skip every repeat", systemImage: "repeat")
+                    }
+                }
                 if !e.isFromSource {
                     Button { edit(e) } label: { Label(e.seriesId != nil ? "Edit series" : "Edit", systemImage: "pencil") }
                     Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash") }

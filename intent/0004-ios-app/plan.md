@@ -476,6 +476,7 @@ about 16 days in.
 | N6 | done 2026-09-30 (#53, #55); SP-N4 waits for the owner. Intent 0005 (sport detected, and changed on the review screen) added to the Videos screens on `video/sport-detect` |
 | N7 | built 2026-09-30 on `ios/n7-notifications` against a fake APNs; the owner adds the APNs key (O-3) and checks each kind on the phone once TestFlight works |
 | N8 | not started |
+| Calendar fixes | 2026-09-30 on `calendar/app-fixes` (owner's bug list): refresh follows each source until it has really run (it used to stop after 3 s, before the job had started), sources sync side by side, pull-to-refresh also syncs; agenda hides what's over (APP-7, ICAL-1); "skip every repeat" (CON-4, web too); calendar feeds exempt from the hourly limit (SYNC-5) |
 | N9 | not planned (owner kept the no-upload default) |
 
 ## Spikes

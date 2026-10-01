@@ -95,15 +95,15 @@ async function runLocked(
       ),
     );
 
-  // At most one successful run per source per hour (SYNC-5); after a failure
-  // it may run again straight away. The lock above stops overlapping runs.
+  // At most one successful run per scraped source per hour (SYNC-5); feeds
+  // and failed runs may run again straight away. The lock above stops overlapping runs.
   const [last] = await db
     .select()
     .from(syncRuns)
     .where(and(eq(syncRuns.sourceId, sourceId), eq(syncRuns.status, "succeeded")))
     .orderBy(desc(syncRuns.startedAt))
     .limit(1);
-  if (last && now().getTime() - last.startedAt.getTime() < minGapMs()) {
+  if (last && now().getTime() - last.startedAt.getTime() < minGapMs(source.kind)) {
     log("sync skipped: ran recently", { sourceId, lastRun: last.startedAt.toISOString() });
     return { status: "skipped", reason: "ran recently" };
   }

@@ -3,7 +3,14 @@ import { REVIEW_MODES, VIDEO_SPORTS } from "@/domain/video-constants";
 import { isValidTimeZone } from "@/domain/time";
 import { deviceTokenInput, handoffInput } from "../auth/device";
 import { copyInput } from "../calendar-copy";
-import { attendanceInput, eventInput, moveInput, ownersInput, seriesInput } from "../calendar/mutations";
+import {
+  attendanceInput,
+  eventInput,
+  moveInput,
+  ownersInput,
+  seriesInput,
+  undoOverridesInput,
+} from "../calendar/mutations";
 import { createCredentialInput, signInCodeInput, updateCredentialInput } from "../credentials/store";
 import { approveInput } from "../email/suggestions";
 import { personInput } from "../people";
@@ -251,6 +258,15 @@ export const operations: Operation[] = [
   },
   {
     method: "POST",
+    path: "/api/v1/events/{id}/skip-repeats",
+    operationId: "skipRepeats",
+    summary: "Skip every upcoming occurrence of a repeating event, or un-skip them.",
+    spec: "CON-4",
+    body: skipInput,
+    response: "SkipRepeatsResponse",
+  },
+  {
+    method: "POST",
     path: "/api/v1/events/{id}/attendance",
     operationId: "setAttendance",
     summary: "Required or optional.",
@@ -281,6 +297,16 @@ export const operations: Operation[] = [
     operationId: "undoOverride",
     summary: "Undo a move or skip.",
     spec: "CON-3",
+    status: 204,
+    response: null,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/overrides/undo",
+    operationId: "undoOverrides",
+    summary: "Undo several overrides at once (skip every repeat).",
+    spec: "CON-3",
+    body: undoOverridesInput,
     status: 204,
     response: null,
   },

@@ -14,8 +14,10 @@ import {
   setAttendance,
   setOwners,
   skipEvent,
+  skipRepeats,
   undoAcceptClash,
   undoOverride,
+  undoOverrides,
 } from "@/server/calendar/mutations";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
@@ -295,5 +297,46 @@ describe("calendar service", () => {
     // Mondays and Wednesdays in the first week of March 2027.
     expect(maths.map((e) => e.start.slice(0, 10))).toEqual(["2027-03-01", "2027-03-03"]);
     expect(await currentCursor(db)).toBeGreaterThan(cursor);
+  });
+
+  it("skips every upcoming repeat of a feed's event, and undoes them together (CON-4)", async () => {
+    const [{ id: feedId }] = await db.insert(sources).values({ kind: "ical", name: "Gym" }).returning();
+    const at = (d: number, uid: string): SourceRecord => ({
+      ...game0,
+      externalId: `${uid}#2031040${d}T150000`,
+      title: uid,
+      startUtc: new Date(Date.UTC(2031, 3, d, 19)),
+      endUtc: new Date(Date.UTC(2031, 3, d, 20)),
+    });
+    await syncRecords(
+      db,
+      { sourceId: feedId },
+      [
+        at(1, "fitness"),
+        at(3, "fitness"),
+        at(5, "fitness"),
+        at(3, "other"),
+        { ...game0, externalId: "once" },
+      ],
+      window,
+      { actor: "sync" },
+    );
+    const april = () => loadCalendar(db, new Date("2031-04-01T00:00:00Z"), new Date("2031-04-08T00:00:00Z"));
+    const fitness = async () => (await april()).events.filter((e) => e.title === "fitness");
+    expect((await fitness()).every((e) => e.repeats)).toBe(true);
+    const [first, second] = await fitness();
+    await skipEvent(db, actor, second.id, true);
+
+    const { undo, count } = await skipRepeats(db, actor, first.id, true);
+    // The one skipped already isn't counted again.
+    expect(count).toBe(2);
+    expect((await fitness()).map((e) => e.override?.skip)).toEqual([true, true, true]);
+    expect((await april()).events.find((e) => e.title === "other")?.override).toBeNull();
+
+    await undoOverrides(db, actor, (undo.body as { ids: string[] }).ids);
+    expect((await fitness()).map((e) => !!e.override?.skip)).toEqual([false, true, false]);
+
+    const once = (await db.select().from(events).where(eq(events.externalId, "once")))[0];
+    await expect(skipRepeats(db, actor, once.id, true)).rejects.toThrow("doesn't repeat");
   });
 });

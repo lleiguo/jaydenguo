@@ -171,7 +171,8 @@ export async function listSources(db: Db) {
       consecutiveFailures: s.consecutiveFailures,
       lastRun: last ? runView(last) : null,
       running: !!last && last.status === "running" && Date.now() - last.startedAt.getTime() < STALE_RUN_MS,
-      nextRefreshAt: lastOk ? new Date(lastOk.getTime() + minGapMs()).toISOString() : null,
+      nextRefreshAt:
+        lastOk && minGapMs(s.kind) ? new Date(lastOk.getTime() + minGapMs(s.kind)).toISOString() : null,
     };
   });
 }
@@ -269,7 +270,7 @@ export async function requestRefresh(db: Db, id: string, launcher: JobLauncher):
     .where(and(eq(syncRuns.sourceId, id), eq(syncRuns.status, "succeeded")))
     .orderBy(desc(syncRuns.startedAt))
     .limit(1);
-  if (lastOk && Date.now() - lastOk.startedAt.getTime() < minGapMs()) {
+  if (lastOk && Date.now() - lastOk.startedAt.getTime() < minGapMs(source.kind)) {
     throw new HttpError(429, "Synced recently. Each source refreshes at most once an hour.");
   }
   await launcher.start(["sync", id, "manual"]);

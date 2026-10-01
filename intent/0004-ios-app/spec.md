@@ -60,16 +60,16 @@ Swift for the app only (concern N-1). AUTH-4's 30-day session becomes
 | APP-4 | Live updates. | While the app is open, it asks `/api/v1/changes` every 10 s and updates the screen (CAL-8). Pull to refresh on every list. |
 | APP-5 | Phone ergonomics. | Primary actions in thumb reach; edits in sheets; swipe actions on list rows; haptics on success and undo; 10 s undo banner wherever the web has undo (CON-3/4). |
 | APP-6 | Accessibility. | Dynamic Type up to the accessibility sizes without clipped text, VoiceOver labels on every control and chart, colour plus icon per category (CAL-1), and a non-drag way to do everything drag does (NFR-9). |
-| APP-7 | Refresh sources. | "Refresh" on the calendar, sport screens and Sources starts syncs as on the web (SYNC-2), with live progress and the same refusal reasons (SYNC-5). |
+| APP-7 | Refresh sources. | "Refresh" on the calendar, sport screens and Sources starts syncs as on the web (SYNC-2), with live progress and the same refusal reasons (SYNC-5). Each due source syncs in its own run, side by side; the app follows each until it has a new finished run (up to 10 minutes) and names scraped sources left alone because they synced within the hour. Pulling down on the calendar reloads and also refreshes the sources (owner, 2026-09-30). |
 
 ### 2.4 Calendar (CAL on iOS)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| ICAL-1 | Agenda (default), day, week and month views. | Native views, not FullCalendar. Week view is readable at 375 pt. Month shows category dots per day; tapping a day opens its agenda. |
+| ICAL-1 | Agenda (default), day, week and month views. | Native views, not FullCalendar. Week view is readable at 375 pt. Month shows category dots per day; tapping a day opens its agenda. The agenda starts now: what's already over is hidden until "Show earlier". Day and week open at the event on now or next (owner, 2026-09-30). |
 | ICAL-2 | People and category filters. | People chips (Jayden, Lei, Ethan, …) and category filters as on the web, saved per device. |
 | ICAL-3 | Clashes. | Red outline and warning icon in every view (CON-2); event detail shows the other event and the overlap in minutes. |
 | ICAL-4 | Move. | Long-press and drag in day and week views (with haptic ticks at 15-minute steps), and "Move to…" (date and time pickers) everywhere. Calls the existing move route; the clash highlight updates from the server's answer. Undo for 10 s. |
-| ICAL-5 | Swipe actions. | On agenda rows: Skip, Accept clash, Move. Leading swipe: Jayden's attendance. |
+| ICAL-5 | Swipe actions. | On agenda rows: Skip, Accept clash, Move. Leading swipe: Jayden's attendance. Skip on a repeating event asks "this one" or "every repeat" (CON-4). |
 | ICAL-6 | Manual events and series. | Create, edit, delete and restore, with the same repeat rules as the web (CAL-5). |
 | ICAL-7 | Event detail. | Source, last sync, source link, owner (person), attendance, override and "source changed since you moved this" (CON-5) with "Use the source's time". |
 | ICAL-8 | Add to Apple Calendar is not offered. | The Google Calendar copy (GCO) already reaches phones; the app doesn't write to the iPhone's calendar. |

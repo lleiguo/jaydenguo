@@ -134,6 +134,24 @@ final class CalendarTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Undone."].waitForExistence(timeout: 10))
     }
 
+    func testSkipEveryRepeatThenUndo() throws {
+        let app = try launch()
+        openCalendar(app)
+        let agenda = app.collectionViews["agenda"]
+        XCTAssertTrue(agenda.waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["agenda-show-earlier"].exists, "past events are hidden behind Show earlier")
+        let row = agenda.buttons.matching(NSPredicate(format: "label CONTAINS 'Math tutoring'")).firstMatch
+        for _ in 0..<10 where !row.exists { agenda.swipeUp() }
+        row.tap()
+        let skip = app.buttons["Skip every repeat"]
+        _ = skip.waitForExistence(timeout: 10)
+        reveal(skip, in: app)
+        skip.tap()
+        XCTAssertTrue(app.staticTexts["Skipped every repeat."].waitForExistence(timeout: 10))
+        app.buttons["undo"].tap()
+        XCTAssertTrue(app.staticTexts["Undone."].waitForExistence(timeout: 10))
+    }
+
     func testAddAnEventThenDeleteIt() throws {
         let app = try launch()
         openCalendar(app)

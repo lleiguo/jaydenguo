@@ -4,6 +4,7 @@ import { closureDates, detectClashes, type ClashEvent } from "../../domain/clash
 import type { Attendance, Category } from "../../domain/constants";
 import { householdDuplicates } from "../../domain/duplicates";
 import { resolveOwners, type Person } from "../../domain/people";
+import { repeatKey } from "../../domain/repeats";
 import { localDate } from "../../domain/time";
 import type { CalendarPayload, ClashView, EventView } from "../../lib/calendar-types";
 import type { DbOrTx } from "../db/client";
@@ -61,6 +62,7 @@ function toView(r: Row, closed: Set<string>, homeTz: string, people: Person[]): 
     sourceUrl: e.sourceUrl,
     source: r.source?.id ? r.source : null,
     seriesId: e.seriesId,
+    repeats: !!repeatKey({ ...e, sourceKind: r.source?.kind ?? null }),
     lastSyncedAt: iso(e.lastSyncedAt),
     override: o
       ? {
