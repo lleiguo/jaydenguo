@@ -67,7 +67,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub$(HUB_BUNDLE_SUFFIX)
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_STRICT_CONCURRENCY: complete
-        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # HubApp.entitlements (app group and push) or, for Personal Team
         # phone builds, HubApp-NoPush.entitlements: see Signing.xcconfig.
         # Both are kept by hand, not generated.
