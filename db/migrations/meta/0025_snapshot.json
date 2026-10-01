@@ -1,5 +1,5 @@
 {
-  "id": "5bf7d4a5-1199-4bc2-ad5f-84a400a689dd",
+  "id": "e522e8b9-91d9-4f30-b55a-e90e9d8679d8",
   "prevId": "1a78231d-4bab-4ce5-a70c-a9ebeb82e67d",
   "version": "7",
   "dialect": "postgresql",
@@ -3987,23 +3987,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "labels": {
-          "name": "labels",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "output": {
           "name": "output",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
-        },
-        "scores": {
-          "name": "scores",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
         },
         "input_tokens": {
           "name": "input_tokens",
@@ -4157,13 +4145,6 @@
           "notNull": true,
           "default": "'queued'"
         },
-        "mode": {
-          "name": "mode",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'gemini'"
-        },
         "progress": {
           "name": "progress",
           "type": "text",
@@ -4224,27 +4205,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "verdict": {
-          "name": "verdict",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "combined_review": {
           "name": "combined_review",
           "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "parent_vote": {
-          "name": "parent_vote",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "voted_at": {
-          "name": "voted_at",
-          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -4323,14 +4286,6 @@
         "video_reviews_status_chk": {
           "name": "video_reviews_status_chk",
           "value": "\"video_reviews\".\"status\" in ('queued', 'picking', 'analysing', 'done', 'failed', 'saved')"
-        },
-        "video_reviews_mode_chk": {
-          "name": "video_reviews_mode_chk",
-          "value": "\"video_reviews\".\"mode\" in ('debate', 'gemini', 'claude')"
-        },
-        "video_reviews_vote_chk": {
-          "name": "video_reviews_vote_chk",
-          "value": "\"video_reviews\".\"parent_vote\" is null or \"video_reviews\".\"parent_vote\" in ('gemini', 'claude')"
         },
         "video_reviews_segment_chk": {
           "name": "video_reviews_segment_chk",

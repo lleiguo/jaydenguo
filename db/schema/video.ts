@@ -3,11 +3,6 @@
 // playback copy of the reviewed clip (intent 0003, PLAY-1); everything else
 // the job fetches or makes goes into a temp folder and is deleted. Reviews
 // are soft-deleted (VID-4).
-//
-// Reviews used to be a debate between Gemini and Claude; now Gemini reviews
-// alone. The debate's columns (mode, verdict, parent_vote, voted_at, and a
-// round's labels and scores) and the values its rows hold are still in the
-// database. Nothing reads or writes them.
 import { sql } from "drizzle-orm";
 import {
   check,
@@ -32,10 +27,11 @@ import {
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 const inList = (values: readonly string[]) => sql.raw(values.map((v) => `'${v}'`).join(", "));
 
-// What the debate's rows hold.
-const OLD_MODELS = ["gemini", "claude"];
-const OLD_MODES = ["debate", ...OLD_MODELS];
-const OLD_ROUNDS = ["detect", "review", "critique", "rebuttal", "final_score", "combine"];
+// Reviews used to be a debate between Gemini and Claude (removed by intent
+// 0006). The rounds of those reviews are still stored, so the checks on a
+// round still allow their values.
+const STORED_MODELS = ["gemini", "claude"];
+const STORED_ROUNDS = ["detect", "review", "critique", "rebuttal", "final_score", "combine"];
 
 export const videoReviews = pgTable(
   "video_reviews",
@@ -54,7 +50,6 @@ export const videoReviews = pgTable(
     segmentStart: real("segment_start"),
     segmentEnd: real("segment_end"),
     status: text("status").notNull().default("queued"),
-    mode: text("mode").notNull().default("gemini"),
     // What the job is doing now, in words for the page (VID-5).
     progress: text("progress"),
     // Plain language, never secrets (CRED-5).
@@ -72,11 +67,8 @@ export const videoReviews = pgTable(
     playbackKey: text("playback_key"),
     playbackBytes: integer("playback_bytes"),
     promptVersion: text("prompt_version"),
-    verdict: jsonb("verdict"),
     // The review (VID-3).
     combinedReview: jsonb("combined_review"),
-    parentVote: text("parent_vote"),
-    votedAt: ts("voted_at"),
     costUsd: numeric("cost_usd", { precision: 10, scale: 4, mode: "number" }),
     createdAt: ts("created_at").notNull().defaultNow(),
     startedAt: ts("started_at"),
@@ -89,11 +81,6 @@ export const videoReviews = pgTable(
     check("video_reviews_sport_source_chk", sql`${t.sportSource} in (${inList(SPORT_SOURCES)})`),
     check("video_reviews_provider_chk", sql`${t.provider} in (${inList(VIDEO_PROVIDERS)})`),
     check("video_reviews_status_chk", sql`${t.status} in (${inList(VIDEO_STATUSES)})`),
-    check("video_reviews_mode_chk", sql`${t.mode} in (${inList(OLD_MODES)})`),
-    check(
-      "video_reviews_vote_chk",
-      sql`${t.parentVote} is null or ${t.parentVote} in (${inList(OLD_MODELS)})`,
-    ),
     check(
       "video_reviews_segment_chk",
       sql`${t.segmentStart} is null or ${t.segmentEnd} is null or ${t.segmentEnd} > ${t.segmentStart}`,
@@ -115,9 +102,7 @@ export const videoReviewRounds = pgTable(
     model: text("model").notNull(),
     modelVersion: text("model_version").notNull(),
     promptVersion: text("prompt_version").notNull(),
-    labels: jsonb("labels"),
     output: jsonb("output").notNull(),
-    scores: jsonb("scores"),
     inputTokens: integer("input_tokens"),
     outputTokens: integer("output_tokens"),
     costUsd: numeric("cost_usd", { precision: 10, scale: 4, mode: "number" }),
@@ -128,7 +113,7 @@ export const videoReviewRounds = pgTable(
   },
   (t) => [
     index("video_review_rounds_review_idx").on(t.reviewId, t.createdAt),
-    check("video_review_rounds_round_chk", sql`${t.round} in (${inList(OLD_ROUNDS)})`),
-    check("video_review_rounds_model_chk", sql`${t.model} in (${inList(OLD_MODELS)})`),
+    check("video_review_rounds_round_chk", sql`${t.round} in (${inList(STORED_ROUNDS)})`),
+    check("video_review_rounds_model_chk", sql`${t.model} in (${inList(STORED_MODELS)})`),
   ],
 );
