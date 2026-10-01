@@ -102,16 +102,18 @@ export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<Ca
     .where(and(isNull(events.deletedAt), lt(effStart, hi), gt(effEnd, lo)))
     .orderBy(effStart, events.id);
   // A household event that repeats a source's event shows once, as the
-  // source's.
+  // source's; one entered twice on the household calendar shows once.
   const duplicates = householdDuplicates(
     fetched.map((r) => ({
       id: r.event.id,
       sourceKind: r.source?.kind ?? null,
+      title: r.event.title,
       category: r.event.category as Category,
       owners: ownersOf(r, people),
       start: r.override?.newStartUtc ?? r.event.startUtc,
       end: r.override?.newEndUtc ?? r.event.endUtc,
       allDay: r.event.allDay,
+      repeats: !!repeatKey({ ...r.event, sourceKind: r.source?.kind ?? null }),
     })),
   );
   const rows = fetched.filter((r) => !duplicates.has(r.event.id));

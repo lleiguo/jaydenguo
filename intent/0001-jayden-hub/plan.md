@@ -767,6 +767,14 @@ the shorter event, or, for all-day events, shares a date
 event is just not shown, not clashed and not copied to Google. The two
 events must also share an owner (see Owners below).
 
+Household twins (owner, 2026-10-01): the household calendar also repeats
+itself, e.g. a fortnightly "Jayden Soccer – Practice (Turf)" series plus a
+one-off entry for the same evening. Two household events with the same
+title (ignoring case and spacing), a shared owner and the same overlap as
+above show once. The one-off stays over the repeat's occurrence (it was
+written for that day); otherwise the first stays. Differently titled
+household events at the same time both still show.
+
 Owners (owner, 2026-09-28): every event belongs to one or more people,
 replacing the School/Activities chips (CAL-3a) and "parent only"
 attendance (CON-1). `people` (migration 0018) holds them; exactly one is
