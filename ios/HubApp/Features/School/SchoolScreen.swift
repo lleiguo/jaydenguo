@@ -55,8 +55,9 @@ struct SchoolScreen: View {
 
     @ViewBuilder
     private func periodRow(_ p: Components.Schemas.SchoolPeriod) -> some View {
-        let row = HStack(alignment: .top, spacing: 12) {
-            Text(model.homeTime.time(p.start)).font(.subheadline.monospacedDigit()).frame(width: 70, alignment: .leading)
+        let row = TimeRow {
+            Text(model.homeTime.time(p.start))
+        } content: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(p.title).font(.body.weight(.medium))
                 let details = [p.room, p.teachers].compactMap { $0 }

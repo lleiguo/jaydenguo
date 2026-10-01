@@ -19,14 +19,7 @@ final class NotificationService: UNNotificationServiceExtension, @unchecked Send
         guard let content = request.content.mutableCopy() as? UNMutableNotificationContent,
               let id = Push.id(from: request.content.userInfo)
         else { return handler(request.content) }
-        let group = ResponseCache.bundleAppGroup
-        let info = Bundle.main.infoDictionary
-        let config = HubConfig(
-            baseURL: SharedSettings(appGroup: group).baseURL ?? HubConfig.productionURL,
-            appVersion: info?["CFBundleShortVersionString"] as? String ?? "0",
-            deviceName: "notification"
-        )
-        let client = HubClient(config: config, tokens: KeychainTokenStore(accessGroup: group))
+        let client = SharedClient.make(deviceName: "notification")
         lock.withLock {
             self.content = content
             deliver = handler

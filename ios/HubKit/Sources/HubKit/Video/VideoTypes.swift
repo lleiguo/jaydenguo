@@ -183,6 +183,29 @@ public enum VideoSport {
     }
 }
 
+/// Links the share sheet is given (EXT-3).
+public enum VideoLink {
+    /// A Google Photos share link: the API can't read it (F-4), so the video
+    /// has to be picked in Google Photos instead.
+    public static func isPhotosShare(_ url: URL) -> Bool {
+        guard let host = url.host()?.lowercased() else { return false }
+        return host == "photos.app.goo.gl" || host == "photos.google.com" || host.hasSuffix(".photos.google.com")
+    }
+
+    /// Noon on a yyyy-MM-dd day as the phone sees it (for a date picker).
+    public static func date(_ s: String, calendar: Calendar = .current) -> Date? {
+        let p = s.split(separator: "-").compactMap { Int($0) }
+        guard p.count == 3 else { return nil }
+        return calendar.date(from: DateComponents(year: p[0], month: p[1], day: p[2], hour: 12))
+    }
+
+    /// yyyy-MM-dd for a day as the phone sees it.
+    public static func day(_ date: Date, calendar: Calendar = .current) -> String {
+        let c = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
+    }
+}
+
 /// The review's points on the clip's timeline (PLAY-4, PLAY-5), as on the web.
 public enum VideoTimeline {
     public struct Point: Sendable, Equatable, Identifiable {

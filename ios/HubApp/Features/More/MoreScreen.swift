@@ -79,6 +79,10 @@ struct AppSettingsScreen: View {
             }
             Section {
                 LabeledContent("Version", value: model.client.config.appVersion)
+                if let t = model.launchToToday, let own = model.appCodeToToday {
+                    LabeledContent("Opened Today in", value: String(format: "%.2f s (app %.2f s)", t, own))
+                        .accessibilityIdentifier("launchTime")
+                }
             }
             Section {
                 Button("Sign out", role: .destructive) { confirmSignOut = true }

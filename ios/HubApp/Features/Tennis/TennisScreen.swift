@@ -107,7 +107,7 @@ struct TennisScreen: View {
                 .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
             Label(foundText(e.status), systemImage: needsYou ? "exclamationmark.triangle.fill" : "info.circle")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(needsYou ? .orange : .primary)
+                .foregroundStyle(needsYou ? .warning : .primary)
             if let note = e.note { Caption(note) }
             HStack(spacing: 16) {
                 if needsYou, let url = https(e.entryUrl) {

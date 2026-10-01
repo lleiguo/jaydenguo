@@ -65,8 +65,12 @@ struct VideosScreen: View {
                 NavigationLink { VideoModeScreen() } label: { Label("Review mode", systemImage: "slider.horizontal.3") }
             }
         }
-        .sheet(isPresented: $adding) {
-            NewReviewSheet { id in model.morePath.append(.video(id: id)) }
+        .sheet(isPresented: $adding, onDismiss: { model.newReviewDraft = nil }) {
+            NewReviewSheet(draft: model.newReviewDraft) { id in model.morePath.append(.video(id: id)) }
+        }
+        // EXT-3: a Google Photos video shared to the hub.
+        .onChange(of: model.newReviewDraft, initial: true) { _, draft in
+            if draft != nil { adding = true }
         }
     }
 
@@ -125,7 +129,7 @@ struct VideoRow: View {
                 if let note = r.note { Text(note).font(.subheadline).lineLimit(2) }
                 HStack(spacing: 6) {
                     Text(VideoStatus.label(r.status))
-                        .foregroundStyle(r.status == "failed" ? .red : VideoStatus.running(r.status) ? .orange : .secondary)
+                        .foregroundStyle(r.status == "failed" ? .red : VideoStatus.running(r.status) ? .warning : .secondary)
                     if let winner = r.winner, winner != ._empty_ {
                         Text("· \(r.tie ? "tie" : "\(winner.rawValue.capitalized) won")")
                     }
@@ -162,6 +166,17 @@ struct NewReviewSheet: View {
     @State private var busy = false
     @State private var google: (drive: Bool, photos: Bool)?
 
+    /// Prefilled from the share sheet (EXT-3): Google Photos, with the note.
+    init(draft: PendingReview? = nil, opened: @escaping (String) -> Void) {
+        self.opened = opened
+        if let draft {
+            _source = State(initialValue: .photos)
+            _sport = State(initialValue: draft.sport)
+            _note = State(initialValue: draft.note)
+            _filmedOn = State(initialValue: VideoLink.date(draft.filmedOn) ?? .now)
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -182,7 +197,7 @@ struct NewReviewSheet: View {
                     }
                     if let google, !(source == .link ? google.drive : google.photos) {
                         Label("Connect Google Drive and Photos first (Settings → Accounts).", systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.warning)
                     }
                 }
                 Section {

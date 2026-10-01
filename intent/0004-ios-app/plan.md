@@ -439,6 +439,62 @@ paid team and the key, O-1 and O-3):
 | N8.5 | Runbook in `ios/README.md`: release steps, the 60-day TestFlight reminder, rotating the APNs key, what to do if a phone is lost (Sign out everywhere). | N-5 | Owner has read it. |
 | N8.6 | Live Activity for tournament and meet days, only if the owner asks for it after N7. | EXT-5 | Manual check on a real event day. |
 
+**N8 as built (2026-09-30), N8.1–N8.5** (N8.6 waits for the owner):
+- Share extension `HubShare` ("Review in Hub"): takes a shared URL (or the
+  first link in shared text), with sport ("Detect automatically" first,
+  intent 0005), date filmed and note, and posts it with the device token
+  from the app group. Checked in the Simulator from Safari: a YouTube link
+  is saved with its note. **Departure (EXT-3):** an extension can't open
+  its app, so a Google Photos link leaves the sport, note and date in the
+  app group and says "Open Hub to pick the video in Google Photos"; the app
+  opens New review on the Photos picker with them the next time it comes
+  to the front.
+- Shortcuts (App Intents, in the app): "What's next", "Today's schedule"
+  and "Refresh all sources", with Siri phrases "What's next in Hub", "Hub
+  today" and "Refresh Hub". **Departure (EXT-4):** the phrases say "Hub",
+  not his name (AUTH-3). They fetch the next days (or use the offline copy)
+  with the same filters and school-day folding as the widgets, and need
+  the phone unlocked. Checked by HubKit tests of the spoken answers; the
+  Siri check is on the phone.
+- `SharedClient` (HubKit): the token and server from the app group, for
+  the extensions and Shortcuts.
+- Accessibility (N8.3): an audit UI test (`AccessibilityTests`) runs
+  Apple's accessibility audit on 13 screens and fails on missing labels,
+  small hit areas, wrong traits and undetected elements (none left).
+  Fixed from the audit and a pass at the largest accessibility text size:
+  - rows with a time column (calendar, Today, school) stack the time above
+    the title at accessibility sizes instead of breaking words, and the
+    column grows with the text size in between (`TimeRow`);
+  - the sign-in screen scrolls instead of truncating;
+  - the player's speed and frame buttons wrap onto two rows when needed,
+    speeds read as "Quarter speed" etc. in VoiceOver, and "Delete video" is
+    a full-size row button;
+  - orange and green text uses darker shades in light mode (`.warning`,
+    `.good`) for 4.5:1 contrast.
+  The audit's Dynamic Type and clipping checks flag system text styles in
+  lists that do scale and aren't cut off (checked by eye at the largest
+  size), so the test doesn't count them. Contrast is reported, not failed:
+  what's left is text under the system's translucent bars and the system's
+  own secondary and destructive colours.
+- Performance (INFR-2): the app times itself from the process starting to
+  Today's list first showing, and the share that's its own code, shown in
+  Settings → App ("Opened Today in"). On the Simulator, a Debug build
+  relaunched by hand with the offline copy: 2.34 s in all, 0.27 s of it
+  the app's own code; the rest is the Simulator loading a Debug build.
+  `LaunchTests` reads the same row three times (XCUITest slows the app: 0.67
+  to 1.06 s own code) and holds the app's share under 1 s. The whole
+  launch is checked on the phone with a TestFlight build. XCUITest's own
+  launch metric isn't used: a Release build's sign-in screen alone measures
+  4.7 s there.
+- The "Turn on notifications?" sheet scrolls and opens full height (its
+  text was cut short in the half-height sheet).
+- App icon: a generic calendar page on blue (`ios/scripts/make-icon.py`),
+  nothing about the family; the launch screen stays the plain system one.
+- Security review: [security-review.md](security-review.md).
+- Runbook in `ios/README.md`: first TestFlight setup, each release, the
+  60-day reminder, push and key rotation (pointing to `infra/README.md`),
+  a lost phone.
+
 ### N9: Upload from the iPhone library (only if the owner says yes to open question 1)
 Needs its own spec section first (spec N-7): trimming on the phone,
 resumable upload to the media bucket, the worker reading from the bucket
@@ -475,7 +531,7 @@ about 16 days in.
 | N5 | done 2026-09-29 (#52) |
 | N6 | done 2026-09-30 (#53, #55); SP-N4 waits for the owner. Intent 0005 (sport detected, and changed on the review screen) added to the Videos screens on `video/sport-detect` |
 | N7 | built 2026-09-30 on `ios/n7-notifications` against a fake APNs; the owner adds the APNs key (O-3) and checks each kind on the phone once TestFlight works |
-| N8 | not started |
+| N8 | N8.1–N8.5 built 2026-09-30 on `ios/n8-share-shortcuts`; on the phone: Siri phrases and sharing from Google Photos; N8.6 (Live Activity) only if the owner asks |
 | Calendar fixes | 2026-09-30 on `calendar/app-fixes` (owner's bug list): refresh follows each source until it has really run (it used to stop after 3 s, before the job had started), sources sync side by side, pull-to-refresh also syncs; agenda hides what's over (APP-7, ICAL-1); "skip every repeat" (CON-4, web too); calendar feeds exempt from the hourly limit (SYNC-5) |
 | N9 | not planned (owner kept the no-upload default) |
 

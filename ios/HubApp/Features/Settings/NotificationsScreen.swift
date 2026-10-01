@@ -24,7 +24,7 @@ struct NotificationsScreen: View {
                     Button("Turn on notifications") { Task { await model.enableNotifications() } }
                 default:
                     if let problem = model.pushProblem {
-                        Label(problem, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                        Label(problem, systemImage: "exclamationmark.triangle").foregroundStyle(.warning)
                     } else if model.notificationSettings?.registered != true {
                         HStack { ProgressView(); Text("Setting up this phone…") }
                     }
@@ -61,13 +61,19 @@ struct NotificationsPrompt: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Image(systemName: "bell.badge").font(.system(size: 44)).foregroundStyle(.tint)
-            Text("Turn on notifications?").font(.title2.bold())
-            Text("The hub can tell you when something needs you: a new clash in the next two weeks, a tennis draw or entry, a finished video review, or a source that keeps failing.")
-            Text("You choose which kinds in Settings → App → Notifications. What they say comes from the hub, not through Apple.")
-                .foregroundStyle(.secondary)
-            Spacer()
+        VStack(spacing: 12) {
+            // The explanation scrolls at large text sizes; the buttons stay put.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Image(systemName: "bell.badge").font(.largeTitle).foregroundStyle(.tint).accessibilityHidden(true)
+                    Text("Turn on notifications?").font(.title2.bold())
+                    Text("The hub can tell you when something needs you: a new clash in the next two weeks, a tennis draw or entry, a finished video review, or a source that keeps failing.")
+                    Text("You choose which kinds in Settings → App → Notifications. What they say comes from the hub, not through Apple.")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollBounceBehavior(.basedOnSize)
             Button { Task { await model.enableNotifications() } } label: {
                 Text("Turn on").frame(maxWidth: .infinity)
             }
@@ -77,6 +83,6 @@ struct NotificationsPrompt: View {
                 .frame(maxWidth: .infinity)
         }
         .padding(24)
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
     }
 }

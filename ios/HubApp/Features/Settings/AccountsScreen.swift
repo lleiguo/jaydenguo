@@ -86,7 +86,7 @@ struct ProviderHeader: View {
             Spacer()
             if creds.isEmpty { Text("Not connected") }
             else if creds.contains(where: \.needsAttention) { Text("Needs attention").foregroundStyle(.red) }
-            else { Text("Connected").foregroundStyle(.green) }
+            else { Text("Connected").foregroundStyle(.good) }
         }
     }
 }

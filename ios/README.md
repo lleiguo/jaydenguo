@@ -98,19 +98,46 @@ It fails if anything personal is left.
 
 ## Release (TestFlight)
 
-Needs the Apple Developer account (plan O-1, O-2):
+The paid Apple Developer team signs it (plan O-1, O-2); `Local.xcconfig`
+holds its team ID with no `.dev` suffix.
 
-1. Set `DEVELOPMENT_TEAM` in `project.yml`, run `xcodegen`, and bump
-   `CURRENT_PROJECT_VERSION` (and `MARKETING_VERSION` for a new version).
-2. Run the UI tests.
-3. Xcode → Product → Archive → Distribute App → TestFlight (internal only).
-4. TestFlight builds expire after 90 days: release at least every 60.
+**First time only**
+
+1. App Store Connect → **Apps** → **+** → New App: iOS, name "Hub" (or any
+   name not about the family: AUTH-3), bundle ID `com.jaydenguo.hub`, SKU
+   `hub`. Don't fill in the store listing: the app is never published
+   (INFR-4).
+2. **Users and Access**: add the other parent's Apple ID with the
+   Developer or Marketing role, then TestFlight → **Internal Testing** → a
+   group with both of you.
+3. App Store Connect → the app → **App Privacy**: "Data not collected" (the
+   app sends data only to your own site).
+
+**Each release**
+
+1. Bump `CURRENT_PROJECT_VERSION` in `project.yml` (and
+   `MARKETING_VERSION` for a new version), run `xcodegen`.
+2. Run HubKit's tests and the UI tests (above).
+3. Xcode → Product → Archive → Distribute App → **TestFlight Internal
+   Only**. Push switches to production automatically in the archive.
+4. TestFlight builds expire after 90 days: **release at least every 60
+   days** (N-5). A calendar reminder works.
 
 To make old builds update, set `MIN_APP_VERSION` on the web service. They
 get a "please update" screen.
 
+## Push notifications
+
+They need the APNs key in Secret Manager and `apns_key_id` /
+`apns_team_id` in Terraform: see "iPhone push notifications" in
+[infra/README.md](../infra/README.md), which also covers rotating the key.
+Until then the worker only logs them. Development builds use Apple's
+sandbox and TestFlight builds production; each phone registers whichever
+it is.
+
 ## Lost phone
 
 On the website, Settings → **Sign out everywhere** ends every session
-within a minute, the phone's included. The app then wipes its data the
-next time it reaches the server.
+within a minute, the phone's included, and stops its notifications. The
+app then wipes its data the next time it reaches the server. Face ID (on by
+default) keeps the app closed meanwhile.

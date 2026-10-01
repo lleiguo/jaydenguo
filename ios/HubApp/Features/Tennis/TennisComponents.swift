@@ -97,7 +97,7 @@ struct MatchRow: View {
                 } else {
                     Text(v.resultLetter ?? "—")
                         .font(.headline)
-                        .foregroundStyle(v.resultLetter == "W" ? .green : v.resultLetter == "L" ? .red : .primary)
+                        .foregroundStyle(v.resultLetter == "W" ? .good : v.resultLetter == "L" ? .red : .primary)
                     Text(v.score).font(.subheadline.monospacedDigit())
                 }
                 if let running = ref.running { Caption(running) }
