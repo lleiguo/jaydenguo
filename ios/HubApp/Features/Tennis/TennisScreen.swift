@@ -3,8 +3,9 @@ import HubKit
 import SwiftUI
 
 /// Tennis (intent 0004, ITEN-1; TEN-2, TEN-3, TEN-6, TEN-9, TEN-10): his
-/// next matches with the estimate, tournaments in progress and coming up,
-/// ones found for him to enter, and past tournaments.
+/// next matches with the estimate, tournaments in progress and the ones
+/// he's entered in, ones found for him to enter, matching ones not open yet
+/// and skipped ones (refreshed with every sync), and past tournaments.
 struct TennisScreen: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openURL) private var openURL
@@ -13,6 +14,9 @@ struct TennisScreen: View {
         RemoteContent(fetch: { try await model.client.api.getTennisOverview().ok.body.json }) { o in
             List {
                 Section {
+                    Text("Last updated: \(updated(o.lastUpdated))")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("tennisLastUpdated")
                     NavigationLink(value: Route.tennisResults) { Label("Results and W–L", systemImage: "list.number") }
                     NavigationLink(value: Route.tennisAccuracy) { Label("How accurate are the predictions?", systemImage: "target") }
                 }
@@ -38,8 +42,8 @@ struct TennisScreen: View {
                         ForEach(o.inProgress, id: \.id) { TournamentRow(t: $0) }
                     }
                 }
-                Section("Upcoming tournaments") {
-                    if o.upcomingRows.isEmpty { Caption("No upcoming tournaments.") }
+                Section(enteredTitle(o.selfName)) {
+                    if o.upcomingRows.isEmpty { Caption("Not entered in any upcoming tournament.") }
                     ForEach(o.upcomingRows, id: \.key) { upcomingRow($0) }
                 }
                 if !o.found.isEmpty {
@@ -49,6 +53,15 @@ struct TennisScreen: View {
                         Text("Found for him")
                     } footer: {
                         Text("Entering and paying happen on the tournament site.")
+                    }
+                }
+                Section("Upcoming matching tournaments (not yet open)") {
+                    if o.notOpen.isEmpty { Caption("None found yet.") }
+                    ForEach(o.notOpen, id: \.id) { notOpenRow($0) }
+                }
+                if !o.skipped.isEmpty {
+                    Section("Skipped") {
+                        ForEach(o.skipped, id: \.id) { skippedRow($0) }
                     }
                 }
                 Section("Past tournaments") {
@@ -121,6 +134,54 @@ struct TennisScreen: View {
             .font(.subheadline)
         }
         .accessibilityIdentifier("foundEntry")
+    }
+
+    // Matching tournaments whose entry hasn't opened yet; the Thursday job
+    // enters him once it does.
+    private func notOpenRow(_ e: Components.Schemas.TennisOverview.NotOpenPayloadPayload) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(e.tournamentName).font(.headline)
+            Caption([TennisFormat.dates(e.startDate, e.endDate), e.eventName].filter { !$0.isEmpty }.joined(separator: " · "))
+            Caption([[e.venue, e.city].compactMap { $0 }.joined(separator: ", "), e.driveMinutes.map { "\(Int($0)) min drive" }]
+                .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+            Text([e.entryOpens.map { "Entry opens \($0)" }, e.entryDeadline.map { "closes \($0)" }]
+                .compactMap { $0 }.joined(separator: " · "))
+                .font(.subheadline.weight(.medium))
+            if let url = https(e.tournamentUrl) {
+                Button("Tournament page") { openURL(url) }.buttonStyle(.borderless).font(.subheadline)
+            }
+        }
+        .accessibilityIdentifier("notOpenEntry")
+    }
+
+    private func skippedRow(_ e: Components.Schemas.TennisOverview.SkippedPayloadPayload) -> some View {
+        Button {
+            if let url = https(e.tournamentUrl) { openURL(url) }
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(e.tournamentName).font(.subheadline.weight(.medium))
+                Caption([TennisFormat.dates(e.startDate, e.endDate), e.note].compactMap { $0 }.joined(separator: " · "))
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("skippedEntry")
+    }
+
+    private func enteredTitle(_ selfName: String?) -> String {
+        guard let name = selfName.flatMap(Self.firstName) else { return "Tournaments he's entered in" }
+        return "Tournaments \(name) is entered in"
+    }
+
+    /// "Guo, Jayden" or "Jayden Guo" → "Jayden".
+    static func firstName(_ name: String) -> String? {
+        let given = name.contains(",") ? name.split(separator: ",").dropFirst().first.map(String.init) ?? "" : name
+        return given.split(separator: " ").first.map(String.init)
+    }
+
+    private func updated(_ iso: String?) -> String {
+        guard let date = iso.flatMap(HomeTime.parse) else { return "not synced yet" }
+        let home = model.homeTime
+        return "\(home.dayTitle(home.localDate(date))), \(home.time(date))"
     }
 
     private func foundText(_ status: String) -> String {

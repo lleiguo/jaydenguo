@@ -370,6 +370,7 @@
       ]
     }
   ],
+  "lastUpdated": null,
   "found": [
     {
       "id": "39b09a11-517c-4e01-b4d3-db86826c3e1d",
@@ -382,6 +383,7 @@
       "city": "Springfield",
       "region": null,
       "entryDeadline": "2026-10-19",
+      "entryOpens": null,
       "eventNo": "1",
       "eventName": "U12 Boys Singles",
       "driveMinutes": 25,
@@ -399,5 +401,7 @@
       "createdAt": "2026-09-29T17:07:16.226Z",
       "updatedAt": "2026-09-29T17:07:16.226Z"
     }
-  ]
+  ],
+  "notOpen": [],
+  "skipped": []
 }

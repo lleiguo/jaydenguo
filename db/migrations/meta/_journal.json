@@ -169,6 +169,13 @@
       "when": 1790782988419,
       "tag": "0023_push_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790816341119,
+      "tag": "0024_tennis_entry_opens",
+      "breakpoints": true
     }
   ]
 }

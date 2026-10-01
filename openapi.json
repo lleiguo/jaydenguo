@@ -9046,6 +9046,12 @@
               ]
             }
           },
+          "lastUpdated": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "found": {
             "type": "array",
             "items": {
@@ -9088,6 +9094,12 @@
                   ]
                 },
                 "entryDeadline": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "entryOpens": {
                   "type": [
                     "string",
                     "null"
@@ -9186,6 +9198,339 @@
                 "city",
                 "region",
                 "entryDeadline",
+                "entryOpens",
+                "eventNo",
+                "eventName",
+                "driveMinutes",
+                "driveEstimated",
+                "status",
+                "reservePosition",
+                "note",
+                "tournamentPlayerId",
+                "tournamentUrl",
+                "entryUrl",
+                "enteredAt",
+                "listCheckedAt",
+                "drawSeenAt",
+                "drawSyncedAt",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "notOpen": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "sourceId": {
+                  "type": "string"
+                },
+                "tournamentExternalId": {
+                  "type": "string"
+                },
+                "tournamentName": {
+                  "type": "string"
+                },
+                "startDate": {
+                  "type": "string"
+                },
+                "endDate": {
+                  "type": "string"
+                },
+                "venue": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "city": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "region": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "entryDeadline": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "entryOpens": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "eventNo": {
+                  "type": "string"
+                },
+                "eventName": {
+                  "type": "string"
+                },
+                "driveMinutes": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "driveEstimated": {
+                  "type": "boolean"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "reservePosition": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tournamentPlayerId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tournamentUrl": {
+                  "type": "string"
+                },
+                "entryUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "enteredAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "listCheckedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "drawSeenAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "drawSyncedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "sourceId",
+                "tournamentExternalId",
+                "tournamentName",
+                "startDate",
+                "endDate",
+                "venue",
+                "city",
+                "region",
+                "entryDeadline",
+                "entryOpens",
+                "eventNo",
+                "eventName",
+                "driveMinutes",
+                "driveEstimated",
+                "status",
+                "reservePosition",
+                "note",
+                "tournamentPlayerId",
+                "tournamentUrl",
+                "entryUrl",
+                "enteredAt",
+                "listCheckedAt",
+                "drawSeenAt",
+                "drawSyncedAt",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "sourceId": {
+                  "type": "string"
+                },
+                "tournamentExternalId": {
+                  "type": "string"
+                },
+                "tournamentName": {
+                  "type": "string"
+                },
+                "startDate": {
+                  "type": "string"
+                },
+                "endDate": {
+                  "type": "string"
+                },
+                "venue": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "city": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "region": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "entryDeadline": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "entryOpens": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "eventNo": {
+                  "type": "string"
+                },
+                "eventName": {
+                  "type": "string"
+                },
+                "driveMinutes": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "driveEstimated": {
+                  "type": "boolean"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "reservePosition": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tournamentPlayerId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tournamentUrl": {
+                  "type": "string"
+                },
+                "entryUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "enteredAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "listCheckedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "drawSeenAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "drawSyncedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "sourceId",
+                "tournamentExternalId",
+                "tournamentName",
+                "startDate",
+                "endDate",
+                "venue",
+                "city",
+                "region",
+                "entryDeadline",
+                "entryOpens",
                 "eventNo",
                 "eventName",
                 "driveMinutes",
@@ -9214,7 +9559,10 @@
           "upcoming",
           "past",
           "upcomingRows",
-          "found"
+          "lastUpdated",
+          "found",
+          "notOpen",
+          "skipped"
         ]
       },
       "TennisPlayerResponse": {
@@ -9611,6 +9959,12 @@
                         "null"
                       ]
                     },
+                    "entryOpens": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "eventNo": {
                       "type": "string"
                     },
@@ -9704,6 +10058,7 @@
                     "city",
                     "region",
                     "entryDeadline",
+                    "entryOpens",
                     "eventNo",
                     "eventName",
                     "driveMinutes",

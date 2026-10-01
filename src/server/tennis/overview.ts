@@ -1,4 +1,5 @@
-import { ACTIVE_ENTRY } from "../../domain/tennis-entry";
+import { and, eq, max } from "drizzle-orm";
+import { sources } from "@db/schema";
 import type { EntryStatus } from "../../domain/tennis-constants";
 import type { DbOrTx } from "../db/client";
 import { listEntries, type EntryView } from "./entries";
@@ -58,18 +59,46 @@ export type TennisOverview = {
   // "Upcoming tournaments": every tournament he's registered for, with a
   // prediction per draw that has an opponent.
   upcomingRows: (UpcomingRow & { drawPredictions: DrawPrediction[] })[];
-  // "Found for him": entries he isn't registered for yet.
+  // When the Tennis source last synced (entries are refreshed with it).
+  lastUpdated: string | null;
+  // "Found for him": open for entry, or dropped off a list; he isn't
+  // registered.
   found: EntryView[];
+  // Matching tournaments whose entry hasn't opened yet, soonest first.
+  notOpen: EntryView[];
+  // Tournaments that don't fit him, with why.
+  skipped: EntryView[];
 };
+
+// The Tennis page's entry sections (TEN-9, TEN-10).
+export function entrySections(entries: EntryView[], today: string) {
+  const status = (e: EntryView) => e.status as EntryStatus;
+  return {
+    found: entries.filter((e) => status(e) === "found" || status(e) === "withdrawn"),
+    notOpen: entries.filter(
+      (e) => status(e) === "not_open" && (!e.entryDeadline || e.entryDeadline >= today),
+    ),
+    skipped: entries.filter((e) => status(e) === "skipped"),
+  };
+}
+
+export async function tennisLastUpdated(db: DbOrTx): Promise<string | null> {
+  const [row] = await db
+    .select({ at: max(sources.lastSuccessAt) })
+    .from(sources)
+    .where(and(eq(sources.kind, "tennis_tc"), eq(sources.enabled, true)));
+  return row?.at ? new Date(row.at).toISOString() : null;
+}
 
 export async function tennisOverview(db: DbOrTx): Promise<TennisOverview> {
   const { data, today, self, nextMatches, inProgress, upcoming, past } = await listTournaments(db);
   const predictions = nextMatches.map((n) =>
     n.draw.opponentKey ? predictAgainst(data, n.draw.opponentKey) : null,
   );
-  const [explanations, entries] = await Promise.all([
+  const [explanations, entries, lastUpdated] = await Promise.all([
     explanationsFor(db, predictions),
     listEntries(db, today),
+    tennisLastUpdated(db),
   ]);
   return {
     today,
@@ -88,6 +117,7 @@ export async function tennisOverview(db: DbOrTx): Promise<TennisOverview> {
         drawPredictions: await drawPredictions(db, data, r.draws),
       })),
     ),
-    found: entries.filter((e) => !ACTIVE_ENTRY.includes(e.status as EntryStatus)),
+    lastUpdated,
+    ...entrySections(entries, today),
   };
 }

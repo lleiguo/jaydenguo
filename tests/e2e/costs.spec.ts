@@ -13,10 +13,11 @@ test("the Costs page shows month to date, the estimate, the chart and the table"
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
   try {
     await pool.query("delete from daily_costs");
-    // Ten days ending yesterday (home time zone is Toronto by default).
+    // Ten days ending today (home time zone is Toronto by default), so
+    // this month always has some, even on the 1st.
     await pool.query(`insert into daily_costs (day, service, cost, currency)
       select ((now() at time zone 'America/Toronto')::date - g), s, c, 'CAD'
-      from generate_series(1, 10) g,
+      from generate_series(0, 9) g,
            (values ('Cloud SQL', 1.00), ('Vertex AI', 0.50)) as x(s, c)`);
   } finally {
     await pool.end();

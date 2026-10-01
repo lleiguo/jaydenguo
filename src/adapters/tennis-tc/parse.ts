@@ -58,6 +58,7 @@ export type TcTournament = {
   city: string | null;
   region: string | null;
   entryDeadline: string | null;
+  entryOpens: string | null;
   categories: string[];
 };
 
@@ -278,6 +279,7 @@ export function parseTournament(html: string, id: string): TcTournament {
     city,
     region,
     entryDeadline: dated["closing deadline"] ?? dated["entry deadline"] ?? null,
+    entryOpens: dated["entry opens"] ?? null,
     categories: root
       .querySelectorAll(".hgroup .tag, .tag--mono")
       .map((t) => text(t)!)
