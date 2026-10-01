@@ -48,22 +48,16 @@ struct CalendarEventRow: View {
     var owners: String?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                if event.allDay {
-                    Text("All day")
-                } else {
+        TimeRow(bar: event.category.color) {
+            if event.allDay {
+                Text("All day")
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(homeTime.time(event.start))
                     Text(homeTime.time(event.end)).foregroundStyle(.secondary)
                 }
             }
-            .font(.subheadline.monospacedDigit())
-            .frame(width: 70, alignment: .leading)
-
-            RoundedRectangle(cornerRadius: 2)
-                .fill(event.category.color)
-                .frame(width: 4)
-
+        } content: {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Image(systemName: event.category.symbol)
@@ -79,10 +73,9 @@ struct CalendarEventRow: View {
                     Text(details.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
                 }
                 if let state = stateLine {
-                    Text(state).font(.caption.weight(.medium)).foregroundStyle(.orange)
+                    Text(state).font(.caption.weight(.medium)).foregroundStyle(.warning)
                 }
             }
-            Spacer(minLength: 0)
         }
         .padding(.vertical, 2)
         // The whole row takes the tap, not only its text.

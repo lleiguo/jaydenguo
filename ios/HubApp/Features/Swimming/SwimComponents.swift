@@ -35,7 +35,7 @@ struct SwimResultRow: View {
                     Text(r.shownTime).font(.body.weight(.semibold).monospacedDigit())
                 }
                 Text(change).font(.caption.monospacedDigit())
-                    .foregroundStyle((r.changeMs ?? 0) < 0 ? .green : .secondary)
+                    .foregroundStyle((r.changeMs ?? 0) < 0 ? .good : .secondary)
                 if let place = r.place { Caption("Place \(Int(place))") }
             }
         }

@@ -38,6 +38,7 @@ struct TodayScreen: View {
                 waitingSection(today)
             }
             .accessibilityIdentifier("todayList")
+            .onAppear { model.todayShown() }
         }
         .navigationTitle("Today")
         .task { await refresh() }

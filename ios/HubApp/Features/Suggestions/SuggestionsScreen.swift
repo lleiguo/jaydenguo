@@ -99,7 +99,7 @@ struct SuggestionRow: View {
             Text("“\(s.quote)”").font(.callout).italic().foregroundStyle(.secondary).lineLimit(3)
             if !s.unsure.isEmpty {
                 Label("Check the \(s.unsure.joined(separator: ", "))", systemImage: "questionmark.circle")
-                    .font(.caption.weight(.medium)).foregroundStyle(.orange)
+                    .font(.caption.weight(.medium)).foregroundStyle(.warning)
             }
             Caption("From \(s.from): \(s.subject)")
         }
@@ -172,7 +172,7 @@ struct SuggestionSheet: View {
                     }
                     if !s.unsure.isEmpty {
                         Label("The \(s.unsure.joined(separator: ", ")) may be wrong: check before approving.", systemImage: "questionmark.circle")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.warning)
                     }
                 }
                 Section(s.kind == .new ? "The event" : "The change") {

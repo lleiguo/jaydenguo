@@ -251,11 +251,9 @@ struct SchoolBlockRow: View {
 
     var body: some View {
         Button(action: expand) {
-            HStack(spacing: 12) {
+            TimeRow(bar: EventCategory.schoolClass.color) {
                 Text(homeTime.time(block.start))
-                    .font(.subheadline.monospacedDigit())
-                    .frame(width: 70, alignment: .leading)
-                RoundedRectangle(cornerRadius: 2).fill(EventCategory.schoolClass.color).frame(width: 4)
+            } content: {
                 VStack(alignment: .leading) {
                     HStack {
                         Label("School", systemImage: EventCategory.schoolClass.symbol)
@@ -264,9 +262,10 @@ struct SchoolBlockRow: View {
                     Text("\(homeTime.range(block.start, block.end)) · \(block.classes.count) classes")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Spacer()
-                Image(systemName: "chevron.down").foregroundStyle(.tertiary)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down").foregroundStyle(.secondary).accessibilityHidden(true)
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityHint("Shows each class")

@@ -21,6 +21,7 @@ struct HubApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             model.lock.sceneChanged(phase)
+            if phase == .active { model.pickUpSharedReview() }
             if phase == .background { model.scheduleRefresh() }
         }
         .backgroundTask(.appRefresh(AppModel.refreshTaskID)) { await model.refreshInBackground() }

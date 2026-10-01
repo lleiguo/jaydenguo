@@ -37,8 +37,8 @@ struct EventSheet: View {
                 if e.schoolClosed { Label("School is closed this day", systemImage: "xmark.octagon") }
                 if let place = e.locationName { Label(place, systemImage: "mappin.and.ellipse") }
                 if let notes = e.notes, !notes.isEmpty { Text(notes) }
-                if e.isCancelled { Label("Cancelled by the source", systemImage: "xmark.circle").foregroundStyle(.orange) }
-                if e.isSkipped { Label("Skipped: he won't go", systemImage: "forward.end").foregroundStyle(.orange) }
+                if e.isCancelled { Label("Cancelled by the source", systemImage: "xmark.circle").foregroundStyle(.warning) }
+                if e.isSkipped { Label("Skipped: he won't go", systemImage: "forward.end").foregroundStyle(.warning) }
             }
 
             Section {
@@ -67,7 +67,7 @@ struct EventSheet: View {
                     Text("You moved this. The source had it \(store.homeTime.range(o.originalStart, o.originalEnd)).")
                     if o.sourceChangedAt != nil {
                         Label("The source changed since you moved this.", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.warning)
                         if let snap = o.snapshot {
                             Text("When you moved it, the source had \(store.homeTime.range(snap.start, snap.end)).").font(.caption)
                         }

@@ -68,7 +68,11 @@ final class VideoTests: XCTestCase {
         XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 20))
         XCTAssertGreaterThanOrEqual(rows.count, 2)
         rows.firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["The advice"].waitForExistence(timeout: 20))
+        // The player comes first; the advice is below it.
+        let advice = app.staticTexts["The advice"]
+        XCTAssertTrue(app.staticTexts["Done"].waitForExistence(timeout: 20))
+        for _ in 0..<6 where !advice.exists { app.swipeUp() }
+        XCTAssertTrue(advice.exists)
         let verdict = app.staticTexts["Verdict"]
         for _ in 0..<8 where !verdict.exists { app.swipeUp() }
         XCTAssertTrue(verdict.exists)
@@ -95,7 +99,7 @@ final class VideoTests: XCTestCase {
     func testVoteOnce() throws {
         let app = launch()
         app.open(URL(string: "jaydenguohub://open/videos/\(debate)")!)
-        XCTAssertTrue(app.staticTexts["The advice"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["Done"].waitForExistence(timeout: 20))
         let voted = element(app, "yourVote")
         let claude = app.buttons["Claude"]
         for _ in 0..<12 where !(voted.exists || claude.isHittable) { app.swipeUp() }

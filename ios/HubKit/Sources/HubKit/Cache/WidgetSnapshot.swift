@@ -71,6 +71,27 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
         return Array(Set(dates.filter { $0 >= now })).sorted().prefix(limit).map { $0 }
     }
 
+    /// What Siri says for "What's next" (EXT-4).
+    public func spokenNext(at now: Date) -> String {
+        guard let next = upcoming(at: now).first else { return "Nothing else is coming up in the next few days." }
+        let place = next.place.map { " at \($0)" } ?? ""
+        if next.start <= now { return "\(next.title), now until \(homeTime.time(next.end))\(place)." }
+        let today = homeTime.localDate(now), day = homeTime.localDate(next.start)
+        let when = day == today ? "at \(homeTime.time(next.start))"
+            : day == CalendarDates.add(days: 1, to: today) ? "tomorrow at \(homeTime.time(next.start))"
+            : "\(homeTime.dayTitle(day)) at \(homeTime.time(next.start))"
+        return "\(next.title) \(when)\(place)."
+    }
+
+    /// What Siri says for "Today's schedule" (EXT-4): the rest of today.
+    public func spokenToday(at now: Date) -> String {
+        let items = today(at: now)
+        guard !items.isEmpty else { return "Nothing else today." }
+        return items.map { i in
+            i.allDay ? "\(i.title), all day" : "\(homeTime.time(i.start)) \(i.title)\(i.clash ? " (clash)" : "")"
+        }.joined(separator: "\n")
+    }
+
     /// "Next: Swim 17:30" for the inline lock screen widget.
     public func inlineText(at now: Date) -> String {
         guard let next = upcoming(at: now).first else { return "Nothing else today" }

@@ -38,6 +38,14 @@ final class AppModel {
     var toast: Toast?
     /// Set while screens show cached answers: when they were fetched (OFF-1).
     private(set) var offlineSince: Date?
+    /// From the process starting to Today's list first showing (INFR-2),
+    /// and how much of it was the app's own code (after the system loaded it).
+    private(set) var launchToToday: TimeInterval?
+    private(set) var appCodeToToday: TimeInterval?
+    /// When the app's code started (the model is made first).
+    private static let appStart = Date.now
+    /// A Google Photos video shared to the hub, to pick (EXT-3).
+    var newReviewDraft: PendingReview?
     /// Shows the "turn on notifications?" explanation (PUSH-3).
     var askForNotifications = false
     /// This phone's notification kinds, once registered.
@@ -67,6 +75,7 @@ final class AppModel {
     }
 
     static func live() -> AppModel {
+        _ = appStart
         #if DEBUG
         let debug = true
         #else
@@ -245,6 +254,38 @@ final class AppModel {
         case .video: morePath = [.videos, route]
         default: pendingRoute = route
         }
+    }
+
+    // MARK: Launch time (INFR-2)
+
+    /// Today calls this when its list first shows; only the first time
+    /// after launch counts.
+    func todayShown() {
+        guard launchToToday == nil, let start = Self.processStart else { return }
+        launchToToday = Date.now.timeIntervalSince(start)
+        appCodeToToday = Date.now.timeIntervalSince(Self.appStart)
+    }
+
+    private static let processStart: Date? = {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else { return nil }
+        let t = info.kp_proc.p_starttime
+        return Date(timeIntervalSince1970: TimeInterval(t.tv_sec) + TimeInterval(t.tv_usec) / 1_000_000)
+    }()
+
+    // MARK: Shared to the hub (EXT-3)
+
+    /// The share sheet can't pick from Google Photos: it leaves the note in
+    /// the app group, and the app opens New review on the Photos picker.
+    func pickUpSharedReview() {
+        guard phase == .signedIn else { return }
+        let shared = SharedSettings(appGroup: ResponseCache.bundleAppGroup)
+        guard let draft = shared.pendingPhotosReview else { return }
+        shared.pendingPhotosReview = nil
+        newReviewDraft = draft
+        go(.videos)
     }
 
     // MARK: Notifications (PUSH-2..4)

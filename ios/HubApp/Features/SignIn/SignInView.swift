@@ -9,6 +9,10 @@ struct SignInView: View {
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
 
     var body: some View {
+        FullHeightScroll { content }
+    }
+
+    private var content: some View {
         VStack(spacing: 24) {
             Spacer()
             Image(systemName: "calendar.badge.checkmark")

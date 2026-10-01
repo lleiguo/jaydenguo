@@ -52,4 +52,39 @@ public struct SharedSettings {
         get { defaults?.string(forKey: "HubBaseURL").flatMap(URL.init(string:)) }
         nonmutating set { defaults?.set(newValue?.absoluteString, forKey: "HubBaseURL") }
     }
+
+    /// A Google Photos video shared to the hub (EXT-3): the share sheet
+    /// can't pick it, so it leaves the note here and the app opens the
+    /// picker with it.
+    public var pendingPhotosReview: PendingReview? {
+        get { defaults?.data(forKey: "PendingPhotosReview").flatMap { try? JSONDecoder().decode(PendingReview.self, from: $0) } }
+        nonmutating set { defaults?.set(newValue.flatMap { try? JSONEncoder().encode($0) }, forKey: "PendingPhotosReview") }
+    }
+}
+
+public struct PendingReview: Codable, Sendable, Equatable {
+    public var sport: String
+    public var note: String
+    /// yyyy-MM-dd.
+    public var filmedOn: String
+
+    public init(sport: String, note: String, filmedOn: String) {
+        self.sport = sport
+        self.note = note
+        self.filmedOn = filmedOn
+    }
+}
+
+/// A client for the app's extensions and Shortcuts: the device token and
+/// server the app keeps in the app group.
+public enum SharedClient {
+    public static func make(deviceName: String, bundle: Bundle = .main, cache: ResponseCache? = nil) -> HubClient {
+        let group = ResponseCache.bundleAppGroup
+        let config = HubConfig(
+            baseURL: SharedSettings(appGroup: group).baseURL ?? HubConfig.productionURL,
+            appVersion: bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0",
+            deviceName: deviceName
+        )
+        return HubClient(config: config, tokens: KeychainTokenStore(accessGroup: group), cache: cache)
+    }
 }

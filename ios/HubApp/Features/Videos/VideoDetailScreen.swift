@@ -162,7 +162,7 @@ struct VideoDetailScreen: View {
         } else if unset {
             Label("The sport couldn't be worked out from the video, so the review used a general checklist. Set it here.",
                   systemImage: "questionmark.circle")
-                .foregroundStyle(.orange)
+                .foregroundStyle(.warning)
         } else if source == "detected" {
             Caption("Worked out from the video.")
         }
@@ -184,7 +184,7 @@ struct VideoDetailScreen: View {
                 let active = VideoTimeline.active(points, at: clip.time)
                 Group {
                     if let active {
-                        Text("\(active.label): ").bold().foregroundStyle(active.good ? .green : .orange) + Text(active.text)
+                        Text("\(active.label): ").bold().foregroundStyle(active.good ? .good : .warning) + Text(active.text)
                     } else {
                         Text(points.isEmpty ? "No points name a time." : "Points show here as the video reaches them.")
                             .foregroundStyle(.secondary)
@@ -192,24 +192,12 @@ struct VideoDetailScreen: View {
                 }
                 .font(.subheadline)
                 .accessibilityIdentifier("currentPoint")
-                HStack {
-                    ForEach(ClipPlayer.speeds, id: \.self) { s in
-                        Button(s == 1 ? "1×" : "\(String(format: "%g", s))×") { clip.setSpeed(s) }
-                            .buttonStyle(.bordered)
-                            .tint(clip.speed == s ? .accentColor : .secondary)
-                            .accessibilityAddTraits(clip.speed == s ? .isSelected : [])
-                    }
-                    Spacer()
-                    Button { clip.step(-1) } label: { Image(systemName: "backward.frame") }
-                        .accessibilityLabel("Back one frame")
-                    Button { clip.step(1) } label: { Image(systemName: "forward.frame") }
-                        .accessibilityLabel("Forward one frame")
-                    Text(VideoTimeline.clock(clip.time)).monospacedDigit().accessibilityIdentifier("videoTime")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .lineLimit(1)
-                .fixedSize(horizontal: false, vertical: true)
+                // Speeds on one row, frame steps and the time on the next, so
+                // neither wraps at large text sizes (APP-6).
+                HStack { speedButtons }
+                    .buttonStyle(.bordered)
+                HStack { stepButtons }
+                    .buttonStyle(.bordered)
                 if let start = r.segmentStart, start > 0 {
                     Caption("This is the reviewed part. Times count from its start (\(VideoTimeline.clock(start)) in the original).")
                 }
@@ -218,13 +206,30 @@ struct VideoDetailScreen: View {
             } else {
                 HStack { ProgressView(); Text("Loading the video…") }
             }
-        } footer: {
-            HStack {
-                Text("A private copy of the reviewed part, without sound, kept until you delete it.")
-                Spacer()
-                Button("Delete video") { confirmDeleteVideo = true }.font(.caption)
+            if clip.ready {
+                Button("Delete video", role: .destructive) { confirmDeleteVideo = true }
             }
+        } footer: {
+            Text("A private copy of the reviewed part, without sound, kept until you delete it.")
         }
+    }
+
+    @ViewBuilder private var speedButtons: some View {
+        ForEach(ClipPlayer.speeds, id: \.self) { s in
+            Button(s == 1 ? "1×" : "\(String(format: "%g", s))×") { clip.setSpeed(s) }
+                .tint(clip.speed == s ? .accentColor : .secondary)
+                .accessibilityLabel(s == 1 ? "Normal speed" : s == 0.5 ? "Half speed" : "Quarter speed")
+                .accessibilityAddTraits(clip.speed == s ? .isSelected : [])
+        }
+    }
+
+    @ViewBuilder private var stepButtons: some View {
+        Button { clip.step(-1) } label: { Image(systemName: "backward.frame") }
+            .accessibilityLabel("Back one frame")
+        Button { clip.step(1) } label: { Image(systemName: "forward.frame") }
+            .accessibilityLabel("Forward one frame")
+        Spacer(minLength: 8)
+        Text(VideoTimeline.clock(clip.time)).monospacedDigit().accessibilityIdentifier("videoTime")
     }
 
     private func verdictSection(_ v: Components.Schemas.Verdict) -> some View {
