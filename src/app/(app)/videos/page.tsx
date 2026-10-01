@@ -1,18 +1,16 @@
 import Link from "next/link";
-import { ReviewModeSetting } from "@/components/video/mode-setting";
 import { NewVideoForm } from "@/components/video/new-video-form";
 import { VideoHistory } from "@/components/video/history";
-import { Scoreboard } from "@/components/video/scoreboard";
 import { SPORT_LABEL, VIDEO_SPORTS, type VideoSport } from "@/domain/video-constants";
 import { localDate } from "@/domain/time";
 import { getDb } from "@/server/db";
 import { getHomeTimeZone } from "@/server/settings";
-import { getReviewMode, listVideoReviews, scoreboard, videoGoogleAccess } from "@/server/video/store";
+import { listVideoReviews, videoGoogleAccess } from "@/server/video/store";
 
 const muted = "text-neutral-600 dark:text-neutral-400";
 
 // Technique review from video links (VID-1..5): add a link or pick from
-// Google Photos, the history per sport, the review mode and the scoreboard.
+// Google Photos, and the history per sport.
 export default async function VideosPage({ searchParams }: PageProps<"/videos">) {
   const { sport: rawSport, deleted } = await searchParams;
   const sport = (VIDEO_SPORTS as readonly unknown[]).includes(rawSport)
@@ -20,11 +18,9 @@ export default async function VideosPage({ searchParams }: PageProps<"/videos">)
     : undefined;
   const showDeleted = deleted === "1";
   const db = await getDb();
-  const [reviews, mode, google, board, tz] = await Promise.all([
+  const [reviews, google, tz] = await Promise.all([
     listVideoReviews(db, { sport, deleted: showDeleted }),
-    getReviewMode(db),
     videoGoogleAccess(db),
-    scoreboard(db),
     getHomeTimeZone(db),
   ]);
   const connected = google.drive && google.photos;
@@ -88,24 +84,6 @@ export default async function VideosPage({ searchParams }: PageProps<"/videos">)
           deleted={showDeleted}
         />
       </section>
-
-      {!showDeleted && (
-        <>
-          <section aria-labelledby="scoreboard" className="flex flex-col gap-2">
-            <h2 id="scoreboard" className="text-lg font-semibold">
-              Scoreboard
-            </h2>
-            <Scoreboard rows={board} />
-          </section>
-
-          <section aria-labelledby="settings" className="flex flex-col gap-2">
-            <h2 id="settings" className="text-lg font-semibold">
-              Review settings
-            </h2>
-            <ReviewModeSetting initial={mode} />
-          </section>
-        </>
-      )}
     </main>
   );
 }

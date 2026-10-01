@@ -45,31 +45,16 @@ describe.runIf(hasFfmpeg)("prepareMedia", () => {
     expect(await probeDuration(SAMPLE)).toBeCloseTo(6, 0);
   });
 
-  // Frame times count from the clip's start, like Gemini's times and the
-  // playback copy (intent 0003, PLAY-6).
-  it("trims to the segment and labels frames with the clip's times", async () => {
-    const media = await prepareMedia(SAMPLE, dir, { start: 2, end: 5 }, true);
+  // The clip's clock starts at zero, like Gemini's times and the playback
+  // copy (intent 0003, PLAY-6).
+  it("trims to the segment", async () => {
+    const media = await prepareMedia(SAMPLE, dir, { start: 2, end: 5 });
     expect(media.durationSec).toBeCloseTo(3, 0);
     expect(media.offsetSec).toBe(2);
     expect(media.clip.length).toBeGreaterThan(1000);
-    expect(media.frames.length).toBeGreaterThan(5);
-    expect(media.frames.length).toBeLessThanOrEqual(60);
-    for (const f of media.frames) {
-      expect(f.atSec).toBeGreaterThanOrEqual(0);
-      expect(f.atSec).toBeLessThan(3.1);
-      // JPEG magic number.
-      expect(f.jpeg.subarray(0, 2).toString("hex")).toBe("ffd8");
-    }
-  });
-
-  it("skips frames when only Gemini reviews", async () => {
-    const media = await prepareMedia(SAMPLE, dir, { start: null, end: null }, false);
-    expect(media.frames).toEqual([]);
   });
 
   it("refuses a file that isn't a video", async () => {
-    await expect(prepareMedia("package.json", dir, { start: null, end: null }, true)).rejects.toThrow(
-      MediaError,
-    );
+    await expect(prepareMedia("package.json", dir, { start: null, end: null })).rejects.toThrow(MediaError);
   });
 });

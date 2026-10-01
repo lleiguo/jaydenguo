@@ -4759,67 +4759,6 @@
         }
       }
     },
-    "/api/v1/videos/{id}/vote": {
-      "post": {
-        "operationId": "voteVideoReview",
-        "summary": "The parent's vote (once).",
-        "description": "Spec: VID-3d",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "vote": {
-                    "type": "string",
-                    "enum": [
-                      "gemini",
-                      "claude"
-                    ]
-                  }
-                },
-                "required": [
-                  "vote"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VideoVoteResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "An error, in words the app can show.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/videos/{id}/video": {
       "get": {
         "operationId": "getPlayback",
@@ -4901,40 +4840,11 @@
         }
       }
     },
-    "/api/v1/videos/scoreboard": {
-      "get": {
-        "operationId": "getScoreboard",
-        "summary": "Judge and parent-vote wins per sport.",
-        "description": "Spec: VID-3d",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ScoreboardResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "An error, in words the app can show.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/videos/settings": {
       "get": {
         "operationId": "getVideoSettings",
-        "summary": "Review mode and Google access.",
-        "description": "Spec: VID-3e",
+        "summary": "Whether Google Drive and Photos are connected.",
+        "description": "Spec: VID-2",
         "responses": {
           "200": {
             "description": "OK",
@@ -4942,56 +4852,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VideoSettingsResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "An error, in words the app can show.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "operationId": "setVideoSettings",
-        "summary": "Change the review mode.",
-        "description": "Spec: VID-3e",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "mode": {
-                    "type": "string",
-                    "enum": [
-                      "debate",
-                      "gemini",
-                      "claude"
-                    ]
-                  }
-                },
-                "required": [
-                  "mode"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VideoModeResponse"
                 }
               }
             }
@@ -5536,144 +5396,6 @@
           "eventB"
         ]
       },
-      "CombinedOutput": {
-        "type": "object",
-        "properties": {
-          "summary": {
-            "type": "string"
-          },
-          "good": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "text": {
-                  "type": "string"
-                },
-                "at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "why": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "agreed",
-                    "disputed"
-                  ]
-                },
-                "sides": {
-                  "type": "object",
-                  "properties": {
-                    "for": {
-                      "type": "string"
-                    },
-                    "against": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "for",
-                    "against"
-                  ],
-                  "x-nullable": true
-                }
-              },
-              "required": [
-                "text",
-                "at",
-                "why",
-                "status"
-              ]
-            }
-          },
-          "fix": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "text": {
-                  "type": "string"
-                },
-                "at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "why": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "agreed",
-                    "disputed"
-                  ]
-                },
-                "sides": {
-                  "type": "object",
-                  "properties": {
-                    "for": {
-                      "type": "string"
-                    },
-                    "against": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "for",
-                    "against"
-                  ],
-                  "x-nullable": true
-                }
-              },
-              "required": [
-                "text",
-                "at",
-                "why",
-                "status"
-              ]
-            }
-          },
-          "drills": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "how": {
-                  "type": "string"
-                },
-                "reps": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "name",
-                "how",
-                "reps"
-              ]
-            }
-          },
-          "filmNext": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "summary",
-          "good",
-          "fix",
-          "drills",
-          "filmNext"
-        ]
-      },
       "Confidence": {
         "type": "string",
         "enum": [
@@ -6036,97 +5758,6 @@
           "lastTestAt",
           "lastTestOk",
           "lastError"
-        ]
-      },
-      "CritiqueOutput": {
-        "type": "object",
-        "properties": {
-          "reviews": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "label": {
-                  "type": "string",
-                  "enum": [
-                    "A",
-                    "B"
-                  ]
-                },
-                "scores": {
-                  "type": "object",
-                  "properties": {
-                    "grounded": {
-                      "type": "number"
-                    },
-                    "correct": {
-                      "type": "number"
-                    },
-                    "ageAppropriate": {
-                      "type": "number"
-                    },
-                    "actionable": {
-                      "type": "number"
-                    },
-                    "prioritised": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "grounded",
-                    "correct",
-                    "ageAppropriate",
-                    "actionable",
-                    "prioritised"
-                  ]
-                },
-                "unsupported": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "errors": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "point": {
-                        "type": "string"
-                      },
-                      "reason": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "point",
-                      "reason"
-                    ]
-                  }
-                },
-                "missed": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "comment": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "label",
-                "scores",
-                "unsupported",
-                "errors",
-                "missed",
-                "comment"
-              ]
-            }
-          }
-        },
-        "required": [
-          "reviews"
         ]
       },
       "DayTotal": {
@@ -6807,64 +6438,6 @@
           "video",
           "email",
           "explanation"
-        ]
-      },
-      "FinalScoreOutput": {
-        "type": "object",
-        "properties": {
-          "reviews": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "label": {
-                  "type": "string",
-                  "enum": [
-                    "A",
-                    "B"
-                  ]
-                },
-                "scores": {
-                  "type": "object",
-                  "properties": {
-                    "grounded": {
-                      "type": "number"
-                    },
-                    "correct": {
-                      "type": "number"
-                    },
-                    "ageAppropriate": {
-                      "type": "number"
-                    },
-                    "actionable": {
-                      "type": "number"
-                    },
-                    "prioritised": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "grounded",
-                    "correct",
-                    "ageAppropriate",
-                    "actionable",
-                    "prioritised"
-                  ]
-                },
-                "reason": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "label",
-                "scores",
-                "reason"
-              ]
-            }
-          }
-        },
-        "required": [
-          "reviews"
         ]
       },
       "Forecast": {
@@ -7631,47 +7204,6 @@
           "isPb"
         ]
       },
-      "RebuttalOutput": {
-        "type": "object",
-        "properties": {
-          "replies": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "point": {
-                  "type": "string"
-                },
-                "response": {
-                  "type": "string",
-                  "enum": [
-                    "concede",
-                    "defend"
-                  ]
-                },
-                "argument": {
-                  "type": "string"
-                },
-                "at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "point",
-                "response",
-                "argument",
-                "at"
-              ]
-            }
-          }
-        },
-        "required": [
-          "replies"
-        ]
-      },
       "RejectedResponse": {
         "type": "object",
         "properties": {
@@ -7954,25 +7486,6 @@
           "revoked"
         ]
       },
-      "RoundScores": {
-        "type": "object",
-        "properties": {
-          "gemini": {
-            "type": "object",
-            "properties": {},
-            "additionalProperties": {
-              "type": "number"
-            }
-          },
-          "claude": {
-            "type": "object",
-            "properties": {},
-            "additionalProperties": {
-              "type": "number"
-            }
-          }
-        }
-      },
       "RunsResponse": {
         "type": "object",
         "properties": {
@@ -8114,128 +7627,6 @@
             "x-nullable": true
           }
         }
-      },
-      "ScoreboardResponse": {
-        "type": "object",
-        "properties": {
-          "sports": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ScoreboardRow"
-            }
-          }
-        },
-        "required": [
-          "sports"
-        ]
-      },
-      "ScoreboardRow": {
-        "type": "object",
-        "properties": {
-          "sport": {
-            "type": "string",
-            "enum": [
-              "tennis",
-              "swimming",
-              "soccer",
-              "hockey",
-              "other"
-            ]
-          },
-          "debates": {
-            "type": "number"
-          },
-          "ties": {
-            "type": "number"
-          },
-          "judgeWins": {
-            "type": "object",
-            "properties": {
-              "gemini": {
-                "type": "number"
-              },
-              "claude": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "gemini",
-              "claude"
-            ]
-          },
-          "parentWins": {
-            "type": "object",
-            "properties": {
-              "gemini": {
-                "type": "number"
-              },
-              "claude": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "gemini",
-              "claude"
-            ]
-          },
-          "voted": {
-            "type": "number"
-          },
-          "agreed": {
-            "type": "number"
-          },
-          "comparable": {
-            "type": "number"
-          },
-          "selfPreference": {
-            "type": "object",
-            "properties": {
-              "gemini": {
-                "type": [
-                  "number",
-                  "null"
-                ]
-              },
-              "claude": {
-                "type": [
-                  "number",
-                  "null"
-                ]
-              }
-            },
-            "required": [
-              "gemini",
-              "claude"
-            ]
-          },
-          "input": {
-            "type": "object",
-            "properties": {
-              "gemini": {
-                "type": "string"
-              },
-              "claude": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "gemini",
-              "claude"
-            ]
-          }
-        },
-        "required": [
-          "sport",
-          "debates",
-          "ties",
-          "judgeWins",
-          "parentWins",
-          "voted",
-          "agreed",
-          "comparable",
-          "selfPreference",
-          "input"
-        ]
       },
       "SeriesResponse": {
         "type": "object",
@@ -10337,133 +9728,6 @@
           }
         ]
       },
-      "Verdict": {
-        "type": "object",
-        "properties": {
-          "winner": {
-            "type": "string",
-            "enum": [
-              "gemini",
-              "claude"
-            ]
-          },
-          "tie": {
-            "type": "boolean"
-          },
-          "margin": {
-            "type": "number"
-          },
-          "totals": {
-            "type": "object",
-            "properties": {
-              "gemini": {
-                "type": "number"
-              },
-              "claude": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "gemini",
-              "claude"
-            ]
-          },
-          "finalScores": {
-            "type": "object",
-            "properties": {
-              "gemini": {
-                "type": "object",
-                "properties": {
-                  "gemini": {
-                    "type": "number"
-                  },
-                  "claude": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "gemini",
-                  "claude"
-                ]
-              },
-              "claude": {
-                "type": "object",
-                "properties": {
-                  "gemini": {
-                    "type": "number"
-                  },
-                  "claude": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "gemini",
-                  "claude"
-                ]
-              }
-            },
-            "required": [
-              "gemini",
-              "claude"
-            ]
-          },
-          "selfScores": {
-            "type": "object",
-            "properties": {
-              "gemini": {
-                "type": "object",
-                "properties": {
-                  "own": {
-                    "type": "number"
-                  },
-                  "other": {
-                    "type": "number"
-                  },
-                  "preference": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "own",
-                  "other",
-                  "preference"
-                ]
-              },
-              "claude": {
-                "type": "object",
-                "properties": {
-                  "own": {
-                    "type": "number"
-                  },
-                  "other": {
-                    "type": "number"
-                  },
-                  "preference": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "own",
-                  "other",
-                  "preference"
-                ]
-              }
-            },
-            "required": [
-              "gemini",
-              "claude"
-            ]
-          }
-        },
-        "required": [
-          "winner",
-          "tie",
-          "margin",
-          "totals",
-          "finalScores",
-          "selfScores"
-        ]
-      },
       "VideoCreated": {
         "type": "object",
         "properties": {
@@ -10477,22 +9741,6 @@
         "required": [
           "id",
           "status"
-        ]
-      },
-      "VideoModeResponse": {
-        "type": "object",
-        "properties": {
-          "mode": {
-            "type": "string",
-            "enum": [
-              "debate",
-              "gemini",
-              "claude"
-            ]
-          }
-        },
-        "required": [
-          "mode"
         ]
       },
       "VideoRestored": {
@@ -10553,14 +9801,6 @@
           "status": {
             "type": "string"
           },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "debate",
-              "gemini",
-              "claude"
-            ]
-          },
           "progress": {
             "type": [
               "string",
@@ -10583,31 +9823,6 @@
             "type": [
               "string",
               "null"
-            ]
-          },
-          "winner": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "gemini",
-              "claude",
-              null
-            ]
-          },
-          "tie": {
-            "type": "boolean"
-          },
-          "parentVote": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "gemini",
-              "claude",
-              null
             ]
           },
           "createdAt": {
@@ -10643,20 +9858,10 @@
               "null"
             ]
           },
-          "verdict": {
-            "$ref": "#/components/schemas/Verdict",
-            "x-nullable": true
-          },
           "combinedReview": {},
           "costUsd": {
             "type": [
               "number",
-              "null"
-            ]
-          },
-          "votedAt": {
-            "type": [
-              "string",
               "null"
             ]
           },
@@ -10678,18 +9883,12 @@
                   "type": "string"
                 },
                 "model": {
-                  "type": "string",
-                  "enum": [
-                    "gemini",
-                    "claude"
-                  ]
+                  "type": "string"
                 },
                 "modelVersion": {
                   "type": "string"
                 },
-                "labels": {},
                 "output": {},
-                "scores": {},
                 "inputTokens": {
                   "type": [
                     "number",
@@ -10713,9 +9912,7 @@
                 "round",
                 "model",
                 "modelVersion",
-                "labels",
                 "output",
-                "scores",
                 "inputTokens",
                 "outputTokens",
                 "costUsd"
@@ -10732,14 +9929,10 @@
           "note",
           "filmedOn",
           "status",
-          "mode",
           "progress",
           "errorMessage",
           "pickerUri",
           "mediaName",
-          "winner",
-          "tie",
-          "parentVote",
           "createdAt",
           "deletedAt",
           "segmentStart",
@@ -10748,7 +9941,6 @@
           "promptVersion",
           "combinedReview",
           "costUsd",
-          "votedAt",
           "finishedAt",
           "hasPlayback",
           "rounds"
@@ -10800,14 +9992,6 @@
           "status": {
             "type": "string"
           },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "debate",
-              "gemini",
-              "claude"
-            ]
-          },
           "progress": {
             "type": [
               "string",
@@ -10832,31 +10016,6 @@
               "null"
             ]
           },
-          "winner": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "gemini",
-              "claude",
-              null
-            ]
-          },
-          "tie": {
-            "type": "boolean"
-          },
-          "parentVote": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "gemini",
-              "claude",
-              null
-            ]
-          },
           "createdAt": {
             "type": "string"
           },
@@ -10876,14 +10035,10 @@
           "note",
           "filmedOn",
           "status",
-          "mode",
           "progress",
           "errorMessage",
           "pickerUri",
           "mediaName",
-          "winner",
-          "tie",
-          "parentVote",
           "createdAt",
           "deletedAt"
         ]
@@ -10891,14 +10046,6 @@
       "VideoSettingsResponse": {
         "type": "object",
         "properties": {
-          "mode": {
-            "type": "string",
-            "enum": [
-              "debate",
-              "gemini",
-              "claude"
-            ]
-          },
           "google": {
             "type": "object",
             "properties": {
@@ -10916,7 +10063,6 @@
           }
         },
         "required": [
-          "mode",
           "google"
         ]
       },
@@ -10932,21 +10078,6 @@
         },
         "required": [
           "reviews"
-        ]
-      },
-      "VideoVoteResponse": {
-        "type": "object",
-        "properties": {
-          "vote": {
-            "type": "string",
-            "enum": [
-              "gemini",
-              "claude"
-            ]
-          }
-        },
-        "required": [
-          "vote"
         ]
       },
       "WinLoss": {

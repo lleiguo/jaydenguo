@@ -4,25 +4,15 @@ import OpenAPIRuntime
 
 public typealias VideoSummary = Components.Schemas.VideoReviewSummary
 public typealias VideoDetail = Components.Schemas.VideoReviewDetail
-public typealias ScoreboardRow = Components.Schemas.ScoreboardRow
 
-/// What a review says (VID-3): a model's review, or the combined advice with
-/// each point agreed or disputed (VID-3c). The API sends these as JSON
-/// without a schema; they're decoded here.
+/// What a review says (VID-3). The API sends it as JSON without a schema;
+/// it's decoded here.
 public struct ReviewContent: Codable, Sendable, Equatable {
     public struct Point: Codable, Sendable, Equatable {
         public var text: String
         /// "m:ss" in the reviewed clip, or nil.
         public var at: String?
         public var why: String
-        public var status: String?
-        public var sides: Sides?
-        public var disputed: Bool { status == "disputed" }
-    }
-
-    public struct Sides: Codable, Sendable, Equatable {
-        public var `for`: String
-        public var against: String
     }
 
     public struct Drill: Codable, Sendable, Equatable {
@@ -38,51 +28,6 @@ public struct ReviewContent: Codable, Sendable, Equatable {
     public var filmNext: String
 }
 
-/// A judge's scores for one review, 1–5 on each criterion (VID-3b).
-public struct ReviewScores: Codable, Sendable, Equatable {
-    public var grounded: Int
-    public var correct: Int
-    public var ageAppropriate: Int
-    public var actionable: Int
-    public var prioritised: Int
-    public var total: Int?
-
-    /// Each criterion with its name, in the web's order.
-    public var criteria: [(label: String, score: Int)] {
-        [("Grounded", grounded), ("Correct technique", correct), ("Age-appropriate", ageAppropriate),
-         ("Actionable", actionable), ("Prioritised", prioritised)]
-    }
-
-    public var sum: Int { total ?? (grounded + correct + ageAppropriate + actionable + prioritised) }
-}
-
-/// Round 2: a judge's critique of both reviews, blind (A and B).
-public struct Critique: Codable, Sendable, Equatable {
-    public struct Entry: Codable, Sendable, Equatable {
-        public struct Error: Codable, Sendable, Equatable {
-            public var point: String
-            public var reason: String
-        }
-        public var label: String
-        public var unsupported: [String]
-        public var errors: [Error]
-        public var missed: [String]
-        public var comment: String
-    }
-    public var reviews: [Entry]
-}
-
-/// Round 3: a model's replies to the critique of its review.
-public struct Rebuttal: Codable, Sendable, Equatable {
-    public struct Reply: Codable, Sendable, Equatable {
-        public var point: String
-        public var response: String
-        public var argument: String
-        public var at: String?
-    }
-    public var replies: [Reply]
-}
-
 extension OpenAPIValueContainer {
     /// Re-reads this JSON as a Swift type.
     public func decoded<T: Decodable>(as type: T.Type = T.self) -> T? {
@@ -91,48 +36,9 @@ extension OpenAPIValueContainer {
     }
 }
 
-public enum VideoModel: String, CaseIterable, Sendable {
-    case gemini, claude
-    public var label: String { self == .gemini ? "Gemini" : "Claude" }
-}
-
 extension VideoDetail {
-    /// The advice to follow: the combined review, or in single-model mode
-    /// the one review.
+    /// The review's advice.
     public var advice: ReviewContent? { combinedReview.decoded() }
-
-    /// One model's own first review (round 1).
-    public func review(by model: VideoModel) -> ReviewContent? {
-        rounds.first { $0.round == "review" && $0.model.rawValue == model.rawValue }?.output.decoded()
-    }
-
-    /// The judges' scores of each model's review: first (critique) and final.
-    public func scores(round: String) -> [(judge: VideoModel, of: VideoModel, scores: ReviewScores)] {
-        rounds.filter { $0.round == round }.flatMap { r -> [(VideoModel, VideoModel, ReviewScores)] in
-            guard let judge = VideoModel(rawValue: r.model.rawValue),
-                  let byModel: [String: ReviewScores] = r.scores.decoded()
-            else { return [] }
-            return VideoModel.allCases.compactMap { m in byModel[m.rawValue].map { (judge, m, $0) } }
-        }
-    }
-
-    /// Each judge's critique, with the blind labels mapped back to models.
-    public var critiques: [(judge: VideoModel, of: VideoModel, entry: Critique.Entry)] {
-        rounds.filter { $0.round == "critique" }.flatMap { r -> [(VideoModel, VideoModel, Critique.Entry)] in
-            guard let judge = VideoModel(rawValue: r.model.rawValue),
-                  let critique: Critique = r.output.decoded(),
-                  let labels: [String: String] = r.labels.decoded()
-            else { return [] }
-            return critique.reviews.compactMap { e in labels[e.label].flatMap(VideoModel.init(rawValue:)).map { (judge, $0, e) } }
-        }
-    }
-
-    public var rebuttals: [(model: VideoModel, rebuttal: Rebuttal)] {
-        rounds.filter { $0.round == "rebuttal" }.compactMap { r in
-            guard let m = VideoModel(rawValue: r.model.rawValue), let reb: Rebuttal = r.output.decoded() else { return nil }
-            return (m, reb)
-        }
-    }
 
     public var isRunning: Bool { VideoStatus.running(status) }
 }
@@ -214,13 +120,12 @@ public enum VideoTimeline {
         public let good: Bool
         public let text: String
         public let seconds: Double
-        public let disputed: Bool
 
-        /// "Good", "Fix 2", "Fix 2 (disputed)".
+        /// "Good", "Fix 2".
         public var label: String {
             if good { return "Good" }
             let n = (Int(id.split(separator: "-").last ?? "0") ?? 0) + 1
-            return "Fix \(n)" + (disputed ? " (disputed)" : "")
+            return "Fix \(n)"
         }
     }
 
@@ -242,7 +147,7 @@ public enum VideoTimeline {
         for (good, list) in [(true, review.good), (false, review.fix)] {
             for (i, p) in list.enumerated() {
                 if let sec = seconds(p.at) {
-                    out.append(Point(id: "\(good ? "good" : "fix")-\(i)", good: good, text: p.text, seconds: sec, disputed: p.disputed))
+                    out.append(Point(id: "\(good ? "good" : "fix")-\(i)", good: good, text: p.text, seconds: sec))
                 }
             }
         }

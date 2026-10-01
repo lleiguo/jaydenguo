@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import HubKit
 
-/// Video reviews (intent 0004, IVID-1, IVID-2) against the seed's debate.
+/// Video reviews (intent 0004, IVID-1, IVID-2) against the seed's sample review.
 @Suite struct VideoTests {
     let client = testClient()
 
@@ -10,23 +10,11 @@ import Testing
         get async throws { try await client.api.getVideoReview(path: .init(id: "x")).ok.body.json }
     }
 
-    @Test func decodesTheCombinedAdvice() async throws {
+    @Test func decodesTheAdvice() async throws {
         let advice = try #require(try await review.advice)
         #expect(!advice.summary.isEmpty)
-        #expect(!advice.fix.isEmpty && !advice.drills.isEmpty)
-        #expect(advice.fix.allSatisfy { $0.status == "agreed" || $0.status == "disputed" })
-        #expect(advice.fix.contains { $0.disputed && $0.sides != nil }, "a disputed point carries both sides")
-    }
-
-    @Test func eachModelsReviewAndTheJudging() async throws {
-        let r = try await review
-        #expect(r.review(by: .gemini)?.summary.contains("[gemini-review]") == true)
-        #expect(r.review(by: .claude)?.summary.contains("[claude-review]") == true)
-        let first = r.scores(round: "critique")
-        #expect(first.count == 4, "two judges, two reviews each")
-        #expect(first.first { $0.judge == .gemini && $0.of == .claude }?.scores.sum == 15)
-        #expect(r.critiques.count == 4)
-        #expect(r.rebuttals.count == 2)
+        #expect(!advice.good.isEmpty && !advice.fix.isEmpty && !advice.drills.isEmpty)
+        #expect(advice.fix.first?.at == "0:02")
     }
 
     @Test func timelineAsOnTheWeb() async throws {
@@ -35,8 +23,8 @@ import Testing
         #expect(VideoTimeline.seconds("0:04-0:06") == 4)
         #expect(VideoTimeline.seconds("00:07.5") == 7.5)
         #expect(VideoTimeline.seconds("no time") == nil)
-        let p = [VideoTimeline.Point(id: "fix-1", good: false, text: "Finish", seconds: 4, disputed: true)]
-        #expect(VideoTimeline.active(p, at: 5.5)?.label == "Fix 2 (disputed)")
+        let p = [VideoTimeline.Point(id: "fix-1", good: false, text: "Finish", seconds: 4)]
+        #expect(VideoTimeline.active(p, at: 5.5)?.label == "Fix 2")
         #expect(VideoTimeline.active(p, at: 6.1) == nil)
         #expect(VideoTimeline.clock(65.4) == "1:05")
     }
@@ -58,7 +46,7 @@ import Testing
     /// intent 0005, SPT-4: where the sport came from.
     @Test func sportInWords() async throws {
         let list = try await client.api.listVideoReviews().ok.body.json.reviews
-        let older = try #require(list.first { $0.mode == .gemini })
+        let older = try #require(list.first { $0.sportSource == .detected })
         #expect(VideoSport.text(older.sport.rawValue, source: older.sportSource.rawValue) == "Tennis (detected)")
         #expect(VideoSport.text("other", source: "unsure") == "Sport not set")
         #expect(VideoSport.text("hockey", source: "chosen") == "Hockey")

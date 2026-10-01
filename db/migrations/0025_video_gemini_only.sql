@@ -1,0 +1,1 @@
+ALTER TABLE "video_reviews" ALTER COLUMN "mode" SET DEFAULT 'gemini';

@@ -17,20 +17,19 @@ import {
 } from "../../adapters/google-media";
 import { googleAccessToken } from "../../adapters/google-calendar";
 import { SyncError } from "../../adapters/types";
-import { geminiFps } from "../../domain/frames";
+import { geminiFps } from "../../domain/video-fps";
 import { parseVideoLink } from "../../domain/video-links";
-import type { ReviewMode, ReviewModel, SportSource, VideoSport } from "../../domain/video-constants";
+import type { SportSource, VideoSport } from "../../domain/video-constants";
 import type { Db } from "../../server/db/client";
-import { claudeModel } from "../../server/llm/claude";
 import { geminiModel } from "../../server/llm/gemini";
 import { LlmError, type StructuredModel } from "../../server/llm/types";
 import { registerSecret } from "../../server/log";
-import { runDebate, type Models } from "../../server/video/debate";
 import { detectSport } from "../../server/video/detect";
 import { notifyVideo } from "../../server/push/kinds";
-import { fakeModels } from "../../server/video/fake";
+import { fakeModel } from "../../server/video/fake";
 import { mediaStore, playbackKey, type MediaStore } from "../../server/video/media-store";
 import { PROMPT_VERSION } from "../../server/video/prompts";
+import { runReview } from "../../server/video/reviewer";
 import { DRIVE_SCOPE, PHOTOS_SCOPE } from "../../server/video/store";
 import type { JobContext } from "../context";
 import { openCredential } from "../credentials";
@@ -38,40 +37,31 @@ import { MediaError, prepareMedia } from "./media";
 
 // The review job (plan M5.2-M5.5, spec VID-2, VID-5): `video:review <id>`.
 // Fetches the video through the owner's Google account into a temp folder,
-// prepares it, works out the sport if asked (intent 0005), runs the debate
-// (or one model), stores every round as it finishes, keeps the clip as a
-// playback copy if the review worked (intent 0003), and always deletes the
-// temp folder, whether it worked or not. A review run again for another
+// prepares it, works out the sport if asked (intent 0005), has Gemini review
+// it, stores every model call as it finishes, keeps the clip as a playback
+// copy if the review worked (intent 0003), and always deletes the temp
+// folder, whether it worked or not. A review run again for another
 // sport starts from its playback copy when there is one (SPT-6).
 
 // How long the owner has to pick in Google Photos.
 const PICK_TIMEOUT_MS = () => Number(process.env.PHOTOS_PICK_TIMEOUT_MS ?? 15 * 60_000);
 
 export type ReviewDeps = {
-  models?: () => Models;
+  model?: () => StructuredModel;
   accessToken?: (db: Db, scope: string) => Promise<string>;
   sleep?: (ms: number) => Promise<void>;
   media?: () => MediaStore | null;
 };
 
-// Vertex AI in production; stand-ins when VIDEO_LLM=fake (never on Cloud Run).
-export function defaultModels(): Models {
+// Gemini on Vertex AI in production; a stand-in when VIDEO_LLM=fake (never
+// on Cloud Run).
+export function defaultModel(): StructuredModel {
   if (process.env.VIDEO_LLM === "fake") {
     if (process.env.K_SERVICE || process.env.CLOUD_RUN_JOB)
       throw new Error("VIDEO_LLM=fake is for local use only");
-    return fakeModels();
+    return fakeModel();
   }
-  // Only the models the mode needs are created, so a Gemini-only review
-  // works while Claude isn't set up.
-  const lazy = (make: () => StructuredModel, name: "gemini" | "claude"): StructuredModel => {
-    let m: StructuredModel | null = null;
-    return {
-      name,
-      input: name === "gemini" ? "video" : "frames",
-      call: (req) => (m ??= make()).call(req),
-    };
-  };
-  return { gemini: lazy(() => geminiModel(), "gemini"), claude: lazy(() => claudeModel(), "claude") };
+  return geminiModel();
 }
 
 async function defaultAccessToken(db: Db, scope: string): Promise<string> {
@@ -118,7 +108,7 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
   const db = await ctx.db();
   const sleep = deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   const token = deps.accessToken ?? defaultAccessToken;
-  const models = deps.models ?? defaultModels;
+  const model = deps.model ?? defaultModel;
   const store = (deps.media ?? mediaStore)();
 
   const [row] = await db.select().from(videoReviews).where(eq(videoReviews.id, id));
@@ -138,7 +128,7 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       .where(eq(videoReviewRounds.reviewId, id));
     return Math.round((cost?.sum ?? 0) * 10_000) / 10_000;
   };
-  // PUSH-1: done or failed, with the review's current sport and verdict.
+  // PUSH-1: done or failed, with the review's current sport.
   const notifyReview = async (status: "done" | "failed", error: string | null) => {
     const [r] = await db.select().from(videoReviews).where(eq(videoReviews.id, id));
     await notifyVideo(
@@ -150,7 +140,6 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
         sportSource: r.sportSource as SportSource,
         filmedOn: r.filmedOn,
         finishedAt: r.finishedAt ?? new Date(),
-        winner: (r.verdict as { winner?: ReviewModel } | null)?.winner ?? null,
         error,
       },
       { log: ctx.log },
@@ -220,15 +209,14 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
 
     // 2. Media prep.
     await progress("Preparing the video");
-    const mode = row.mode as ReviewMode;
     const media = await prepareMedia(
       src,
       dir,
       copy ? { start: null, end: null } : { start: row.segmentStart, end: row.segmentEnd },
-      mode !== "gemini",
     );
     await set({ durationSec: media.durationSec, promptVersion: PROMPT_VERSION });
-    const reviewers = models();
+    const reviewer = model();
+    const video = { kind: "video" as const, data: media.clip, mimeType: "video/mp4" };
 
     // 3. The sport, read again: the owner may have set it while picking.
     const [current] = await db
@@ -238,13 +226,8 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
     let sport = current.sport as VideoSport;
     if (current.source === "detecting") {
       await progress("Working out the sport");
-      const found = await detectSport(
-        mode,
-        reviewers,
-        mode === "claude"
-          ? { kind: "frames", frames: media.frames }
-          : { kind: "video", data: media.clip, mimeType: "video/mp4", fps: 1 },
-        (message, fields) => ctx.log(message, { id, ...fields }, "WARNING"),
+      const found = await detectSport(reviewer, { ...video, fps: 1 }, (message, fields) =>
+        ctx.log(message, { id, ...fields }, "WARNING"),
       );
       if (found.round) await db.insert(videoReviewRounds).values({ reviewId: id, ...found.round });
       sport = found.sport;
@@ -252,20 +235,11 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
     }
 
     // 4. The review.
-    const result = await runDebate(
-      mode,
-      reviewers,
+    const result = await runReview(
+      reviewer,
       {
         context: { sport, note: row.note },
-        media: {
-          gemini: {
-            kind: "video",
-            data: media.clip,
-            mimeType: "video/mp4",
-            fps: geminiFps(sport, media.durationSec),
-          },
-          claude: { kind: "frames", frames: media.frames },
-        },
+        media: { ...video, fps: geminiFps(sport, media.durationSec) },
       },
       {
         progress,
@@ -279,14 +253,13 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
     await set({
       status: "done",
       progress: null,
-      verdict: result.verdict,
-      combinedReview: result.combined,
+      combinedReview: result.review,
       costUsd: await totalCost(),
       finishedAt: new Date(),
       playbackKey: playback,
       playbackBytes: copy ? row.playbackBytes : playback ? media.clip.length : null,
     });
-    ctx.log("video review done", { id, mode, costUsd: result.costUsd, playback: !!playback });
+    ctx.log("video review done", { id, costUsd: result.costUsd, playback: !!playback });
     await notifyReview("done", null);
   } catch (err) {
     const message = failureMessage(err);

@@ -1,17 +1,13 @@
 import type { z } from "zod";
-import type { ReviewModel } from "../../domain/video-constants";
 
-// One structured call to a model on Vertex AI (plan M5.4, spec §6.3). Gemini
-// gets the video itself; Claude gets timestamped frames (F-13). Every call
-// returns JSON that matches a fixed schema, plus its tokens and cost.
+// One structured call to a model on Vertex AI (plan M5.4, spec §6.3). Every
+// call returns JSON that matches a fixed schema, plus its tokens and cost.
 
-export type Frame = { atSec: number; jpeg: Buffer };
-
-export type Media =
-  { kind: "video"; data: Buffer; mimeType: string; fps: number } | { kind: "frames"; frames: Frame[] };
+// A video, sent to Gemini inline.
+export type Media = { kind: "video"; data: Buffer; mimeType: string; fps: number };
 
 export type ModelRequest<T> = {
-  // Short name of the step, e.g. "review" or "critique"; used by recorded
+  // Short name of the step, e.g. "review" or "detect"; used by recorded
   // and scripted models, and in logs.
   purpose: string;
   system: string;
@@ -31,9 +27,7 @@ export type ModelResult<T> = {
 };
 
 export interface StructuredModel {
-  readonly name: ReviewModel;
-  // What this model is sent: the video or frames (shown on the scoreboard).
-  readonly input: Media["kind"];
+  readonly name: "gemini" | "claude";
   call<T>(request: ModelRequest<T>): Promise<ModelResult<T>>;
 }
 

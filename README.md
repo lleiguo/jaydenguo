@@ -141,11 +141,10 @@ restore test.
 
 ### AI features (Vertex AI)
 
-- **Video reviews fail with "Claude is over its quota":** Claude's Vertex
-  quota is 0 until raised (IAM & Admin → Quotas →
+- **Email suggestions or match explanations fail with "Claude is over its
+  quota":** Claude's Vertex quota is 0 until raised (IAM & Admin → Quotas →
   `global_online_prediction_requests_per_base_model`,
-  `anthropic-claude-opus`). Meanwhile set Videos → Review settings to
-  "Gemini only". Email suggestions and match explanations need Claude too.
+  `anthropic-claude-opus`). Video reviews use Gemini only.
 - **"Google Photos refused" / "Can't open this link":** the Drive or Photos
   Picker API is off in the project, or the Google account lost that
   access. Check `terraform apply` is clean, then reconnect "Drive and

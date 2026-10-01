@@ -7,7 +7,6 @@
 
 import type { CalendarPayload, ClashView, EventView, Undo } from "@/lib/calendar-types";
 import type { Person } from "@/domain/people";
-import type { ReviewMode, ReviewModel } from "@/domain/video-constants";
 import type { listSessions } from "../auth/session";
 import type { copyAccounts, CopySettings, setCopy } from "../calendar-copy";
 import type { getSeries } from "../calendar/mutations";
@@ -26,8 +25,8 @@ import type {
 } from "../tennis/load";
 import type { DrawPrediction, TennisOverview } from "../tennis/overview";
 import type { TodayView } from "../today";
-import type { Combined, Critique, Detected, FinalScore, Rebuttal, Review } from "../video/prompts";
-import type { ScoreboardRow, VideoReviewDetail, VideoReviewSummary } from "../video/store";
+import type { Detected, Review } from "../video/prompts";
+import type { VideoReviewDetail, VideoReviewSummary } from "../video/store";
 
 // Small acknowledgements shared by many routes.
 export type Started = { started: true };
@@ -113,22 +112,11 @@ export type { VideoReviewDetail };
 export type VideosResponse = { reviews: VideoReviewSummary[] };
 export type { VideoReviewSummary };
 export type VideoCreated = { id: string; status: string };
-export type VideoVoteResponse = { vote: ReviewModel };
 export type VideoRestored = { restored: true };
-export type ScoreboardResponse = { sports: ScoreboardRow[] };
-export type VideoSettingsResponse = { mode: ReviewMode; google: { drive: boolean; photos: boolean } };
-export type VideoModeResponse = { mode: ReviewMode };
+export type VideoSettingsResponse = { google: { drive: boolean; photos: boolean } };
 
 // The JSON a review round holds, by `round` (VideoReviewDetail.rounds[].output
 // and .combinedReview are sent as stored). Listed so the app can decode them:
-// detect → DetectOutput, review → ReviewOutput, critique → CritiqueOutput, rebuttal →
-// RebuttalOutput, final_score → FinalScoreOutput, combine and
-// combinedReview → CombinedOutput (or ReviewOutput in single-model mode).
+// detect → DetectOutput, review and combinedReview → ReviewOutput.
 export type DetectOutput = Detected;
 export type ReviewOutput = Review;
-export type CritiqueOutput = Critique;
-export type RebuttalOutput = Rebuttal;
-export type FinalScoreOutput = FinalScore;
-export type CombinedOutput = Combined;
-// rounds[].scores: per judge (model), per criterion, 1–5.
-export type RoundScores = Partial<Record<ReviewModel, Record<string, number>>>;

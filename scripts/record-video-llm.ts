@@ -1,12 +1,10 @@
-// Records Gemini's raw answers to each debate step for the contract tests
-// (plan M5.4): `VERTEX_PROJECT=<project> pnpm exec tsx scripts/record-video-llm.ts`.
+// Records Gemini's raw answer to the review for the contract test (plan
+// M5.4): `VERTEX_PROJECT=<project> pnpm exec tsx scripts/record-video-llm.ts`.
 // Uses Vertex AI with Application Default Credentials and a synthetic
-// test-pattern clip, never a real video. Costs well under $1.
+// test-pattern clip, never a real video. Costs a few cents.
 import { readFileSync, writeFileSync } from "node:fs";
 import { GoogleGenAI, type GenerateContentParameters } from "@google/genai";
-import type { ZodType } from "zod";
 import { geminiModel, GEMINI_MODEL } from "../src/server/llm/gemini";
-import { fakeReview, marker } from "../src/server/video/fake";
 import * as p from "../src/server/video/prompts";
 
 async function main() {
@@ -35,51 +33,23 @@ async function main() {
   const ctx: p.ReviewContext = {
     sport: "tennis",
     note: "Test clip: a moving test pattern, not a real swing.",
-    input: "video",
   };
-  const clean = (m: "gemini" | "claude") => {
-    const r = fakeReview(m);
-    return { ...r, summary: r.summary.replace(marker(m), "").trim() };
-  };
-  const a = clean("gemini");
-  const b = { ...clean("claude"), summary: "Solid contact, but the take-back is late." };
-  const rebuttal: p.Rebuttal = {
-    replies: [
-      { point: "Finish over the shoulder", response: "concede", argument: "It's out of frame.", at: null },
-    ],
-  };
-  const steps: [string, string, string, ZodType][] = [
-    ["review", p.reviewerSystem(), p.reviewPrompt(ctx), p.reviewSchema],
-    ["critique", p.judgeSystem(), p.critiquePrompt(ctx, a, b), p.critiqueSchema],
-    ["rebuttal", p.rebuttalSystem(), p.rebuttalPrompt(ctx, a, []), p.rebuttalSchema],
-    [
-      "final_score",
-      p.judgeSystem(),
-      p.finalScorePrompt(ctx, a, b, { A: rebuttal, B: rebuttal }),
-      p.finalScoreSchema,
-    ],
-    [
-      "combine",
-      p.combineSystem(),
-      p.combinePrompt(ctx, a, b, [], { A: rebuttal, B: rebuttal }),
-      p.combinedSchema,
-    ],
-  ];
-  let total = 0;
-  for (const [purpose, system, prompt, schema] of steps) {
-    const result = await gemini.call({ purpose, system, prompt, schema, media });
-    total += result.costUsd;
-    writeFileSync(
-      `tests/fixtures/llm/video/gemini-${purpose}.json`,
-      JSON.stringify(
-        { recorded: true, model: GEMINI_MODEL(), promptVersion: p.PROMPT_VERSION, response: last },
-        null,
-        2,
-      ) + "\n",
-    );
-    console.log(purpose, result.inputTokens, result.outputTokens, result.costUsd);
-  }
-  console.log("total $", total.toFixed(4));
+  const result = await gemini.call({
+    purpose: "review",
+    system: p.reviewerSystem(),
+    prompt: p.reviewPrompt(ctx),
+    schema: p.reviewSchema,
+    media,
+  });
+  writeFileSync(
+    "tests/fixtures/llm/video/gemini-review.json",
+    JSON.stringify(
+      { recorded: true, model: GEMINI_MODEL(), promptVersion: p.PROMPT_VERSION, response: last },
+      null,
+      2,
+    ) + "\n",
+  );
+  console.log("review", result.inputTokens, result.outputTokens, "$", result.costUsd.toFixed(4));
 }
 
 main().catch((err) => {

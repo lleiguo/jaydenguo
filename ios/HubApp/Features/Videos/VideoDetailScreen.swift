@@ -5,8 +5,7 @@ import SwiftUI
 
 /// One review (intent 0004, IVID-1, IVID-2; VID-3..5, PLAY-3..7): progress
 /// while it runs, the Google Photos pick, the clip with the advice's points
-/// on it, the combined advice with jump buttons, the verdict, the parent's
-/// vote, both models' reviews and the judging.
+/// on it, and the advice with jump buttons.
 struct VideoDetailScreen: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openURL) private var openURL
@@ -60,9 +59,7 @@ struct VideoDetailScreen: View {
             Button("Review again as \(VideoSport.label(sport))") { Task { await changeSport(sport, again: true) } }
             Button("Only change the label") { Task { await changeSport(sport, again: false) } }
         } message: { _ in
-            Text(review?.parentVote.map { $0 != ._empty_ } == true
-                 ? "That runs the whole review again and clears your vote, which was about this review."
-                 : "That runs the whole review again.")
+            Text("That runs the whole review again.")
         }
     }
 
@@ -83,23 +80,9 @@ struct VideoDetailScreen: View {
             header(r)
             if r.status == "done", r.hasPlayback { player(r, points: points) }
             if let advice {
-                AdviceSections(title: r.mode == .debate ? "The advice" : "The review", review: advice,
+                AdviceSections(review: advice,
                                jump: clip.ready ? { clip.seek(to: $0) } : nil,
                                active: clip.ready ? VideoTimeline.active(points, at: clip.time)?.id : nil)
-            }
-            if let v = r.verdict { verdictSection(v) }
-            if r.mode == .debate, r.status == "done" { voteSection(r) }
-            if r.mode == .debate {
-                ForEach(VideoModel.allCases, id: \.self) { m in
-                    if let own = r.review(by: m) {
-                        Section {
-                            DisclosureGroup("\(m.label)'s review") {
-                                AdviceBody(review: own, jump: clip.ready ? { clip.seek(to: $0) } : nil)
-                            }
-                        }
-                    }
-                }
-                judging(r)
             }
             Section {
                 if r.deletedAt == nil {
@@ -132,8 +115,8 @@ struct VideoDetailScreen: View {
                 Caption("Pick one video, then come back: the review starts by itself.")
             }
             if r.status == "failed" { Button("Try again") { Task { await retry() } } }
-            let details = [r.mediaName, segment(r), r.mode == .debate ? "two models" : "\(r.mode.rawValue.capitalized) only"].compactMap { $0 }
-            Caption(details.joined(separator: " · "))
+            let details = [r.mediaName, segment(r)].compactMap { $0 }
+            if !details.isEmpty { Caption(details.joined(separator: " · ")) }
             if let url = r.url.flatMap(URL.init(string:)), url.scheme == "https" {
                 Button("Open the video") { openURL(url) }
             }
@@ -232,72 +215,6 @@ struct VideoDetailScreen: View {
         Text(VideoTimeline.clock(clip.time)).monospacedDigit().accessibilityIdentifier("videoTime")
     }
 
-    private func verdictSection(_ v: Components.Schemas.Verdict) -> some View {
-        Section("Verdict") {
-            Text(v.tie ? "A tie" : "\(VideoModel(rawValue: v.winner.rawValue)?.label ?? "") wrote the more useful review")
-                .font(.headline)
-            LabeledContent("Gemini", value: String(format: "%.1f / 25", v.totals.gemini))
-            LabeledContent("Claude", value: String(format: "%.1f / 25", v.totals.claude))
-            Caption("Each judge scored both reviews without knowing which model wrote which. Scores of their own review: Gemini \(Int(v.selfScores.gemini.own)), Claude \(Int(v.selfScores.claude.own)).")
-        }
-    }
-
-    // VID-3d: once, never changed.
-    @ViewBuilder
-    private func voteSection(_ r: VideoDetail) -> some View {
-        Section {
-            if let vote = r.parentVote, let m = VideoModel(rawValue: vote.rawValue) {
-                Text("You found \(m.label)'s review more useful.").accessibilityIdentifier("yourVote")
-            } else {
-                HStack {
-                    ForEach(VideoModel.allCases, id: \.self) { m in
-                        Button(m.label) { Task { await vote(m) } }.buttonStyle(.bordered)
-                    }
-                }
-            }
-        } header: {
-            Text("Which review was more useful?")
-        } footer: {
-            if r.parentVote == nil { Text("Your vote is saved once and can't be changed. It's the real measure.") }
-        }
-    }
-
-    @ViewBuilder
-    private func judging(_ r: VideoDetail) -> some View {
-        let first = r.scores(round: "critique"), final = r.scores(round: "final_score")
-        if !first.isEmpty {
-            Section("Scores (out of 25)") {
-                ForEach(Array((first.map { ("First", $0) } + final.map { ("Final", $0) }).enumerated()), id: \.offset) { _, row in
-                    LabeledContent("\(row.0): \(row.1.judge.label) on \(row.1.of.label)", value: "\(row.1.scores.sum)")
-                }
-            }
-            Section {
-                DisclosureGroup("Critiques") {
-                    ForEach(Array(r.critiques.enumerated()), id: \.offset) { _, c in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(c.judge.label) on \(c.of.label)'s review").font(.subheadline.bold())
-                            Text(c.entry.comment).font(.subheadline)
-                            ForEach(c.entry.errors, id: \.point) { e in Caption("Error: \(e.point) — \(e.reason)") }
-                            ForEach(c.entry.unsupported, id: \.self) { Caption("Not in the video: \($0)") }
-                            ForEach(c.entry.missed, id: \.self) { Caption("Missed: \($0)") }
-                        }
-                    }
-                }
-                DisclosureGroup("Replies") {
-                    ForEach(Array(r.rebuttals.enumerated()), id: \.offset) { _, reb in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(reb.model.label)'s replies").font(.subheadline.bold())
-                            ForEach(reb.rebuttal.replies, id: \.point) { reply in
-                                Text("\(reply.response == "concede" ? "Conceded" : "Defended"): \(reply.point)").font(.subheadline)
-                                Caption(reply.argument)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: Actions
 
     private func act(_ done: String, _ work: () async throws -> Void) async {
@@ -308,10 +225,6 @@ struct VideoDetailScreen: View {
             model.show(HubError.from(error)?.message ?? "That didn't work.")
         }
         await model.dataChanged()
-    }
-
-    private func vote(_ m: VideoModel) async {
-        await act("Vote saved.") { _ = try await model.client.api.voteVideoReview(path: .init(id: id), body: .json(.init(vote: .init(rawValue: m.rawValue)!))).ok }
     }
 
     private func changeSport(_ sport: String, again: Bool) async {
@@ -359,7 +272,6 @@ struct PointStrip: View {
                 ForEach(points) { p in
                     Circle()
                         .fill(p.good ? Color.green : .orange)
-                        .overlay { if p.disputed { Circle().strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [2, 2])) } }
                         .frame(width: 14, height: 14)
                         .offset(x: x(p.seconds) - 7)
                         .onTapGesture { seek(p.seconds) }
@@ -374,33 +286,16 @@ struct PointStrip: View {
 
 /// A review's advice as list sections, with "at 0:04" jump buttons.
 struct AdviceSections: View {
-    let title: String
     let review: ReviewContent
     let jump: ((Double) -> Void)?
     let active: String?
 
     var body: some View {
-        Section(title) { Text(review.summary) }
+        Section("The review") { Text(review.summary) }
         Section("What's good") { PointRows(points: review.good, section: "good", jump: jump, active: active) }
         Section("What to fix") { PointRows(points: review.fix, section: "fix", jump: jump, active: active, ranked: true) }
         Section("Drills") { DrillRows(drills: review.drills) }
         Section("Film next time") { Text(review.filmNext) }
-    }
-}
-
-/// The same advice inside a disclosure (each model's own review).
-struct AdviceBody: View {
-    let review: ReviewContent
-    let jump: ((Double) -> Void)?
-
-    var body: some View {
-        Text(review.summary)
-        Text("What's good").font(.subheadline.bold())
-        PointRows(points: review.good, section: "good", jump: jump, active: nil)
-        Text("What to fix").font(.subheadline.bold())
-        PointRows(points: review.fix, section: "fix", jump: jump, active: nil, ranked: true)
-        DrillRows(drills: review.drills)
-        Caption("Film next: \(review.filmNext)")
     }
 }
 
@@ -414,18 +309,8 @@ struct PointRows: View {
     var body: some View {
         ForEach(Array(points.enumerated()), id: \.offset) { i, p in
             VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(ranked ? "\(i + 1). \(p.text)" : p.text).fontWeight(active == "\(section)-\(i)" ? .bold : .regular)
-                    if let status = p.status {
-                        Text(status).font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 5).padding(.vertical, 1)
-                            .background((p.disputed ? Color.orange : Color.green).opacity(0.2), in: Capsule())
-                    }
-                }
+                Text(ranked ? "\(i + 1). \(p.text)" : p.text).fontWeight(active == "\(section)-\(i)" ? .bold : .regular)
                 Caption(p.why)
-                if p.disputed, let sides = p.sides {
-                    Caption("For: \(sides.for) Against: \(sides.against)")
-                }
                 if let at = p.at {
                     if let jump, let sec = VideoTimeline.seconds(at) {
                         Button("at \(at)") { jump(sec) }

@@ -176,6 +176,13 @@
       "when": 1790816341119,
       "tag": "0024_tennis_entry_opens",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790839967544,
+      "tag": "0025_video_gemini_only",
+      "breakpoints": true
     }
   ]
 }

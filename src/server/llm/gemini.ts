@@ -36,10 +36,9 @@ const BLOCKED = new Set(["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "R
 export function geminiModel(generate: Generate = vertexGenerate(), model = GEMINI_MODEL()): StructuredModel {
   return {
     name: "gemini",
-    input: "video",
     async call<T>(req: ModelRequest<T>): Promise<ModelResult<T>> {
       const parts: Part[] = [];
-      if (req.media?.kind === "video") {
+      if (req.media) {
         if (req.media.data.length > GEMINI_INLINE_LIMIT)
           throw new LlmError(
             "too_large",

@@ -341,6 +341,10 @@ for any service that isn't available in Toronto.
   says so.
 
 ### 6.3 Video technique review (two models, debate and judge)
+> Superseded by [0006](../0006-video-gemini-only/spec.md) (2026-10-01):
+> Gemini reviews alone. The rounds below, the verdict, the vote and the
+> scoreboard were removed; VID-3a to VID-3e no longer apply.
+
 **Input**
 - The worker fetches the video through the owner's connected Google account.
 - Gemini receives the video itself. The worker trims it to the stroke or swim

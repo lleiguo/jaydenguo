@@ -70,7 +70,7 @@ export function JumpTo({ at }: { at: string }) {
 }
 
 const pointLabel = (p: TimelinePoint) =>
-  p.kind === "good" ? "Good" : `Fix ${Number(p.key.split("-")[1]) + 1}${p.disputed ? " (disputed)" : ""}`;
+  p.kind === "good" ? "Good" : `Fix ${Number(p.key.split("-")[1]) + 1}`;
 
 export function ReviewPlayer({
   reviewId,
@@ -135,9 +135,7 @@ export function ReviewPlayer({
               cx={`${pct(p.sec)}%`}
               cy="10"
               r={active?.key === p.key ? 7 : 5}
-              className={`cursor-pointer ${p.kind === "good" ? "fill-green-600" : "fill-amber-500"} ${p.disputed ? "stroke-neutral-900 dark:stroke-white" : ""}`}
-              strokeWidth={p.disputed ? 2 : 0}
-              strokeDasharray={p.disputed ? "2 2" : undefined}
+              className={`cursor-pointer ${p.kind === "good" ? "fill-green-600" : "fill-amber-500"}`}
               onClick={() => seek(p.sec)}
             >
               <title>{`${pointLabel(p)} at ${formatClockTime(p.sec)}: ${p.text}`}</title>

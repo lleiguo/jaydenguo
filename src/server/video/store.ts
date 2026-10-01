@@ -1,22 +1,11 @@
 import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { credentials, settings, videoReviewRounds, videoReviews } from "@db/schema";
-import {
-  AUTO_SPORT,
-  MODEL_LABEL,
-  REVIEW_MODELS,
-  REVIEW_MODES,
-  VIDEO_SPORTS,
-  type ReviewMode,
-  type ReviewModel,
-  type SportSource,
-  type VideoSport,
-} from "../../domain/video-constants";
+import { credentials, videoReviewRounds, videoReviews } from "@db/schema";
+import { AUTO_SPORT, VIDEO_SPORTS, type SportSource, type VideoSport } from "../../domain/video-constants";
 import { isReviewable, parseVideoLink } from "../../domain/video-links";
 import type { Db, DbOrTx } from "../db/client";
 import { HttpError } from "../errors";
 import type { JobLauncher } from "../jobs/launcher";
-import type { Verdict } from "./debate";
 import type { MediaStore } from "./media-store";
 
 // Video reviews for the web app (plan M5.2, M5.6; spec VID-1..5). The web
@@ -25,22 +14,6 @@ import type { MediaStore } from "./media-store";
 
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
 export const PHOTOS_SCOPE = "https://www.googleapis.com/auth/photospicker.mediaitems.readonly";
-
-// --- Settings (VID-3e) ----------------------------------------------------
-
-const MODE_KEY = "video_review_mode";
-
-export async function getReviewMode(db: DbOrTx): Promise<ReviewMode> {
-  const [row] = await db.select().from(settings).where(eq(settings.key, MODE_KEY));
-  return (REVIEW_MODES as readonly unknown[]).includes(row?.value) ? (row!.value as ReviewMode) : "debate";
-}
-
-export async function setReviewMode(db: DbOrTx, mode: ReviewMode) {
-  await db
-    .insert(settings)
-    .values({ key: MODE_KEY, value: mode })
-    .onConflictDoUpdate({ target: settings.key, set: { value: mode, updatedAt: new Date() } });
-}
 
 // Whether a connected Google account has granted Drive and Photos (CRED-2).
 export async function videoGoogleAccess(db: DbOrTx) {
@@ -98,7 +71,6 @@ export async function createVideoReview(
     if (provider === "photos" && !access.photos)
       throw new HttpError(409, "Connect Google Drive and Photos first (the button above the form).");
   }
-  const mode = await getReviewMode(db);
   // SPT-1: a link the site can't watch can't be detected either.
   const auto = input.sport === AUTO_SPORT;
   // VID-1: the link is saved before any analysis runs.
@@ -113,7 +85,6 @@ export async function createVideoReview(
       filmedOn: input.filmedOn,
       segmentStart: input.segmentStart,
       segmentEnd: input.segmentEnd,
-      mode,
       status: !reviewable ? "saved" : provider === "photos" ? "picking" : "queued",
       progress: provider === "photos" ? "Opening Google Photos" : reviewable ? "Waiting to start" : null,
     })
@@ -148,7 +119,6 @@ export async function retryVideoReview(db: Db, id: string, launcher: JobLauncher
       errorMessage: null,
       pickerSessionId: repick ? null : row.pickerSessionId,
       pickerUri: null,
-      mode: await getReviewMode(db),
     })
     .where(eq(videoReviews.id, id));
   await supersedeRounds(db, id);
@@ -202,16 +172,11 @@ export async function changeVideoSport(
       status: repick ? "picking" : "queued",
       progress: repick ? "Opening Google Photos" : "Waiting to start",
       errorMessage: null,
-      verdict: null,
       combinedReview: null,
-      // The vote judged the reviews being replaced (S-2).
-      parentVote: null,
-      votedAt: null,
       startedAt: null,
       finishedAt: null,
       pickerSessionId: repick ? null : row.pickerSessionId,
       pickerUri: null,
-      mode: await getReviewMode(db),
     })
     .where(and(eq(videoReviews.id, id), eq(videoReviews.status, "done")))
     .returning();
@@ -232,44 +197,33 @@ export type VideoReviewSummary = {
   note: string | null;
   filmedOn: string;
   status: string;
-  mode: ReviewMode;
   progress: string | null;
   errorMessage: string | null;
   pickerUri: string | null;
   mediaName: string | null;
-  winner: ReviewModel | null;
-  tie: boolean;
-  parentVote: ReviewModel | null;
   createdAt: string;
   deletedAt: string | null;
 };
 
 type Row = typeof videoReviews.$inferSelect;
 
-const summary = (r: Row): VideoReviewSummary => {
-  const verdict = r.verdict as Verdict | null;
-  return {
-    id: r.id,
-    sport: r.sport as VideoSport,
-    sportSource: r.sportSource as SportSource,
-    url: r.url,
-    provider: r.provider,
-    note: r.note,
-    filmedOn: r.filmedOn,
-    status: r.status,
-    mode: r.mode as ReviewMode,
-    progress: r.progress,
-    errorMessage: r.errorMessage,
-    // Only while the owner still has to pick.
-    pickerUri: r.status === "picking" ? r.pickerUri : null,
-    mediaName: r.mediaName,
-    winner: verdict?.winner ?? null,
-    tie: verdict?.tie ?? false,
-    parentVote: r.parentVote as ReviewModel | null,
-    createdAt: r.createdAt.toISOString(),
-    deletedAt: r.deletedAt?.toISOString() ?? null,
-  };
-};
+const summary = (r: Row): VideoReviewSummary => ({
+  id: r.id,
+  sport: r.sport as VideoSport,
+  sportSource: r.sportSource as SportSource,
+  url: r.url,
+  provider: r.provider,
+  note: r.note,
+  filmedOn: r.filmedOn,
+  status: r.status,
+  progress: r.progress,
+  errorMessage: r.errorMessage,
+  // Only while the owner still has to pick.
+  pickerUri: r.status === "picking" ? r.pickerUri : null,
+  mediaName: r.mediaName,
+  createdAt: r.createdAt.toISOString(),
+  deletedAt: r.deletedAt?.toISOString() ?? null,
+});
 
 // VID-4: newest first, per sport or all; deleted ones only when asked.
 export async function listVideoReviews(db: DbOrTx, opts: { sport?: VideoSport; deleted?: boolean } = {}) {
@@ -291,20 +245,16 @@ export type VideoReviewDetail = VideoReviewSummary & {
   segmentEnd: number | null;
   durationSec: number | null;
   promptVersion: string | null;
-  verdict: Verdict | null;
   combinedReview: unknown;
   costUsd: number | null;
-  votedAt: string | null;
   finishedAt: string | null;
   // A playback copy is kept (intent 0003, PLAY-1).
   hasPlayback: boolean;
   rounds: {
     round: string;
-    model: ReviewModel;
+    model: string;
     modelVersion: string;
-    labels: unknown;
     output: unknown;
-    scores: unknown;
     inputTokens: number | null;
     outputTokens: number | null;
     costUsd: number | null;
@@ -325,19 +275,15 @@ export async function getVideoReview(db: DbOrTx, id: string): Promise<VideoRevie
     segmentEnd: row.segmentEnd,
     durationSec: row.durationSec,
     promptVersion: row.promptVersion,
-    verdict: row.verdict as Verdict | null,
     combinedReview: row.combinedReview,
     costUsd: row.costUsd,
-    votedAt: row.votedAt?.toISOString() ?? null,
     finishedAt: row.finishedAt?.toISOString() ?? null,
     hasPlayback: row.playbackKey !== null,
     rounds: rounds.map((r) => ({
       round: r.round,
-      model: r.model as ReviewModel,
+      model: r.model,
       modelVersion: r.modelVersion,
-      labels: r.labels,
       output: r.output,
-      scores: r.scores,
       inputTokens: r.inputTokens,
       outputTokens: r.outputTokens,
       costUsd: r.costUsd,
@@ -383,107 +329,4 @@ export async function deletePlayback(db: Db, store: MediaStore, id: string) {
     .update(videoReviews)
     .set({ playbackKey: null, playbackBytes: null })
     .where(eq(videoReviews.id, id));
-}
-
-export const voteInput = z.object({ vote: z.enum(REVIEW_MODELS) });
-
-// VID-3d: written once, never overwritten.
-export async function voteVideoReview(db: Db, id: string, vote: ReviewModel) {
-  const [row] = await db
-    .update(videoReviews)
-    .set({ parentVote: vote, votedAt: new Date() })
-    .where(
-      and(
-        eq(videoReviews.id, id),
-        isNull(videoReviews.parentVote),
-        eq(videoReviews.status, "done"),
-        eq(videoReviews.mode, "debate"),
-      ),
-    )
-    .returning({ id: videoReviews.id });
-  if (row) return;
-  const [existing] = await db.select().from(videoReviews).where(eq(videoReviews.id, id));
-  if (!existing) throw new HttpError(404, "not found");
-  if (existing.parentVote)
-    throw new HttpError(
-      409,
-      `Your vote (${MODEL_LABEL[existing.parentVote as ReviewModel]}) is already saved.`,
-    );
-  throw new HttpError(409, "Only a finished two-model review can be voted on.");
-}
-
-// --- Scoreboard (VID-3d) --------------------------------------------------
-
-export type ScoreboardRow = {
-  sport: VideoSport;
-  debates: number;
-  ties: number;
-  judgeWins: Record<ReviewModel, number>;
-  parentWins: Record<ReviewModel, number>;
-  voted: number;
-  // Of the votes on reviews that weren't a tie: how often the judges' winner
-  // was the parent's choice.
-  agreed: number;
-  comparable: number;
-  // Average points each model gave its own review above the other judge.
-  selfPreference: Record<ReviewModel, number | null>;
-  // What each model was given (F-13).
-  input: Record<ReviewModel, string>;
-};
-
-export async function scoreboard(db: DbOrTx): Promise<ScoreboardRow[]> {
-  const rows = await db
-    .select({ sport: videoReviews.sport, verdict: videoReviews.verdict, vote: videoReviews.parentVote })
-    .from(videoReviews)
-    .where(
-      and(
-        isNull(videoReviews.deletedAt),
-        eq(videoReviews.status, "done"),
-        eq(videoReviews.mode, "debate"),
-        sql`${videoReviews.verdict} is not null`,
-      ),
-    );
-  const bySport = new Map<VideoSport, ScoreboardRow & { self: Record<ReviewModel, number[]> }>();
-  for (const r of rows) {
-    const sport = r.sport as VideoSport;
-    const v = r.verdict as Verdict;
-    let s = bySport.get(sport);
-    if (!s) {
-      s = {
-        sport,
-        debates: 0,
-        ties: 0,
-        judgeWins: { gemini: 0, claude: 0 },
-        parentWins: { gemini: 0, claude: 0 },
-        voted: 0,
-        agreed: 0,
-        comparable: 0,
-        selfPreference: { gemini: null, claude: null },
-        input: { gemini: "whole video", claude: "frames" },
-        self: { gemini: [], claude: [] },
-      };
-      bySport.set(sport, s);
-    }
-    s.debates++;
-    if (v.tie) s.ties++;
-    else s.judgeWins[v.winner]++;
-    for (const m of REVIEW_MODELS) s.self[m].push(v.selfScores[m].preference);
-    const vote = r.vote as ReviewModel | null;
-    if (vote) {
-      s.voted++;
-      s.parentWins[vote]++;
-      if (!v.tie) {
-        s.comparable++;
-        if (vote === v.winner) s.agreed++;
-      }
-    }
-  }
-  const avg = (xs: number[]) =>
-    xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null;
-  return VIDEO_SPORTS.flatMap((sport) => {
-    const s = bySport.get(sport);
-    if (!s) return [];
-    const { self, ...rest } = s;
-    return [{ ...rest, selfPreference: { gemini: avg(self.gemini), claude: avg(self.claude) } }];
-  });
 }

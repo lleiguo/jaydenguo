@@ -4,12 +4,13 @@ import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { credentials, notifications, settings, videoReviewRounds, videoReviews } from "@db/schema";
+import { credentials, notifications, videoReviewRounds, videoReviews } from "@db/schema";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import type { JobLauncher } from "@/server/jobs/launcher";
 import { createLogger } from "@/server/log";
-import { fakeModels } from "@/server/video/fake";
+import { LlmError, type StructuredModel } from "@/server/llm/types";
+import { fakeModel } from "@/server/video/fake";
 import { localMediaStore, playbackKey, type MediaStore } from "@/server/video/media-store";
 import {
   changeVideoSport,
@@ -21,9 +22,6 @@ import {
   playbackOf,
   restoreVideoReview,
   retryVideoReview,
-  scoreboard,
-  setReviewMode,
-  voteVideoReview,
 } from "@/server/video/store";
 import { HttpError } from "@/server/errors";
 import { videoReviewJob, type ReviewDeps } from "@/worker/video/review";
@@ -31,7 +29,7 @@ import { createGoogleMediaFake } from "../e2e/support/fake-google-media";
 
 // Video reviews end to end in the worker (plan M5.2-M5.5): link saved,
 // video fetched from a fake Drive or Photos, media prepared with ffmpeg,
-// the debate run with stand-in models, every round stored, temp files gone.
+// the review run with a stand-in model, every call stored, temp files gone.
 // Each job really runs ffmpeg, which takes ~4 s on CI: more than vitest's
 // default 5 s once a test runs two jobs.
 
@@ -45,12 +43,23 @@ describe("video reviews", { timeout: 60_000 }, () => {
   const started: string[][] = [];
   const launcher: JobLauncher = { start: async (args) => void started.push(args) };
   const deps = (over: Partial<ReviewDeps> = {}): ReviewDeps => ({
-    models: () => fakeModels(),
+    model: () => fakeModel(),
     accessToken: async () => "good-token",
     sleep: (ms) => new Promise((r) => setTimeout(r, Math.min(ms, 50))),
     ...over,
   });
   const ctx = () => ({ log, db: async () => db });
+  // A model whose `purpose` step fails.
+  const failingAt = (purpose: string): StructuredModel => {
+    const model = fakeModel();
+    return {
+      ...model,
+      call: async (req) => {
+        if (req.purpose === purpose) throw new LlmError("unavailable", "Gemini is busy.");
+        return model.call(req);
+      },
+    };
+  };
   const tempDirs = async () => (await readdir(tmpdir())).filter((d) => d.startsWith("video-review-"));
 
   const input = (url: string | null, over: Record<string, unknown> = {}) => ({
@@ -85,7 +94,6 @@ describe("video reviews", { timeout: 60_000 }, () => {
   beforeEach(async () => {
     await db.delete(videoReviewRounds);
     await db.delete(videoReviews);
-    await db.delete(settings).where(eq(settings.key, "video_review_mode"));
     started.length = 0;
   });
 
@@ -98,7 +106,7 @@ describe("video reviews", { timeout: 60_000 }, () => {
     return row.id;
   }
 
-  it("reviews a Drive video in debate mode and keeps every round", async () => {
+  it("reviews a Drive video and keeps the model call", async () => {
     const before = await tempDirs();
     const id = await saved({
       url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view",
@@ -110,39 +118,21 @@ describe("video reviews", { timeout: 60_000 }, () => {
     expect(r.errorMessage).toBeNull();
     expect(r.mediaName).toBe("forehand.mp4");
     expect(r.durationSec).toBeCloseTo(6, 0);
-    expect(r.verdict?.winner).toBeDefined();
-    expect(r.rounds.map((x) => x.round).sort()).toEqual(
-      [
-        "combine",
-        "critique",
-        "critique",
-        "final_score",
-        "final_score",
-        "rebuttal",
-        "rebuttal",
-        "review",
-        "review",
-      ].sort(),
-    );
-    expect(r.costUsd).toBeCloseTo(0.09, 5);
+    expect(r.rounds.map((x) => `${x.round}:${x.model}`)).toEqual(["review:gemini"]);
+    expect(r.combinedReview).toEqual(r.rounds[0].output);
+    expect(r.costUsd).toBeCloseTo(0.01, 5);
     // PUSH-1: the review is done.
     const [done] = await db
       .select()
       .from(notifications)
       .where(eq(notifications.target, `videos/${id}`));
-    expect(done).toMatchObject({ kind: "video", title: "Video review ready" });
+    expect(done).toMatchObject({
+      kind: "video",
+      title: "Video review ready",
+      body: "Tennis video from 2026-09-20.",
+    });
     // VID-2: nothing kept after the review.
     expect(await tempDirs()).toEqual(before);
-  });
-
-  it("runs one model in single-model mode", async () => {
-    await setReviewMode(db, "gemini");
-    const id = await saved({ url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view", mode: "gemini" });
-    await videoReviewJob([id], ctx(), deps());
-    const r = (await getVideoReview(db, id))!;
-    expect(r.status).toBe("done");
-    expect(r.verdict).toBeNull();
-    expect(r.rounds.map((x) => `${x.round}:${x.model}`)).toEqual(["review:gemini"]);
   });
 
   it("fails in plain words when the Drive file can't be opened, and cleans up", async () => {
@@ -161,23 +151,18 @@ describe("video reviews", { timeout: 60_000 }, () => {
     expect((await getVideoReview(db, id))!.errorMessage).toBe("That Drive file isn't a video.");
   });
 
-  it("keeps what a failed debate managed and says why", async () => {
-    const models = fakeModels();
+  it("says why when the model fails", async () => {
     const broken = {
-      ...models,
-      claude: {
-        ...models.claude,
-        call: async () => {
-          const { LlmError } = await import("@/server/llm/types");
-          throw new LlmError("quota", "Claude is over its quota on Vertex AI.");
-        },
+      ...fakeModel(),
+      call: async () => {
+        throw new LlmError("quota", "Gemini is busy or over its quota on Vertex AI.");
       },
     };
     const id = await saved({ url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view" });
-    await videoReviewJob([id], ctx(), deps({ models: () => broken }));
+    await videoReviewJob([id], ctx(), deps({ model: () => broken }));
     const r = (await getVideoReview(db, id))!;
     expect(r.status).toBe("failed");
-    expect(r.errorMessage).toBe("Claude is over its quota on Vertex AI.");
+    expect(r.errorMessage).toBe("Gemini is busy or over its quota on Vertex AI.");
   });
 
   it("waits for the owner to pick in Google Photos, then reviews", async () => {
@@ -238,7 +223,7 @@ describe("video reviews", { timeout: 60_000 }, () => {
     ).rejects.toBe(rollback);
   });
 
-  it("lists newest first per sport, and a vote is written once", async () => {
+  it("lists newest first per sport", async () => {
     const a = await saved({
       url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view",
       filmedOn: "2026-09-01",
@@ -250,21 +235,6 @@ describe("video reviews", { timeout: 60_000 }, () => {
     await saved({ sport: "swimming", url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view" });
     await videoReviewJob([a], ctx(), deps());
     expect((await listVideoReviews(db, { sport: "tennis" })).map((r) => r.id)).toEqual([b, a]);
-
-    await voteVideoReview(db, a, "claude");
-    await expect(voteVideoReview(db, a, "gemini")).rejects.toMatchObject({ status: 409 });
-    expect((await getVideoReview(db, a))!.parentVote).toBe("claude");
-    // Not finished: no vote.
-    await expect(voteVideoReview(db, b, "gemini")).rejects.toMatchObject({ status: 409 });
-
-    const board = await scoreboard(db);
-    expect(board).toHaveLength(1);
-    expect(board[0]).toMatchObject({
-      sport: "tennis",
-      debates: 1,
-      voted: 1,
-      parentWins: { gemini: 0, claude: 1 },
-    });
   });
 
   it("tries a failed review again", async () => {
@@ -281,68 +251,45 @@ describe("video reviews", { timeout: 60_000 }, () => {
     const detecting = { url: DRIVE, sport: "other" as const, sportSource: "detecting" };
 
     it("works out the sport before the review (SPT-2)", async () => {
-      const models = fakeModels({ detect: { sport: "swimming", sure: true, reason: "A pool." } });
+      const model = fakeModel({ detect: { sport: "swimming", sure: true, reason: "A pool." } });
       const id = await saved(detecting);
-      await videoReviewJob([id], ctx(), deps({ models: () => models }));
+      await videoReviewJob([id], ctx(), deps({ model: () => model }));
       const r = (await getVideoReview(db, id))!;
       expect(r.status).toBe("done");
       expect(r).toMatchObject({ sport: "swimming", sportSource: "detected" });
       expect(r.rounds[0]).toMatchObject({ round: "detect", model: "gemini" });
-      expect(r.costUsd).toBeCloseTo(0.1, 5);
+      expect(r.costUsd).toBeCloseTo(0.02, 5);
       // The review used the swimming checklist.
-      const review = models.gemini.requests.find((q) => q.purpose === "review")!;
+      const review = model.requests.find((q) => q.purpose === "review")!;
       expect(review.prompt).toContain("Sport: swimming.");
-      expect(models.gemini.requests[0].media).toMatchObject({ kind: "video", fps: 1 });
-    });
-
-    it("asks Claude with frames in Claude-only mode", async () => {
-      const models = fakeModels();
-      const id = await saved({ ...detecting, mode: "claude" });
-      await videoReviewJob([id], ctx(), deps({ models: () => models }));
-      expect((await getVideoReview(db, id))!.rounds.map((x) => `${x.round}:${x.model}`)).toEqual([
-        "detect:claude",
-        "review:claude",
-      ]);
-      expect(models.claude.requests[0].media?.kind).toBe("frames");
+      expect(model.requests[0].media).toMatchObject({ kind: "video", fps: 1 });
     });
 
     it("carries on as Other when unsure, or when detection fails (SPT-3)", async () => {
-      const unsure = fakeModels({ detect: { sport: "tennis", sure: false, reason: "Too dark." } });
+      const unsure = fakeModel({ detect: { sport: "tennis", sure: false, reason: "Too dark." } });
       const a = await saved(detecting);
-      await videoReviewJob([a], ctx(), deps({ models: () => unsure }));
+      await videoReviewJob([a], ctx(), deps({ model: () => unsure }));
       expect(await getVideoReview(db, a)).toMatchObject({
         status: "done",
         sport: "other",
         sportSource: "unsure",
       });
 
-      const models = fakeModels();
-      const { LlmError } = await import("@/server/llm/types");
-      const failing = {
-        ...models,
-        gemini: {
-          ...models.gemini,
-          call: async <T>(req: Parameters<typeof models.gemini.call<T>>[0]) => {
-            if (req.purpose === "detect") throw new LlmError("unavailable", "Gemini is busy.");
-            return models.gemini.call(req);
-          },
-        },
-      };
       const b = await saved(detecting);
-      await videoReviewJob([b], ctx(), deps({ models: () => failing }));
+      await videoReviewJob([b], ctx(), deps({ model: () => failingAt("detect") }));
       const r = (await getVideoReview(db, b))!;
       expect(r).toMatchObject({ status: "done", sport: "other", sportSource: "unsure" });
       expect(r.rounds.some((x) => x.round === "detect")).toBe(false);
     });
 
     it("skips detection when the owner sets the sport first (SPT-5)", async () => {
-      const models = fakeModels();
+      const model = fakeModel();
       const id = await saved(detecting);
       await changeVideoSport(db, id, { sport: "hockey", reviewAgain: false }, launcher);
-      await videoReviewJob([id], ctx(), deps({ models: () => models }));
+      await videoReviewJob([id], ctx(), deps({ model: () => model }));
       const r = (await getVideoReview(db, id))!;
       expect(r).toMatchObject({ status: "done", sport: "hockey", sportSource: "chosen" });
-      expect(models.gemini.requests.some((q) => q.purpose === "detect")).toBe(false);
+      expect(model.requests.some((q) => q.purpose === "detect")).toBe(false);
     });
 
     it("saves an auto link it can't watch as Other, not set (SPT-1)", async () => {
@@ -362,17 +309,10 @@ describe("video reviews", { timeout: 60_000 }, () => {
 
       const id = await saved({ url: DRIVE });
       await videoReviewJob([id], ctx(), deps());
-      await voteVideoReview(db, id, "claude");
       const changed = await changeVideoSport(db, id, { sport: "soccer", reviewAgain: false }, launcher);
-      expect(changed).toMatchObject({
-        sport: "soccer",
-        sportSource: "chosen",
-        status: "done",
-        parentVote: "claude",
-      });
-      expect((await getVideoReview(db, id))!.rounds).toHaveLength(9);
+      expect(changed).toMatchObject({ sport: "soccer", sportSource: "chosen", status: "done" });
+      expect((await getVideoReview(db, id))!.rounds).toHaveLength(1);
       expect(started).toEqual([]);
-      expect((await scoreboard(db)).map((b) => b.sport)).toEqual(["soccer"]);
     });
 
     it("takes a new sport on a failed review, and can try it again", async () => {
@@ -389,9 +329,8 @@ describe("video reviews", { timeout: 60_000 }, () => {
         const store = localMediaStore(dir);
         const id = await saved({ url: DRIVE });
         await videoReviewJob([id], ctx(), deps({ media: () => store }));
-        await voteVideoReview(db, id, "gemini");
         const r = await changeVideoSport(db, id, { sport: "swimming", reviewAgain: true }, launcher);
-        expect(r).toMatchObject({ status: "queued", sport: "swimming", parentVote: null });
+        expect(r).toMatchObject({ status: "queued", sport: "swimming" });
         expect(started).toEqual([["video:review", id]]);
         expect((await getVideoReview(db, id))!.rounds).toEqual([]);
 
@@ -400,21 +339,16 @@ describe("video reviews", { timeout: 60_000 }, () => {
           .update(videoReviews)
           .set({ url: "https://drive.google.com/file/d/missing12345678/view" })
           .where(eq(videoReviews.id, id));
-        const models = fakeModels();
-        await videoReviewJob([id], ctx(), deps({ media: () => store, models: () => models }));
+        const model = fakeModel();
+        await videoReviewJob([id], ctx(), deps({ media: () => store, model: () => model }));
         const again = (await getVideoReview(db, id))!;
-        expect(again).toMatchObject({
-          status: "done",
-          sport: "swimming",
-          hasPlayback: true,
-          parentVote: null,
-        });
-        expect(again.rounds).toHaveLength(9);
-        expect(models.gemini.requests[0].prompt).toContain("Sport: swimming.");
+        expect(again).toMatchObject({ status: "done", sport: "swimming", hasPlayback: true });
+        expect(again.rounds).toHaveLength(1);
+        expect(model.requests[0].prompt).toContain("Sport: swimming.");
         // Both runs count.
-        expect(again.costUsd).toBeCloseTo(0.18, 5);
+        expect(again.costUsd).toBeCloseTo(0.02, 5);
         const all = await db.select().from(videoReviewRounds).where(eq(videoReviewRounds.reviewId, id));
-        expect(all).toHaveLength(18);
+        expect(all).toHaveLength(2);
       } finally {
         await rm(dir, { recursive: true, force: true });
       }
@@ -427,22 +361,14 @@ describe("video reviews", { timeout: 60_000 }, () => {
     });
 
     it("keeps a failed attempt's rounds when it's tried again", async () => {
-      const models = fakeModels();
-      const broken = {
-        ...models,
-        claude: {
-          ...models.claude,
-          call: async () => {
-            throw new Error("boom");
-          },
-        },
-      };
-      const id = await saved({ url: DRIVE });
-      await videoReviewJob([id], ctx(), deps({ models: () => broken }));
+      // The sport is worked out, then the review fails.
+      const id = await saved(detecting);
+      await videoReviewJob([id], ctx(), deps({ model: () => failingAt("review") }));
+      expect((await getVideoReview(db, id))!.status).toBe("failed");
       await retryVideoReview(db, id, launcher);
       expect((await getVideoReview(db, id))!.rounds).toEqual([]);
       const all = await db.select().from(videoReviewRounds).where(eq(videoReviewRounds.reviewId, id));
-      expect(all.length).toBeGreaterThan(0);
+      expect(all.map((x) => x.round)).toEqual(["detect"]);
     });
   });
 
@@ -485,18 +411,8 @@ describe("video reviews", { timeout: 60_000 }, () => {
     });
 
     it("keeps nothing when the review fails", async () => {
-      const models = fakeModels();
-      const broken = {
-        ...models,
-        gemini: {
-          ...models.gemini,
-          call: async () => {
-            throw new Error("boom");
-          },
-        },
-      };
       const id = await saved({ url: DRIVE });
-      await videoReviewJob([id], ctx(), deps({ models: () => broken, media: () => store }));
+      await videoReviewJob([id], ctx(), deps({ model: () => failingAt("review"), media: () => store }));
       expect((await getVideoReview(db, id))!.status).toBe("failed");
       expect(await store.size(playbackKey(id))).toBeNull();
     });

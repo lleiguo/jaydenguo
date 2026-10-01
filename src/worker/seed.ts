@@ -29,9 +29,9 @@ import type { TennisMatchRecord, TennisTournamentRecord } from "../domain/tennis
 import { syncTennis } from "../server/tennis/apply";
 import { copyFile, mkdir, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { runDebate, type RoundRecord } from "../server/video/debate";
-import { fakeModels } from "../server/video/fake";
+import { fakeModel } from "../server/video/fake";
 import { playbackKey } from "../server/video/media-store";
+import { runReview, type RoundRecord } from "../server/video/reviewer";
 import type { JobContext } from "./context";
 
 // `pnpm seed` (plan M1.14, spec §5.2): a realistic fake season so the app
@@ -623,25 +623,24 @@ export async function seedJob(_args: string[], ctx: JobContext) {
       kind: "video",
       dedupKey: "sample:video-review",
       title: "Video review ready",
-      body: "Tennis video (sample): Gemini's review won.",
+      body: "Tennis video (sample).",
       target: "videos/5eed0000-0000-4000-8000-000000000001",
     })
     .onConflictDoNothing();
 
-  // Video reviews (VID, PLAY): a finished debate on a forehand with a
+  // Video reviews (VID, PLAY): a finished review of a forehand with a
   // playback copy (the 6-second test pattern, when MEDIA_DIR is set), and an
-  // older Gemini-only review to compare it with. Fixed ids so a new seed
-  // resets them, the vote included (it can only be cast once).
+  // older one to compare it with. Fixed ids so a new seed resets them.
   const reviews = [
     {
       id: "5eed0000-0000-4000-8000-000000000001",
-      mode: "debate" as const,
+      older: false,
       filmedOn: addDays(today, -3),
       note: "Forehand rally (sample)",
     },
     {
       id: "5eed0000-0000-4000-8000-000000000002",
-      mode: "gemini" as const,
+      older: true,
       filmedOn: addDays(today, -60),
       note: "Forehand, early season (sample)",
     },
@@ -649,18 +648,14 @@ export async function seedJob(_args: string[], ctx: JobContext) {
   const clip = "tests/fixtures/video/test-pattern-6s.mp4";
   for (const v of reviews) {
     const rounds: RoundRecord[] = [];
-    const result = await runDebate(
-      v.mode,
-      fakeModels({
-        critique: { gemini: { gemini: 4, claude: 3 }, claude: { gemini: 4, claude: 4 } },
-        final: { gemini: { gemini: 4, claude: 3 }, claude: { gemini: 5, claude: 4 } },
-      }),
-      { context: { sport: "tennis", note: v.note }, media: { gemini: undefined, claude: undefined } },
-      { saveRound: (r) => void rounds.push(r), random: () => 0.3 },
+    const result = await runReview(
+      fakeModel(),
+      { context: { sport: "tennis", note: v.note }, media: undefined },
+      { saveRound: (r) => void rounds.push(r) },
     );
     let key: string | null = null;
     let bytes: number | null = null;
-    if (process.env.MEDIA_DIR && v.mode === "debate") {
+    if (process.env.MEDIA_DIR && !v.older) {
       key = playbackKey(v.id);
       const target = join(process.env.MEDIA_DIR, key);
       await mkdir(dirname(target), { recursive: true });
@@ -670,13 +665,12 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     const values = {
       sport: "tennis",
       // The older one's sport was worked out from the video (intent 0005).
-      sportSource: v.mode === "gemini" ? "detected" : "chosen",
+      sportSource: v.older ? "detected" : "chosen",
       url: null,
       provider: "drive",
       note: v.note,
       filmedOn: v.filmedOn,
       status: "done",
-      mode: v.mode,
       progress: null,
       errorMessage: null,
       mediaName: "forehand.mp4",
@@ -684,10 +678,7 @@ export async function seedJob(_args: string[], ctx: JobContext) {
       playbackKey: key,
       playbackBytes: bytes,
       promptVersion: rounds[0]?.promptVersion ?? null,
-      verdict: result.verdict,
-      combinedReview: result.combined,
-      parentVote: null,
-      votedAt: null,
+      combinedReview: result.review,
       costUsd: result.costUsd,
       finishedAt: new Date(),
       deletedAt: null,
@@ -697,20 +688,7 @@ export async function seedJob(_args: string[], ctx: JobContext) {
       .insert(videoReviews)
       .values({ id: v.id, ...values })
       .onConflictDoUpdate({ target: videoReviews.id, set: values });
-    for (const r of rounds)
-      await db.insert(videoReviewRounds).values({
-        reviewId: v.id,
-        round: r.round,
-        model: r.model,
-        modelVersion: r.modelVersion,
-        promptVersion: r.promptVersion,
-        labels: r.labels,
-        output: r.output,
-        scores: r.scores,
-        inputTokens: r.inputTokens,
-        outputTokens: r.outputTokens,
-        costUsd: r.costUsd,
-      });
+    for (const r of rounds) await db.insert(videoReviewRounds).values({ reviewId: v.id, ...r });
   }
 
   ctx.log("seeded", { weeks: WEEKS, from: monday });
