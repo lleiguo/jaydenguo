@@ -12,11 +12,13 @@ const ev = (
   ({
     id,
     sourceKind,
+    title: id,
     category: "soccer",
     owners: ["jayden"],
     start: at(from),
     end: at(to),
     allDay: false,
+    repeats: false,
     ...extra,
   }) as DedupEvent;
 
@@ -63,11 +65,31 @@ describe("householdDuplicates", () => {
     expect(got.size).toBe(0);
   });
 
-  it("leaves manual events and two household events alone", () => {
+  it("leaves manual events and differently titled household events alone", () => {
     const got = householdDuplicates([
       ev("m", null, "17:00", "18:00"),
       ev("h1", "google_calendar", "17:00", "18:00"),
       ev("h2", "google_calendar", "17:00", "18:00"),
+    ]);
+    expect(got.size).toBe(0);
+  });
+
+  it("shows a household event entered twice once, keeping the one-off", () => {
+    const twin = { title: "Jayden Soccer – Practice (Turf)" };
+    const got = householdDuplicates([
+      ev("series", "google_calendar", "18:45", "19:45", { ...twin, repeats: true }),
+      ev("oneoff", "google_calendar", "18:45", "19:45", { title: " jayden soccer –  practice (turf)" }),
+      ev("third", "google_calendar", "18:45", "19:45", twin),
+    ]);
+    expect([...got].sort()).toEqual(["series", "third"]);
+  });
+
+  it("keeps same-titled household events at other times or for other people", () => {
+    const twin = { title: "Practice" };
+    const got = householdDuplicates([
+      ev("a", "google_calendar", "17:00", "18:00", twin),
+      ev("b", "google_calendar", "18:00", "19:00", twin),
+      ev("c", "google_calendar", "17:00", "18:00", { ...twin, owners: ["ethan"] }),
     ]);
     expect(got.size).toBe(0);
   });
