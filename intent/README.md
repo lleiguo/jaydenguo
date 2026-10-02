@@ -22,3 +22,4 @@ Rules:
 | 0005 | [Video sport](0005-video-sport/) | approved 2026-09-30 (chat) | approved 2026-09-30 (chat) | approved 2026-09-30; done, merged in #56 |
 | 0006 | [Video reviews by Gemini alone](0006-video-gemini-only/) | approved 2026-10-01 (chat) | built from the request 2026-10-01; concerns G-1, G-2 for the owner | built 2026-10-01 |
 | 0007 | [Cookie, the family assistant](0007-cookie-assistant/) | approved 2026-10-02 (chat); defaults kept | approved 2026-10-02 (chat); owner decisions recorded in §5; K-12 open | approved 2026-10-02; K1–K4 built, spikes and K5–K7 in the plan's Status |
+| 0008 | [Cookie changes the calendar](0008-cookie-calendar-changes/) | draft 2026-10-02; owner chose the household Google Calendar | — | — |
