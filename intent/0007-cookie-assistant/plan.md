@@ -10,9 +10,13 @@ in the same commit when the build departs from it. Backend tasks keep
 add `xcodebuild test` for HubKit and the UI tests they touch.
 
 Order: spikes first, because the transcript spike decides whether voice
-is built at all. Then the backend with typing on the website, which is
-the cheapest way to try her answers every day. Voice and the iPhone app
-come last, on a backend that already answers well.
+is built at all. Then the backend, then typed chat in the iPhone app, so
+the owner can try her answers every day from a TestFlight build. Voice
+comes last, on a backend that already answers well.
+
+Changed 2026-10-02 (owner): Cookie is in the app only; the website chat
+box (the old K2) is dropped from this intent and decided later. The
+app's typed chat moved forward from K6 to take its place.
 
 ---
 
@@ -25,7 +29,7 @@ come last, on a backend that already answers well.
 | O-3 | Apply Terraform after K5 and K7 merge (Text-to-Speech API, `ASSISTANT_MODEL`, the cap). | K5, K7 |
 | O-4 | Optional: a short recording of Cookie barking (spec K-8). | K6 |
 | O-5 | Add the school, street and club names to "Never send to the web" in Settings → Cookie. | K4 |
-| O-6 | Install the TestFlight build and use her for a few days before K7 closes. | K7 |
+| O-6 | Install the TestFlight build after K2 (typed chat) and after K6 (voice), and use her for a few days before K7 closes. | K2, K7 |
 
 ---
 
@@ -60,17 +64,20 @@ is replaced with SP-C2's numbers.
 | K1.6 | Costs: "Cookie" as a fourth AI feature on the Costs page and API. | LIM-6, COST-4 | Unit and e2e tests updated. |
 | K1.7 | Eval set and `pnpm assistant:eval`. | §4.6 | First run's results pasted here; pass bars met. |
 
-### K2: Website chat box (≈ 2 days)
+### K2: iPhone, typed chat (≈ 4 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
-| K2.1 | Floating avatar button and chat panel in the app layout: history, sources, errors, limit messages. | CK-1, CK-4, CK-8, CHR-4 | e2e with the fake model; keyboard and screen-reader checks (NFR-9). |
-| K2.2 | Settings → Cookie: cap, use the web, clear history. | LIM-5, MEM-9 | e2e. |
+| K2.1 | HubKit: assistant client and types from the regenerated OpenAPI. | §4.5, CSEC-8 | HubKit tests against recorded responses. |
+| K2.2 | The floating button (tap only for now): overlay in `RootView`, hidden where CK-1 says, dimmed offline. | CK-1, CK-7 | UI test for visibility. |
+| K2.3 | Chat sheet: history, typing, sources, errors and limit messages. | CK-4, CHR-4, MEM-9 | UI test: tap, type, answer (fake model). VoiceOver pass. |
+| K2.4 | Settings → Cookie: cap and this month's spend, use the web, clear history. | LIM-5, MEM-9 | UI test. |
+| K2.5 | API e2e through the built server with the fake model: ask, history, settings. | §4.6, CSEC-1 | e2e green. |
 
 ### K3: Memory (≈ 2 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
 | K3.1 | `memory_search`, `memory_save`, `memory_forget`; keyword search over text and bilingual keywords. | TOOL-8..10, MEM-1, MEM-3, MEM-5..8 | Integration tests, including refusal after a web tool and both language directions. |
-| K3.2 | Memory routes; Memory list in Settings → Cookie; "Saved to memory · Undo" in the chat. | MEM-2, MEM-4 | e2e: save by chat, undo, edit, forget, restore. |
+| K3.2 | Memory routes; in the app, the Memory list in Settings → Cookie and "Saved to memory · Undo" in the chat. | MEM-2, MEM-4 | API e2e: save by chat, undo, edit, forget, restore. UI test for the Memory list. |
 | K3.3 | Daily clean-up: turn text after 90 days, forgotten memories after 30. | MEM-4, MEM-9 | Integration test with old rows. |
 
 ### K4: Web tools (≈ 2 days)
@@ -87,14 +94,13 @@ is replaced with SP-C2's numbers.
 | K5.2 | `GET /turns/{id}/speech`: Text-to-Speech with the SP-C3 voice; counted against the cap; off at 80%. | VOX-5, LIM-5 | Integration test against a fake speech service. |
 | K5.3 | Terraform: enable Text-to-Speech, `ASSISTANT_MODEL` and cap on the web service, the service account's role. | §3 | `terraform validate`; owner applies (O-3). |
 
-### K6: iPhone (≈ 5 days)
+### K6: iPhone, voice (≈ 3 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
-| K6.1 | HubKit: assistant client and types from the regenerated OpenAPI, recorder, player. | §4.5, CSEC-2, CSEC-8 | HubKit tests against recorded responses. |
-| K6.2 | The floating button: overlay in `RootView`, hold to record with level ring and haptics, slide off to cancel, limits, hidden where CK-1 says. Microphone permission text. | CK-1, CK-2, CK-6, CK-7 | UI test for visibility; by hand on the phone for the hold. |
+| K6.1 | HubKit: recorder and player (AVFoundation); audio in the ask call. Microphone permission text. | §4.5, CSEC-2, CK-6 | HubKit tests. |
+| K6.2 | Hold to talk on the floating button: level ring and haptics, slide off to cancel, limits. | CK-2, CK-6 | By hand on the phone. |
 | K6.3 | Bubble and speech: heard text, answer, bark sound then speech, tap to stop, fallback to the phone's voice. | CK-3, CHR-2, VOX-5 | By hand on the phone; UI test with the fixture clip flag. |
-| K6.4 | Chat sheet: history, typing, mic button (tap to start and stop), sources, Saved to memory with Undo. | CK-4, CK-5, MEM-2 | UI test: tap, type, answer. VoiceOver pass. |
-| K6.5 | Settings → Cookie: Memory, History, Spoken answers, Use the web, cap. | MEM-4, MEM-9, VOX-5 | UI test for the Memory list. |
+| K6.4 | Mic button in the chat sheet (tap to start and stop); "Spoken answers" in Settings → Cookie. | CK-5, VOX-5 | UI test with the fixture clip flag. VoiceOver pass. |
 
 ### K7: Release (≈ 2 days)
 | Task | Description | Spec | Done when |
@@ -110,7 +116,7 @@ is replaced with SP-C2's numbers.
 | Risk | What we do |
 |---|---|
 | The model is slower than VOX-6 allows (found in SP-C2: spec K-11). | Measure from Cloud Run in K7.1 before deciding. |
-| SP-C1 fails with both Gemini and Chirp. | Ship K1–K4 (typing on web and iPhone) and stop; voice gets a new intent. |
+| SP-C1 fails with both Gemini and Chirp. | Ship K1–K4 (typed chat in the app) and stop; voice gets a new intent. |
 | Forced tool calls with audio don't work on Flash (SP-C2). | Fall back to JSON output for the final turn; the grounding check doesn't change. |
 | Answers are slower than VOX-6. | Lowest thinking setting, fewer rounds for common questions (`today()` covers most), speech fetched after the text. If still slow, raise the web service's minimum instances for the feature's hours. |
 | The prompt and tool list grow as tools are added. | The size test (TOOL-15) fails the build. |
@@ -120,7 +126,7 @@ is replaced with SP-C2's numbers.
 
 ## 5. Estimate
 
-About 21 working days: spikes 2, K1 4, K2 2, K3 2, K4 2, K5 2, K6 5,
+About 22 working days: spikes 2, K1 4, K2 4, K3 3, K4 2, K5 2, K6 3,
 K7 2.
 
 ---

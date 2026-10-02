@@ -4,9 +4,9 @@ chat: "spec and plan looks good, let's start the implementation"). The
 intent's open questions are answered by the defaults in §6, which the
 owner kept on 2026-10-02 along with the decisions recorded in §5.
 
-Cookie is a new feature on both clients: the iPhone app gets voice and
-typing, the website gets typing. All of her thinking happens on the
-server, behind one new API route, with a fixed list of tools.
+Cookie lives in the iPhone app only, with voice and typing (owner,
+2026-10-02: app first, the website is decided later). All of her
+thinking happens on the server, behind one new API route, with a fixed list of tools.
 
 Changes to earlier specs:
 - 0001 NFR-1 (where data about the family goes) gains four lines: voice
@@ -42,14 +42,14 @@ Changes to earlier specs:
 ### 2.1 Reaching her (CK)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| CK-1 | Her avatar is the button. | A round button with the app icon's artwork sits bottom-right above the tab bar on every app screen, and bottom-right on every signed-in web page. Hidden on sign-in, while the app is locked (SEC-2) and over the full-screen video player. Fixed in place in v1: dragging would fight press-and-hold. |
+| CK-1 | Her avatar is the button. | A round button with the app icon's artwork sits bottom-right above the tab bar on every app screen. Hidden on sign-in, while the app is locked (SEC-2) and over the full-screen video player. Fixed in place in v1: dragging would fight press-and-hold. |
 | CK-2 | Press and hold to talk (iPhone). | Holding for 0.2 s starts recording with a haptic and a level ring round the icon. Releasing sends. Sliding off the icon before releasing cancels. Shorter than 0.5 s is discarded with the hint "Hold to talk". Recording stops and sends at 30 s. |
 | CK-3 | Voice answers. | What she heard and her answer appear as text in a bubble by the icon as soon as the answer is ready; speech follows. Tapping the icon stops the speech. The bubble closes 5 s after speech ends; tapping it opens the chat. |
-| CK-4 | Tap to type. | A tap opens a chat sheet (iPhone) or panel (web): the conversation so far, a text field, and sources under each answer (web links open in the browser). Typed questions get text answers and no speech. |
+| CK-4 | Tap to type. | A tap opens a chat sheet: the conversation so far, a text field, and sources under each answer (web links open in the browser). Typed questions get text answers and no speech. |
 | CK-5 | A non-hold way to speak. | The chat sheet has a mic button: tap to start, tap to stop (NFR-9, APP-6: nothing needs a long press). VoiceOver labels on the icon, mic and every bubble. |
 | CK-6 | First use and refusals. | The first hold asks for microphone permission, explaining why. If it is refused, holding shows how to turn it on, and typing still works. |
 | CK-7 | Offline. | With no connection the icon is dimmed and says "You're offline" (OFF-2). Nothing is queued. |
-| CK-8 | Website: typing only. | The site keeps `microphone=()` in its Permissions-Policy. Voice on the website is out of scope. |
+| CK-8 | Not on the website. | The website has no Cookie button, chat or settings in this intent (owner, 2026-10-02: decided later). The API routes answer any signed-in session, as every `/api/v1` route does. The site keeps `microphone=()` in its Permissions-Policy. |
 
 ### 2.2 Voice and language (VOX)
 | ID | Requirement | Acceptance criteria |
@@ -103,14 +103,14 @@ Cookie has exactly these tools. Adding one is a spec change.
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | MEM-1 | Saved only when told. | `memory_save` runs only when the question asks her to remember something. The server refuses it in a question where a web tool has already run, so a web page can't plant a fact. One fact per save, at most 300 characters, with search keywords in both languages. |
-| MEM-2 | She confirms. | The answer repeats what was saved in one line. Both clients show "Saved to memory" with Undo for 10 s. |
+| MEM-2 | She confirms. | The answer repeats what was saved in one line. The chat shows "Saved to memory" with Undo for 10 s. |
 | MEM-3 | Found across languages. | A fact saved in English is found by a Mandarin question and the reverse: search matches the fact's text and its bilingual keywords. The eval set (§4.6) has cases for both directions. |
-| MEM-4 | Visible and editable. | Settings → Cookie → Memory, on web and iPhone: each fact with who saved it and when; add, edit, forget. Forgotten facts can be restored for 30 days, then are deleted for good. |
+| MEM-4 | Visible and editable. | Settings → Cookie → Memory in the app: each fact with who saved it and when; add, edit, forget. Forgotten facts can be restored for 30 days, then are deleted for good. |
 | MEM-5 | Forget by voice. | "Cookie, forget …" finds the fact, forgets it and says which one. If more than one matches, she asks which. |
 | MEM-6 | No secrets. | She refuses to remember passwords, card numbers and sign-in codes, and the Memory screen says not to store them. |
 | MEM-7 | One memory for the family. | Shared by every allow-listed account. |
 | MEM-8 | Follow-ups. | Each question carries the text of up to 6 earlier turns from the same conversation in the last 30 minutes (at most 2,000 characters). Audio and tool results from earlier turns are never sent again. |
-| MEM-9 | History. | Both clients show past turns, newest last. "Clear history" in Settings removes the text of every turn. Turn text is removed automatically after 90 days; token and cost numbers stay for the Costs page. |
+| MEM-9 | History. | The chat shows past turns, newest last. "Clear history" in Settings removes the text of every turn. Turn text is removed automatically after 90 days; token and cost numbers stay for the Costs page. |
 
 ### 2.6 Limits and cost (LIM)
 | ID | Requirement | Acceptance criteria |
@@ -234,9 +234,8 @@ US$14 per 1,000. Speech is priced in SP-C3.
   Settings → Cookie (Memory, History, Spoken answers, Use the web, cap).
   `NSMicrophoneUsageDescription` in `project.yml`. A bark sound in the
   asset catalogue. No new packages (SEC-4).
-- **Web.** A client component in `src/components/assistant/`, mounted in
-  `src/app/(app)/layout.tsx`; Settings → Cookie page. The avatar is the
-  existing icon under `/icons/`. No new script sources (CSP unchanged).
+- **Web.** No chat on the website (CK-8). The Costs page shows Cookie's
+  cost line, as it does for every AI feature.
 
 ### 4.6 Tests
 - Unit: grounding check, limits, query filter, address checks, prompt
@@ -245,8 +244,8 @@ US$14 per 1,000. Speech is priced in SP-C3.
   bark on unknown, bark on an ungrounded claim, limit reached, memory
   rules (MEM-1), CSEC-5 and CSEC-6 cases, costs recorded, cap and rate
   limits.
-- e2e (web, `ASSISTANT_LLM=fake`): open the chat, ask, see sources, save
-  and undo a memory, edit it in Settings; signed-out 401 for each route.
+- e2e (`ASSISTANT_LLM=fake`): the API through the built server: ask,
+  history, settings and memory routes; signed-out 401 for each route.
 - iPhone: HubKit tests against recorded responses; a UI test for tap,
   type, answer, and for the mic button with a fixture clip injected by a
   debug flag.
@@ -271,7 +270,7 @@ US$14 per 1,000. Speech is priced in SP-C3.
 | K-6 | **Costs and other grown-up answers said aloud** in front of the children (intent question 4). | Default: she answers what she is asked. A "don't say aloud" list of tools (e.g. costs: text only) is small to add. | **Decided 2026-10-02:** nothing held back. |
 | K-7 | **Memory recall by keywords** may miss a fact worded differently. | Bilingual keywords at save time (MEM-3), eval cases. If recall is poor, add embeddings in a later intent. | No |
 | K-8 | **The bark sound.** A stock sound needs a licence that allows it. | Default: the owner records the real Cookie (plan O-4). Until then the voice says "Woof!". | **Decided 2026-10-02:** the voice says "Woof!" until a recording is supplied. |
-| K-9 | **Two clients again** (N-1 of 0004). | Thin client: only recording, playback and the chat views are built twice. | No |
+| K-9 | **The website and the app drift apart** (N-1 of 0004): Cookie is the first feature only the app has. | Owner's choice (2026-10-02). The backend is client-neutral, so a website chat later needs no server change. | **Decided 2026-10-02:** app only for now. |
 | K-10 | **A floating button covers content.** | Sits above the tab bar; hidden over the video player. Position and dragging are intent question 3. | **Decided 2026-10-02:** fixed bottom-right, not draggable. |
 | K-11 | **She is slower than VOX-6 asks.** Measured from the owner's Mac (plan, Spikes): a model call takes 1–4 s even for a trivial question, a hub question needs two, and the median was 4.7 s against the 3 s target. Now and then a call stalls. | Thinking is off, calls time out at 12 s, and `today()` answers most questions in one lookup. Measured again from Cloud Run in K7.1. If it stays slow: show "Cookie is looking…" with the tool's name, and consider a second, smaller model for the first round. | **Decided 2026-10-02:** the speed is acceptable. Still measured from Cloud Run in K7.1. |
 
@@ -284,7 +283,7 @@ US$14 per 1,000. Speech is priced in SP-C3.
 3. The icon: every screen except sign-in, lock and the full-screen
    player; not draggable (CK-1).
 4. Things not to say aloud: none yet (K-6).
-5. Voice on the website: no (CK-8).
+5. The website: no Cookie there for now (owner, 2026-10-02; CK-8).
 6. History: text kept 90 days, then cleared; can be cleared any time
    (MEM-9). Memory is kept until forgotten.
 7. Voice and bark: a plain friendly voice chosen in SP-C3; the bark is a
