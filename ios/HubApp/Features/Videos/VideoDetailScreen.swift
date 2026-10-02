@@ -119,7 +119,12 @@ struct VideoDetailScreen: View {
             }
             if r.status == "failed" { Button("Try again") { Task { await retry() } } }
             let details = [r.mediaName, segment(r)].compactMap { $0 }
-            if !details.isEmpty { Caption(details.joined(separator: " · ")) }
+            if !details.isEmpty {
+                // A bare file name fails the audit's "human-readable label" check, so VoiceOver says what it is.
+                Caption(details.joined(separator: " · "))
+                    .accessibilityLabel(([r.mediaName.map { "Video file \($0)" }, segment(r)] as [String?])
+                        .compactMap { $0 }.joined(separator: ", "))
+            }
             if let url = r.url.flatMap(URL.init(string:)), url.scheme == "https" {
                 Button("Open the video") { openURL(url) }
             }
