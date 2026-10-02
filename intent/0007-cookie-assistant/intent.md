@@ -1,6 +1,7 @@
 # Intent: Cookie, a voice-first family assistant in the app
-Status: draft (2026-10-01). Drafted by Claude from the owner's request;
-not yet approved.
+Status: approved to go to spec (owner, 2026-10-01, in chat: "go ahead
+with a plan.md and spec.md"). Drafted by Claude from the owner's request.
+The open questions are not answered yet; spec §6 lists the defaults taken.
 Owner: Jayden's parent (lleiguo).
 
 "I'd like to build an AI assistant into the app, the name is 'Cookie',
@@ -119,8 +120,8 @@ Vertex AI in the hub's own Google Cloud project.
   handles Mandarin and English in one sentence. The iPhone's built-in
   voices are free and private but switch awkwardly between the two
   languages; they are the fallback when offline or over budget.
-- **Web search:** Vertex AI's Google Search grounding, plus the hub's
-  own page fetcher for reading one page.
+- **Web search:** Vertex AI's Google Search grounding, plus a small page
+  fetcher (new: the hub has none today) for reading one page.
 - **Memory:** a new table in the hub's existing database, searched by
   the memory tool. No separate memory service.
 
