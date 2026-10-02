@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { call } from "@/components/calendar/api";
-import { MODEL_LABEL, sportText, type VideoSport } from "@/domain/video-constants";
+import { sportText, type VideoSport } from "@/domain/video-constants";
 import type { VideoReviewSummary } from "@/server/video/store";
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -25,7 +25,7 @@ const PROVIDER_LABEL: Record<string, string> = {
   other: "Link",
 };
 
-// VID-4: newest first with link, note, date, status and the result; two
+// VID-4: newest first with link, note, date and status; two
 // can be compared side by side; deleted ones can be restored. Polls while
 // any review is still running (VID-5).
 export function VideoHistory({
@@ -103,12 +103,6 @@ export function VideoHistory({
                 <span data-testid="video-status" className={statusTone(r.status)}>
                   {STATUS_LABEL[r.status] ?? r.status}
                 </span>
-                {r.status === "done" && r.winner && (
-                  <span className="text-neutral-600 dark:text-neutral-400">
-                    {r.tie ? "Tie" : `${MODEL_LABEL[r.winner]} won`}
-                    {r.parentVote && ` · you: ${MODEL_LABEL[r.parentVote]}`}
-                  </span>
-                )}
               </div>
               {r.note && <p className="break-words">{r.note}</p>}
               <p className="truncate text-neutral-600 dark:text-neutral-400">

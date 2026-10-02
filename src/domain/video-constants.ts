@@ -36,17 +36,7 @@ export type VideoProvider = (typeof VIDEO_PROVIDERS)[number];
 export const VIDEO_STATUSES = ["queued", "picking", "analysing", "done", "failed", "saved"] as const;
 export type VideoStatus = (typeof VIDEO_STATUSES)[number];
 
-export const REVIEW_MODELS = ["gemini", "claude"] as const;
-export type ReviewModel = (typeof REVIEW_MODELS)[number];
-
-export const MODEL_LABEL: Record<ReviewModel, string> = { gemini: "Gemini", claude: "Claude" };
-
-// debate (VID-3a..c) or one model's review only (VID-3e).
-export const REVIEW_MODES = ["debate", "gemini", "claude"] as const;
-export type ReviewMode = (typeof REVIEW_MODES)[number];
-
-// detect: the job working out the sport (intent 0005, SPT-2).
-export const REVIEW_ROUNDS = ["detect", "review", "critique", "rebuttal", "final_score", "combine"] as const;
+// One model call of a review: working out the sport (intent 0005, SPT-2),
+// then the review itself.
+export const REVIEW_ROUNDS = ["detect", "review"] as const;
 export type ReviewRound = (typeof REVIEW_ROUNDS)[number];
-
-export const other = (m: ReviewModel): ReviewModel => (m === "gemini" ? "claude" : "gemini");

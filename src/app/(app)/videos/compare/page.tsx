@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { MODEL_LABEL, SPORT_LABEL, type ReviewModel } from "@/domain/video-constants";
+import { SPORT_LABEL } from "@/domain/video-constants";
 import { getDb } from "@/server/db";
-import type { Combined } from "@/server/video/prompts";
+import type { Review } from "@/server/video/prompts";
 import { getVideoReview } from "@/server/video/store";
 
 const muted = "text-neutral-600 dark:text-neutral-400";
@@ -28,7 +28,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/videos/c
       <h1 className="text-xl font-semibold">Compare reviews</h1>
       <div className="grid gap-3 md:grid-cols-2">
         {sorted.map((r) => {
-          const c = r.combinedReview as Combined | null;
+          const c = r.combinedReview as Review | null;
           return (
             <section key={r.id} className="flex flex-col gap-2 rounded-md border p-3 dark:border-neutral-800">
               <h2 className="font-semibold">
@@ -54,13 +54,6 @@ export default async function ComparePage({ searchParams }: PageProps<"/videos/c
                       <li key={i}>{p.text}</li>
                     ))}
                   </ol>
-                  <p className={`text-xs ${muted}`}>
-                    {r.verdict
-                      ? r.verdict.tie
-                        ? "Two-model review (tie)"
-                        : `Two-model review, ${MODEL_LABEL[r.verdict.winner as ReviewModel]} won`
-                      : `${MODEL_LABEL[r.mode === "claude" ? "claude" : "gemini"]} only`}
-                  </p>
                 </>
               )}
             </section>

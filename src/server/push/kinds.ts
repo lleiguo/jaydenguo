@@ -1,12 +1,6 @@
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { tennisEntries } from "@db/schema";
-import {
-  MODEL_LABEL,
-  sportText,
-  type ReviewModel,
-  type SportSource,
-  type VideoSport,
-} from "../../domain/video-constants";
+import { sportText, type SportSource, type VideoSport } from "../../domain/video-constants";
 import { localDate } from "../../domain/time";
 import type { DbOrTx } from "../db/client";
 import { loadCalendar } from "../calendar/load";
@@ -168,7 +162,6 @@ export async function notifyVideo(
     sportSource: SportSource;
     filmedOn: string;
     finishedAt: Date;
-    winner: ReviewModel | null;
     error: string | null;
   },
   deps: NotifyDeps = {},
@@ -180,10 +173,7 @@ export async function notifyVideo(
       kind: "video",
       dedupKey: `video:${r.id}:${r.finishedAt.toISOString()}`,
       title: r.status === "done" ? "Video review ready" : "Video review failed",
-      body:
-        r.status === "done"
-          ? `${what}${r.winner ? `: ${MODEL_LABEL[r.winner]}'s review won` : ""}.`
-          : `${what}: ${r.error ?? "it failed"}`,
+      body: r.status === "done" ? `${what}.` : `${what}: ${r.error ?? "it failed"}`,
       target: `videos/${r.id}`,
     },
     deps,

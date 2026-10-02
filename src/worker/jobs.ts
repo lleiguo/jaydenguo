@@ -55,7 +55,7 @@ export const jobs: Record<string, Job> = {
     run: tennisDrawWatchJob,
   },
   "video:review": {
-    description: "Fetch a linked video and review it (debate or one model): video:review <id>",
+    description: "Fetch a linked video and review it: video:review <id>",
     run: (args, ctx) => videoReviewJob(args, ctx),
   },
   "calendar:copy": {

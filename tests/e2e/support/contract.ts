@@ -30,7 +30,7 @@ const doc = allowNulls(
 const ajv = new Ajv2020({ strict: false, allErrors: true });
 addFormats(ajv);
 
-// Literal paths before templated ones (/videos/scoreboard before /videos/{id}).
+// Literal paths before templated ones (/videos/settings before /videos/{id}).
 const templates = Object.keys(doc.paths)
   .map((t) => ({
     t,

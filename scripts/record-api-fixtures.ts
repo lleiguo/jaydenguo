@@ -68,9 +68,8 @@ async function main() {
   if (tournamentId) save("getTournament", await get(`/api/v1/tennis/tournaments/${tournamentId}`));
   if (next?.draw.opponentKey)
     save("getTennisPlayer", await get(`/api/v1/tennis/players/${next.draw.opponentKey}`));
-  const videos = saved.listVideoReviews as { reviews: { id: string; mode: string }[] };
-  const debate = videos.reviews.find((v) => v.mode === "debate");
-  if (debate) save("getVideoReview", await get(`/api/v1/videos/${debate.id}`));
+  // The seed's sample review with a playback copy.
+  save("getVideoReview", await get("/api/v1/videos/5eed0000-0000-4000-8000-000000000001"));
   // The seed's sample notification (PUSH-2).
   save("getNotification", await get("/api/v1/notifications/5eed0000-0000-4000-8000-000000000101"));
   console.log(`recorded ${Object.keys(saved).length + 8} fixtures in ${path.relative(process.cwd(), out)}`);

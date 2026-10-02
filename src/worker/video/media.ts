@@ -2,14 +2,12 @@ import { execFile } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { chooseFrameTimes, type MotionSample } from "../../domain/frames";
-import type { Frame } from "../../server/llm/types";
 import { GEMINI_INLINE_LIMIT } from "../../server/llm/gemini";
 
 // Media prep for a review (spec §6.3, plan M5.3), with ffmpeg in the worker
-// image: trim to the owner's segment, shrink to a clip Gemini takes inline,
-// and pick timestamped frames for Claude, denser where the motion is. All
-// files go into the job's temp folder, which the job deletes (VID-2).
+// image: trim to the owner's segment and shrink to a clip Gemini takes
+// inline. All files go into the job's temp folder, which the job deletes
+// (VID-2).
 
 const run = promisify(execFile);
 const FFMPEG = () => process.env.FFMPEG_PATH ?? "ffmpeg";
@@ -98,82 +96,28 @@ export async function prepareClip(src: string, dir: string, range: { start: numb
   throw new MediaError("The video is too large to review even when shrunk. Mark a shorter segment.");
 }
 
-// Scene-change score for 15 small frames a second.
-export async function motionSamples(clip: string): Promise<MotionSample[]> {
-  const { stdout } = await ffmpeg(
-    ["-i", clip, "-vf", "fps=15,scale=160:-2,select='gte(scene,0)',metadata=print:file=-", "-f", "null", "-"],
-    { capture: true },
-  );
-  const samples: MotionSample[] = [];
-  let t: number | null = null;
-  for (const line of stdout.split("\n")) {
-    const time = /pts_time:([\d.]+)/.exec(line);
-    if (time) t = Number(time[1]);
-    const score = /lavfi\.scene_score=([\d.]+)/.exec(line);
-    if (score && t !== null) samples.push({ t, score: Number(score[1]) });
-  }
-  return samples;
-}
-
-export async function extractFrames(clip: string, dir: string, times: number[]): Promise<Frame[]> {
-  const frames: Frame[] = [];
-  for (const [i, t] of times.entries()) {
-    const out = join(dir, `frame-${String(i).padStart(3, "0")}.jpg`);
-    await ffmpeg([
-      "-ss",
-      t.toFixed(3),
-      "-i",
-      clip,
-      "-frames:v",
-      "1",
-      "-vf",
-      "scale='min(768,iw)':-2",
-      "-q:v",
-      "5",
-      out,
-    ]);
-    frames.push({ atSec: t, jpeg: await readFile(out) });
-  }
-  return frames;
-}
-
 export type PreparedMedia = {
   clip: Buffer;
   durationSec: number;
   // Where the clip starts in the original video, in seconds.
   offsetSec: number;
-  frames: Frame[];
 };
 
-// Everything both models need. Frame times count from the clip's start,
-// like the times Gemini cites and the playback copy (intent 0003, PLAY-6).
-export async function prepareMedia(
-  src: string,
-  dir: string,
-  segment: Segment,
-  wantFrames: boolean,
-): Promise<PreparedMedia> {
+// The clip to review. Its clock starts at zero, like the times Gemini cites
+// and the playback copy (intent 0003, PLAY-6).
+export async function prepareMedia(src: string, dir: string, segment: Segment): Promise<PreparedMedia> {
   const duration = await probeDuration(src);
   const range = reviewRange(duration, segment);
   const clipFile = await prepareClip(src, dir, range);
   const clipDuration = await probeDuration(clipFile);
-  let frames: Frame[] = [];
-  if (wantFrames) {
-    const times = chooseFrameTimes(clipDuration, await motionSamples(clipFile));
-    frames = await extractFrames(clipFile, dir, times);
-  }
-  return { clip: await readFile(clipFile), durationSec: clipDuration, offsetSec: range.start, frames };
+  return { clip: await readFile(clipFile), durationSec: clipDuration, offsetSec: range.start };
 }
 
-async function ffmpeg(args: string[], opts: { capture?: boolean } = {}) {
+async function ffmpeg(args: string[]) {
   try {
-    return await run(
-      FFMPEG(),
-      ["-hide_banner", "-loglevel", opts.capture ? "info" : "error", "-y", ...args],
-      {
-        maxBuffer: 64 * 1024 * 1024,
-      },
-    );
+    return await run(FFMPEG(), ["-hide_banner", "-loglevel", "error", "-y", ...args], {
+      maxBuffer: 64 * 1024 * 1024,
+    });
   } catch {
     throw new MediaError("Couldn't process the video (ffmpeg failed). Is it a normal video file?");
   }

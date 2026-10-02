@@ -1,28 +1,25 @@
-import type { ReviewMode, SportSource, VideoSport } from "../../domain/video-constants";
-import { LlmError, type Media } from "../llm/types";
-import type { Models, RoundRecord } from "./debate";
+import type { SportSource, VideoSport } from "../../domain/video-constants";
+import { LlmError, type Media, type StructuredModel } from "../llm/types";
 import { detectPrompt, detectSchema, detectSystem, PROMPT_VERSION } from "./prompts";
+import type { RoundRecord } from "./reviewer";
 
 // Working out the sport before the review (intent 0005, SPT-2, SPT-3): one
-// call to the model the review mode uses first (Gemini with the clip, or
-// Claude with frames in Claude-only mode). An unsure answer, or a model
-// that fails, leaves the review as "other" and marked unsure: detection
-// never fails the review.
+// call to Gemini with the clip. An unsure answer, or a model that fails,
+// leaves the review as "other" and marked unsure: detection never fails the
+// review.
 
 export type Detection = { sport: VideoSport; source: SportSource; round: RoundRecord | null };
 
 export async function detectSport(
-  mode: ReviewMode,
-  models: Models,
+  model: StructuredModel,
   media: Media,
   log: (message: string, fields: Record<string, unknown>) => void = () => {},
 ): Promise<Detection> {
-  const model = models[mode === "claude" ? "claude" : "gemini"];
   try {
     const result = await model.call({
       purpose: "detect",
       system: detectSystem(),
-      prompt: detectPrompt(model.input),
+      prompt: detectPrompt(),
       schema: detectSchema,
       media,
     });
@@ -32,9 +29,7 @@ export async function detectSport(
       model: model.name,
       modelVersion: result.modelVersion,
       promptVersion: PROMPT_VERSION,
-      labels: null,
       output: result.output,
-      scores: null,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
       costUsd: result.costUsd,

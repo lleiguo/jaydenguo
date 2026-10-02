@@ -49,20 +49,20 @@ describe("citedSeconds", () => {
 
 describe("timelinePoints and activePoint", () => {
   const review = {
-    good: [{ text: "Eyes on the ball", at: "0:03", status: "agreed" as const }],
+    good: [{ text: "Eyes on the ball", at: "0:03" }],
     fix: [
-      { text: "Turn sooner", at: "0:02", status: "agreed" as const },
+      { text: "Turn sooner", at: "0:02" },
       { text: "Finish high", at: null },
-      { text: "Bend the knees", at: "0:04", status: "disputed" as const },
+      { text: "Bend the knees", at: "0:04" },
     ],
   };
   const points = timelinePoints(review);
 
   it("keeps points with a time, in time order, keyed by section and place", () => {
-    expect(points.map((p) => [p.key, p.sec, p.disputed])).toEqual([
-      ["fix-0", 2, false],
-      ["good-0", 3, false],
-      ["fix-2", 4, true],
+    expect(points.map((p) => [p.key, p.sec])).toEqual([
+      ["fix-0", 2],
+      ["good-0", 3],
+      ["fix-2", 4],
     ]);
   });
 

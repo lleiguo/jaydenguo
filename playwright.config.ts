@@ -63,7 +63,7 @@ export default defineConfig({
         GOOGLE_API_BASE: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
         CLASSROOM_API_BASE: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
         PHOTOS_PICKER_BASE: `http://127.0.0.1:${FAKE_OIDC_PORT}`,
-        // Video reviews run with stand-in models, not Vertex AI.
+        // Video reviews run with a stand-in model, not Vertex AI.
         VIDEO_LLM: "fake",
         // Playback copies (intent 0003) go to a local folder, not a bucket.
         MEDIA_DIR: path.join(os.tmpdir(), "jaydenguo-e2e-media"),

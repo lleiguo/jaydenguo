@@ -70,9 +70,8 @@ DATABASE_URL=postgres://hub:hub@localhost:5433/hub_fixtures pnpm seed
 DATABASE_URL=postgres://hub:hub@localhost:5433/hub_fixtures APP_URL=http://localhost:3200 pnpm dev --port 3200
 ```
 
-`pnpm seed` puts the sample email suggestions and the sample review's vote
-back, so the tests that use them up can run again; re-run it between full
-test runs.
+`pnpm seed` puts the sample email suggestions back, so the tests that use
+them up can run again; re-run it between full test runs.
 
 Then:
 

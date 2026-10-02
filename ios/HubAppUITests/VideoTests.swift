@@ -1,13 +1,12 @@
 import XCTest
 
 /// N6 part 2 (intent 0004, IVID-1..3) against the local seed server: the
-/// seeded debate with its playback copy (MEDIA_DIR, see ios/README.md) and
-/// an older single-model review whose sport was detected. The vote can
-/// only be cast once, and relabelling clears "detected": `pnpm seed` resets
-/// both.
+/// seeded review with its playback copy (MEDIA_DIR, see ios/README.md) and
+/// an older one whose sport was detected. Relabelling clears "detected":
+/// `pnpm seed` resets it.
 final class VideoTests: XCTestCase {
     private var server: String { ProcessInfo.processInfo.environment["HUB_TEST_SERVER"] ?? "http://localhost:3200" }
-    private let debate = "5eed0000-0000-4000-8000-000000000001"
+    private let sample = "5eed0000-0000-4000-8000-000000000001"
     private var token = ""
     private var cleanups: [() -> Void] = []
 
@@ -69,22 +68,16 @@ final class VideoTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(rows.count, 2)
         rows.firstMatch.tap()
         // The player comes first; the advice is below it.
-        let advice = app.staticTexts["The advice"]
+        let advice = app.staticTexts["The review"]
         XCTAssertTrue(app.staticTexts["Done"].waitForExistence(timeout: 20))
         for _ in 0..<6 where !advice.exists { app.swipeUp() }
         XCTAssertTrue(advice.exists)
-        let verdict = app.staticTexts["Verdict"]
-        for _ in 0..<8 where !verdict.exists { app.swipeUp() }
-        XCTAssertTrue(verdict.exists)
-        let geminiReview = app.buttons["Gemini's review"]
-        for _ in 0..<6 where !geminiReview.exists { app.swipeUp() }
-        XCTAssertTrue(geminiReview.exists, "each model's own review is there too")
     }
 
     /// IVID-2: a jump button seeks and shows the point.
     func testAJumpButtonShowsThatMomentAndItsPoint() throws {
         let app = launch()
-        app.open(URL(string: "jaydenguohub://open/videos/\(debate)")!)
+        app.open(URL(string: "jaydenguohub://open/videos/\(sample)")!)
         let time = element(app, "videoTime")
         XCTAssertTrue(time.waitForExistence(timeout: 30), "the playback copy loads")
         let jump = app.buttons["Show 0:02 in the video"].firstMatch
@@ -95,19 +88,6 @@ final class VideoTests: XCTestCase {
         let point = element(app, "currentPoint")
         XCTAssertTrue(point.label.hasPrefix("Fix 1"), point.label)
     }
-
-    func testVoteOnce() throws {
-        let app = launch()
-        app.open(URL(string: "jaydenguohub://open/videos/\(debate)")!)
-        XCTAssertTrue(app.staticTexts["Done"].waitForExistence(timeout: 20))
-        let voted = element(app, "yourVote")
-        let claude = app.buttons["Claude"]
-        for _ in 0..<12 where !(voted.exists || claude.isHittable) { app.swipeUp() }
-        if voted.exists { throw XCTSkip("Already voted: run `pnpm seed` to reset the sample vote.") }
-        claude.tap()
-        XCTAssertTrue(app.staticTexts["You found Claude's review more useful."].waitForExistence(timeout: 10))
-    }
-
     /// intent 0005, SPT-4..6: the seeded older review's sport was detected;
     /// change only its label, then change it back.
     func testChangeTheSportLabel() throws {

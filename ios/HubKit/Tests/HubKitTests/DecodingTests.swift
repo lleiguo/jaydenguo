@@ -57,7 +57,6 @@ import Testing
         "getVideoReview": { _ = try await $0.api.getVideoReview(path: .init(id: id)).ok.body.json },
         "getDeviceSettings": { _ = try await $0.api.getDeviceSettings().ok.body.json },
         "getNotification": { _ = try await $0.api.getNotification(path: .init(id: id)).ok.body.json },
-        "getScoreboard": { _ = try await $0.api.getScoreboard().ok.body.json },
         "getVideoSettings": { _ = try await $0.api.getVideoSettings().ok.body.json },
     ]
 }

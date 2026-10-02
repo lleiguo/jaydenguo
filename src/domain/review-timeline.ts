@@ -13,18 +13,16 @@ export type TimelinePoint = {
   kind: "good" | "fix";
   text: string;
   sec: number;
-  disputed: boolean;
 };
 
-type CitedPoint = { text: string; at: string | null; status?: "agreed" | "disputed" };
+type CitedPoint = { text: string; at: string | null };
 
 export function timelinePoints(review: { good: CitedPoint[]; fix: CitedPoint[] }): TimelinePoint[] {
   const points: TimelinePoint[] = [];
   for (const kind of ["good", "fix"] as const) {
     review[kind].forEach((p, i) => {
       const sec = citedSeconds(p.at);
-      if (sec !== null)
-        points.push({ key: `${kind}-${i}`, kind, text: p.text, sec, disputed: p.status === "disputed" });
+      if (sec !== null) points.push({ key: `${kind}-${i}`, kind, text: p.text, sec });
     });
   }
   return points.sort((a, b) => a.sec - b.sec);

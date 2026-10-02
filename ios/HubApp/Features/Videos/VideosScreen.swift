@@ -3,8 +3,7 @@ import HubKit
 import SwiftUI
 
 /// Videos (intent 0004, IVID-1, IVID-3; VID-1..5): the review history per
-/// sport, deleted reviews to restore, compare two, the scoreboard, the
-/// review mode, and starting a review.
+/// sport, deleted reviews to restore, compare two, and starting a review.
 struct VideosScreen: View {
     @Environment(AppModel.self) private var model
     @State private var sport: String?
@@ -57,12 +56,6 @@ struct VideosScreen: View {
                     comparing.toggle()
                     picked = []
                 }
-            }
-            ToolbarItem(placement: .secondaryAction) {
-                NavigationLink { ScoreboardScreen() } label: { Label("Scoreboard", systemImage: "trophy") }
-            }
-            ToolbarItem(placement: .secondaryAction) {
-                NavigationLink { VideoModeScreen() } label: { Label("Review mode", systemImage: "slider.horizontal.3") }
             }
         }
         .sheet(isPresented: $adding, onDismiss: { model.newReviewDraft = nil }) {
@@ -127,16 +120,9 @@ struct VideoRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("\(VideoSport.text(r.sport.rawValue, source: r.sportSource.rawValue)) · \(r.filmedOn)").font(.headline)
                 if let note = r.note { Text(note).font(.subheadline).lineLimit(2) }
-                HStack(spacing: 6) {
-                    Text(VideoStatus.label(r.status))
-                        .foregroundStyle(r.status == "failed" ? .red : VideoStatus.running(r.status) ? .warning : .secondary)
-                    if let winner = r.winner, winner != ._empty_ {
-                        Text("· \(r.tie ? "tie" : "\(winner.rawValue.capitalized) won")")
-                    }
-                    if let vote = r.parentVote, vote != ._empty_ { Text("· you: \(vote.rawValue.capitalized)") }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(VideoStatus.label(r.status))
+                    .font(.caption)
+                    .foregroundStyle(r.status == "failed" ? .red : VideoStatus.running(r.status) ? .warning : .secondary)
             }
             Spacer(minLength: 0)
         }
@@ -294,75 +280,5 @@ struct CompareScreen: View {
             }
         }
         .navigationTitle("Compare")
-    }
-}
-
-/// Judge and parent-vote wins per sport (VID-3d).
-struct ScoreboardScreen: View {
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        RemoteContent(fetch: { try await model.client.api.getScoreboard().ok.body.json.sports }) { rows in
-            List {
-                ForEach(rows, id: \.sport) { s in
-                    Section(VideoSport.label(s.sport.rawValue)) {
-                        LabeledContent("Debates", value: "\(Int(s.debates))" + (s.ties > 0 ? " (\(Int(s.ties)) ties)" : ""))
-                        LabeledContent("Judges picked", value: "Gemini \(Int(s.judgeWins.gemini)) · Claude \(Int(s.judgeWins.claude))")
-                        LabeledContent("You picked", value: "Gemini \(Int(s.parentWins.gemini)) · Claude \(Int(s.parentWins.claude))")
-                        if s.comparable > 0 {
-                            LabeledContent("Judges agreed with you", value: "\(Int(s.agreed)) of \(Int(s.comparable))")
-                        }
-                        Caption("Gemini watches the \(s.input.gemini); Claude sees \(s.input.claude).")
-                    }
-                }
-            }
-            .overlay { if rows.isEmpty { ContentUnavailableView("No debates yet", systemImage: "trophy") } }
-        }
-        .navigationTitle("Scoreboard")
-    }
-}
-
-/// Review mode (VID-3e): two models debate, or one model alone.
-struct VideoModeScreen: View {
-    @Environment(AppModel.self) private var model
-    @State private var mode: String?
-
-    private let options: [(value: String, label: String, hint: String)] = [
-        ("debate", "Two models debate (default)", "Gemini and Claude each review, judge each other and agree on the advice. About $1.50–2 a video."),
-        ("gemini", "Gemini only", "One review from the whole video. About $0.15 a video."),
-        ("claude", "Claude only", "One review from still frames. About $0.30 a video."),
-    ]
-
-    var body: some View {
-        List {
-            ForEach(options, id: \.value) { o in
-                Button {
-                    Task { await set(o.value) }
-                } label: {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(o.label)
-                            Caption(o.hint)
-                        }
-                        Spacer()
-                        if mode == o.value { Image(systemName: "checkmark").foregroundStyle(Color.accentColor) }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .navigationTitle("Review mode")
-        .task { mode = try? await model.client.api.getVideoSettings().ok.body.json.mode.rawValue }
-    }
-
-    private func set(_ value: String) async {
-        do {
-            _ = try await model.client.api.setVideoSettings(body: .json(.init(mode: .init(rawValue: value)!))).ok
-            mode = value
-            model.show("New reviews use this mode.")
-        } catch {
-            model.show(HubError.from(error)?.message ?? "Couldn't change it.")
-        }
     }
 }

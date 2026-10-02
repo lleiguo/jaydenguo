@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { REVIEW_MODES, VIDEO_SPORTS } from "@/domain/video-constants";
+import { VIDEO_SPORTS } from "@/domain/video-constants";
 import { isValidTimeZone } from "@/domain/time";
 import { deviceTokenInput, handoffInput } from "../auth/device";
 import { copyInput } from "../calendar-copy";
@@ -18,7 +18,7 @@ import { deviceKindsInput, registerDeviceInput } from "../push/notify";
 import { createSourceInput, updateSourceInput } from "../sources";
 import { addResultInput, correctResultInput, createMeetInput } from "../swim/mutations";
 import { addMatchInput, correctMatchInput } from "../tennis/mutations";
-import { changeSportInput, createVideoInput, voteInput } from "../video/store";
+import { changeSportInput, createVideoInput } from "../video/store";
 
 // Every /api/v1 operation, for openapi.json (intent 0004, API-4). `response`
 // names a type exported from ./responses.ts; null means an empty body
@@ -50,7 +50,6 @@ export type Operation = {
 const skipInput = z.object({ skip: z.boolean().default(true) });
 const acceptClashInput = z.object({ a: z.uuid(), b: z.uuid() });
 const settingsInput = z.object({ homeTimeZone: z.string().refine(isValidTimeZone, "unknown time zone") });
-const modeInput = z.object({ mode: z.enum(REVIEW_MODES) });
 
 export const operations: Operation[] = [
   // The iPhone app's sign-in (intent 0004, API-1, API-5)
@@ -866,15 +865,6 @@ export const operations: Operation[] = [
     response: "Started",
   },
   {
-    method: "POST",
-    path: "/api/v1/videos/{id}/vote",
-    operationId: "voteVideoReview",
-    summary: "The parent's vote (once).",
-    spec: "VID-3d",
-    body: voteInput,
-    response: "VideoVoteResponse",
-  },
-  {
     method: "GET",
     path: "/api/v1/videos/{id}/video",
     operationId: "getPlayback",
@@ -894,27 +884,10 @@ export const operations: Operation[] = [
   },
   {
     method: "GET",
-    path: "/api/v1/videos/scoreboard",
-    operationId: "getScoreboard",
-    summary: "Judge and parent-vote wins per sport.",
-    spec: "VID-3d",
-    response: "ScoreboardResponse",
-  },
-  {
-    method: "GET",
     path: "/api/v1/videos/settings",
     operationId: "getVideoSettings",
-    summary: "Review mode and Google access.",
-    spec: "VID-3e",
+    summary: "Whether Google Drive and Photos are connected.",
+    spec: "VID-2",
     response: "VideoSettingsResponse",
-  },
-  {
-    method: "PATCH",
-    path: "/api/v1/videos/settings",
-    operationId: "setVideoSettings",
-    summary: "Change the review mode.",
-    spec: "VID-3e",
-    body: modeInput,
-    response: "VideoModeResponse",
   },
 ];

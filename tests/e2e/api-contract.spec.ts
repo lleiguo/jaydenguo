@@ -35,7 +35,6 @@ const routes = [
   "/api/v1/tennis/accuracy",
   "/api/v1/videos",
   "/api/v1/videos?deleted=1",
-  "/api/v1/videos/scoreboard",
   "/api/v1/videos/settings",
 ];
 
