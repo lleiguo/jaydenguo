@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "./support/test";
 import { apiSend } from "./support/api";
 import { APP_URL, OWNER } from "./support/env";
@@ -168,6 +169,55 @@ test("Cookie refuses an empty or over-long question (LIM-3)", async ({ context }
       data: { text },
       headers: { origin: APP_URL },
     });
+    expect(res.status()).toBe(400);
+  }
+});
+
+test("Cookie hears a spoken question and reads her answer aloud (VOX-1..5)", async ({ context }, info) => {
+  test.skip(info.project.name !== "desktop", "one shared chat; one project is enough");
+  await signInAs(context, OWNER);
+  // Synthetic speech. The stand-in transcriber hears "What's on today?" in any clip.
+  const data = readFileSync("tests/fixtures/assistant/question.m4a").toString("base64");
+  const spoken = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+    audio: { data, mimeType: "audio/mp4" },
+  });
+  expect(spoken).toMatchObject({ outcome: "answer", heard: "What's on today?", language: "en" });
+  const history = await apiSend(context, "GET", "/api/v1/assistant/turns?limit=1");
+  expect(history.turns[0]).toMatchObject({ id: spoken.turnId, mode: "voice" });
+
+  const speech = await context.request.get(`/api/v1/assistant/turns/${spoken.turnId}/speech`);
+  expect(speech.status()).toBe(200);
+  expect(speech.headers()["content-type"]).toBe("audio/mpeg");
+  expect(speech.headers()["cache-control"]).toContain("no-store");
+  expect((await speech.body()).length).toBeGreaterThan(100);
+
+  // Someone else's turn, or none: nothing to read.
+  const missing = await context.request.get(
+    "/api/v1/assistant/turns/00000000-0000-4000-8000-000000000000/speech",
+  );
+  expect(missing.status()).toBe(404);
+  // Switched off: the app reads it with the phone's voice.
+  await apiSend(context, "PATCH", "/api/v1/assistant/settings", { speak: false });
+  try {
+    const off = await context.request.get(`/api/v1/assistant/turns/${spoken.turnId}/speech`);
+    expect(off.status()).toBe(409);
+  } finally {
+    await apiSend(context, "PATCH", "/api/v1/assistant/settings", { speak: true });
+  }
+});
+
+test("Cookie refuses a recording she can't use, and a question that is both or neither (LIM-3)", async ({
+  context,
+}) => {
+  await signInAs(context, OWNER);
+  const clip = readFileSync("tests/fixtures/assistant/question.m4a").toString("base64");
+  for (const data of [
+    { audio: { data: clip, mimeType: "video/mp4" } },
+    { audio: { data: "AAAA", mimeType: "audio/mp4" } },
+    { audio: { data: clip, mimeType: "audio/mp4" }, text: "and typed too" },
+    {},
+  ]) {
+    const res = await context.request.post("/api/v1/assistant/ask", { data, headers: { origin: APP_URL } });
     expect(res.status()).toBe(400);
   }
 });

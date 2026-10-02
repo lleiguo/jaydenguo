@@ -45,8 +45,8 @@ export type Operation = {
   bodyOptional?: boolean;
   status?: 200 | 201 | 202 | 204 | 206;
   response: string | null;
-  // Not JSON: the video stream.
-  binary?: "video/mp4";
+  // Not JSON: the video stream, or Cookie's spoken answer.
+  binary?: "video/mp4" | "audio/mpeg";
   // No session needed (the body carries a single-use code).
   public?: true;
 };
@@ -900,8 +900,8 @@ export const operations: Operation[] = [
     method: "POST",
     path: "/api/v1/assistant/ask",
     operationId: "askAssistant",
-    summary: "Ask Cookie a question; she answers from the hub or barks.",
-    spec: "CK-4, CHR-1..7, LIM-1..6",
+    summary: "Ask Cookie a question, typed or as a recording; she answers from the hub or barks.",
+    spec: "CK-4, VOX-1..4, CHR-1..7, LIM-1..6",
     body: askInput,
     response: "AssistantAnswer",
   },
@@ -922,6 +922,15 @@ export const operations: Operation[] = [
     spec: "MEM-9",
     status: 204,
     response: null,
+  },
+  {
+    method: "GET",
+    path: "/api/v1/assistant/turns/{id}/speech",
+    operationId: "getAssistantSpeech",
+    summary: "One answer read aloud. Any error means: use the phone's own voice.",
+    spec: "VOX-5, LIM-5",
+    response: null,
+    binary: "audio/mpeg",
   },
   {
     method: "GET",

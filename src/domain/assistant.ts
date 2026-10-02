@@ -49,6 +49,17 @@ export const LIMITS = {
   historyDays: 90,
 } as const;
 
+// LIM-3, VOX-5
+export const VOICE_LIMITS = {
+  clipSeconds: 30,
+  clipBytes: 1024 * 1024,
+  // How many names the transcriber is given (VOX-3).
+  spellingNames: 40,
+  // An answer longer than this is read only this far.
+  speechChars: 600,
+  perAccount: { limit: 30, windowMs: 5 * 60_000 },
+} as const;
+
 // MEM-1, MEM-3, MEM-4
 export const MEMORY_LIMITS = {
   textChars: 300,
@@ -188,6 +199,10 @@ export const restLine = (language: Language | null | undefined) =>
 export const capLine = (language: Language | null | undefined) =>
   zh(language) ? "Cookie 这个月的额度用完了。" : "Cookie has reached this month's limit.";
 
+// A clip with no words in it.
+export const unheardLine = (language: Language | null | undefined) =>
+  zh(language) ? "汪！我没听清，再说一遍？" : "Woof! I didn't catch that. Say it again?";
+
 export const errorLine = (language: Language | null | undefined) =>
   zh(language) ? "Cookie 现在答不了，请稍后再试。" : "Cookie can't answer right now. Try again in a moment.";
 
@@ -301,4 +316,67 @@ export function fetchUrlProblem(url: string): string | null {
   if (!host.includes(".") || /(^|\.)(localhost|internal|local)$/i.test(host))
     return "that isn't a public site";
   return null;
+}
+
+// --- Voice (VOX-1..5, LIM-3) -------------------------------------------------
+
+// What the iPhone records: AAC in an MPEG-4 file.
+const CLIP_TYPES = new Set(["audio/mp4", "audio/m4a", "audio/x-m4a", "audio/aac"]);
+
+// How long an MPEG-4 clip runs, from its movie header; null if this isn't
+// one or it doesn't say.
+export function mp4Seconds(bytes: Uint8Array): number | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const tag = (at: number) => String.fromCharCode(...bytes.subarray(at, at + 4));
+  // Walks the boxes in [from, to) and returns the body of the one named.
+  const find = (name: string, from: number, to: number): [number, number] | null => {
+    for (let at = from; at + 8 <= to;) {
+      let size = view.getUint32(at);
+      let head = 8;
+      if (size === 1) {
+        if (at + 16 > to) return null;
+        size = Number(view.getBigUint64(at + 8));
+        head = 16;
+      } else if (size === 0) size = to - at;
+      if (size < head || at + size > to) return null;
+      if (tag(at + 4) === name) return [at + head, at + size];
+      at += size;
+    }
+    return null;
+  };
+  if (bytes.length < 16 || tag(4) !== "ftyp") return null;
+  const moov = find("moov", 0, bytes.length);
+  const mvhd = moov && find("mvhd", moov[0], moov[1]);
+  if (!mvhd) return null;
+  const [at, end] = mvhd;
+  const long = bytes[at] === 1;
+  if (end - at < (long ? 32 : 20)) return null;
+  const scale = view.getUint32(at + (long ? 20 : 12));
+  const length = long ? Number(view.getBigUint64(at + 24)) : view.getUint32(at + 16);
+  return scale > 0 && length > 0 ? length / scale : null;
+}
+
+// LIM-3: why a clip is refused, in words the app can show, or null.
+export function clipProblem(mimeType: string, bytes: Uint8Array): string | null {
+  if (!CLIP_TYPES.has(mimeType.toLowerCase())) return "that isn't a recording Cookie can listen to";
+  if (bytes.length > VOICE_LIMITS.clipBytes) return "that recording is too big";
+  const seconds = mp4Seconds(bytes);
+  if (seconds === null) return "that isn't a recording Cookie can listen to";
+  // A little slack: the recorder stops at the limit, give or take a frame.
+  if (seconds > VOICE_LIMITS.clipSeconds + 1)
+    return `recordings can be ${VOICE_LIMITS.clipSeconds} seconds at most`;
+  return null;
+}
+
+// VOX-5, CHR-4: the answer as it is read aloud. Links aren't read, and a
+// web answer says where it came from.
+export function spokenText(text: string, language: Language | null | undefined, fromWeb: boolean): string {
+  const plain = text
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/[*_#`]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, VOICE_LIMITS.speechChars);
+  if (!plain || !fromWeb) return plain;
+  return zh(language) ? `网上说：${plain}` : `From the web: ${plain}`;
 }

@@ -66,7 +66,7 @@ export const memorySaveTool: Tool<z.infer<typeof saveInput>> = {
       ctx.db,
       ctx.userId,
       { text: q.text, about: about ? [about.id] : [], keywords: q.keywords },
-      "chat",
+      ctx.spoken ? "voice" : "chat",
     );
     return { saved: shape(ctx.turn.saved, ctx) };
   },

@@ -11,13 +11,15 @@
 // --mode loop (default) sends each clip the way Cookie will: her system
 // prompt and tools, with the transcript read from the `heard` of her final
 // `answer` or `bark` (hub tools answer "nothing here", so no hub data is
-// involved). --mode plain asks for the transcript alone, in one call.
+// involved). --mode plain asks for the transcript alone, in one call: the
+// call the server makes for a spoken question since K5.
 // --names is the spelling list Cookie is given (VOX-3).
 
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { FunctionCallingConfigMode, GoogleGenAI, type Content } from "@google/genai";
 import { ASSISTANT_MODEL } from "../src/server/assistant/model";
+import { geminiTranscriber } from "../src/server/assistant/transcribe";
 import { declarations, SYSTEM_PROMPT } from "../src/server/assistant/prompt";
 import { HUB_TOOLS } from "../src/server/assistant/tools";
 
@@ -63,35 +65,24 @@ async function main() {
   const ai = new GoogleGenAI({ vertexai: true, project: process.env.VERTEX_PROJECT, location: "global" });
   const model = ASSISTANT_MODEL();
   const context = `[Now: 2026-10-02 Fri 16:00 (America/Toronto). People: ${names ?? "(not given)"}.]`;
-  const heardTool = {
-    name: "heard",
-    description: "Give the transcript.",
-    parametersJsonSchema: {
-      type: "object",
-      properties: { text: { type: "string" } },
-      required: ["text"],
-    },
-  };
   const loopTools = declarations(HUB_TOOLS).map((t) => ({
     name: t.name,
     description: t.description,
     parametersJsonSchema: t.parameters,
   }));
 
+  // --mode plain is the call Cookie's server makes for a spoken question.
+  const plain = geminiTranscriber();
   const transcribe = async (file: string): Promise<{ heard: string; rounds: number; firstCall: string }> => {
+    if (mode === "plain") {
+      const t = await plain({ data: readFileSync(file), mimeType: "audio/mp4" }, names?.split(",") ?? []);
+      return { heard: t.text, rounds: 1, firstCall: "" };
+    }
     const audio = { inlineData: { mimeType: "audio/mp4", data: readFileSync(file).toString("base64") } };
     const contents: Content[] = [
       {
         role: "user",
-        parts: [
-          {
-            text:
-              mode === "plain"
-                ? `Transcribe the spoken question exactly as said: the same words and languages, Chinese in simplified characters, English as English, not translated.${names ? ` Names you may hear: ${names}.` : ""}`
-                : `${context}\n(spoken question)`,
-          },
-          audio,
-        ],
+        parts: [{ text: `${context}\n(spoken question)` }, audio],
       },
     ];
     let firstCall = "";
@@ -100,8 +91,8 @@ async function main() {
         model,
         contents,
         config: {
-          ...(mode === "plain" ? {} : { systemInstruction: SYSTEM_PROMPT }),
-          tools: [{ functionDeclarations: mode === "plain" ? [heardTool] : loopTools }],
+          systemInstruction: SYSTEM_PROMPT,
+          tools: [{ functionDeclarations: loopTools }],
           toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
           thinkingConfig: { thinkingBudget: 0 },
           maxOutputTokens: 500,
@@ -112,8 +103,7 @@ async function main() {
       if (!calls.length) return { heard: "(no call)", rounds: round, firstCall };
       firstCall ||= calls.map((c) => `${c.name}(${JSON.stringify(c.args)})`).join(" + ");
       for (const call of calls) {
-        const args = (call.args ?? {}) as { text?: string; heard?: string };
-        if (call.name === "heard") return { heard: args.text ?? "", rounds: round, firstCall };
+        const args = (call.args ?? {}) as { heard?: string };
         if (call.name === "answer" || call.name === "bark")
           return { heard: args.heard ?? "", rounds: round, firstCall };
       }

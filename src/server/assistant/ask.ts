@@ -8,18 +8,23 @@ import {
   capLine,
   capState,
   checkGrounding,
+  clipProblem,
   errorLine,
   fitResult,
   languageOf,
   LIMITS,
+  mp4Seconds,
   noCalls,
   restLine,
+  unheardLine,
+  VOICE_LIMITS,
   type AssistantOutcome,
   type Language,
   type SourceKind,
   type ToolKind,
 } from "@/domain/assistant";
 import { hit } from "../auth/rate-limit";
+import { HttpError } from "../errors";
 import type { Db } from "../db/client";
 import { LlmError } from "../llm/types";
 import { listPeople } from "../people";
@@ -28,18 +33,44 @@ import type { AssistantModel, ModelCall } from "./model";
 import { answerInput, barkInput, contextLine, declarations, systemPrompt } from "./prompt";
 import { getAssistantSettings } from "./settings";
 import type { MemoryView } from "./memory";
+import { geminiTranscriber, spellingList, type Clip, type Transcriber } from "./transcribe";
 import { HUB_TOOLS, MEMORY_TOOLS, newTurn, WEB_TOOLS, type Tool, type ToolContext } from "./tools";
 import { monthSpendUsd, recentTurns, type AssistantSource } from "./turns";
 import { geminiSearch, guardedFetch, type PageFetch, type WebSearch } from "./web";
 
-// One question to Cookie, end to end (intent 0007, spec §4.1): limits, the
-// tool loop (at most LIMITS.rounds rounds), the grounding check, then the
-// turn is saved with what it cost.
+// One question to Cookie, end to end (intent 0007, spec §4.1): limits, a
+// spoken question turned into text, the tool loop (at most LIMITS.rounds
+// rounds), the grounding check, then the turn is saved with what it cost.
 
-export const askInput = z.object({
-  conversationId: z.string().uuid().optional(),
-  text: z.string().trim().min(1, "ask a question").max(LIMITS.questionChars, "that question is too long"),
-});
+// Base64 of a clip at the size limit, with room for padding.
+const CLIP_BASE64 = Math.ceil(VOICE_LIMITS.clipBytes / 3) * 4 + 4;
+
+// A typed question, or a recording of a spoken one (LIM-3).
+export const askInput = z
+  .object({
+    conversationId: z.string().uuid().optional(),
+    text: z
+      .string()
+      .trim()
+      .min(1, "ask a question")
+      .max(LIMITS.questionChars, "that question is too long")
+      .optional(),
+    audio: z
+      .object({
+        data: z.string().min(1, "that recording is empty").max(CLIP_BASE64, "that recording is too big"),
+        mimeType: z.string().max(40),
+      })
+      .optional(),
+  })
+  .refine((q) => (q.text === undefined) !== (q.audio === undefined), "ask a question");
+
+// The recording as bytes, or a 400 that says what is wrong with it.
+export function clipOf(audio: { data: string; mimeType: string }): Clip {
+  const data = /^[A-Za-z0-9+/]+={0,2}$/.test(audio.data) ? Buffer.from(audio.data, "base64") : null;
+  const problem = data ? clipProblem(audio.mimeType, data) : "that isn't a recording Cookie can listen to";
+  if (!data || problem) throw new HttpError(400, problem ?? "bad recording");
+  return { data, mimeType: "audio/mp4" };
+}
 
 export type AskResult = {
   turnId: string;
@@ -57,6 +88,8 @@ export type AskResult = {
 
 export type AskDeps = {
   model: AssistantModel;
+  // Turns a spoken question into text (VOX-1).
+  transcribe?: Transcriber;
   now?: Date;
   tools?: Tool[];
   // The web, when "Use the web" is on (TOOL-17).
@@ -86,15 +119,18 @@ async function runTool(tool: Tool | undefined, ctx: ToolContext, call: ModelCall
 export async function ask(
   db: Db,
   deps: AskDeps,
-  input: { userId: string; conversationId?: string; text: string },
+  input: { userId: string; conversationId?: string; text?: string; audio?: Clip },
 ): Promise<AskResult> {
   const now = deps.now ?? new Date();
   const turn = newTurn();
   const log = deps.log ?? consoleLog;
   const started = Date.now();
   const conversationId = input.conversationId ?? randomUUID();
-  const heard = input.text;
-  const language = languageOf(heard);
+  // A spoken question has no words until it is transcribed, below.
+  const clip = input.audio;
+  const seconds = clip ? mp4Seconds(clip.data) : null;
+  let heard = clip ? "" : (input.text ?? "");
+  let language = languageOf(heard);
 
   const usage = { inputTokens: 0, outputTokens: 0, costUsd: 0 };
   let model: string | null = null;
@@ -113,7 +149,7 @@ export async function ask(
       .values({
         conversationId,
         userId: input.userId,
-        mode: "text",
+        mode: clip ? "voice" : "text",
         heard,
         answer: text,
         outcome,
@@ -124,6 +160,7 @@ export async function ask(
         modelVersion,
         inputTokens: usage.inputTokens + turn.webCost.inputTokens,
         outputTokens: usage.outputTokens + turn.webCost.outputTokens,
+        audioSeconds: seconds,
         searches: turn.webCost.searches,
         costUsd: usage.costUsd + turn.webCost.costUsd,
         createdAt: now,
@@ -169,6 +206,26 @@ export async function ask(
     listPeople(db),
     recentTurns(db, conversationId, now),
   ]);
+
+  // VOX-1..3: the clip becomes text first, so the words are known whatever
+  // happens next, and a spoken question takes the same path as a typed one.
+  if (clip) {
+    let transcript;
+    try {
+      transcript = await (deps.transcribe ?? geminiTranscriber())(clip, await spellingList(db, people));
+    } catch (err) {
+      if (!(err instanceof LlmError)) throw err;
+      return finish("error", errorLine(language), [], language, err.kind);
+    }
+    usage.inputTokens += transcript.inputTokens;
+    usage.outputTokens += transcript.outputTokens;
+    usage.costUsd += transcript.costUsd;
+    model = transcript.model;
+    modelVersion = transcript.modelVersion;
+    heard = transcript.text.slice(0, LIMITS.questionChars);
+    language = languageOf(heard);
+    if (!heard) return finish("bark", unheardLine(language), [], language, "nothing heard");
+  }
   // The web tools aren't even described to the model while the web is off.
   const tools = deps.tools ?? [...HUB_TOOLS, ...MEMORY_TOOLS, ...(settings.web ? WEB_TOOLS : [])];
   const webOn = tools.some((t) => t.kind === "web");
@@ -179,6 +236,7 @@ export async function ask(
     people,
     userId: input.userId,
     question: heard,
+    spoken: !!clip,
     turn,
     settings,
     web: deps.web ?? { search: (q, l) => geminiSearch()(q, l), fetch: guardedFetch() },

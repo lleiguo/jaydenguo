@@ -310,13 +310,15 @@ export function buildDocument(): Schema {
     const responses: Record<string, Schema> = {};
     if (op.binary) {
       responses["200"] = {
-        description: "The whole file.",
+        description: op.binary === "video/mp4" ? "The whole file." : "The answer as speech.",
         content: { [op.binary]: { schema: { type: "string", format: "binary" } } },
       };
-      responses["206"] = {
-        description: "The requested range.",
-        content: { [op.binary]: { schema: { type: "string", format: "binary" } } },
-      };
+      // Only the video is served in ranges.
+      if (op.binary === "video/mp4")
+        responses["206"] = {
+          description: "The requested range.",
+          content: { [op.binary]: { schema: { type: "string", format: "binary" } } },
+        };
     } else if (op.response === null) {
       responses[String(status)] = { description: "Done." };
     } else {

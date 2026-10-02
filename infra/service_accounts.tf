@@ -53,6 +53,14 @@ resource "google_project_iam_member" "worker_vertex" {
   member  = google_service_account.worker.member
 }
 
+# Web calls Gemini Flash on Vertex AI for Cookie (intent 0007). Text-to-Speech
+# needs no role of its own: the API being enabled is enough.
+resource "google_project_iam_member" "web_vertex" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = google_service_account.web.member
+}
+
 # Worker calls the Routes API for drive times to tournaments (TEN-9),
 # billed to this project through X-Goog-User-Project.
 resource "google_project_iam_member" "worker_routes" {

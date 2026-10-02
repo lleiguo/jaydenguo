@@ -54,11 +54,11 @@ Changes to earlier specs:
 ### 2.2 Voice and language (VOX)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| VOX-1 | Mandarin, English and both mixed. | The clip goes to the model as audio with no language set. Spike SP-C1 passes before anything else is built: on 20 or more real questions from the family (English, Mandarin, mixed), every key term (names, places, sport terms, dates and numbers) is right in at least 18. |
+| VOX-1 | Mandarin, English and both mixed. | The clip goes to the model as audio with no language set, in one call that only writes down the words; the words then go through the same loop as a typed question (plan SP-C1). Spike SP-C1 passes before anything else is built: on 20 or more real questions from the family (English, Mandarin, mixed), every key term (names, places, sport terms, dates and numbers) is right in at least 18. |
 | VOX-2 | The transcript is always shown. | Every voice turn returns `heard`, the words as spoken (Chinese in simplified characters, English as English, not translated). A wrong transcript can be fixed by typing the question. |
-| VOX-3 | Names she should know. | The people's names from Settings → People, and the names of clubs and venues in the hub, are given to the model as a short spelling list so they are transcribed correctly. |
+| VOX-3 | Names she should know. | The people's names from Settings → People, and the places the calendar names most often (street addresses left out), are given to the model as a short spelling list (40 names at most) so they are transcribed correctly. |
 | VOX-4 | She answers in the language of the question. | English question, English answer; Mandarin, Mandarin; mixed, the main language of the question, keeping names and sport terms as they were said. |
-| VOX-5 | Speech out. | The answer text is turned into speech on the server by a voice that reads Mandarin and English in one sentence (chosen in SP-C3). If that fails or the month's cap is reached, the phone's built-in voice reads it. "Spoken answers" can be switched off in Settings. |
+| VOX-5 | Speech out. | The answer text is turned into speech on the server by a voice that reads Mandarin and English in one sentence (chosen in SP-C3). If that fails or the month's spend is at 80% of the cap, the phone's built-in voice reads it. Links aren't read out. "Spoken answers" can be switched off in Settings. |
 | VOX-6 | Speed. | From release to the answer text: under 3 s for a question answered from the hub, on 4G with a warm backend (median, measured in SP-C1 and again before release). Speech starts within 2 s after that. |
 
 ### 2.3 Character and grounding (CHR)
@@ -117,7 +117,7 @@ Cookie has exactly these tools. Adding one is a spec change.
 |---|---|---|
 | LIM-1 | A hard stop per question. | At most 4 model rounds and 5 tool calls, of which at most 1 `web_search` and 1 `web_fetch`. On reaching a limit without an answer, the outcome is a bark. A model call is given 12 s and one retry, and a question 25 s in all; past that she says she can't answer right now (outcome `error`, not a bark). |
 | LIM-2 | Small outputs. | Output capped at 500 tokens; the model's thinking set to its lowest setting that passes the eval set. |
-| LIM-3 | Small inputs. | Clips at most 30 s and 1 MB. Typed questions at most 500 characters. |
+| LIM-3 | Small inputs. | Clips at most 30 s and 1 MB, AAC in an MPEG-4 file (what the iPhone records); anything else is refused before any model is called. Typed questions at most 500 characters. |
 | LIM-4 | Rate limits. | 20 questions per 5 minutes per account and 300 a day for the family, counted with the existing rate limiter. Over the limit: "Cookie needs a rest. Try again in a few minutes." |
 | LIM-5 | Monthly cap. | A cap in Settings → Cookie (default US$10). At the cap she answers "Cookie has reached this month's limit" until the month ends or the cap is raised. Spoken answers fall back to the phone's voice at 80%. |
 | LIM-6 | Every question is costed. | Each turn records model, tokens in and out, audio seconds, speech characters, searches and an estimated cost. Costs → AI by feature shows "Cookie" per day and this month (COST-4). |
@@ -140,9 +140,9 @@ Cookie has exactly these tools. Adding one is a spec change.
 
 | Job | Service | Why |
 |---|---|---|
-| Understand the clip and answer | `gemini-3.8-flash` on Vertex AI, from `global` (spike SP-6 of 0001 found it generally available there). Model ID in `ASSISTANT_MODEL`. | Takes audio directly and handles mixed Mandarin and English without a language setting. One call gives the transcript and the tool calls, so there is no separate transcription bill. Same project, bill and service-account sign-in as the video reviews. |
-| Fallback transcription | Google Cloud Speech-to-Text (Chirp), in front of the same model. | Only if SP-C1 fails on Gemini's transcripts. |
-| Speech out | Google Cloud Text-to-Speech, voice chosen in SP-C3. Fallback: the iPhone's `AVSpeechSynthesizer`. | The phone's voices are free but switch badly between languages mid-sentence. |
+| Understand the clip and answer | `gemini-3.8-flash` on Vertex AI, from `global` (spike SP-6 of 0001 found it generally available there). Model ID in `ASSISTANT_MODEL`. | Takes audio directly and handles mixed Mandarin and English without a language setting. A first call writes down what was said; the answer loop then runs on those words (SP-C1: the transcript is then always there, and voice takes the path the eval set covers). Same project, bill and service-account sign-in as the video reviews. |
+| Fallback transcription | Google Cloud Speech-to-Text (Chirp), in front of the same model. | Not needed: SP-C1 passed on Gemini's transcripts. |
+| Speech out | Google Cloud Text-to-Speech, a Chirp 3 HD voice (SP-C3; the speaker's name in `ASSISTANT_VOICE`): its Mandarin voice for Chinese and mixed answers, its English voice for English ones. MP3, about 20 kB an answer, made in about a second. Fallback: the iPhone's `AVSpeechSynthesizer`. | The phone's voices are free but switch badly between languages mid-sentence. The first million characters a month are free, then US$30 per million; each answer read is counted at the list price against Cookie's cap. |
 | Web search | Vertex AI's Grounding with Google Search, in a separate call (CSEC-3). | No new account or key. The first 5,000 searches a month are free, then US$14 per 1,000; a question can make 1–4 searches. Each is counted at the list price against Cookie's cap. |
 | Page fetch | A small fetcher in the web service (`node:https` with a guarded DNS lookup), using the HTML parser the scrapers already use. | The hub had no general page fetcher, so this is new code. |
 | Memory | Two new tables in the hub's Postgres. | A family's facts are tens to a few hundred rows: keyword search is enough, no vector database. |
@@ -160,7 +160,10 @@ or audio, and US$3.75 out). Audio adds about 25 tokens a second, so a
 that is about US$2.40 a month before speech, under the US$10 default
 cap. The list price doubles on 2027-01-01 (`pricing.ts` knows the date).
 Search grounding is free for the first 5,000 queries a month, then
-US$14 per 1,000. Speech is priced in SP-C3.
+US$14 per 1,000. A spoken question adds the transcription call (about
+150 tokens in, 15 out: two hundredths of a cent). A spoken answer of 80
+characters is US$0.0024 at the list price, though a family stays far
+inside the free million characters a month.
 
 ---
 
@@ -172,6 +175,9 @@ US$14 per 1,000. Speech is priced in SP-C3.
         │  POST /api/v1/assistant/ask { conversationId, audio | text }
         ▼
  web service: limits (LIM-4/5) → build context (TOOL-18, MEM-8)
+        │
+        ▼  (a clip only)
+ Gemini Flash: the clip → the words (`heard`), with the spelling list
         │
         ▼
  Gemini Flash ── tool call ──► hub loaders / memory / web   (≤ 4 rounds)
@@ -208,7 +214,7 @@ US$14 per 1,000. Speech is priced in SP-C3.
 | Route | Does |
 |---|---|
 | `POST /ask` | `{ conversationId?, text? , audio?: { data, mimeType } }` → `{ turnId, conversationId, heard, language, outcome, text, sources, saved, forgot }` (`saved` and `forgot` are the fact this question saved or forgot, or null). Audio is base64 in JSON, so the generated client needs nothing special. |
-| `GET /turns/{id}/speech` | The answer as audio. 404 for someone else's turn or cleared text. |
+| `GET /turns/{id}/speech` | The answer as audio (`audio/mpeg`). 404 for someone else's turn or cleared text; 409 when spoken answers are off or the spend is at 80% of the cap; 503 when the voice doesn't answer. On anything but audio the app uses the phone's voice. |
 | `GET /turns`, `DELETE /turns` | History, newest last, paged. Clear history. |
 | `GET /memories`, `POST /memories` | List (with forgotten ones on request), add. |
 | `PATCH /memories/{id}`, `DELETE /memories/{id}`, `POST /memories/{id}/restore` | Edit, forget, restore. |
@@ -312,5 +318,6 @@ web tools more than the first draft of this spec allowed for:
 5. The website: no Cookie there for now (owner, 2026-10-02; CK-8).
 6. History: text kept 90 days, then cleared; can be cleared any time
    (MEM-9). Memory is kept until forgotten.
-7. Voice and bark: a plain friendly voice chosen in SP-C3; the bark is a
+7. Voice and bark: a plain friendly voice, "Leda", until the owner has
+   listened to the SP-C3 samples and picked one; the bark is a
    recording of Cookie if the owner supplies one (K-8).

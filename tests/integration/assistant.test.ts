@@ -1,11 +1,14 @@
-import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { eq, sql } from "drizzle-orm";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { assistantTurns, credentials, emailMessages, sources, users } from "@db/schema";
 import { fitResult, LIMITS, type Language } from "@/domain/assistant";
-import { ask, type AskDeps } from "@/server/assistant/ask";
+import { ask, clipOf, type AskDeps } from "@/server/assistant/ask";
 import { scriptedAssistant, type AssistantScript, type ModelCall } from "@/server/assistant/model";
 import { getAssistantSettings, saveAssistantSettings } from "@/server/assistant/settings";
+import { fakeSpeech, speakTurn, type SpeechRequest } from "@/server/assistant/speech";
 import { HUB_TOOLS, newTurn, type ToolContext } from "@/server/assistant/tools";
+import { scriptedTranscriber } from "@/server/assistant/transcribe";
 import {
   addMemory,
   forgetMemory,
@@ -782,6 +785,205 @@ describe("Cookie", () => {
       expect(sent).toContain("didn't ask you to remember");
       expect(sent).toContain("ask it without names");
       await saveAssistantSettings(db, { web: false, privateTerms: [] });
+    });
+  });
+
+  describe("spoken questions (plan K5.1)", () => {
+    // Synthetic speech ("What's on today?"), not a recording of anyone.
+    const file = readFileSync("tests/fixtures/assistant/question.m4a");
+    const clip = () => clipOf({ data: file.toString("base64"), mimeType: "audio/mp4" });
+
+    it("turns the clip into text, then answers it the way a typed question is answered", async () => {
+      const given: string[][] = [];
+      const d = {
+        ...deps((_req, round) =>
+          round === 1 ? [{ name: "today", args: {} }] : [answer("Swim practice at 5:30 pm.", ["hub"])],
+        ),
+        transcribe: scriptedTranscriber((sent, names) => {
+          expect(sent.data.equals(file)).toBe(true);
+          given.push([...names]);
+          return "What's on today?";
+        }),
+      };
+      const logged = vi.spyOn(console, "log").mockImplementation(() => {});
+      const result = await ask(db, d, { userId, audio: clip() });
+      const printed = JSON.stringify(logged.mock.calls);
+      logged.mockRestore();
+
+      expect(result).toMatchObject({
+        outcome: "answer",
+        heard: "What's on today?",
+        language: "en",
+        text: "Swim practice at 5:30 pm.",
+        sources: [{ kind: "hub", label: "Today" }],
+      });
+      // VOX-3: the people, then the places the calendar names.
+      const people = (await listPeople(db)).map((p) => p.name);
+      expect(given).toHaveLength(1);
+      expect(given[0].slice(0, people.length)).toEqual(people);
+      expect(given[0]).toContain("Aquatic Centre");
+      // The model is sent the words, never the clip.
+      const sent = JSON.stringify(d.model.requests);
+      expect(sent).toContain("What's on today?");
+      expect(sent).not.toContain("inlineData");
+
+      const [row] = await db.select().from(assistantTurns).where(eq(assistantTurns.id, result.turnId));
+      expect(row).toMatchObject({ mode: "voice", heard: "What's on today?" });
+      expect(row.audioSeconds).toBeGreaterThan(0.5);
+      expect(row.audioSeconds).toBeLessThan(1.5);
+      // The transcript's tokens and cost are counted with the two rounds'.
+      expect(row.inputTokens).toBe(2100);
+      expect(row.costUsd).toBeCloseTo(0.0021, 4);
+      // CSEC-2, CSEC-7: the clip is in no row and no log line, and the logs hold no words.
+      const start = file.toString("base64").slice(0, 40);
+      expect(JSON.stringify(row)).not.toContain(start);
+      for (const text of [printed, JSON.stringify(lines)]) {
+        expect(text).not.toContain(start);
+        expect(text).not.toContain("today?");
+        expect(text).not.toContain("Swim practice");
+      }
+      expect(lines[0]).toMatchObject({ turnId: result.turnId, outcome: "answer", tools: ["today"] });
+    });
+
+    it("keeps a spoken follow-up in the conversation, and saves a spoken fact (MEM-1)", async () => {
+      const d = {
+        ...deps((_req, round) =>
+          round === 1
+            ? [{ name: "memory_save", args: { text: "The piano teacher is Ms Lin", keywords: ["piano"] } }]
+            : [answer("Saved: the piano teacher is Ms Lin.", ["memory"])],
+        ),
+        transcribe: scriptedTranscriber("记住 the piano teacher is Ms Lin"),
+      };
+      const result = await ask(db, d, { userId, audio: clip() });
+      expect(result).toMatchObject({ outcome: "answer", saved: { text: "The piano teacher is Ms Lin" } });
+      const [fact] = (await listMemories(db)).filter((m) => m.text === "The piano teacher is Ms Lin");
+      expect(fact).toMatchObject({ via: "voice" });
+      await forgetMemory(db, fact.id);
+    });
+
+    it("barks without asking the model when there were no words in the clip", async () => {
+      const d = { ...deps(() => [answer("Nothing.", ["self"])]), transcribe: scriptedTranscriber("") };
+      const result = await ask(db, d, { userId, audio: clip() });
+      expect(result).toMatchObject({
+        outcome: "bark",
+        heard: "",
+        text: "Woof! I didn't catch that. Say it again?",
+      });
+      expect(d.model.requests).toHaveLength(0);
+      expect(lines[0]).toMatchObject({ why: "nothing heard" });
+    });
+
+    it("says she can't answer when the clip can't be transcribed", async () => {
+      const d = {
+        ...deps(() => [answer("Nothing.", ["self"])]),
+        transcribe: async () => {
+          throw new LlmError("unavailable", "down");
+        },
+      };
+      const result = await ask(db, d, { userId, audio: clip() });
+      expect(result).toMatchObject({ outcome: "error", heard: "" });
+      expect(d.model.requests).toHaveLength(0);
+    });
+
+    it("refuses a clip that is the wrong kind, not base64, or too long (LIM-3)", () => {
+      const data = file.toString("base64");
+      expect(() => clipOf({ data, mimeType: "video/mp4" })).toThrow(/can listen to/);
+      expect(() => clipOf({ data: "not base64!", mimeType: "audio/mp4" })).toThrow(/can listen to/);
+      expect(() =>
+        clipOf({ data: Buffer.from("hello there, Cookie").toString("base64"), mimeType: "audio/mp4" }),
+      ).toThrow(/can listen to/);
+      // The same clip, with a header that claims 40 seconds.
+      const long = Buffer.from(file);
+      const at = long.indexOf("mvhd") + 4;
+      long.writeUInt32BE(long.readUInt32BE(at + 12) * 40, at + 16);
+      expect(() => clipOf({ data: long.toString("base64"), mimeType: "audio/mp4" })).toThrow(/30 seconds/);
+    });
+  });
+
+  describe("spoken answers (plan K5.2)", () => {
+    const said: SpeechRequest[] = [];
+    const speech = async (req: SpeechRequest) => {
+      said.push(req);
+      return fakeSpeech(req);
+    };
+    const turnOf = async (text: string, extra: Partial<typeof assistantTurns.$inferInsert> = {}) => {
+      const [row] = await db
+        .insert(assistantTurns)
+        .values({
+          conversationId: crypto.randomUUID(),
+          userId,
+          mode: "voice",
+          heard: "q",
+          answer: text,
+          outcome: "answer",
+          language: "en",
+          createdAt: now,
+          ...extra,
+        })
+        .returning({ id: assistantTurns.id });
+      return row.id;
+    };
+
+    beforeEach(() => {
+      said.length = 0;
+    });
+
+    it("reads an answer aloud and counts what it cost (VOX-5, LIM-6)", async () => {
+      const turnId = await turnOf("Swim practice at 5:30 pm.");
+      const audio = await speakTurn(db, { speech, now }, { userId, turnId });
+      expect(audio.mimeType).toBe("audio/mpeg");
+      expect(audio.data.length).toBeGreaterThan(100);
+      expect(said).toEqual([{ text: "Swim practice at 5:30 pm.", language: "en" }]);
+      await speakTurn(db, { speech, now }, { userId, turnId });
+      const [row] = await db.select().from(assistantTurns).where(eq(assistantTurns.id, turnId));
+      // Read twice, counted twice: 25 characters at US$30 a million, rounded up to the cent's hundredth.
+      expect(row.speechChars).toBe(50);
+      expect(row.costUsd).toBeCloseTo(0.0016, 4);
+    });
+
+    it("says a web answer is from the web, and doesn't read links out (CHR-4)", async () => {
+      const turnId = await turnOf("公共泳池周末九点开门。 https://pool.example/hours", {
+        language: "zh",
+        sources: [{ kind: "web", label: "Pool hours", url: "https://pool.example/hours" }],
+      });
+      await speakTurn(db, { speech, now }, { userId, turnId });
+      expect(said).toEqual([{ text: "网上说：公共泳池周末九点开门。", language: "zh" }]);
+    });
+
+    it("has nothing to read for someone else's turn, a cleared one or an unknown one", async () => {
+      const [other] = await db
+        .insert(users)
+        .values({ email: "cookie-other@example.test" })
+        .onConflictDoUpdate({ target: users.email, set: { email: "cookie-other@example.test" } })
+        .returning();
+      const theirs = await turnOf("Private.", { userId: other.id });
+      const cleared = await turnOf("Gone.", { answer: null, heard: null, textClearedAt: now });
+      for (const turnId of [theirs, cleared, crypto.randomUUID()])
+        await expect(speakTurn(db, { speech, now }, { userId, turnId })).rejects.toMatchObject({
+          status: 404,
+        });
+      expect(said).toEqual([]);
+    });
+
+    it("leaves the reading to the phone when switched off, near the cap, or when the voice fails (LIM-5)", async () => {
+      const turnId = await turnOf("Swim practice at 5:30 pm.");
+      await saveAssistantSettings(db, { speak: false });
+      await expect(speakTurn(db, { speech, now }, { userId, turnId })).rejects.toMatchObject({ status: 409 });
+      // 85% of the cap is spent.
+      const spent = await monthSpendUsd(db, now);
+      await saveAssistantSettings(db, { speak: true, monthlyCapUsd: spent / 0.85 });
+      await expect(speakTurn(db, { speech, now }, { userId, turnId })).rejects.toMatchObject({ status: 409 });
+      expect(said).toEqual([]);
+
+      await saveAssistantSettings(db, { monthlyCapUsd: LIMITS.defaultCapUsd });
+      const down = async () => {
+        throw new LlmError("unavailable", "down");
+      };
+      await expect(speakTurn(db, { speech: down, now }, { userId, turnId })).rejects.toMatchObject({
+        status: 503,
+      });
+      const [row] = await db.select().from(assistantTurns).where(eq(assistantTurns.id, turnId));
+      expect(row.speechChars).toBe(0);
     });
   });
 

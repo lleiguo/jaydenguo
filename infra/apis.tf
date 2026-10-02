@@ -23,6 +23,7 @@ locals {
     "secretmanager.googleapis.com",
     "sqladmin.googleapis.com",
     "sts.googleapis.com",
+    "texttospeech.googleapis.com", # Cookie's spoken answers (intent 0007, VOX-5)
   ]
 }
 

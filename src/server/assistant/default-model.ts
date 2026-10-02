@@ -1,4 +1,6 @@
 import { geminiAssistant, scriptedAssistant, type AssistantModel, type ModelCall } from "./model";
+import { fakeSpeech, googleSpeech, type Speech } from "./speech";
+import { geminiTranscriber, scriptedTranscriber, type Transcriber } from "./transcribe";
 import { fakeFetch, fakeSearch, geminiSearch, guardedFetch, type PageFetch, type WebSearch } from "./web";
 
 // Gemini on Vertex AI in production; a stand-in when ASSISTANT_LLM=fake
@@ -16,6 +18,17 @@ export function defaultAssistant(): AssistantModel {
 export function defaultWeb(): { search: WebSearch; fetch: PageFetch } {
   if (process.env.ASSISTANT_LLM === "fake") return { search: fakeSearch, fetch: fakeFetch };
   return { search: (query, language) => geminiSearch()(query, language), fetch: guardedFetch() };
+}
+
+// The stand-in hears the same question in every clip.
+export function defaultTranscriber(): Transcriber {
+  if (process.env.ASSISTANT_LLM === "fake") return scriptedTranscriber("What's on today?");
+  return geminiTranscriber();
+}
+
+export function defaultSpeech(): Speech {
+  if (process.env.ASSISTANT_LLM === "fake") return fakeSpeech;
+  return googleSpeech();
 }
 
 const textOf = (parts: { text?: string }[] | undefined) => parts?.map((p) => p.text ?? "").join("") ?? "";

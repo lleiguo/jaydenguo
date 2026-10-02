@@ -26,7 +26,8 @@ app's typed chat moved forward from K6 to take its place.
 |---|---|---|
 | O-1 | Record 20 or more real questions with the family on the iPhone (Voice Memos): some English, some Mandarin, most mixed, with the names, places and sport terms you actually say. AirDrop them to the Mac into `~/cookie-recordings/` (outside the repo), named `01.m4a`, `02.m4a`, …, with a `said.txt` beside them: one line per clip, the number and the words as spoken. | SP-C1 |
 | O-2 | Decide spec concerns K-1, K-2, K-5, K-6 and K-10. **Done 2026-10-02:** K-1 accepted, defaults kept for the rest (spec §5). | — |
-| O-3 | Apply Terraform after K5 and K7 merge (Text-to-Speech API, `ASSISTANT_MODEL`, the cap). | K5, K7 |
+| O-3 | Apply Terraform after K5 and K7 merge (the web service's role on Vertex AI, Text-to-Speech API, `ASSISTANT_MODEL`, the voice, the cap). Cookie doesn't work on Cloud Run before this. | K5, K7 |
+| O-7 | Listen to the voice samples in `~/cookie-recordings/voices/` (SP-C3) and pick a speaker, or keep "Leda". | K6 |
 | O-4 | Optional: a short recording of Cookie barking (spec K-8). | K6 |
 | O-5 | Add the school, street and club names to "Never send to the web" in Settings → Cookie. | K4 |
 | O-6 | Install the TestFlight build after K2 (typed chat) and after K6 (voice), and use her for a few days before K7 closes. | K2, K7 |
@@ -137,14 +138,15 @@ K7 2.
 |---|---|
 | SP-C2 | done 2026-10-02 (below). |
 | SP-C1 | done 2026-10-02 (below): passes, at the bar. |
-| SP-C3 | not started. |
+| SP-C3 | measured 2026-10-02 (below); the owner's pick by ear is open. Built with "Leda". |
 | SP-C4 | done 2026-10-02 (below). |
 | SP-C5 | Voice Memos clips from the iPhone (48 kHz mono AAC, `.m4a`) are accepted as `audio/mp4` (SP-C1); a clip recorded by the app itself is still to do in K6. |
 | K1.1–K1.7 | built 2026-10-02 on `cookie/k1-backend`; not merged or deployed. |
 | K2.1–K2.5 | built 2026-10-02 on `cookie/k2-ios-chat` (stacked on K1); not merged, no TestFlight build yet. |
 | K3.1–K3.3 | built 2026-10-02 on `cookie/k3-memory`; not merged. |
 | K4.1–K4.3 | built 2026-10-02 on `cookie/k4-web` (stacked on K3); not merged. |
-| K5–K7 | not started. |
+| K5.1–K5.3 | built 2026-10-02 on `cookie/k5-voice`; not merged, Terraform not applied (O-3). |
+| K6–K7 | not started. |
 
 **K1 as built (2026-10-02):**
 - *Schema (K1.1).* Migration `0027_assistant`: `assistant_turns` and
@@ -269,9 +271,60 @@ K7 2.
   question still came from the hub, and a family question the hub can't
   answer got a bark, not a search. Median 7.9 s on a bad Vertex day.
 
-**Still open from K1:** the eval's two timeouts and the speed (spec
-K-11); nothing here has run on Cloud Run yet, and Terraform doesn't set
-`ASSISTANT_MODEL` or the cap until K5.3 (the defaults work without).
+**K5 as built (2026-10-02):**
+- *Spoken questions (K5.1).* `POST /ask` takes `audio: { data, mimeType }`
+  (base64) in place of `text`. As SP-C1 advised, the clip is
+  **transcribed first** (`src/server/assistant/transcribe.ts`: one call,
+  the spelling list, no system prompt, no tools but `heard`), and the
+  words then take the typed path unchanged. The answer loop never sees
+  the clip. Spec VOX-1, §3 and §4.1 are updated to say so.
+- *Checks.* AAC in an MPEG-4 file only, 1 MB and 30 s at most; the
+  length is read from the file's own header (`mp4Seconds`), so a clip
+  is refused before any model is called. A clip with no words in it gets
+  "Woof! I didn't catch that." without asking the answer model.
+- *Spelling list (VOX-3).* The people's names, then the places the
+  calendar's events name most often (the part before a comma, street
+  addresses left out), 40 names at most. The hub has no separate list
+  of clubs and venues, so this is where their names come from.
+- *What is kept.* The turn records `voice`, the clip's length, and the
+  transcription's tokens and cost with the loop's. A fact saved by a
+  spoken question is marked as saved by voice. The clip is in memory
+  for the request and nowhere else; the integration test checks that
+  no row or log line holds it, and that the logs hold no words.
+- *Spoken answers (K5.2).* `GET /turns/{id}/speech`
+  (`src/server/assistant/speech.ts`): Text-to-Speech, MP3, not stored.
+  Links aren't read, and a web answer starts "From the web:". Each
+  reading is added to the turn's characters and cost at the list price
+  (reading it twice counts twice). Not audio: 404 (not this account's
+  turn, or cleared), 409 (spoken answers off, or the spend at 80% of the
+  cap), 429 (30 readings in 5 minutes), 503 (the voice didn't answer).
+  The app falls back to the phone's voice on all of them (K6).
+- *Stand-ins.* With `ASSISTANT_LLM=fake` every clip is heard as "What's
+  on today?" and the speech is a quarter-second tone, so K6's UI tests
+  need no Google service.
+- *Terraform (K5.3).* **Nothing of Cookie works on Cloud Run until this
+  is applied (O-3):** the web service had neither `VERTEX_PROJECT` nor
+  a role on Vertex AI, because until now only the worker called a model.
+  Added: `roles/aiplatform.user` for the web service account; the
+  Text-to-Speech API (already on in the project, now in Terraform);
+  `VERTEX_PROJECT`, `GEMINI_VERTEX_REGION`, `ASSISTANT_MODEL`,
+  `ASSISTANT_VOICE` and `ASSISTANT_MONTHLY_CAP_USD` on the web service.
+  `terraform validate` passes. Text-to-Speech needs no role of its own;
+  that is to be confirmed on the first deploy (if it is refused, the
+  phone's voice reads the answers and nothing else breaks).
+- *Tried live once* (owner's Mac, seed data, synthetic clips): an
+  English and a mixed question were heard right, answered from the hub
+  and read aloud. 7 s and 22 s to the text (Vertex was slow again; the
+  second took three lookups), then 2 s for the speech. Speed stays as
+  in spec K-11.
+- *Tests.* Unit (clip header, clip checks, what is read aloud, voice
+  choice, the two Google calls with made-up transports), integration
+  (the five spoken-question cases, four speech cases), API e2e (a clip
+  in, speech out, refusals). The fixture clip is a macOS voice saying
+  "What's on today?".
+
+**Still open from K1:** the eval's timeouts and the speed (spec K-11);
+nothing here has run on Cloud Run yet.
 
 ---
 
@@ -350,6 +403,34 @@ voice reuses the path the eval set already covers. It costs one more
 model call per spoken question (about 2.5 s and a few hundredths of a
 cent). Spec §4.1 and §3 say "one call gives the transcript and the tool
 calls"; they change when K5.1 is built. Chirp is not needed.
+
+### SP-C3: the voice (2026-10-02, measured; the owner's pick is open)
+
+`scripts/assistant-voices.ts` read ten made-up answers (English,
+Mandarin, and both in one sentence, with times, a swim time and club
+names) through five Text-to-Speech voices, and saved the MP3s outside
+the repo for the owner to listen to.
+
+- **Chirp 3 HD voices** (Leda, Aoede, Kore, Puck): about 1.0 s an
+  answer (slowest 1.4 s), about 19 kB each as MP3. Each speaker has a
+  Mandarin and an English voice under the same name; the Mandarin one
+  reads a sentence with English words in it. Sent back through Cookie's
+  own transcription, every mixed sentence came back with its English
+  and Chinese words right (differences were digits for number words and
+  punctuation). "汪！" was heard as "哇" for two of the voices.
+- **WaveNet** (the older kind): 0.5 s, twice the size, and a flatter
+  sound; kept in the samples for comparison.
+- **Price** (pricing page, 2026-10-02): Chirp 3 HD is free for the first
+  million characters a month, then US$30 per million. A family's
+  answers are tens of thousands of characters a month. WaveNet: 4
+  million free, then US$4 per million.
+- **Region:** the global Text-to-Speech endpoint; the answer's text is
+  processed outside Canada, as the question is (spec K-1).
+- **Not tried:** Gemini's own speech models (preview, priced per token)
+  and `AVSpeechSynthesizer` on a phone, which K6 uses as the fallback.
+- **Built with "Leda"** (`ASSISTANT_VOICE`, a Terraform variable). The
+  owner listens to the samples and names another speaker if one is
+  better; that is a one-word change.
 
 ### SP-C4: search grounding (2026-10-02, done)
 

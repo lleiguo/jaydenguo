@@ -21,6 +21,8 @@ export type ToolContext = {
   // on what the question asks for (MEM-1, MEM-5).
   userId: string;
   question: string;
+  // The question was spoken, not typed.
+  spoken?: boolean;
   // What this question has done so far.
   turn: TurnState;
   settings: AssistantSettings;

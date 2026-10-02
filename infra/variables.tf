@@ -151,6 +151,24 @@ variable "gemini_region" {
   default     = "global"
 }
 
+variable "assistant_model" {
+  description = "Gemini model for Cookie, the family assistant (intent 0007, SP-C2). Served from gemini_region."
+  type        = string
+  default     = "gemini-3.8-flash"
+}
+
+variable "assistant_voice" {
+  description = "Cookie's Text-to-Speech voice: a Chirp 3 HD speaker name (intent 0007, SP-C3)."
+  type        = string
+  default     = "Leda"
+}
+
+variable "assistant_monthly_cap_usd" {
+  description = "What Cookie may cost in a month, in US dollars, until Settings → Cookie says otherwise (intent 0007, LIM-5)."
+  type        = number
+  default     = 10
+}
+
 variable "billing_export_dataset" {
   description = "BigQuery dataset (in this project) that receives the Cloud Billing standard usage cost export, e.g. \"billing\". Empty until the owner turns the export on (intent 0002)."
   type        = string
