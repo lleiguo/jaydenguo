@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { VIDEO_SPORTS } from "@/domain/video-constants";
 import { isValidTimeZone } from "@/domain/time";
+import { askInput } from "../assistant/ask";
+import { assistantSettingsInput } from "../assistant/settings";
+import { turnsQuery } from "../assistant/turns";
 import { deviceTokenInput, handoffInput } from "../auth/device";
 import { copyInput } from "../calendar-copy";
 import {
@@ -889,5 +892,51 @@ export const operations: Operation[] = [
     summary: "Whether Google Drive and Photos are connected.",
     spec: "VID-2",
     response: "VideoSettingsResponse",
+  },
+
+  // Cookie, the family assistant (intent 0007)
+  {
+    method: "POST",
+    path: "/api/v1/assistant/ask",
+    operationId: "askAssistant",
+    summary: "Ask Cookie a question; she answers from the hub or barks.",
+    spec: "CK-4, CHR-1..7, LIM-1..6",
+    body: askInput,
+    response: "AssistantAnswer",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/assistant/turns",
+    operationId: "listAssistantTurns",
+    summary: "This account's chat with Cookie, newest last.",
+    spec: "MEM-9",
+    query: turnsQuery,
+    response: "AssistantTurnsResponse",
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/assistant/turns",
+    operationId: "clearAssistantHistory",
+    summary: "Clear the words of every turn; costs stay.",
+    spec: "MEM-9",
+    status: 204,
+    response: null,
+  },
+  {
+    method: "GET",
+    path: "/api/v1/assistant/settings",
+    operationId: "getAssistantSettings",
+    summary: "Cookie's monthly cap, spoken answers, web use and this month's spend.",
+    spec: "LIM-5, VOX-5, TOOL-17, CSEC-3",
+    response: "AssistantSettingsResponse",
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/assistant/settings",
+    operationId: "updateAssistantSettings",
+    summary: "Change Cookie's settings.",
+    spec: "LIM-5, VOX-5, TOOL-17, CSEC-3",
+    body: assistantSettingsInput,
+    response: "AssistantSettingsResponse",
   },
 ];

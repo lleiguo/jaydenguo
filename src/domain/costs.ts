@@ -162,4 +162,8 @@ export function summariseCosts(
 }
 
 // AI cost per feature per day, from each call's recorded cost (COST-4).
-export type FeatureCost = { day: string; feature: "video" | "email" | "explanation"; costUsd: number };
+export type FeatureCost = {
+  day: string;
+  feature: "video" | "email" | "explanation" | "assistant";
+  costUsd: number;
+};

@@ -1,7 +1,8 @@
 # Spec: Cookie, a voice-first family assistant
-Source: [intent.md](intent.md). Status: draft (2026-10-01), waiting for
-the owner's approval. The intent's open questions are answered by the
-defaults in §6 until the owner says otherwise.
+Source: [intent.md](intent.md). Status: approved (owner, 2026-10-02, in
+chat: "spec and plan looks good, let's start the implementation"). The
+intent's open questions are answered by the defaults in §6, which the
+owner kept on 2026-10-02 along with the decisions recorded in §5.
 
 Cookie is a new feature on both clients: the iPhone app gets voice and
 typing, the website gets typing. All of her thinking happens on the
@@ -114,7 +115,7 @@ Cookie has exactly these tools. Adding one is a spec change.
 ### 2.6 Limits and cost (LIM)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| LIM-1 | A hard stop per question. | At most 4 model rounds and 5 tool calls, of which at most 1 `web_search` and 1 `web_fetch`. On reaching a limit without an answer, the outcome is a bark. |
+| LIM-1 | A hard stop per question. | At most 4 model rounds and 5 tool calls, of which at most 1 `web_search` and 1 `web_fetch`. On reaching a limit without an answer, the outcome is a bark. A model call is given 12 s and one retry, and a question 25 s in all; past that she says she can't answer right now (outcome `error`, not a bark). |
 | LIM-2 | Small outputs. | Output capped at 500 tokens; the model's thinking set to its lowest setting that passes the eval set. |
 | LIM-3 | Small inputs. | Clips at most 30 s and 1 MB. Typed questions at most 500 characters. |
 | LIM-4 | Rate limits. | 20 questions per 5 minutes per account and 300 a day for the family, counted with the existing rate limiter. Over the limit: "Cookie needs a rest. Try again in a few minutes." |
@@ -151,13 +152,15 @@ Gemini Live (speech-to-speech streaming: dearer per minute and more to
 build than press-and-hold needs); Apple's on-device dictation (one
 language at a time).
 
-**Cost, rough.** A spoken hub question is a few hundred audio tokens,
-about 2,500 tokens of prompt and tools, one or two tool results, and
-under 100 tokens out, over two rounds. At Flash list prices that is a
-fraction of a cent; reading the answer aloud costs about the same again;
-a web search costs a few cents. At 30 questions a day the estimate is a
-few US dollars a month, under the US$10 default cap. SP-C2 replaces this
-paragraph with measured numbers.
+**Cost, measured (SP-C2 and the eval set, 2026-10-02).** A typed hub
+question used about 3,100 tokens in and 85 out over two rounds: about
+US$0.0027 at the Flash list price (US$0.75 per million tokens in, text
+or audio, and US$3.75 out). Audio adds about 25 tokens a second, so a
+10 s spoken question adds a fiftieth of a cent. At 30 questions a day
+that is about US$2.40 a month before speech, under the US$10 default
+cap. The list price doubles on 2027-01-01 (`pricing.ts` knows the date).
+Search grounding is free for the first 5,000 queries a month, then
+US$14 per 1,000. Speech is priced in SP-C3.
 
 ---
 
@@ -209,7 +212,7 @@ paragraph with measured numbers.
 | `GET /turns`, `DELETE /turns` | History, newest last, paged. Clear history. |
 | `GET /memories`, `POST /memories` | List (with forgotten ones on request), add. |
 | `PATCH /memories/{id}`, `DELETE /memories/{id}`, `POST /memories/{id}/restore` | Edit, forget, restore. |
-| `GET /settings`, `PUT /settings` | Monthly cap, spoken answers, use the web, "never send to the web" words. |
+| `GET /settings`, `PATCH /settings` | Monthly cap, spoken answers, use the web, "never send to the web" words; the GET also gives this month's spend. |
 
 ### 4.4 Data
 - `assistant_turns`: conversation ID, user, mode (voice or text), heard,
@@ -260,16 +263,17 @@ paragraph with measured numbers.
 
 | # | Concern | Handling | Owner decision? |
 |---|---|---|---|
-| K-1 | **Children's voices leave Canada for processing.** `gemini-3.8-flash` answers from `global`, as the video model does. The owner accepted that for video and text; voice clips are a new kind of data. | Nothing is stored (CSEC-2). SP-C2 checks whether a Canadian region serves the model with audio. | Yes: accept, or wait for a Canadian region |
-| K-2 | **Google may keep web search queries.** Search grounding has its own data terms, which SP-C4 reads before it is switched on. | The search call sees only the query, with family words refused (CSEC-3). "Use the web" can be off. | Yes: web on or off by default |
+| K-1 | **Children's voices leave Canada for processing.** `gemini-3.8-flash` answers from `global`, as the video model does. The owner accepted that for video and text; voice clips are a new kind of data. | Nothing is stored (CSEC-2). SP-C2 checks whether a Canadian region serves the model with audio. | **Decided 2026-10-02:** accepted. Voice clips are processed outside Canada; nothing is stored. |
+| K-2 | **Google may keep web search queries.** Search grounding has its own data terms, which SP-C4 reads before it is switched on. | The search call sees only the query, with family words refused (CSEC-3). "Use the web" can be off. | **Decided 2026-10-02:** off by default. |
 | K-3 | **Mixed-language transcripts may not be good enough.** | SP-C1 is first and has a pass bar. Fallback: Chirp in front. If both fail, the feature ships typing-first and voice waits. | No |
 | K-4 | **She may still make something up.** A model can call a tool and then misread it. CHR-3 catches claims with no source, not wrong readings of a real one. | Short answers, sources shown, the eval set's bark cases, and the transcript on screen. Reported mistakes become eval cases. | No |
-| K-5 | **What may she answer from her own knowledge?** A strict reading of "grounded" means even "what's 12 × 12" needs a source. | Default: `self` only for greetings, who she is, sums and word help (CHR-3). Facts about the world need the web or get a bark. | Yes: confirm the line |
-| K-6 | **Costs and other grown-up answers said aloud** in front of the children (intent question 4). | Default: she answers what she is asked. A "don't say aloud" list of tools (e.g. costs: text only) is small to add. | Yes |
+| K-5 | **What may she answer from her own knowledge?** A strict reading of "grounded" means even "what's 12 × 12" needs a source. | Default: `self` only for greetings, who she is, sums and word help (CHR-3). Facts about the world need the web or get a bark. | **Decided 2026-10-02:** the default stands. |
+| K-6 | **Costs and other grown-up answers said aloud** in front of the children (intent question 4). | Default: she answers what she is asked. A "don't say aloud" list of tools (e.g. costs: text only) is small to add. | **Decided 2026-10-02:** nothing held back. |
 | K-7 | **Memory recall by keywords** may miss a fact worded differently. | Bilingual keywords at save time (MEM-3), eval cases. If recall is poor, add embeddings in a later intent. | No |
-| K-8 | **The bark sound.** A stock sound needs a licence that allows it. | Default: the owner records the real Cookie (plan O-4). Until then the voice says "Woof!". | Yes: supply a recording |
+| K-8 | **The bark sound.** A stock sound needs a licence that allows it. | Default: the owner records the real Cookie (plan O-4). Until then the voice says "Woof!". | **Decided 2026-10-02:** the voice says "Woof!" until a recording is supplied. |
 | K-9 | **Two clients again** (N-1 of 0004). | Thin client: only recording, playback and the chat views are built twice. | No |
-| K-10 | **A floating button covers content.** | Sits above the tab bar; hidden over the video player. Position and dragging are intent question 3. | Yes |
+| K-10 | **A floating button covers content.** | Sits above the tab bar; hidden over the video player. Position and dragging are intent question 3. | **Decided 2026-10-02:** fixed bottom-right, not draggable. |
+| K-11 | **She is slower than VOX-6 asks.** Measured from the owner's Mac (plan, Spikes): a model call takes 1–4 s even for a trivial question, a hub question needs two, and the median was 4.7 s against the 3 s target. Now and then a call stalls. | Thinking is off, calls time out at 12 s, and `today()` answers most questions in one lookup. Measured again from Cloud Run in K7.1. If it stays slow: show "Cookie is looking…" with the tool's name, and consider a second, smaller model for the first round. | **Decided 2026-10-02:** the speed is acceptable. Still measured from Cloud Run in K7.1. |
 
 ---
 

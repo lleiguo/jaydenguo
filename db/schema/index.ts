@@ -9,3 +9,4 @@ export * from "./email";
 export * from "./calendar-copy";
 export * from "./costs";
 export * from "./push";
+export * from "./assistant";

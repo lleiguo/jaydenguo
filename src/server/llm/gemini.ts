@@ -20,7 +20,7 @@ export const GEMINI_INLINE_LIMIT = 19 * 1024 * 1024;
 
 export type Generate = (params: GenerateContentParameters) => Promise<GenerateContentResponse>;
 
-function vertexGenerate(): Generate {
+export function vertexGenerate(): Generate {
   const project = process.env.VERTEX_PROJECT;
   if (!project) throw new LlmError("unavailable", "Vertex AI isn't set up (VERTEX_PROJECT is missing).");
   const ai = new GoogleGenAI({

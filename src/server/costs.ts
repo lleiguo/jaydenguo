@@ -1,5 +1,12 @@
 import { eq, gte, sql } from "drizzle-orm";
-import { dailyCosts, emailMessages, settings, tennisExplanations, videoReviewRounds } from "@db/schema";
+import {
+  assistantTurns,
+  dailyCosts,
+  emailMessages,
+  settings,
+  tennisExplanations,
+  videoReviewRounds,
+} from "@db/schema";
 import { summariseCosts, type CostSummary } from "../domain/costs";
 import { addDays, localDate } from "../domain/time";
 import type { DbOrTx } from "./db/client";
@@ -30,7 +37,15 @@ const num = (v: string | undefined) => {
   return v && Number.isFinite(n) && n > 0 ? n : null;
 };
 
-export type FeatureDay = { day: string; video: number; email: number; explanation: number };
+// `assistant` is Cookie (intent 0007, LIM-6).
+export type FeatureDay = {
+  day: string;
+  video: number;
+  email: number;
+  explanation: number;
+  assistant: number;
+};
+type Feature = Exclude<keyof FeatureDay, "day">;
 
 export type CostsView = {
   configured: boolean;
@@ -39,7 +54,7 @@ export type CostsView = {
   today: string;
   summary: CostSummary;
   // COST-4: estimated from tokens and list prices, in USD.
-  features: { days: FeatureDay[]; month: { video: number; email: number; explanation: number } };
+  features: { days: FeatureDay[]; month: Record<Feature, number> };
 };
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
@@ -47,7 +62,7 @@ const r2 = (x: number) => Math.round(x * 100) / 100;
 async function featureCosts(db: DbOrTx, from: string, tz: string, month: string) {
   const localDay = (col: unknown) => sql<string>`to_char(${col} at time zone ${tz}, 'YYYY-MM-DD')`;
   const since = new Date(`${from}T00:00:00Z`);
-  const [video, email, explanations] = await Promise.all([
+  const [video, email, explanations, assistant] = await Promise.all([
     db
       .select({
         day: localDay(videoReviewRounds.createdAt),
@@ -73,23 +88,46 @@ async function featureCosts(db: DbOrTx, from: string, tz: string, month: string)
       })
       .from(tennisExplanations)
       .where(gte(tennisExplanations.createdAt, since)),
+    db
+      .select({
+        day: localDay(assistantTurns.createdAt),
+        cost: sql<number>`sum(${assistantTurns.costUsd})::float`,
+      })
+      .from(assistantTurns)
+      .where(gte(assistantTurns.createdAt, since))
+      .groupBy(sql`1`),
   ]);
   const byDay = new Map<string, FeatureDay>();
   const at = (day: string) => {
     let d = byDay.get(day);
-    if (!d) byDay.set(day, (d = { day, video: 0, email: 0, explanation: 0 }));
+    if (!d) byDay.set(day, (d = { day, video: 0, email: 0, explanation: 0, assistant: 0 }));
     return d;
   };
   for (const v of video) at(v.day).video += v.cost ?? 0;
   for (const e of email) at(e.day).email += e.cost ?? 0;
   for (const x of explanations)
     at(x.day).explanation += costUsd(x.model, { input: x.input ?? 0, output: x.output ?? 0 });
+  for (const a of assistant) at(a.day).assistant += a.cost ?? 0;
   const days = [...byDay.values()]
-    .map((d) => ({ day: d.day, video: r2(d.video), email: r2(d.email), explanation: r2(d.explanation) }))
+    .map((d) => ({
+      day: d.day,
+      video: r2(d.video),
+      email: r2(d.email),
+      explanation: r2(d.explanation),
+      assistant: r2(d.assistant),
+    }))
     .sort((a, b) => a.day.localeCompare(b.day));
   const inMonth = days.filter((d) => d.day.startsWith(month));
-  const total = (k: "video" | "email" | "explanation") => r2(inMonth.reduce((a, d) => a + d[k], 0));
-  return { days, month: { video: total("video"), email: total("email"), explanation: total("explanation") } };
+  const total = (k: Feature) => r2(inMonth.reduce((a, d) => a + d[k], 0));
+  return {
+    days,
+    month: {
+      video: total("video"),
+      email: total("email"),
+      explanation: total("explanation"),
+      assistant: total("assistant"),
+    },
+  };
 }
 
 export async function loadCosts(db: DbOrTx, now = new Date()): Promise<CostsView> {

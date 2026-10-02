@@ -58,6 +58,7 @@ struct CostsScreen: View {
                     LabeledContent("Video reviews", value: c.features.month.video.formatted(money))
                     LabeledContent("Email suggestions", value: c.features.month.email.formatted(money))
                     LabeledContent("Match explanations", value: c.features.month.explanation.formatted(money))
+                    LabeledContent("Cookie", value: c.features.month.assistant.formatted(money))
                 }
                 Section {
                     Button("Refresh costs") { Task { await refresh() } }

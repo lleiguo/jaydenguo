@@ -1,7 +1,8 @@
 # Intent: Cookie, a voice-first family assistant in the app
-Status: approved to go to spec (owner, 2026-10-01, in chat: "go ahead
-with a plan.md and spec.md"). Drafted by Claude from the owner's request.
-The open questions are not answered yet; spec §6 lists the defaults taken.
+Status: approved (owner, 2026-10-02, in chat: "spec and plan looks good,
+let's start the implementation"). Drafted by Claude from the owner's
+request. Open questions answered 2026-10-02 by keeping the defaults in
+spec §6.
 Owner: Jayden's parent (lleiguo).
 
 "I'd like to build an AI assistant into the app, the name is 'Cookie',

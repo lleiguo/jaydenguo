@@ -163,6 +163,7 @@ export default async function CostsPage() {
                 ["Video reviews", f.month.video],
                 ["Email suggestions", f.month.email],
                 ["Match explanations", f.month.explanation],
+                ["Cookie", f.month.assistant],
               ] as const
             ).map(([name, cost]) => (
               <tr key={name} className="border-t border-neutral-200 dark:border-neutral-800">
