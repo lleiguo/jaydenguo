@@ -173,10 +173,12 @@ final class CookieSpeaker {
     /// stopped while the speaker was being readied.
     func play(_ audio: Data, onFinish: @escaping @MainActor @Sendable () -> Void) async -> Bool {
         guard await prepare() else { return false }
-        guard let player = try? AVAudioPlayer(data: audio) else { return false }
+        // Told what it is: an MP3 with no header of its own isn't always recognised.
+        guard let player = try? AVAudioPlayer(data: audio, fileTypeHint: AVFileType.mp3.rawValue) else { return false }
         let finish = Finish(onFinish)
         player.delegate = finish
-        guard player.play() else { return false }
+        player.volume = 1
+        guard player.prepareToPlay(), player.play() else { return false }
         self.player = player
         self.finish = finish
         return true
@@ -214,7 +216,8 @@ final class CookieSpeaker {
 
     /// Lets other apps' audio come back once she is quiet.
     func rest() {
-        guard player == nil, !synthesizer.isSpeaking else { return }
+        guard player?.isPlaying != true, !synthesizer.isSpeaking else { return }
+        player = nil
         CookieSession.rest()
     }
 }

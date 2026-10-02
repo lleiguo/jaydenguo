@@ -135,6 +135,12 @@ struct CookieButton: View {
                     if let line = answer.sourceLine {
                         Text(line).font(.caption2).foregroundStyle(.secondary)
                     }
+                    if talk.isSpeaking {
+                        // Shown while she reads it out, so silence is the phone's volume, not her.
+                        Label("Speaking. Tap Cookie to stop.", systemImage: "speaker.wave.2.fill")
+                            .font(.caption2).foregroundStyle(.tint)
+                            .accessibilityIdentifier("cookieSpeaking")
+                    }
                 }
             }
             .buttonStyle(.plain)

@@ -108,7 +108,7 @@ is replaced with SP-C2's numbers.
 |---|---|---|---|
 | K7.1 | Eval set on the release build's prompt and model; VOX-6 timings on the phone. | §4.6, VOX-6 | Results pasted here. |
 | K7.2 | Security review of the assistant routes and tools (`security-review.md` in this folder). | §2.7 | Findings fixed or accepted by the owner. |
-| K7.3 | Deploy, apply Terraform, TestFlight build, README and runbook notes. | — | Owner has used her for a few days (O-6). |
+| K7.3 | Terraform applied by the owner 2026-10-02; #79 deployed; TestFlight 1.0.0 (6) uploaded and the same build installed on the owner's phone; first questions asked in production (below). Left: a few days' use (O-6), the voice pick (O-7), the review's risks and K-12. |
 
 ---
 
@@ -147,7 +147,7 @@ K7 2.
 | K4.1–K4.3 | built 2026-10-02 on `cookie/k4-web` (stacked on K3); not merged. |
 | K5.1–K5.3 | built 2026-10-02 on `cookie/k5-voice`; not merged, Terraform not applied (O-3). |
 | K6.1–K6.4 | merged 2026-10-02 (#77). Tried on the simulator; not yet on a phone (O-6). |
-| K7.1 | eval done 2026-10-02 (below): pass. Timings from Cloud Run and on the phone wait for O-3. |
+| K7.1 | eval done 2026-10-02 (below): pass. First timings from Cloud Run and the phone taken 2026-10-02 (below). |
 | K7.2 | done 2026-10-02: [security-review.md](security-review.md); six findings fixed, seven risks for the owner to accept. |
 | K7.3 | Code deploys by itself on merge. Runbook notes written (README → Runbook → Cookie); build number set to 6 (another change took 5). **Waiting on the owner:** apply Terraform (O-3), then the TestFlight build and a few days' use (O-6). |
 
@@ -408,6 +408,38 @@ K7 2.
   `ms`); confirm Text-to-Speech answers for the web service account;
   upload build 6; the owner uses her for a few days (O-6) and picks a
   voice (O-7).
+
+**In production (2026-10-02, after O-3):** the owner asked three
+questions from the phone on build 6. From the web service's logs, which
+hold no words:
+
+| Question | To the text | Lookups | Result | Speech |
+|---|---|---|---|---|
+| spoken | 5.9 s | `today` | answer | her own voice, 1.6 s, 34 kB |
+| spoken | 16.7 s | memory, swimming, calendar, tennis | **bark: round limit** | her own voice, 0.6 s |
+| typed | 3.8 s | `today` | answer | none (typed) |
+
+- Vertex AI and Text-to-Speech both answer for the web service account;
+  Text-to-Speech needed no role of its own.
+- Speed from Cloud Run is about what it was from the owner's Mac: 3.8 s
+  typed, 5.9 s spoken, against the 3 s target (spec K-11).
+- **One question used all four rounds on lookups and never answered,**
+  so the server barked after 16.7 s and four lookups were thrown away.
+  **Fixed the same day:** on her last round, or once her five lookups
+  are used, she may only call `answer` or `bark` (the model call names
+  them as the only allowed functions; the tool list itself doesn't
+  change). So three rounds of looking are followed by an answer from
+  what she found. Eval after the change, with two questions across
+  several areas added (56 in all): made-up 0; right 44 of 45 (98%); no
+  reply 1. Both new questions were answered from the calendar, tennis
+  and swimming together.
+- **No sound on the phone.** The owner saw both spoken answers in the
+  bubble but heard nothing for at least the bark. The server sent the
+  audio both times, and on the simulator the player starts. Not yet
+  explained: the phone's media volume, or a fault only a real device
+  shows. Added to tell them apart: a "Speaking" line in the bubble
+  while she reads, and the player is told the audio is MP3 and made
+  ready before it plays. Open until tried again on the phone.
 
 **Still open from K1:** the eval's timeouts and the speed (spec K-11);
 nothing here has run on Cloud Run yet.

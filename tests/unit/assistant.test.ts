@@ -595,3 +595,26 @@ describe("what goes wrong, without the words (CSEC-7)", () => {
     }
   });
 });
+
+describe("her last round (LIM-1)", () => {
+  it("lets the model call only the tools that end the question", async () => {
+    const calls: Parameters<Generate>[0][] = [];
+    const generate: Generate = async (params) => {
+      calls.push(params);
+      return {
+        candidates: [{ content: { role: "model", parts: [] } }],
+        functionCalls: [{ name: "bark", args: { heard: "q", language: "en", text: "Woof!" } }],
+        usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 },
+      } as unknown as Awaited<ReturnType<Generate>>;
+    };
+    const model = geminiAssistant(generate, "gemini-3.8-flash");
+    const request = { system: "s", tools: declarations(ALL_TOOLS), contents: [] };
+    await model.round(request);
+    await model.round({ ...request, only: ["answer", "bark"] });
+    const config = (i: number) => calls[i].config?.toolConfig?.functionCallingConfig;
+    expect(config(0)?.allowedFunctionNames).toBeUndefined();
+    expect(config(1)?.allowedFunctionNames).toEqual(["answer", "bark"]);
+    // Every tool is still declared, so the prompt is the same on every round.
+    expect(calls[1].config?.tools).toEqual(calls[0].config?.tools);
+  });
+});
