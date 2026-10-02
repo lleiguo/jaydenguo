@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { describe, expect, it, vi } from "vitest";
 import {
   allowCall,
   answerLength,
@@ -7,6 +8,7 @@ import {
   barkLine,
   capState,
   checkGrounding,
+  clipProblem,
   fetchUrlProblem,
   isPublicAddress,
   linksIn,
@@ -16,14 +18,21 @@ import {
   languageOf,
   LIMITS,
   looksSecret,
+  mp4Seconds,
   noCalls,
+  spokenText,
+  VOICE_LIMITS,
 } from "@/domain/assistant";
 import { fakeAssistant } from "@/server/assistant/default-model";
 import { declarations, SYSTEM_PROMPT, systemPrompt } from "@/server/assistant/prompt";
+import { googleSpeech, speechCostUsd, voiceFor } from "@/server/assistant/speech";
 import { ALL_TOOLS } from "@/server/assistant/tools";
 import { stamp } from "@/server/assistant/tools/types";
 import { FetchRefused, guardedFetch, publicLookup, type Transport } from "@/server/assistant/web";
+import { geminiTranscriber } from "@/server/assistant/transcribe";
+import type { Generate } from "@/server/llm/gemini";
 import { costUsd } from "@/server/llm/pricing";
+import { LlmError } from "@/server/llm/types";
 
 // intent 0007: Cookie's pure rules.
 
@@ -448,5 +457,100 @@ describe("the Flash price (LIM-6)", () => {
     const usage = { input: 1_000_000, output: 1_000_000 };
     expect(costUsd("gemini-3.8-flash", usage, new Date("2026-12-31T12:00:00Z"))).toBe(4.5);
     expect(costUsd("gemini-3.8-flash", usage, new Date("2027-01-01T12:00:00Z"))).toBe(9);
+  });
+});
+
+describe("voice (VOX-5, LIM-3)", () => {
+  // Synthetic speech, about a second of AAC in an MPEG-4 file.
+  const clip = readFileSync("tests/fixtures/assistant/question.m4a");
+
+  it("reads how long a clip runs from its header", () => {
+    expect(mp4Seconds(clip)).toBeCloseTo(0.96, 2);
+    expect(mp4Seconds(Buffer.from("not a recording at all"))).toBeNull();
+    expect(mp4Seconds(clip.subarray(0, 40))).toBeNull();
+    expect(mp4Seconds(new Uint8Array(0))).toBeNull();
+  });
+
+  it("accepts the iPhone's recordings and refuses the rest", () => {
+    expect(clipProblem("audio/mp4", clip)).toBeNull();
+    expect(clipProblem("audio/x-m4a", clip)).toBeNull();
+    expect(clipProblem("audio/mpeg", clip)).toMatch(/can listen to/);
+    expect(clipProblem("audio/mp4", Buffer.alloc(VOICE_LIMITS.clipBytes + 1))).toMatch(/too big/);
+    expect(clipProblem("audio/mp4", Buffer.from("x".repeat(64)))).toMatch(/can listen to/);
+  });
+
+  it("reads an answer without its links, and says when it is from the web", () => {
+    expect(spokenText("Swim practice at 5:30 pm.", "en", false)).toBe("Swim practice at 5:30 pm.");
+    expect(spokenText("Opens at 9. https://pool.example/hours", "en", true)).toBe(
+      "From the web: Opens at 9.",
+    );
+    expect(spokenText("九点开门。", "zh", true)).toBe("网上说：九点开门。");
+    expect(spokenText("**Bold** and `code`", "en", false)).toBe("Bold and code");
+    expect(spokenText("  ", "en", true)).toBe("");
+    expect(spokenText("a".repeat(900), "en", false)).toHaveLength(VOICE_LIMITS.speechChars);
+  });
+
+  it("picks the speaker's Mandarin voice for Chinese and mixed answers", () => {
+    expect(voiceFor("Leda", "en")).toEqual({ name: "en-US-Chirp3-HD-Leda", languageCode: "en-US" });
+    expect(voiceFor("Leda", "zh")).toEqual({ name: "cmn-CN-Chirp3-HD-Leda", languageCode: "cmn-CN" });
+    expect(voiceFor("Leda", "mixed").languageCode).toBe("cmn-CN");
+    expect(voiceFor("Wavenet-A", null).name).toBe("en-US-Wavenet-A");
+    expect(speechCostUsd("cmn-CN-Chirp3-HD-Leda", 1000)).toBe(0.03);
+  });
+
+  it("asks Text-to-Speech for an MP3 and turns a failure into an error the route can catch", async () => {
+    const sent: unknown[] = [];
+    const speak = googleSpeech(async (body) => {
+      sent.push(body);
+      return { status: 200, data: { audioContent: Buffer.from("mp3").toString("base64") } };
+    });
+    const audio = await speak({ text: "汪！", language: "zh", voice: "Kore" });
+    expect(audio).toMatchObject({ mimeType: "audio/mpeg", voice: "cmn-CN-Chirp3-HD-Kore", chars: 2 });
+    expect(audio.data.toString()).toBe("mp3");
+    expect(sent).toEqual([
+      {
+        input: { text: "汪！" },
+        voice: { name: "cmn-CN-Chirp3-HD-Kore", languageCode: "cmn-CN" },
+        audioConfig: { audioEncoding: "MP3" },
+      },
+    ]);
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(
+      googleSpeech(async () => ({ status: 403, data: { error: {} } }))({ text: "Hi", language: "en" }),
+    ).rejects.toBeInstanceOf(LlmError);
+    quiet.mockRestore();
+  });
+
+  it("asks for the words only, with the names to spell", async () => {
+    const calls: Parameters<Generate>[0][] = [];
+    const generate: Generate = async (params) => {
+      calls.push(params);
+      return {
+        functionCalls: [{ name: "heard", args: { text: " Jayden 明天几点有 swim practice？ " } }],
+        usageMetadata: { promptTokenCount: 120, candidatesTokenCount: 12 },
+        modelVersion: "gemini-3.8-flash-001",
+      } as unknown as Awaited<ReturnType<Generate>>;
+    };
+    const heard = await geminiTranscriber(generate, "gemini-3.8-flash")(
+      { data: clip, mimeType: "audio/mp4" },
+      ["Jayden", "Aquatic Centre"],
+    );
+    expect(heard).toMatchObject({
+      text: "Jayden 明天几点有 swim practice？",
+      inputTokens: 120,
+      outputTokens: 12,
+    });
+    const parts = (
+      calls[0].contents as { parts: { text?: string; inlineData?: { mimeType: string } }[] }[]
+    )[0].parts;
+    expect(parts[0].text).toContain("Names you may hear: Jayden, Aquatic Centre.");
+    expect(parts[1].inlineData?.mimeType).toBe("audio/mp4");
+    expect(calls[0].config?.systemInstruction).toBeUndefined();
+    // No call, or no text: nothing was heard.
+    const none = await geminiTranscriber(
+      async () => ({ usageMetadata: {} }) as unknown as Awaited<ReturnType<Generate>>,
+      "gemini-3.8-flash",
+    )({ data: clip, mimeType: "audio/mp4" }, []);
+    expect(none.text).toBe("");
   });
 });

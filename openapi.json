@@ -4872,8 +4872,8 @@
     "/api/v1/assistant/ask": {
       "post": {
         "operationId": "askAssistant",
-        "summary": "Ask Cookie a question; she answers from the hub or barks.",
-        "description": "Spec: CK-4, CHR-1..7, LIM-1..6",
+        "summary": "Ask Cookie a question, typed or as a recording; she answers from the hub or barks.",
+        "description": "Spec: CK-4, VOX-1..4, CHR-1..7, LIM-1..6",
         "requestBody": {
           "required": true,
           "content": {
@@ -4890,11 +4890,26 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 500
+                  },
+                  "audio": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1398108
+                      },
+                      "mimeType": {
+                        "type": "string",
+                        "maxLength": 40
+                      }
+                    },
+                    "required": [
+                      "data",
+                      "mimeType"
+                    ]
                   }
-                },
-                "required": [
-                  "text"
-                ]
+                }
               }
             }
           }
@@ -4980,6 +4995,46 @@
         "responses": {
           "204": {
             "description": "Done."
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assistant/turns/{id}/speech": {
+      "get": {
+        "operationId": "getAssistantSpeech",
+        "summary": "One answer read aloud. Any error means: use the phone's own voice.",
+        "description": "Spec: VOX-5, LIM-5",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The answer as speech.",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
           },
           "default": {
             "description": "An error, in words the app can show.",

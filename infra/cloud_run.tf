@@ -68,6 +68,14 @@ resource "google_cloud_run_v2_service" "web" {
           BUDGET_CURRENCY      = var.budget_currency
           # Playback copies of reviewed clips (intent 0003).
           MEDIA_BUCKET = google_storage_bucket.media.name
+          # Cookie, the family assistant (intent 0007): Gemini Flash on
+          # Vertex AI answers while someone waits, so the web service calls
+          # it itself; Text-to-Speech reads the answer.
+          VERTEX_PROJECT            = var.project_id
+          GEMINI_VERTEX_REGION      = var.gemini_region
+          ASSISTANT_MODEL           = var.assistant_model
+          ASSISTANT_VOICE           = var.assistant_voice
+          ASSISTANT_MONTHLY_CAP_USD = tostring(var.assistant_monthly_cap_usd)
         })
         content {
           name  = env.key
