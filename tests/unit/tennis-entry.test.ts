@@ -139,11 +139,12 @@ describe("entry rules", () => {
   });
 
   it("enters one tournament per weekend, closest first, never over one he's in", () => {
-    const c = (id: string, start: string, end: string, drive: number | null) => ({
+    const c = (id: string, start: string, end: string, drive: number | null, venue: string | null = id) => ({
       tournamentId: id,
       startDate: start,
       endDate: end,
       driveMinutes: drive,
+      venue,
     });
     const far = c("far", "2024-10-05", "2024-10-06", 110);
     const near = c("near", "2024-10-05", "2024-10-05", 30);
@@ -151,13 +152,35 @@ describe("entry rules", () => {
     const taken = c("taken", "2024-10-19", "2024-10-20", 10);
     const { enter, skip } = chooseEntries(
       [far, near, unknown, taken],
-      [{ startDate: "2024-10-20", endDate: "2024-10-20" }],
+      [{ startDate: "2024-10-20", endDate: "2024-10-20", venue: "Another Club" }],
     );
     expect(enter.map((e) => e.tournamentId)).toEqual(["near", "unknown"]);
     expect(skip.map((s) => [s.candidate.tournamentId, s.because?.tournamentId ?? null])).toEqual([
       ["taken", null],
       ["far", "near"],
     ]);
+  });
+
+  it("enters both when two tournaments on the same dates are at the same club", () => {
+    const c = (id: string, venue: string | null, drive = 20) => ({
+      tournamentId: id,
+      startDate: "2024-10-18",
+      endDate: "2024-10-18",
+      driveMinutes: drive,
+      venue,
+    });
+    const both = chooseEntries([c("rookie", "Fixture Club"), c("rising", " fixture  club ")], []);
+    expect(both.enter.map((e) => e.tournamentId)).toEqual(["rising", "rookie"]);
+    expect(both.skip).toEqual([]);
+    // One he's already in at that club doesn't block the other either.
+    const second = chooseEntries(
+      [c("rising", "Fixture Club")],
+      [{ startDate: "2024-10-18", endDate: "2024-10-18", venue: "Fixture Club" }],
+    );
+    expect(second.enter.map((e) => e.tournamentId)).toEqual(["rising"]);
+    // An unknown venue isn't the same club.
+    const unknown = chooseEntries([c("a", null), c("b", null)], []);
+    expect(unknown.enter.map((e) => e.tournamentId)).toEqual(["a"]);
   });
 });
 
