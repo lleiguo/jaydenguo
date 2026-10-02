@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   allowCall,
   answerLength,
+  asksToForget,
+  asksToRemember,
   barkLine,
   capState,
   checkGrounding,
@@ -9,11 +11,12 @@ import {
   fitResult,
   languageOf,
   LIMITS,
+  looksSecret,
   noCalls,
 } from "@/domain/assistant";
 import { fakeAssistant } from "@/server/assistant/default-model";
 import { declarations, SYSTEM_PROMPT } from "@/server/assistant/prompt";
-import { HUB_TOOLS } from "@/server/assistant/tools";
+import { ALL_TOOLS } from "@/server/assistant/tools";
 import { stamp } from "@/server/assistant/tools/types";
 import { costUsd } from "@/server/llm/pricing";
 
@@ -122,15 +125,58 @@ describe("language and length (VOX-4, CHR-1)", () => {
   });
 });
 
+describe("memory rules (MEM-1, MEM-5, MEM-6)", () => {
+  it("knows when a question asks her to remember", () => {
+    for (const q of [
+      "Remember that his shoe size is 4",
+      "Cookie, please remember: recycling goes out on Tuesday",
+      "Don't forget that the coach is called Sam",
+      "记住奶奶的生日是三月五号",
+      "帮我记一下 Jayden 的 locker number 是 12",
+    ])
+      expect(asksToRemember(q), q).toBe(true);
+    for (const q of [
+      "What's on today?",
+      "他的鞋码是多少？",
+      "Do you remember the plan?".replace("remember", "know"),
+    ])
+      expect(asksToRemember(q), q).toBe(false);
+  });
+
+  it("knows when a question asks her to forget", () => {
+    for (const q of [
+      "Forget his shoe size",
+      "Delete what you know about the key",
+      "忘掉奶奶的生日",
+      "把那条删掉",
+    ])
+      expect(asksToForget(q), q).toBe(true);
+    for (const q of ["What's on today?", "When is practice?"]) expect(asksToForget(q), q).toBe(false);
+  });
+
+  it("spots passwords, codes and card numbers", () => {
+    for (const t of [
+      "The wifi password is tulip-7781",
+      "garage passcode 4410",
+      "家里的密码是 8891",
+      "card 4111 1111 1111 1111",
+      "the verification code was 993311",
+    ])
+      expect(looksSecret(t), t).toBe(true);
+    for (const t of ["His shoe size is 4", "Locker 12, second floor", "Grandma's number is 555-0142"])
+      expect(looksSecret(t), t).toBe(false);
+  });
+});
+
 describe("the prompt (TOOL-15, TOOL-17)", () => {
-  const tools = declarations(HUB_TOOLS);
+  const tools = declarations(ALL_TOOLS);
 
   it("stays under the size budget with every tool definition", () => {
     const size = SYSTEM_PROMPT.length + JSON.stringify(tools).length;
     expect(size).toBeLessThanOrEqual(LIMITS.promptChars);
   });
 
-  it("lists the hub tools first, then answer and bark", () => {
+  it("lists the hub tools first, then memory, then answer and bark", () => {
     expect(tools.map((t) => t.name)).toEqual([
       "today",
       "calendar",
@@ -139,6 +185,9 @@ describe("the prompt (TOOL-15, TOOL-17)", () => {
       "school",
       "videos",
       "costs",
+      "memory_search",
+      "memory_save",
+      "memory_forget",
       "answer",
       "bark",
     ]);
@@ -190,13 +239,46 @@ describe("the stand-in model (ASSISTANT_LLM=fake)", () => {
     });
   });
 
-  it("barks at anything else", async () => {
+  it("looks in memory for anything else, and barks when nothing is there", async () => {
+    const model = fakeAssistant();
+    const question = { role: "user", parts: [{ text: "[Now: …]\nWhat is his shoe size?" }] };
+    const first = await model.round({ system: "", tools: [], contents: [question] });
+    expect(first.calls).toEqual([
+      { name: "memory_search", args: { keywords: ["what", "his", "shoe", "size"] } },
+    ]);
+    const response = (result: unknown) => ({
+      role: "user",
+      parts: [{ functionResponse: { name: "memory_search", response: { result } } }],
+    });
+    const nothing = await model.round({
+      system: "",
+      tools: [],
+      contents: [question, first.content, response({ error: "nothing in memory matches" })],
+    });
+    expect(nothing.calls[0].name).toBe("bark");
+    const found = await model.round({
+      system: "",
+      tools: [],
+      contents: [question, first.content, response({ facts: [{ id: "m1", fact: "His shoe size is 4" }] })],
+    });
+    expect(found.calls[0]).toMatchObject({
+      name: "answer",
+      args: { text: "His shoe size is 4.", sources: ["memory"] },
+    });
+  });
+
+  it("saves what it is told to remember", async () => {
     const { calls } = await fakeAssistant().round({
       system: "",
       tools: [],
-      contents: [{ role: "user", parts: [{ text: "[Now: …]\nWhat is his shoe size?" }] }],
+      contents: [
+        { role: "user", parts: [{ text: "[Now: …]\nRemember that the spare key is under the blue pot." }] },
+      ],
     });
-    expect(calls[0].name).toBe("bark");
+    expect(calls[0]).toMatchObject({
+      name: "memory_save",
+      args: { text: "the spare key is under the blue pot" },
+    });
   });
 });
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { VIDEO_SPORTS } from "@/domain/video-constants";
 import { isValidTimeZone } from "@/domain/time";
 import { askInput } from "../assistant/ask";
+import { memoriesQuery, memoryInput, memoryPatch } from "../assistant/memory";
 import { assistantSettingsInput } from "../assistant/settings";
 import { turnsQuery } from "../assistant/turns";
 import { deviceTokenInput, handoffInput } from "../auth/device";
@@ -938,5 +939,49 @@ export const operations: Operation[] = [
     spec: "LIM-5, VOX-5, TOOL-17, CSEC-3",
     body: assistantSettingsInput,
     response: "AssistantSettingsResponse",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/assistant/memories",
+    operationId: "listAssistantMemories",
+    summary: "What Cookie was told to remember, newest first; `forgotten=true` for the forgotten ones.",
+    spec: "MEM-4",
+    query: memoriesQuery,
+    response: "AssistantMemoriesResponse",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/assistant/memories",
+    operationId: "addAssistantMemory",
+    summary: "Add a fact by hand.",
+    spec: "MEM-4, MEM-6",
+    body: memoryInput,
+    status: 201,
+    response: "MemoryView",
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/assistant/memories/{id}",
+    operationId: "updateAssistantMemory",
+    summary: "Edit a fact.",
+    spec: "MEM-4, MEM-6",
+    body: memoryPatch,
+    response: "MemoryView",
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/assistant/memories/{id}",
+    operationId: "forgetAssistantMemory",
+    summary: "Forget a fact; it can be restored for 30 days.",
+    spec: "MEM-4, MEM-2",
+    response: "MemoryView",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/assistant/memories/{id}/restore",
+    operationId: "restoreAssistantMemory",
+    summary: "Bring a forgotten fact back.",
+    spec: "MEM-4",
+    response: "MemoryView",
   },
 ];

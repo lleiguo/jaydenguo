@@ -5,8 +5,17 @@ import { fitResult, LIMITS } from "@/domain/assistant";
 import { ask, type AskDeps } from "@/server/assistant/ask";
 import { scriptedAssistant, type AssistantScript, type ModelCall } from "@/server/assistant/model";
 import { getAssistantSettings, saveAssistantSettings } from "@/server/assistant/settings";
-import { HUB_TOOLS, type ToolContext } from "@/server/assistant/tools";
-import { clearHistory, listTurns, monthSpendUsd } from "@/server/assistant/turns";
+import { HUB_TOOLS, newTurn, type ToolContext } from "@/server/assistant/tools";
+import {
+  addMemory,
+  forgetMemory,
+  listMemories,
+  pruneMemories,
+  restoreMemory,
+  searchMemories,
+  updateMemory,
+} from "@/server/assistant/memory";
+import { clearHistory, listTurns, monthSpendUsd, pruneHistory } from "@/server/assistant/turns";
 import { createEvent } from "@/server/calendar/mutations";
 import { loadCosts } from "@/server/costs";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
@@ -361,7 +370,15 @@ describe("Cookie", () => {
 
     // The made-up credential can't be opened, so it mustn't outlive this test.
     try {
-      const ctx: ToolContext = { db, now, timeZone: await getHomeTimeZone(db), people: await listPeople(db) };
+      const ctx: ToolContext = {
+        db,
+        now,
+        timeZone: await getHomeTimeZone(db),
+        people: await listPeople(db),
+        userId,
+        question: "",
+        turn: newTurn(),
+      };
       const inputs: Record<string, unknown[]> = {
         today: [{}],
         calendar: [{ from: "2033-03-01", to: "2033-03-31" }],
@@ -396,10 +413,188 @@ describe("Cookie", () => {
     }
   });
 
+  describe("memory (MEM-1..8)", () => {
+    const save = (text: string, keywords: string[], about?: string): ModelCall => ({
+      name: "memory_save",
+      args: { text, keywords, ...(about ? { about } : {}) },
+    });
+    const search = (...keywords: string[]): ModelCall => ({ name: "memory_search", args: { keywords } });
+
+    it("saves a fact when asked, and says what it saved (MEM-1, MEM-2)", async () => {
+      const result = await ask(
+        db,
+        deps((_, round) =>
+          round === 1
+            ? [save("The spare key is under the blue pot", ["key", "spare", "钥匙", "备用"])]
+            : [answer("Saved: the spare key is under the blue pot.", ["memory"])],
+        ),
+        { userId, text: "Remember that the spare key is under the blue pot" },
+      );
+      expect(result).toMatchObject({
+        outcome: "answer",
+        sources: [{ kind: "memory", label: "Memory" }],
+        saved: {
+          text: "The spare key is under the blue pot",
+          via: "chat",
+          savedBy: "cookie-test@example.test",
+        },
+        forgot: null,
+      });
+      expect((await listMemories(db)).map((m) => m.text)).toEqual(["The spare key is under the blue pot"]);
+    });
+
+    it("finds an English fact from a Mandarin question, and the reverse (MEM-3)", async () => {
+      await ask(
+        db,
+        deps((_, round) =>
+          round === 1
+            ? [save("奶奶的生日是三月五号", ["奶奶", "生日", "grandma", "birthday"])]
+            : [answer("记住了：奶奶的生日是三月五号。", ["memory"])],
+        ),
+        { userId, text: "记住奶奶的生日是三月五号" },
+      );
+      const zh = deps((_, round) =>
+        round === 1 ? [search("钥匙", "备用", "key")] : [answer("备用钥匙在蓝色花盆下面。", ["memory"])],
+      );
+      expect((await ask(db, zh, { userId, text: "备用钥匙在哪里？" })).outcome).toBe("answer");
+      expect(JSON.stringify(zh.model.requests[1].contents.at(-1))).toContain("under the blue pot");
+
+      const en = deps((_, round) =>
+        round === 1
+          ? [search("grandma", "birthday")]
+          : [answer("Grandma's birthday is March 5.", ["memory"])],
+      );
+      expect((await ask(db, en, { userId, text: "When is grandma's birthday?" })).outcome).toBe("answer");
+      const sent = JSON.stringify(en.model.requests[1].contents.at(-1));
+      expect(sent).toContain("奶奶的生日是三月五号");
+      // Only the fact that matches comes back.
+      expect(sent).not.toContain("blue pot");
+    });
+
+    it("barks when memory holds nothing on it", async () => {
+      const result = await ask(
+        db,
+        deps((_, round) =>
+          round === 1 ? [search("shoe", "size", "鞋码")] : [answer("Size 4.", ["memory"])],
+        ),
+        { userId, text: "What's his shoe size?" },
+      );
+      expect(result.outcome).toBe("bark");
+    });
+
+    it("refuses to save when the question didn't ask (MEM-1)", async () => {
+      const d = deps((_, round) =>
+        round === 1
+          ? [save("Practice moved to 6 pm", ["practice"])]
+          : [barkCall("Woof! I couldn't do that.")],
+      );
+      const result = await ask(db, d, { userId, text: "What's on today?" });
+      expect(result.saved).toBeNull();
+      expect(JSON.stringify(d.model.requests[1].contents.at(-1))).toContain("didn't ask you to remember");
+      expect(await listMemories(db)).toHaveLength(2);
+    });
+
+    it("never keeps a password or a card number (MEM-6)", async () => {
+      for (const [question, fact] of [
+        ["Remember the wifi password is tulip-7781", "The wifi password is tulip-7781"],
+        ["Remember my card 4111 1111 1111 1111", "Card 4111 1111 1111 1111"],
+      ]) {
+        const d = deps((_, round) =>
+          round === 1 ? [save(fact, ["wifi"])] : [answer("I don't keep passwords.", ["self"])],
+        );
+        const result = await ask(db, d, { userId, text: question });
+        expect(result.saved).toBeNull();
+        expect(JSON.stringify(d.model.requests[1].contents.at(-1))).toContain("don't keep passwords");
+      }
+      await expect(
+        addMemory(db, userId, { text: "Alarm code: password 1234" }, "settings"),
+      ).rejects.toThrow();
+      expect(await listMemories(db)).toHaveLength(2);
+    });
+
+    it("saves one fact per question", async () => {
+      const d = deps((_, round) =>
+        round === 1
+          ? [save("Coach is called Sam", ["coach"]), save("Coach likes tea", ["coach"])]
+          : [answer("Saved.", ["memory"])],
+      );
+      const result = await ask(db, d, { userId, text: "Remember the coach is called Sam and likes tea" });
+      expect(result.saved?.text).toBe("Coach is called Sam");
+      expect(JSON.stringify(d.model.requests[1].contents.at(-1))).toContain("one fact per question");
+      expect(await listMemories(db)).toHaveLength(3);
+    });
+
+    it("forgets a fact when asked, and it can be restored (MEM-4, MEM-5)", async () => {
+      const [coach] = await searchMemories(db, ["coach"]);
+      const notAsked = deps((_, round) =>
+        round === 1 ? [{ name: "memory_forget", args: { id: coach.id } }] : [barkCall()],
+      );
+      expect((await ask(db, notAsked, { userId, text: "Who is the coach?" })).forgot).toBeNull();
+
+      const result = await ask(
+        db,
+        deps((_, round) =>
+          round === 1
+            ? [search("coach")]
+            : round === 2
+              ? [{ name: "memory_forget", args: { id: coach.id } }]
+              : [answer("Forgotten: the coach is called Sam.", ["memory"])],
+        ),
+        { userId, text: "Forget the coach's name" },
+      );
+      expect(result).toMatchObject({ outcome: "answer", forgot: { id: coach.id }, saved: null });
+      expect(await listMemories(db)).toHaveLength(2);
+      expect((await listMemories(db, { forgotten: true })).map((m) => m.id)).toEqual([coach.id]);
+      expect(await searchMemories(db, ["coach"])).toEqual([]);
+
+      await restoreMemory(db, coach.id);
+      expect(await searchMemories(db, ["coach"])).toHaveLength(1);
+    });
+
+    it("edits a fact, and deletes for good what was forgotten over 30 days ago (MEM-4)", async () => {
+      const [coach] = await searchMemories(db, ["coach"]);
+      const edited = await updateMemory(db, userId, coach.id, { text: "Coach is called Sam Lee" });
+      expect(edited).toMatchObject({ text: "Coach is called Sam Lee" });
+      expect(edited.updatedAt).not.toBeNull();
+
+      await forgetMemory(db, coach.id, new Date("2033-01-01T00:00:00Z"));
+      expect(await pruneMemories(db, new Date("2033-01-20T00:00:00Z"))).toBe(0);
+      expect(await pruneMemories(db, new Date("2033-02-05T00:00:00Z"))).toBe(1);
+      expect(await listMemories(db, { forgotten: true })).toEqual([]);
+      expect(await listMemories(db)).toHaveLength(2);
+    });
+
+    it("clears the words of turns older than 90 days (MEM-9)", async () => {
+      const [old] = await db
+        .insert(assistantTurns)
+        .values({
+          conversationId: "00000000-0000-4000-8000-000000000002",
+          userId,
+          mode: "text",
+          heard: "an old question",
+          answer: "an old answer",
+          outcome: "answer",
+          costUsd: 0.5,
+          createdAt: new Date("2032-11-01T00:00:00Z"),
+        })
+        .returning();
+      expect(await pruneHistory(db, now)).toBe(1);
+      const [row] = await db
+        .select()
+        .from(assistantTurns)
+        .where(sql`id = ${old.id}`);
+      expect(row).toMatchObject({ heard: null, answer: null, costUsd: 0.5 });
+      expect(row.textClearedAt).not.toBeNull();
+    });
+  });
+
   it("keeps each account's history, and clears the words but not the costs (MEM-9)", async () => {
     const before = await listTurns(db, userId, { limit: 100 });
     expect(before.turns.length).toBeGreaterThan(10);
-    expect(before.turns.at(-1)).toMatchObject({ heard: "What's on today, Cookie?", text: "Swim practice." });
+    expect(before.turns.at(-1)).toMatchObject({
+      heard: "Forget the coach's name",
+      text: "Forgotten: the coach is called Sam.",
+    });
     // Oldest first.
     const times = before.turns.map((t) => t.createdAt);
     expect(times).toEqual([...times].sort());

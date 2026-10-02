@@ -31,7 +31,7 @@ export const LIMITS = {
   deadlineMs: 25_000,
   // TOOL-15
   resultChars: 6000,
-  promptChars: 8000,
+  promptChars: 10_000,
   // LIM-2, LIM-3
   outputTokens: 500,
   questionChars: 500,
@@ -45,6 +45,16 @@ export const LIMITS = {
   // LIM-5
   defaultCapUsd: 10,
   speechOffAt: 0.8,
+  // MEM-9: turn text is cleared after this long.
+  historyDays: 90,
+} as const;
+
+// MEM-1, MEM-3, MEM-4
+export const MEMORY_LIMITS = {
+  textChars: 300,
+  keywords: 12,
+  results: 8,
+  restoreDays: 30,
 } as const;
 
 // --- Grounding (CHR-3) -------------------------------------------------------
@@ -189,3 +199,21 @@ export function answerLength(text: string): number {
   // 60 characters read about as long as 40 words.
   return Math.round(words + cjk * (40 / 60));
 }
+
+// --- Memory (MEM-1, MEM-5, MEM-6) -----------------------------------------------
+
+// MEM-1: she saves a fact only when the question itself asks her to, so
+// text in a tool result (an event title, a web page) can never plant one.
+const REMEMBER =
+  /\b(remember|memori[sz]e|note (that|down)|keep in mind|make a note|don'?t forget|save (that|this))\b|记住|记得|记下|记一下|别忘|不要忘|帮我记/i;
+export const asksToRemember = (question: string) => REMEMBER.test(question);
+
+// MEM-5: and forgets one only when asked to.
+const FORGET = /\b(forget|remove|delete|erase)\b|忘记|忘掉|忘了|删掉|删除|别记|不用记/i;
+export const asksToForget = (question: string) => FORGET.test(question);
+
+// MEM-6: passwords, card numbers and sign-in codes are never kept.
+const SECRET_WORD =
+  /pass\s?(word|code|phrase)|\bpin\b|\bcvv\b|security code|sign-?in code|verification code|密码|验证码|口令/i;
+const CARD_NUMBER = /(?:\d[ -]?){13,19}/;
+export const looksSecret = (text: string) => SECRET_WORD.test(text) || CARD_NUMBER.test(text);

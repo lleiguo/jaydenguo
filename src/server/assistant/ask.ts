@@ -27,7 +27,8 @@ import { getHomeTimeZone } from "../settings";
 import type { AssistantModel, ModelCall } from "./model";
 import { answerInput, barkInput, contextLine, declarations, SYSTEM_PROMPT } from "./prompt";
 import { getAssistantSettings } from "./settings";
-import { HUB_TOOLS, type Tool, type ToolContext } from "./tools";
+import type { MemoryView } from "./memory";
+import { ALL_TOOLS, newTurn, type Tool, type ToolContext } from "./tools";
 import { monthSpendUsd, recentTurns, type AssistantSource } from "./turns";
 
 // One question to Cookie, end to end (intent 0007, spec §4.1): limits, the
@@ -48,6 +49,9 @@ export type AskResult = {
   outcome: AssistantOutcome;
   text: string;
   sources: AssistantSource[];
+  // A fact this question saved or forgot, for "Saved to memory · Undo" (MEM-2).
+  saved: MemoryView | null;
+  forgot: MemoryView | null;
 };
 
 export type AskDeps = {
@@ -82,7 +86,8 @@ export async function ask(
   input: { userId: string; conversationId?: string; text: string },
 ): Promise<AskResult> {
   const now = deps.now ?? new Date();
-  const tools = deps.tools ?? HUB_TOOLS;
+  const tools = deps.tools ?? ALL_TOOLS;
+  const turn = newTurn();
   const log = deps.log ?? consoleLog;
   const started = Date.now();
   const conversationId = input.conversationId ?? randomUUID();
@@ -130,7 +135,17 @@ export async function ask(
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
     });
-    return { turnId: row.id, conversationId, heard, language: saidLanguage, outcome, text, sources };
+    return {
+      turnId: row.id,
+      conversationId,
+      heard,
+      language: saidLanguage,
+      outcome,
+      text,
+      sources,
+      saved: turn.saved,
+      forgot: turn.forgot,
+    };
   };
 
   // LIM-4, LIM-5
@@ -151,7 +166,7 @@ export async function ask(
     listPeople(db),
     recentTurns(db, conversationId, now),
   ]);
-  const ctx: ToolContext = { db, now, timeZone, people };
+  const ctx: ToolContext = { db, now, timeZone, people, userId: input.userId, question: heard, turn };
   const contents: Content[] = [
     ...history.flatMap((t): Content[] => [
       { role: "user", parts: [{ text: t.heard }] },
@@ -217,7 +232,9 @@ export async function ask(
         value = { error: "that lookup failed" };
       }
       const text = fitResult(value);
-      runs.push({ name: call.name, ms: Date.now() - t0, chars: text.length, ok: !isProblem(value) });
+      const ok = !isProblem(value);
+      runs.push({ name: call.name, ms: Date.now() - t0, chars: text.length, ok });
+      if (ok && kindOf(tools, call.name) === "web") turn.webRan = true;
       responses.push({
         functionResponse: { id: call.id, name: call.name, response: { result: JSON.parse(text) as unknown } },
       });

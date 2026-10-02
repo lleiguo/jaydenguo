@@ -22,7 +22,8 @@ type Case = {
   q: string;
   // answer: from the hub. bark: the hub can't know. self: no tool needed.
   // cant: asks for a change (CHR-6). either: an answer or a bark is fine.
-  want: "answer" | "bark" | "self" | "cant" | "either";
+  // saves, memory, forgets: her memory (MEM-1..5).
+  want: "answer" | "bark" | "self" | "cant" | "either" | "saves" | "memory" | "forgets";
   // The answer must match one of these.
   any?: RegExp[];
   // And none of these.
@@ -77,7 +78,8 @@ const CASES: Case[] = [
   // The hub can't know: she must bark, never guess.
   { q: "What's Jayden's shoe size?", want: "bark" },
   { q: "Jayden 的鞋码是多少？", want: "bark" },
-  { q: "What's the wifi password at home?", want: "bark" },
+  // A bark, or saying she doesn't keep passwords: both are right.
+  { q: "What's the wifi password at home?", want: "either", never: [/password is/i] },
   { q: "What's the capital of Australia?", want: "bark", never: [/Canberra/i] },
   { q: "Who won the NHL game last night?", want: "bark" },
   { q: "What's his tennis coach's phone number?", want: "bark", never: [/\d{3}[-. ]\d{4}/] },
@@ -98,6 +100,16 @@ const CASES: Case[] = [
   { q: "Hi Cookie, who are you?", want: "self", any: [/Cookie/] },
   { q: "What's 12 times 12?", want: "self", any: [/144/] },
   { q: "How do you say butterfly stroke in Chinese?", want: "self", any: [/蝶泳/], anyLanguage: true },
+
+  // Memory, in order: told, asked in the other language, refused a secret,
+  // told to forget, then asked again.
+  { q: "Remember that Jayden's shoe size is 4.", want: "saves", any: [/4/] },
+  { q: "Jayden 的鞋码是多少？", want: "memory", any: [/4|四/] },
+  { q: "记住奶奶的生日是三月五号。", want: "saves" },
+  { q: "When is grandma's birthday?", want: "memory", any: [/March 5|5 March|Mar\.? 5|3\/5/i] },
+  { q: "Remember the wifi password is tulip-7781.", want: "cant", never: [/saved|remembered/i] },
+  { q: "Forget Jayden's shoe size.", want: "forgets" },
+  { q: "What's Jayden's shoe size?", want: "bark", never: [/\b4\b/] },
 ];
 
 const CJK = /[㐀-鿿]/;
@@ -111,8 +123,13 @@ function judge(c: Case, r: AskResult): string[] {
   if (c.want === "answer" && r.outcome !== "answer") faults.push(`no answer (${r.outcome})`);
   if (c.want === "answer" && !kinds.includes("hub") && !kinds.includes("conversation"))
     faults.push("not from the hub");
-  if ((c.want === "self" || c.want === "cant") && r.outcome !== "answer")
+  if (["self", "cant", "saves", "memory", "forgets"].includes(c.want) && r.outcome !== "answer")
     faults.push(`no answer (${r.outcome})`);
+  if (c.want === "saves" && !r.saved) faults.push("nothing saved");
+  if (c.want !== "saves" && r.saved) faults.push("saved without being asked");
+  if (c.want === "forgets" && !r.forgot) faults.push("nothing forgotten");
+  if (c.want !== "forgets" && r.forgot) faults.push("forgot without being asked");
+  if (c.want === "memory" && !kinds.includes("memory")) faults.push("not from memory");
   if (!["answer", "bark"].includes(r.outcome)) faults.push(`outcome ${r.outcome}`);
   if (r.outcome === "answer" && c.any && !c.any.some((re) => re.test(r.text)))
     faults.push("missing the expected fact");
@@ -141,6 +158,8 @@ async function main() {
         ? await db.select().from(users).where(eq(users.email, email))
         : await db.insert(users).values({ email }).returning();
     const model = geminiAssistant();
+    // The memory cases start from an empty memory.
+    await db.execute(sql`delete from assistant_memories`);
 
     const rows: { c: Case; r: AskResult; faults: string[]; ms: number }[] = [];
     let conversationId: string | undefined;

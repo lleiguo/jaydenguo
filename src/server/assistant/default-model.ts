@@ -13,9 +13,12 @@ export function defaultAssistant(): AssistantModel {
 
 const textOf = (parts: { text?: string }[] | undefined) => parts?.map((p) => p.text ?? "").join("") ?? "";
 
+type FakeFact = { id: string; fact: string };
+
 // Answers a handful of fixed questions so the chat can be tried without
-// Vertex AI: "today" looks at the Today view, "hello" greets, anything else
-// gets a bark.
+// Vertex AI: "today" looks at the Today view, "hello" greets, "remember …"
+// saves the rest of the sentence, "forget …" forgets the first fact that
+// matches, and anything else is looked up in memory, then gets a bark.
 export function fakeAssistant(): AssistantModel {
   return scriptedAssistant((request, round): ModelCall[] => {
     const question = textOf(
@@ -23,37 +26,51 @@ export function fakeAssistant(): AssistantModel {
     )
       .split("\n")
       .at(-1)!;
-    const zh = /[㐀-鿿]/.test(question);
+    const zh = /[\u3400-\u9fff]/.test(question);
     const language = zh ? "zh" : "en";
-    if (/today|今天/i.test(question)) {
-      if (round === 1) return [{ name: "today", args: {} }];
-      const result = request.contents.at(-1)?.parts?.[0]?.functionResponse?.response as
-        { result?: { events?: { title: string }[] } } | undefined;
-      const titles = (result?.result?.events ?? []).map((e) => e.title);
-      const text = titles.length
-        ? `${zh ? "今天有" : "Today:"} ${titles.join(", ")}.`
-        : zh
-          ? "今天没有安排。"
-          : "Nothing on today.";
-      return [{ name: "answer", args: { heard: question, language, text, sources: ["hub"] } }];
-    }
-    if (/^(hi|hello|你好)/i.test(question))
-      return [
-        {
-          name: "answer",
-          args: {
-            heard: question,
-            language,
-            text: zh ? "汪！我是 Cookie。" : "Woof! I'm Cookie.",
-            sources: ["self"],
-          },
-        },
-      ];
-    return [
+    const say = (text: string, sources: string[]): ModelCall[] => [
+      { name: "answer", args: { heard: question, language, text, sources } },
+    ];
+    const bark: ModelCall[] = [
       {
         name: "bark",
         args: { heard: question, language, text: zh ? "汪！这个我不知道。" : "Woof! I don't know that one." },
       },
     ];
+    // What the last tool answered, if this isn't the first round.
+    const last = request.contents.at(-1)?.parts?.[0]?.functionResponse;
+    const result = (last?.response as { result?: Record<string, unknown> } | undefined)?.result;
+    const words = question.toLowerCase().match(/[a-z]{3,}|[\u3400-\u9fff]{2,}/g) ?? [];
+
+    if (/today|今天/i.test(question)) {
+      if (round === 1) return [{ name: "today", args: {} }];
+      const titles = ((result?.events as { title: string }[] | undefined) ?? []).map((e) => e.title);
+      return say(
+        titles.length
+          ? `${zh ? "今天有" : "Today:"} ${titles.join(", ")}.`
+          : zh
+            ? "今天没有安排。"
+            : "Nothing on today.",
+        ["hub"],
+      );
+    }
+    if (/^(hi|hello|你好)/i.test(question))
+      return say(zh ? "汪！我是 Cookie。" : "Woof! I'm Cookie.", ["self"]);
+
+    const remember = question.match(/^(?:remember(?: that)?|记住)\s*(.+?)[.。]?$/i);
+    if (remember) {
+      if (round === 1) return [{ name: "memory_save", args: { text: remember[1], keywords: words } }];
+      const saved = result?.saved as FakeFact | undefined;
+      return saved ? say(`Saved: ${saved.fact}.`, ["memory"]) : say("I don't keep that.", ["self"]);
+    }
+    if (round === 1) return [{ name: "memory_search", args: { keywords: words.length ? words : ["?"] } }];
+    const facts = (result?.facts as FakeFact[] | undefined) ?? [];
+    if (/^(forget|忘记|忘掉)/i.test(question)) {
+      if (last?.name === "memory_search")
+        return facts.length ? [{ name: "memory_forget", args: { id: facts[0].id } }] : bark;
+      const forgot = result?.forgot as FakeFact | undefined;
+      return forgot ? say(`Forgotten: ${forgot.fact}.`, ["memory"]) : bark;
+    }
+    return facts.length ? say(`${facts[0].fact}.`, ["memory"]) : bark;
   });
 }
