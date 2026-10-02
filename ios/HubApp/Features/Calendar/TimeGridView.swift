@@ -104,8 +104,9 @@ struct TimeGridView: View {
     }
 
     @ViewBuilder private var allDayRow: some View {
-        let lists = days.map { store.items(on: $0).allDay }
-        if lists.contains(where: { !$0.isEmpty }) || days.contains(where: store.closures.contains) {
+        let items = days.map { store.items(on: $0) }
+        let lists = items.map(\.allDay)
+        if lists.contains(where: { !$0.isEmpty }) || days.contains(where: store.closures.contains) || items.contains(where: { $0.openSchool != nil }) {
             HStack(alignment: .top, spacing: 0) {
                 Text("all day").font(.caption2).foregroundStyle(.secondary).frame(width: gutter)
                 ForEach(Array(days.enumerated()), id: \.element) { i, date in
@@ -118,6 +119,15 @@ struct TimeGridView: View {
                                 chip(e, compact: days.count > 1)
                             }
                             .buttonStyle(.plain)
+                        }
+                        // The open school day folds away from here.
+                        if let school = items[i].openSchool {
+                            Button { store.expandedSchool = nil } label: {
+                                schoolChip(school, compact: days.count > 1)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Hides each class")
+                            .accessibilityIdentifier("school-block-open")
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -167,7 +177,7 @@ struct TimeGridView: View {
             ForEach(DayLayout.place(items.school, on: date, homeTime: store.homeTime, start: { HomeTime.parse($0.start) }, end: { HomeTime.parse($0.end) }), id: \.item.id) { p in
                 let school = p.item
                 let slotWidth = width / CGFloat(p.columns)
-                Button { store.expandedSchool.insert(school.id) } label: {
+                Button { store.expandedSchool = school.id } label: {
                     block(tint: EventCategory.schoolClass.color, title: store.ownerNames(school).map { "School · \($0)" } ?? "School", subtitle: "\(school.classes.count) classes", mark: store.mark(school), compact: days.count > 1)
                 }
                 .buttonStyle(.plain)
@@ -274,6 +284,20 @@ struct TimeGridView: View {
         .frame(maxWidth: .infinity)
         .background(e.category.color.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
         .accessibilityLabel(e.title)
+    }
+
+    private func schoolChip(_ school: SchoolBlock, compact: Bool) -> some View {
+        let title = store.ownerNames(school).map { "School · \($0)" } ?? "School"
+        return HStack(spacing: 3) {
+            Image(systemName: EventCategory.schoolClass.symbol).font(.caption2)
+            if !compact { Text(title).font(.caption).lineLimit(1) }
+            Image(systemName: "chevron.up").font(.caption2)
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity)
+        .background(EventCategory.schoolClass.color.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
+        .accessibilityLabel(title)
     }
 
     private func y(_ minute: Double) -> CGFloat { CGFloat(minute / 60) * hourHeight }

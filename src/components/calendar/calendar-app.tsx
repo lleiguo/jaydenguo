@@ -360,7 +360,8 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
             eventClick={(arg) => {
               arg.jsEvent.preventDefault();
               const block = arg.event.extendedProps.schoolBlock as { key: string } | undefined;
-              if (block) setExpandedSchool((s) => new Set(s).add(block.key));
+              // One school block open at a time: opening another folds this one.
+              if (block) setExpandedSchool(new Set([block.key]));
               else if (arg.event.id) setSelected(arg.event.id);
             }}
             eventDrop={onDrop}

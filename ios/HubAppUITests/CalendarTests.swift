@@ -99,6 +99,23 @@ final class CalendarTests: XCTestCase {
         XCTAssertTrue(clash.exists, "a seeded clash is marked in the agenda")
     }
 
+    /// SCH-1: a school day opens to show its classes, and folds away again.
+    func testSchoolBlockOpensAndFolds() throws {
+        let app = try launch()
+        openCalendar(app)
+        let agenda = app.collectionViews["agenda"]
+        XCTAssertTrue(agenda.waitForExistence(timeout: 20))
+        let block = agenda.buttons.matching(identifier: "school-block").firstMatch
+        for _ in 0..<6 where !(block.exists && block.isHittable) { agenda.swipeUp() }
+        XCTAssertTrue(block.exists, "the seed has a school day in the agenda")
+        block.tap()
+        let open = agenda.buttons.matching(identifier: "school-block-open")
+        XCTAssertTrue(open.firstMatch.waitForExistence(timeout: 5), "the open school day can be folded")
+        XCTAssertEqual(open.count, 1)
+        open.firstMatch.tap()
+        XCTAssertTrue(open.firstMatch.waitForNonExistence(timeout: 5), "tapping it folds the classes away")
+    }
+
     func testDragToMoveThenUndo() throws {
         let app = try launch()
         app.open(URL(string: "jaydenguohub://open/calendar?date=\(thisSunday())")!)

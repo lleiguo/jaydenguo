@@ -162,7 +162,12 @@ struct AgendaView: View {
                             ForEach(items.allDay, id: \.id) { row($0, now: now) }
                             ForEach(items.school) { block in
                                 SchoolBlockRow(block: block, homeTime: store.homeTime, mark: store.mark(block), owners: store.ownerNames(block)) {
-                                    store.expandedSchool.insert(block.id)
+                                    withAnimation { store.expandedSchool = block.id }
+                                }
+                            }
+                            if let open = items.openSchool {
+                                SchoolBlockRow(block: open, homeTime: store.homeTime, mark: .none, owners: store.ownerNames(open), expanded: true) {
+                                    withAnimation { store.expandedSchool = nil }
                                 }
                             }
                             ForEach(items.timed, id: \.id) { row($0, now: now) }
@@ -242,17 +247,19 @@ struct AgendaView: View {
     }
 }
 
-/// A folded school day (SCH-1): tap to see each class.
+/// A school day (SCH-1): folded, tap to see each class; open, tap to fold
+/// the classes away again.
 struct SchoolBlockRow: View {
     let block: SchoolBlock
     let homeTime: HomeTime
     let mark: ClashMark
     /// Whose school day, unless it's only the primary person's.
     let owners: String?
-    let expand: () -> Void
+    var expanded = false
+    let toggle: () -> Void
 
     var body: some View {
-        Button(action: expand) {
+        Button(action: toggle) {
             TimeRow(bar: EventCategory.schoolClass.color) {
                 Text(homeTime.time(block.start))
             } content: {
@@ -265,12 +272,13 @@ struct SchoolBlockRow: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.down").foregroundStyle(.secondary).accessibilityHidden(true)
+                Image(systemName: expanded ? "chevron.up" : "chevron.down").foregroundStyle(.secondary).accessibilityHidden(true)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint("Shows each class")
+        .accessibilityHint(expanded ? "Hides each class" : "Shows each class")
+        .accessibilityIdentifier(expanded ? "school-block-open" : "school-block")
     }
 }
 
