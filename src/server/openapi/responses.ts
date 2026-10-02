@@ -52,7 +52,7 @@ export type ClashesResponse = {
 export type SeriesResponse = Awaited<ReturnType<typeof getSeries>>;
 export type PeopleResponse = { people: Person[] };
 export type SettingsResponse = { homeTimeZone: string };
-export type SchoolTodayResponse = { schoolDay: SchoolDay | null };
+export type SchoolTodayResponse = { schoolDay: SchoolDay | null; schoolDays: SchoolDay[] };
 
 // Google Calendar copy (GCO)
 export type CalendarCopyResponse = CopySettings & { accounts: Awaited<ReturnType<typeof copyAccounts>> };

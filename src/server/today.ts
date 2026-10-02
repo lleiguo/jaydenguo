@@ -2,7 +2,7 @@ import type { CalendarPayload, ClashView, EventView } from "@/lib/calendar-types
 import { addDays, localDate, zonedToUtc } from "../domain/time";
 import type { Person } from "../domain/people";
 import { loadCalendar } from "./calendar/load";
-import { loadSchoolDay, type SchoolDay } from "./calendar/school-day";
+import { loadSchoolDays, type SchoolDay } from "./calendar/school-day";
 import type { Db } from "./db/client";
 import { pendingCount } from "./email/suggestions";
 import { listSources } from "./sources";
@@ -26,7 +26,9 @@ export type TodayView = {
   // Clashes from now to 7 days ahead, with both events (open and accepted).
   clashes: (ClashView & { eventA: EventView; eventB: EventView })[];
   cursor: number;
+  // The primary person's school day, then every child's (his first).
   schoolDay: SchoolDay | null;
+  schoolDays: SchoolDay[];
   nextMatches: TennisNextMatch[];
   nextMeet: MeetView | null;
   waiting: {
@@ -67,9 +69,9 @@ export async function loadToday(db: Db, now = new Date()): Promise<TodayView> {
   const date = localDate(now, tz);
   const dayStart = midnight(date, tz);
   const dayEnd = midnight(addDays(date, 1), tz);
-  const [day, schoolDay, tennis, meets, suggestions, sources] = await Promise.all([
+  const [day, schoolDays, tennis, meets, suggestions, sources] = await Promise.all([
     loadCalendar(db, dayStart, dayEnd),
-    loadSchoolDay(db, now),
+    loadSchoolDays(db, now),
     tennisOverview(db),
     listMeets(db),
     pendingCount(db),
@@ -85,7 +87,8 @@ export async function loadToday(db: Db, now = new Date()): Promise<TodayView> {
       .sort(),
     clashes: clashesWithEvents(week, now, weekEnd),
     cursor: week.cursor,
-    schoolDay,
+    schoolDay: schoolDays.find((d) => week.people.some((p) => p.isPrimary && p.id === d.person.id)) ?? null,
+    schoolDays,
     nextMatches: tennis.nextMatches,
     nextMeet: meets.upcoming[0] ?? null,
     waiting: {

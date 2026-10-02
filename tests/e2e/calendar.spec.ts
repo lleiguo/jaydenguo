@@ -220,6 +220,41 @@ test("a school day's classes fold into one School block that expands and collaps
   await expect(page.getByTestId("school-block")).toHaveCount(0);
   await expect(calEvent(page, `Orthodontist ${RUN}`)).toHaveAttribute("data-clash", "hidden");
   await classes.check();
+  await page.getByRole("button", { name: "Filters" }).click();
+
+  // His brother's classes are a block of their own (owner, 2026-10-01).
+  const thu = addDays(monday, 3);
+  const brotherName = `Brother ${info.project.name} blocks ${RUN}`;
+  const { id: brother } = await apiSend(context, "POST", "/api/v1/people", { name: brotherName });
+  try {
+    for (const [title, from, to, ownerIds] of [
+      [`His first ${RUN}`, "08:30", "09:20", undefined],
+      [`His last ${RUN}`, "14:00", "15:00", undefined],
+      [`Brother first ${RUN}`, "08:00", "09:00", [brother]],
+      [`Brother last ${RUN}`, "14:30", "15:30", [brother]],
+    ] as const) {
+      await addEvent(context, {
+        title,
+        category: "school_class",
+        start: toronto(thu, from),
+        end: toronto(thu, to),
+        ownerIds: ownerIds && [...ownerIds],
+      });
+    }
+    await openWeek(page, monday);
+    const thursday = page.locator(`[data-testid="school-block"][data-date="${thu}"]`);
+    await expect(thursday).toHaveCount(2);
+    const his = thursday.filter({ hasNotText: brotherName });
+    await expect(his).toHaveCount(1);
+    // Opening his brother's leaves his own folded.
+    await thursday.filter({ hasText: brotherName }).click();
+    await expect(calEvent(page, `Brother first ${RUN}`)).toBeVisible();
+    await expect(calEvent(page, `Brother last ${RUN}`)).toBeVisible();
+    await expect(his).toHaveCount(1);
+    await expect(calEvent(page, `His first ${RUN}`)).toHaveCount(0);
+  } finally {
+    await apiSend(context, "DELETE", `/api/v1/people/${brother}`);
+  }
 });
 
 test("a repeating event keeps its local time across the daylight-saving change (CAL-5, CAL-9)", async ({

@@ -122,8 +122,8 @@ extension JSONDecoder {
 
 extension WidgetSnapshot {
     /// The widgets' view of the next few days (EXT-1): what the calendar
-    /// shows for the chosen people and categories, a school day folded into
-    /// one "School" item, cancelled and skipped events left out, and the
+    /// shows for the chosen people and categories, each child's school day
+    /// folded into one "School" item, cancelled and skipped events left out, and the
     /// server's clash marks.
     public static func build(
         from index: CalendarIndex,
@@ -137,8 +137,8 @@ extension WidgetSnapshot {
         var items: [Item] = []
         for date in CalendarDates.days(from: homeTime.localDate(now), count: days) {
             let (allDay, timed) = DayLayout.events(on: date, from: shown, homeTime: homeTime)
-            let block = blocks.first { $0.date == date }
-            let folded = Set(block?.classes.map(\.id) ?? [])
+            let today = blocks.filter { $0.date == date }
+            let folded = Set(today.flatMap { $0.classes.map(\.id) })
             for e in allDay where !items.contains(where: { $0.title == e.title && $0.allDay && CalendarDates.string($0.start) == e.allDayDates.first }) {
                 let d = e.allDayDates
                 guard let start = CalendarDates.date(d.first), let end = CalendarDates.date(d.lastExclusive) else { continue }
@@ -148,9 +148,10 @@ extension WidgetSnapshot {
                 guard let start = e.startDate, let end = e.endDate else { continue }
                 items.append(item(e, start: start, end: end, allDay: false, index: index, filters: filters))
             }
-            if let block, let start = HomeTime.parse(block.start), let end = HomeTime.parse(block.end) {
+            for block in today {
+                guard let start = HomeTime.parse(block.start), let end = HomeTime.parse(block.end) else { continue }
                 items.append(Item(
-                    title: "School", symbol: EventCategory.schoolClass.symbol, category: EventCategory.schoolClass.rawValue,
+                    title: index.ownerNames(block.owners).map { "School · \($0)" } ?? "School", symbol: EventCategory.schoolClass.symbol, category: EventCategory.schoolClass.rawValue,
                     start: start, end: end, allDay: false,
                     clash: index.mark(for: block.classes.map(\.id), filters: filters) != .none, place: nil
                 ))

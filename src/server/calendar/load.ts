@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, isNotNull, isNull, lt, max, sql } from "drizzle-orm";
 import { changeLog, conflicts, eventOverrides, events, sources } from "@db/schema";
-import { closureDates, detectClashes, type ClashEvent } from "../../domain/clashes";
+import { closedFor, closuresByPerson, detectClashes, type ClashEvent } from "../../domain/clashes";
 import type { Attendance, Category } from "../../domain/constants";
 import { householdDuplicates } from "../../domain/duplicates";
 import { resolveOwners, type Person } from "../../domain/people";
@@ -40,18 +40,19 @@ const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : nul
 const ownersOf = (r: Row, people: Person[]) =>
   resolveOwners(r.override?.ownerIds ?? r.event.ownerIds, people);
 
-function toView(r: Row, closed: Set<string>, homeTz: string, people: Person[]): EventView {
+function toView(r: Row, closed: Map<string, Set<string>>, homeTz: string, people: Person[]): EventView {
   const e = r.event;
   const o = r.override;
   const start = o?.newStartUtc ?? e.startUtc;
   const end = o?.newEndUtc ?? e.endUtc;
+  const owners = ownersOf(r, people);
   const snap = o?.sourceSnapshot as { start: string; end: string; title: string } | null | undefined;
   return {
     id: e.id,
     title: e.title,
     category: e.category as Category,
     attendance: (o?.attendance ?? e.attendance) as Attendance,
-    owners: ownersOf(r, people),
+    owners,
     start: start.toISOString(),
     end: end.toISOString(),
     allDay: e.allDay,
@@ -82,7 +83,7 @@ function toView(r: Row, closed: Set<string>, homeTz: string, people: Person[]): 
     schoolClosed:
       !e.allDay &&
       !["school_class", "school_closure"].includes(e.category) &&
-      closed.has(localDate(start, homeTz)),
+      closedFor(closed, owners, localDate(start, homeTz)),
   };
 }
 
@@ -129,7 +130,7 @@ export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<Ca
       end: r.override?.newEndUtc ?? r.event.endUtc,
       allDay: r.event.allDay,
     }));
-  const closed = closureDates(clashEvents, homeTimeZone);
+  const closed = closuresByPerson(clashEvents, homeTimeZone);
   const accepted = await db
     .select({ id: conflicts.id, a: conflicts.eventA, b: conflicts.eventB })
     .from(conflicts)
@@ -154,7 +155,7 @@ export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<Ca
   return {
     events: shown.map((r) => toView(r, closed, homeTimeZone, people)),
     clashes,
-    closures: [...closed].sort(),
+    closures: [...new Set([...closed.values()].flatMap((dates) => [...dates]))].sort(),
     homeTimeZone,
     people,
     cursor,
@@ -165,7 +166,7 @@ export async function loadEvent(db: DbOrTx, id: string): Promise<EventView | nul
   const [row] = await baseQuery(db).where(eq(events.id, id));
   if (!row) return null;
   const homeTz = await getHomeTimeZone(db);
-  return toView(row, new Set(), homeTz, await listPeople(db));
+  return toView(row, new Map(), homeTz, await listPeople(db));
 }
 
 // The "Deleted" view (CAL-6): manual events that can be restored.
@@ -176,5 +177,5 @@ export async function loadDeleted(db: DbOrTx): Promise<EventView[]> {
     .limit(200);
   const homeTz = await getHomeTimeZone(db);
   const people = await listPeople(db);
-  return rows.map((r) => toView(r, new Set(), homeTz, people));
+  return rows.map((r) => toView(r, new Map(), homeTz, people));
 }

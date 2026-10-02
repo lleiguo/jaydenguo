@@ -481,6 +481,17 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   the owner types (sealed as a `code` row, deleted once read). It ticks
   "remember this device" and saves the cookies. A sync that meets the code
   page doesn't wait; it says to use Test connection.
+- M4.2, a second child (owner, 2026-10-01): his brother's timetable is a
+  second `veracross` source on the same login (his first name, him as the
+  source's owner). So the two don't mix: the calendar folds classes into
+  one "School" block per child per day (named unless it's the primary
+  person's; web and the iPhone app), "Today at school" is one card per
+  child (`loadSchoolDays`; `/api/v1/school/today` and `/api/v1/today` gain
+  `schoolDays`, and `schoolDay` stays the primary person's), and a
+  closure counts only for its owners (CAL-7), so key dates for one
+  division don't close the other's day. No migration. The key dates
+  source covers both when both are its owners and a title rule gives each
+  division's items to its child.
 - M4.3 deferred (owner, 2026-09-28): homework and grades wait. When they
   resume: SP-5's result (Classroom connect with his school account) is
   still unreported. The fallback is Veracross, now signed in: each child

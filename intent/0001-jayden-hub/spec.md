@@ -78,7 +78,7 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 | CAL-4 | Every event shows where it came from and when it was last synced. | The event detail shows source name, last sync time, and a link to the source page when one exists. |
 | CAL-5 | The owner can create, edit and delete manual events, including repeating ones. | Repeat rules support weekly, every N weeks, and date-range limits. Edits take effect immediately. |
 | CAL-6 | Events are kept forever. | No event row is ever hard-deleted. A source event that disappears is marked `cancelled` and stays visible in history. A manual delete sets `deleted_at`, and the event can be restored from a "Deleted" view. Every change is written to an event revision history. |
-| CAL-7 | School closure days appear as all-day banners. | Closure days come from the school calendar feed (SCH-2). Activities on those days are not clashes, but they are marked "school closed". |
+| CAL-7 | School closure days appear as all-day banners. | Closure days come from the school calendar feed (SCH-2). Activities on those days are not clashes, but they are marked "school closed". A closure counts for the people it belongs to: a day off for one brother leaves the other's classes on. |
 | CAL-8 | Other open devices see changes within 10 seconds. | Change on phone A, and phone B shows it within 10 s without a manual refresh. |
 | CAL-9 | Times are stored in UTC and shown in the home time zone (a setting). | Events that cross a daylight-saving change show the correct local time. |
 
@@ -152,7 +152,7 @@ unchanged. Revisit after S1–S3 are in use; it would be its own intent.
 ### 3.8 School (SCH)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| SCH-1 | Daily timetable. | A "Today at school" card shows periods, classes, rooms and teachers from Veracross. The calendar shows school blocks, collapsed into one "School" block by default and expandable. |
+| SCH-1 | Daily timetable. | A "Today at school" card shows periods, classes, rooms and teachers from Veracross. The calendar shows school blocks, collapsed into one "School" block by default and expandable. With more than one child at school, each has his own card and his own block, named. |
 | SCH-2 | School calendar. | Closures, early dismissals, PD days and events from the school calendar feed. Closures follow CAL-7. |
 | SCH-3 | Homework. | Classroom assignments with course, title, due date and status (assigned, turned in, late, missing). Upcoming due dates appear in the agenda. "Missing" and "due in 24 h" are highlighted. |
 | SCH-4 | Grades and quizzes. | Returned grades per course, shown as score and percentage with a simple trend per course. |

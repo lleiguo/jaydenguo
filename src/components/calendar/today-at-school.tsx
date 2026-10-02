@@ -1,8 +1,14 @@
 import type { SchoolDay } from "@/server/calendar/school-day";
 
 // "Today at school" (SCH-1): periods, classes, rooms and teachers from
-// Veracross, each linking back to its Daily Schedule (SCH-5).
-export function TodayAtSchool({ day }: { day: SchoolDay }) {
+// Veracross, each linking back to its Daily Schedule (SCH-5). One card per
+// child, named once there's more than one.
+export function TodayAtSchool({ days }: { days: SchoolDay[] }) {
+  return days.map((day) => <SchoolDayCard key={day.person.id} day={day} named={days.length > 1} />);
+}
+
+function SchoolDayCard({ day, named }: { day: SchoolDay; named: boolean }) {
+  const id = `today-at-school-${day.person.id}`;
   const time = (iso: string) =>
     new Date(iso).toLocaleTimeString("en-CA", { timeZone: day.timeZone, hour: "numeric", minute: "2-digit" });
   const heading = day.today
@@ -15,13 +21,13 @@ export function TodayAtSchool({ day }: { day: SchoolDay }) {
       })}`;
   return (
     <section
-      aria-labelledby="today-at-school"
+      aria-labelledby={id}
       className="rounded-lg border border-neutral-200 p-3 text-sm dark:border-neutral-800"
     >
       <details open>
         <summary className="cursor-pointer">
-          <h2 id="today-at-school" className="inline font-semibold">
-            🏫 {heading}
+          <h2 id={id} className="inline font-semibold">
+            🏫 {named ? `${day.person.name}: ${heading}` : heading}
           </h2>{" "}
           <span className="text-neutral-600 dark:text-neutral-400">
             {time(day.periods[0].start)}–{time(day.periods.at(-1)!.end)}
