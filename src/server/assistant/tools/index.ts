@@ -7,9 +7,10 @@ import { tennisTool } from "./tennis";
 import { todayTool } from "./today";
 import type { Tool } from "./types";
 import { videosTool } from "./videos";
+import { webFetchTool, webSearchTool } from "./web";
 
 // Cookie's tools, in the order the prompt gives them (TOOL-17): the hub
-// first, then her memory. The web joins in plan K4.
+// first, then her memory, then the web.
 export const HUB_TOOLS = [
   todayTool,
   calendarTool,
@@ -22,7 +23,10 @@ export const HUB_TOOLS = [
 
 export const MEMORY_TOOLS = [memorySearchTool, memorySaveTool, memoryForgetTool] as Tool[];
 
-export const ALL_TOOLS = [...HUB_TOOLS, ...MEMORY_TOOLS];
+// Offered only while "Use the web" is on (TOOL-17).
+export const WEB_TOOLS = [webSearchTool, webFetchTool] as Tool[];
+
+export const ALL_TOOLS = [...HUB_TOOLS, ...MEMORY_TOOLS, ...WEB_TOOLS];
 
 export { newTurn } from "./types";
 export type { Tool, ToolContext, TurnState } from "./types";

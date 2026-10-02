@@ -37,10 +37,14 @@ final class CookieTests: XCTestCase {
     }
 
     @discardableResult
-    private func request(_ method: String, _ path: String) -> Data? {
+    private func request(_ method: String, _ path: String, body: String? = nil) -> Data? {
         var r = URLRequest(url: URL(string: "\(server)\(path)")!)
         r.httpMethod = method
         r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        if let body {
+            r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            r.httpBody = Data(body.utf8)
+        }
         return fetch(r)
     }
 
@@ -173,9 +177,51 @@ final class CookieTests: XCTestCase {
         XCTAssertEqual(app.buttons.matching(identifier: "cookieMemory").count, 2)
 
         // Forget it with a swipe.
-        app.staticTexts["Locker 12, second floor"].swipeLeft()
+        // Earlier runs leave theirs under Forgotten; this is the live row.
+        app.buttons.matching(identifier: "cookieMemory")
+            .matching(NSPredicate(format: "label CONTAINS %@", "Locker 12")).firstMatch.swipeLeft()
         app.buttons["Forget"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Forgotten. It can be restored for 30 days."].waitForExistence(timeout: 10))
         XCTAssertEqual(app.buttons.matching(identifier: "cookieMemory").count, 1)
+    }
+
+    /// TOOL-17, CSEC-3: the web is off until switched on in Settings; a
+    /// search's answer comes with its links; words can be kept out of
+    /// searches.
+    func testTheWebIsOffUntilSwitchedOn() throws {
+        request("PATCH", "/api/v1/assistant/settings", body: #"{"web":false,"privateTerms":[]}"#)
+        let app = launch()
+        app.buttons["cookieButton"].tap()
+        ask(app, "Search for pool opening hours")
+        XCTAssertTrue(app.descendants(matching: .any)["cookieBark"].firstMatch.waitForExistence(timeout: 20))
+        app.buttons["Done"].tap()
+
+        app.tabBars.buttons["More"].tap()
+        let row = app.collectionViews.buttons["Cookie"].firstMatch
+        for _ in 0..<4 where !row.isHittable { app.swipeUp() }
+        row.tap()
+        let toggle = app.switches["cookieWeb"].firstMatch
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        toggle.switches.firstMatch.exists ? toggle.switches.firstMatch.tap() : toggle.tap()
+
+        app.buttons["cookiePrivateWords"].tap()
+        let field = app.textFields["cookiePrivateWord"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
+        field.typeText("Maple School")
+        app.buttons["cookieAddPrivateWord"].tap()
+        XCTAssertTrue(app.staticTexts["Maple School"].waitForExistence(timeout: 10))
+
+        app.buttons["cookieButton"].tap()
+        ask(app, "Search for pool opening hours")
+        let answer = app.descendants(matching: .any)["cookieAnswer"].firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["A made-up web answer about pool opening hours."].exists)
+        XCTAssertTrue(app.links["example.com"].firstMatch.exists || app.buttons["example.com"].firstMatch.exists)
+
+        // A search naming the school is refused, so she barks.
+        ask(app, "Search for Maple School term dates")
+        XCTAssertTrue(app.descendants(matching: .any)["cookieBark"].firstMatch.waitForExistence(timeout: 20))
+        request("PATCH", "/api/v1/assistant/settings", body: #"{"web":false,"privateTerms":[]}"#)
     }
 }

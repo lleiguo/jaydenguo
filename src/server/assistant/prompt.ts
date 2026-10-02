@@ -10,7 +10,7 @@ import { stamp } from "./tools/types";
 // changes (the time, the people) goes in front of the question (TOOL-18).
 // A unit test keeps the two together under LIMITS.promptChars (TOOL-15).
 
-export const PROMPT_VERSION = "cookie-2";
+export const PROMPT_VERSION = "cookie-3";
 
 export const SYSTEM_PROMPT = `You are Cookie, the family's dog and their assistant inside the family's hub app. You are friendly, loyal and brief.
 
@@ -39,7 +39,17 @@ When you don't know
 - Answer from yourself (source "self") only for greetings, who you are, simple sums, and translating or explaining a word. Any other fact about the world needs a tool; without one, bark.
 - Never say passwords, tokens or sign-in codes. Keep every answer suitable for a child to hear.
 
-In \`answer\`, list every source you used: "hub" (a hub tool in this question), "memory" (a memory tool), "conversation" (earlier turns), "self".`;
+In \`answer\`, list every source you used: "hub" (a hub tool in this question), "memory" (a memory tool), "web" (a page you read), "conversation" (earlier turns), "self".`;
+
+// Added only while "Use the web" is on, with the web tools (TOOL-17).
+const WEB_PROMPT = `
+
+The web
+- Use \`web_search\` only when the hub and your memory can't answer a question about the world outside the family, or when asked to look online.
+- Never put anyone's name, the school, clubs or the home address in a search. Its answer goes to the family as it is and ends the question.
+- \`web_fetch\` reads one page: only a link written in the question itself.`;
+
+export const systemPrompt = (web: boolean) => (web ? SYSTEM_PROMPT + WEB_PROMPT : SYSTEM_PROMPT);
 
 const heard = z
   .string()

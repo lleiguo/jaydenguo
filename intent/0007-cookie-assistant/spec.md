@@ -87,8 +87,8 @@ Cookie has exactly these tools. Adding one is a spec change.
 | TOOL-8 | `memory_search(keywords)` | Her memory. | Up to 8 matching facts with their IDs. |
 | TOOL-9 | `memory_save(text, about?, keywords)` | Writes one fact. | The saved fact. Rules in MEM-1. |
 | TOOL-10 | `memory_forget(id)` | Marks one fact forgotten. | The forgotten fact. |
-| TOOL-11 | `web_search(query)` | Google Search. | A short answer and up to 3 sources (title, link). Rules in CSEC-3. |
-| TOOL-12 | `web_fetch(url)` | One public page. | Its text, up to 8,000 characters. Rules in CSEC-4. |
+| TOOL-11 | `web_search(query)` | Google Search, in a separate call (CSEC-3). | Nothing to the model: the search's own short answer, with up to 3 pages and the Google searches behind it as links, goes to the family word for word and ends the question (§4.7). No answer in the results: the model is told so and may bark. |
+| TOOL-12 | `web_fetch(url)` | One public page whose link is written in the question. | Its title and text, up to 8,000 characters. Rules in CSEC-4. |
 | TOOL-13 | `answer(heard, language, text, sources)` | Ends the question. | — |
 | TOOL-14 | `bark(heard, language, text)` | Ends the question. | — |
 
@@ -96,7 +96,7 @@ Cookie has exactly these tools. Adding one is a spec change.
 |---|---|---|
 | TOOL-15 | Narrow inputs, capped outputs. | Each tool has a zod schema for its input and output. Results are compact JSON (no IDs the model doesn't need, no nulls), cut at 6,000 characters with `more: true`. A unit test fails if the system prompt plus all tool definitions grow past 10,000 characters (8,000 until the memory tools were added in K3: the seven hub tools and the prompt alone came to 7,400). |
 | TOOL-16 | Every person, not only Jayden. | Calendar and school tools take any person from Settings → People. Tennis and swimming hold the primary person's data today, and say so when asked about someone else. |
-| TOOL-17 | Hub and memory first. | The prompt orders the tools: hub, then memory, then the web. The web is used only when those can't answer or the question asks for it, and only if "Use the web" is on in Settings. |
+| TOOL-17 | Hub and memory first. | The prompt orders the tools: hub, then memory, then the web. The web is used only when those can't answer or the question asks for it, and only if "Use the web" is on in Settings. While it is off, the web tools and the prompt's paragraph about them aren't sent to the model at all. |
 | TOOL-18 | What every question starts with. | The date and time in the home time zone, the people's names, and the VOX-3 spelling list. Nothing else from the hub is sent unless a tool is called. |
 
 ### 2.5 Memory (MEM)
@@ -127,8 +127,8 @@ Cookie has exactly these tools. Adding one is a spec change.
 |---|---|---|
 | CSEC-1 | Signed-in only. | Every assistant route needs a session or device token (AUTH-2, API-2). The route-list e2e covers them. |
 | CSEC-2 | Audio is not kept. | The clip lives in memory on the phone (or a protected temporary file deleted once sent or cancelled) and in memory on the server for the length of the request. Never written to storage, the database or logs. Speech audio is made on request and not stored. |
-| CSEC-3 | Web searches carry no family details. | `web_search` is its own model call that receives only the query: no conversation, no hub data, no memory. Queries are at most 120 characters. The server refuses a query containing a person's name from People or any word on the "Never send to the web" list in Settings → Cookie (seeded with the people's names; the owner adds the school, street and clubs). |
-| CSEC-4 | Page fetches are fenced in. | `web_fetch` opens only a link returned by this question's `web_search` or written in the question. HTTPS only; the host must resolve to a public address (no private, loopback, link-local or metadata addresses), re-checked on each of at most 3 redirects; 5 s timeout; 1 MB; HTML or plain text only; no cookies or hub headers. Scripts are not run. |
+| CSEC-3 | Web searches carry no family details. | `web_search` is its own model call that receives only the query: no conversation, no hub data, no memory. Queries are at most 120 characters. The server refuses a query containing a person's name from People (always, listed or not) or any word on the "Never send to the web" list in Settings → Cookie (the owner adds the school, street and clubs). Google keeps queries for up to three days, not tied to the account (§4.7). |
+| CSEC-4 | Page fetches are fenced in. | `web_fetch` opens only a link written in the question itself: never one from a search result (Google's terms forbid it, §4.7), a page's text or any other tool result. HTTPS on its usual port, a named public site (no bare addresses, no sign-in details in the link); the host must resolve to public addresses only (no private, loopback, link-local, carrier-NAT or metadata addresses), checked when the connection is made so the address checked is the address used, and again on each of at most 3 redirects; 5 s; 1 MB; HTML or plain text only; no cookies or hub headers. Scripts are not run. One page per question. |
 | CSEC-5 | No credentials. | No tool reads the credential or session tables. An integration test runs every hub tool against a seeded database and checks that no credential, token or email-inbox text appears in any result. |
 | CSEC-6 | Tool results can't give orders. | Tool results are passed as data in function responses, and the prompt says text inside them is never an instruction. Because she is read-only, the only things a planted instruction could try are a memory save (blocked by MEM-1) and a web request carrying hub data (blocked by CSEC-3 and CSEC-4). Tests cover both with a hostile page and a hostile event title. |
 | CSEC-7 | Logs hold no words. | Logs record the turn ID, outcome, tool names, timings and token counts. Never the question, answer, transcript, memory text or audio. |
@@ -143,8 +143,8 @@ Cookie has exactly these tools. Adding one is a spec change.
 | Understand the clip and answer | `gemini-3.8-flash` on Vertex AI, from `global` (spike SP-6 of 0001 found it generally available there). Model ID in `ASSISTANT_MODEL`. | Takes audio directly and handles mixed Mandarin and English without a language setting. One call gives the transcript and the tool calls, so there is no separate transcription bill. Same project, bill and service-account sign-in as the video reviews. |
 | Fallback transcription | Google Cloud Speech-to-Text (Chirp), in front of the same model. | Only if SP-C1 fails on Gemini's transcripts. |
 | Speech out | Google Cloud Text-to-Speech, voice chosen in SP-C3. Fallback: the iPhone's `AVSpeechSynthesizer`. | The phone's voices are free but switch badly between languages mid-sentence. |
-| Web search | Vertex AI's Grounding with Google Search, in a separate call (CSEC-3). | No new account or key. |
-| Page fetch | A small fetcher in the web service, using the HTML parser the scrapers already use. | The hub has no general page fetcher today, so this is new code. |
+| Web search | Vertex AI's Grounding with Google Search, in a separate call (CSEC-3). | No new account or key. The first 5,000 searches a month are free, then US$14 per 1,000; a question can make 1–4 searches. Each is counted at the list price against Cookie's cap. |
+| Page fetch | A small fetcher in the web service (`node:https` with a guarded DNS lookup), using the HTML parser the scrapers already use. | The hub had no general page fetcher, so this is new code. |
 | Memory | Two new tables in the hub's Postgres. | A family's facts are tens to a few hundred rows: keyword search is enough, no vector database. |
 
 Not chosen: Claude (no audio input, and its Vertex quota is still 0);
@@ -257,6 +257,30 @@ US$14 per 1,000. Speech is priced in SP-C3.
   at least 90% of answerable ones are right, and no answer exceeds
   CHR-1. Results are pasted into the plan.
 
+### 4.7 Google's terms for search grounding (read 2026-10-02)
+
+The Service Specific Terms for "Grounding with Google Search" shape the
+web tools more than the first draft of this spec allowed for:
+
+- **Shown as it is.** A result may not be modified or mixed with other
+  content. So a search ends the question: its answer goes to the family
+  word for word and is never handed back to Cookie's model to rephrase
+  or combine with hub data.
+- **With its links and search suggestions**, to the person who asked.
+  The answer carries its pages and the Google searches behind it as
+  links (K-12).
+- **Links are not for software to follow.** Using a result's links to
+  find pages to crawl is forbidden, so `web_fetch` never opens one; it
+  reads only links the family typed (CSEC-4).
+- **Stored only as chat history.** Results may be kept in the asker's
+  chat history (up to two years; the hub keeps turn text 90 days) and
+  not otherwise cached, analysed or learned from. Nothing from the web
+  goes into memory (MEM-1), and tool results are never stored.
+- **No click tracking.** The app opens links in the browser and records
+  nothing about it.
+- **Google's side.** Queries are stored for up to three days for
+  debugging, not associated with the customer or its users.
+
 ---
 
 ## 5. Concerns
@@ -264,7 +288,7 @@ US$14 per 1,000. Speech is priced in SP-C3.
 | # | Concern | Handling | Owner decision? |
 |---|---|---|---|
 | K-1 | **Children's voices leave Canada for processing.** `gemini-3.8-flash` answers from `global`, as the video model does. The owner accepted that for video and text; voice clips are a new kind of data. | Nothing is stored (CSEC-2). SP-C2 checks whether a Canadian region serves the model with audio. | **Decided 2026-10-02:** accepted. Voice clips are processed outside Canada; nothing is stored. |
-| K-2 | **Google may keep web search queries.** Search grounding has its own data terms, which SP-C4 reads before it is switched on. | The search call sees only the query, with family words refused (CSEC-3). "Use the web" can be off. | **Decided 2026-10-02:** off by default. |
+| K-2 | **Google may keep web search queries.** Search grounding has its own data terms, which SP-C4 reads before it is switched on. | SP-C4 read the terms (2026-10-02, §4.7): Google keeps the queries for up to three days for debugging, not tied to the account or its users. The search call sees only the query, with family words refused (CSEC-3). "Use the web" can be off. | **Decided 2026-10-02:** off by default. |
 | K-3 | **Mixed-language transcripts may not be good enough.** | SP-C1 is first and has a pass bar. Fallback: Chirp in front. If both fail, the feature ships typing-first and voice waits. | No |
 | K-4 | **She may still make something up.** A model can call a tool and then misread it. CHR-3 catches claims with no source, not wrong readings of a real one. | Short answers, sources shown, the eval set's bark cases, and the transcript on screen. Reported mistakes become eval cases. | No |
 | K-5 | **What may she answer from her own knowledge?** A strict reading of "grounded" means even "what's 12 × 12" needs a source. | Default: `self` only for greetings, who she is, sums and word help (CHR-3). Facts about the world need the web or get a bark. | **Decided 2026-10-02:** the default stands. |
@@ -274,6 +298,7 @@ US$14 per 1,000. Speech is priced in SP-C3.
 | K-9 | **The website and the app drift apart** (N-1 of 0004): Cookie is the first feature only the app has. | Owner's choice (2026-10-02). The backend is client-neutral, so a website chat later needs no server change. | **Decided 2026-10-02:** app only for now. |
 | K-10 | **A floating button covers content.** | Sits above the tab bar; hidden over the video player. Position and dragging are intent question 3. | **Decided 2026-10-02:** fixed bottom-right, not draggable. |
 | K-11 | **She is slower than VOX-6 asks.** Measured from the owner's Mac (plan, Spikes): a model call takes 1–4 s even for a trivial question, a hub question needs two, and the median was 4.7 s against the 3 s target. Now and then a call stalls. | Thinking is off, calls time out at 12 s, and `today()` answers most questions in one lookup. Measured again from Cloud Run in K7.1. If it stays slow: show "Cookie is looking…" with the tool's name, and consider a second, smaller model for the first round. | **Decided 2026-10-02:** the speed is acceptable. Still measured from Cloud Run in K7.1. |
+| K-12 | **A search's answer is Google's, not Cookie's.** By Google's terms it is shown as it is, so it isn't in her voice, isn't held to two sentences by her own rules (the search is asked for two), and isn't checked by CHR-3. It can be wrong. Also: the terms want Google's "search suggestions" shown with a result. The app shows them as plain links to the Google searches, not Google's own chip design; whether that is enough is not confirmed. | Web answers are marked "From the web" with their pages; nothing from the web can be saved to memory (MEM-1). "Use the web" is off by default. | Yes: before switching the web on, accept this, or ask for Google's chip design to be embedded |
 
 ---
 

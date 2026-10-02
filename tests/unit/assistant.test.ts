@@ -7,6 +7,10 @@ import {
   barkLine,
   capState,
   checkGrounding,
+  fetchUrlProblem,
+  isPublicAddress,
+  linksIn,
+  webQueryProblem,
   compact,
   fitResult,
   languageOf,
@@ -15,9 +19,10 @@ import {
   noCalls,
 } from "@/domain/assistant";
 import { fakeAssistant } from "@/server/assistant/default-model";
-import { declarations, SYSTEM_PROMPT } from "@/server/assistant/prompt";
+import { declarations, SYSTEM_PROMPT, systemPrompt } from "@/server/assistant/prompt";
 import { ALL_TOOLS } from "@/server/assistant/tools";
 import { stamp } from "@/server/assistant/tools/types";
+import { FetchRefused, guardedFetch, publicLookup, type Transport } from "@/server/assistant/web";
 import { costUsd } from "@/server/llm/pricing";
 
 // intent 0007: Cookie's pure rules.
@@ -168,15 +173,169 @@ describe("memory rules (MEM-1, MEM-5, MEM-6)", () => {
   });
 });
 
+describe("web rules (CSEC-3, CSEC-4)", () => {
+  it("refuses a search that names someone or something private", () => {
+    const words = ["Robin", "Sam", "Maple School", "小明"];
+    expect(webQueryProblem("pool opening hours Saturday", words)).toBeNull();
+    expect(webQueryProblem("the same day delivery", words)).toBeNull(); // "Sam" isn't in "same"
+    expect(webQueryProblem("Robin tennis ranking", words)).toMatch(/private/);
+    expect(webQueryProblem("maple school term dates", words)).toMatch(/private/);
+    expect(webQueryProblem("小明的比赛", words)).toMatch(/private/);
+    expect(webQueryProblem("x".repeat(121), words)).toMatch(/under 120/);
+    expect(webQueryProblem("  ", words)).toMatch(/empty/);
+  });
+
+  it("finds only the https links written in a question", () => {
+    expect(linksIn("What does https://pool.example/hours?day=sat say, and http://old.example?")).toEqual([
+      "https://pool.example/hours?day=sat",
+    ]);
+    expect(linksIn("看看 https://pool.example/时间。")).toEqual(["https://pool.example/时间"]);
+    expect(linksIn("no links here")).toEqual([]);
+  });
+
+  it("allows public addresses only", () => {
+    for (const ip of ["8.8.8.8", "93.184.216.34", "2606:4700:4700::1111"])
+      expect(isPublicAddress(ip), ip).toBe(true);
+    for (const ip of [
+      "127.0.0.1",
+      "10.1.2.3",
+      "172.16.0.1",
+      "172.31.255.255",
+      "192.168.1.1",
+      "169.254.169.254", // the cloud metadata server
+      "100.64.0.1",
+      "0.0.0.0",
+      "224.0.0.1",
+      "::1",
+      "::",
+      "fd00::1",
+      "fe80::1",
+      "::ffff:127.0.0.1",
+      "::ffff:169.254.169.254",
+      "not-an-address",
+    ])
+      expect(isPublicAddress(ip), ip).toBe(false);
+  });
+
+  it("allows https links to named public sites only", () => {
+    expect(fetchUrlProblem("https://pool.example/hours")).toBeNull();
+    for (const url of [
+      "http://pool.example/hours",
+      "https://pool.example:8443/",
+      "https://user:pw@pool.example/",
+      "https://127.0.0.1/",
+      "https://[::1]/",
+      "https://localhost/",
+      "https://metadata.google.internal/computeMetadata/v1/",
+      "https://printer.local/",
+      "ftp://pool.example/",
+      "not a link",
+    ])
+      expect(fetchUrlProblem(url), url).not.toBeNull();
+  });
+});
+
+describe("the page fetcher (CSEC-4)", () => {
+  const html = (body: string) => ({
+    status: 200,
+    location: null,
+    contentType: "text/html; charset=utf-8",
+    body: Buffer.from(body),
+  });
+  const redirect = (location: string) => ({ status: 302, location, contentType: "", body: Buffer.alloc(0) });
+  const serving = (pages: Record<string, Awaited<ReturnType<Transport>>>) => {
+    const asked: string[] = [];
+    const transport: Transport = async (url) => {
+      asked.push(url.toString());
+      const page = pages[url.toString()];
+      if (!page) throw new Error("unreachable");
+      return page;
+    };
+    return { asked, fetch: guardedFetch(transport) };
+  };
+
+  it("reads a page as text and never runs its scripts", async () => {
+    const { fetch } = serving({
+      "https://pool.example/hours": html(
+        "<html><head><title>Pool hours</title><script>steal()</script><style>p{}</style></head>" +
+          "<body><nav>Menu</nav><main><h1>Hours</h1><p>Open 9 am to 5 pm.</p></main></body></html>",
+      ),
+    });
+    const page = await fetch("https://pool.example/hours");
+    expect(page).toMatchObject({ title: "Pool hours", url: "https://pool.example/hours" });
+    expect(page.text).toContain("Open 9 am to 5 pm.");
+    expect(page.text).not.toMatch(/steal|p\{\}/);
+  });
+
+  it("cuts a long page at 8,000 characters", async () => {
+    const { fetch } = serving({ "https://pool.example/long": html(`<p>${"word ".repeat(5000)}</p>`) });
+    expect((await fetch("https://pool.example/long")).text.length).toBeLessThanOrEqual(8000);
+  });
+
+  it("follows a redirect to another public page, checking it again", async () => {
+    const { fetch, asked } = serving({
+      "https://pool.example/old": redirect("/new"),
+      "https://pool.example/new": html("<p>Moved here.</p>"),
+    });
+    expect((await fetch("https://pool.example/old")).text).toBe("Moved here.");
+    expect(asked).toEqual(["https://pool.example/old", "https://pool.example/new"]);
+  });
+
+  it("refuses a redirect to a private address, plain http or the metadata server", async () => {
+    for (const target of [
+      "https://169.254.169.254/latest/meta-data/",
+      "http://pool.example/hours",
+      "https://metadata.google.internal/",
+      "https://10.0.0.5/admin",
+    ]) {
+      const { fetch, asked } = serving({ "https://pool.example/go": redirect(target) });
+      await expect(fetch("https://pool.example/go"), target).rejects.toBeInstanceOf(FetchRefused);
+      // The second address was never asked.
+      expect(asked).toEqual(["https://pool.example/go"]);
+    }
+  });
+
+  it("gives up after three redirects", async () => {
+    const { fetch } = serving({
+      "https://a.example/1": redirect("https://a.example/2"),
+      "https://a.example/2": redirect("https://a.example/3"),
+      "https://a.example/3": redirect("https://a.example/4"),
+      "https://a.example/4": redirect("https://a.example/5"),
+      "https://a.example/5": html("<p>too far</p>"),
+    });
+    await expect(fetch("https://a.example/1")).rejects.toThrow(/too many/);
+  });
+
+  it("refuses anything that isn't a page of text, and pages that fail", async () => {
+    const { fetch } = serving({
+      "https://pool.example/photo": { ...html(""), contentType: "image/png" },
+      "https://pool.example/gone": { ...html(""), status: 404 },
+    });
+    await expect(fetch("https://pool.example/photo")).rejects.toThrow(/isn't a web page/);
+    await expect(fetch("https://pool.example/gone")).rejects.toThrow(/404/);
+    await expect(fetch("https://pool.example/unknown")).rejects.toThrow(/couldn't be reached/);
+  });
+
+  it("refuses a host name that resolves to this machine", async () => {
+    const err = await new Promise<Error | null>((resolve) =>
+      publicLookup("localhost", {}, (e) => resolve(e as Error | null)),
+    );
+    expect(err).toBeInstanceOf(FetchRefused);
+  });
+});
+
 describe("the prompt (TOOL-15, TOOL-17)", () => {
   const tools = declarations(ALL_TOOLS);
 
   it("stays under the size budget with every tool definition", () => {
-    const size = SYSTEM_PROMPT.length + JSON.stringify(tools).length;
+    const size = systemPrompt(true).length + JSON.stringify(tools).length;
     expect(size).toBeLessThanOrEqual(LIMITS.promptChars);
+    // With the web off, its tools and its paragraph aren't sent at all.
+    expect(systemPrompt(false)).toBe(SYSTEM_PROMPT);
+    expect(SYSTEM_PROMPT).not.toContain("web_search");
   });
 
-  it("lists the hub tools first, then memory, then answer and bark", () => {
+  it("lists the hub tools first, then memory, the web, then answer and bark", () => {
     expect(tools.map((t) => t.name)).toEqual([
       "today",
       "calendar",
@@ -188,6 +347,8 @@ describe("the prompt (TOOL-15, TOOL-17)", () => {
       "memory_search",
       "memory_save",
       "memory_forget",
+      "web_search",
+      "web_fetch",
       "answer",
       "bark",
     ]);

@@ -3,8 +3,8 @@ import HubKit
 import SwiftUI
 
 /// Settings → Cookie (intent 0007): what she has cost this month against
-/// the monthly limit (LIM-5), her memory (MEM-4), and clearing the chat
-/// (MEM-9).
+/// the monthly limit (LIM-5), the web (TOOL-17, CSEC-3), her memory
+/// (MEM-4), and clearing the chat (MEM-9).
 struct CookieSettingsScreen: View {
     @Environment(AppModel.self) private var model
     @State private var state: Loadable<CookieSettings> = .loading
@@ -30,6 +30,18 @@ struct CookieSettingsScreen: View {
                     Text("This month")
                 } footer: {
                     Text("An estimate in US dollars, from what each question used. At the limit Cookie stops answering until next month, or until you raise it.")
+                }
+                Section {
+                    Toggle("Use the web", isOn: Binding(get: { settings.web }, set: { on in Task { await setWeb(on) } }))
+                        .accessibilityIdentifier("cookieWeb")
+                    NavigationLink {
+                        CookiePrivateWordsScreen(words: settings.privateTerms) { words in await setPrivateWords(words) }
+                    } label: {
+                        LabeledContent("Never send to the web", value: "\(settings.privateTerms.count) words")
+                    }
+                    .accessibilityIdentifier("cookiePrivateWords")
+                } footer: {
+                    Text("Off, Cookie answers only from the hub and her memory. On, she can search Google or read a link you give her. A search never includes the family's names or the words on this list, and its answer is Google's, shown as it is. Google keeps searches for up to three days.")
                 }
                 Section {
                     NavigationLink { CookieMemoryScreen() } label: { Label("Memory", systemImage: "brain") }
@@ -60,10 +72,29 @@ struct CookieSettingsScreen: View {
     }
 
     private func setCap(_ cap: Double) async {
+        await update("Couldn't change the limit.") {
+            try await model.client.api.updateAssistantSettings(body: .json(.init(monthlyCapUsd: cap))).ok.body.json
+        }
+    }
+
+    private func setWeb(_ on: Bool) async {
+        await update("Couldn't change that.") { try await model.client.api.updateAssistantSettings(body: .json(.init(web: on))).ok.body.json }
+    }
+
+    private func setPrivateWords(_ words: [String]) async -> Bool {
+        await update("Couldn't save the list.") {
+            try await model.client.api.updateAssistantSettings(body: .json(.init(privateTerms: words))).ok.body.json
+        }
+    }
+
+    @discardableResult
+    private func update(_ fallback: String, _ work: () async throws -> CookieSettings) async -> Bool {
         do {
-            state = .loaded(try await model.client.api.updateAssistantSettings(body: .json(.init(monthlyCapUsd: cap))).ok.body.json)
+            state = .loaded(try await work())
+            return true
         } catch {
-            model.show(HubError.from(error)?.message ?? "Couldn't change the limit.")
+            model.show(HubError.from(error)?.message ?? fallback)
+            return false
         }
     }
 
@@ -75,5 +106,56 @@ struct CookieSettingsScreen: View {
         } catch {
             model.show(HubError.from(error)?.message ?? "Couldn't clear the history.")
         }
+    }
+}
+
+/// "Never send to the web" (CSEC-3): words a search may not contain. The
+/// family's names are refused whether or not they are listed.
+struct CookiePrivateWordsScreen: View {
+    @Environment(\.dismiss) private var dismiss
+    @State var words: [String]
+    let save: ([String]) async -> Bool
+    @State private var draft = ""
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(words, id: \.self) { Text($0) }
+                    .onDelete { offsets in
+                        var next = words
+                        next.remove(atOffsets: offsets)
+                        Task { await set(next) }
+                    }
+                HStack {
+                    TextField("Add a word or name", text: $draft)
+                        .submitLabel(.done)
+                        .onSubmit(add)
+                        .accessibilityIdentifier("cookiePrivateWord")
+                    Button("Add", action: add)
+                        .disabled(word == nil)
+                        .accessibilityIdentifier("cookieAddPrivateWord")
+                }
+            } footer: {
+                Text("The school, your street, clubs, anyone outside the family. The names under People are always kept out of searches, so they don't need to be here. Swipe a word to remove it.")
+            }
+        }
+        .navigationTitle("Never send to the web")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var word: String? {
+        let w = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return w.isEmpty || w.count > 60 || words.contains(where: { $0.caseInsensitiveCompare(w) == .orderedSame }) ? nil : w
+    }
+
+    private func add() {
+        guard let w = word else { return }
+        Task { if await set(words + [w]) { draft = "" } }
+    }
+
+    private func set(_ next: [String]) async -> Bool {
+        guard await save(next) else { return false }
+        words = next
+        return true
     }
 }
