@@ -20,6 +20,13 @@ struct RootView: View {
                 PrivacyCover()
             }
         }
+        // Cookie's button (intent 0007, CK-1): on every screen once signed
+        // in, never over the lock, the privacy cover or the video player.
+        .overlay(alignment: .bottomTrailing) {
+            if model.phase == .signedIn, !lock.isLocked, !lock.isCovered, model.cookieHiddenBy == 0 {
+                CookieButton()
+            }
+        }
         .sheet(isPresented: Binding(
             get: { model.askForNotifications && model.phase == .signedIn && !lock.isLocked },
             set: { if !$0 { model.declineNotifications() } }

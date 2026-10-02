@@ -1,0 +1,14 @@
+{
+  "turnId": "5b0f6c1e-3a52-4f0e-9d53-0c7f6f1b2a05",
+  "conversationId": "9a2b7c44-11de-4c7b-8d0a-3a1f0e5d6c04",
+  "heard": "Hi Cookie",
+  "language": "en",
+  "outcome": "answer",
+  "text": "Woof! I'm Cookie.",
+  "sources": [
+    {
+      "kind": "self",
+      "label": "Cookie"
+    }
+  ]
+}

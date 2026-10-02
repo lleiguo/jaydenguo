@@ -70,7 +70,7 @@ is replaced with SP-C2's numbers.
 | K2.1 | HubKit: assistant client and types from the regenerated OpenAPI. | §4.5, CSEC-8 | HubKit tests against recorded responses. |
 | K2.2 | The floating button (tap only for now): overlay in `RootView`, hidden where CK-1 says, dimmed offline. | CK-1, CK-7 | UI test for visibility. |
 | K2.3 | Chat sheet: history, typing, sources, errors and limit messages. | CK-4, CHR-4, MEM-9 | UI test: tap, type, answer (fake model). VoiceOver pass. |
-| K2.4 | Settings → Cookie: cap and this month's spend, use the web, clear history. | LIM-5, MEM-9 | UI test. |
+| K2.4 | Settings → Cookie: cap and this month's spend, clear history. ("Use the web" moves to K4.) | LIM-5, MEM-9 | UI test. |
 | K2.5 | API e2e through the built server with the fake model: ask, history, settings. | §4.6, CSEC-1 | e2e green. |
 
 ### K3: Memory (≈ 2 days)
@@ -83,7 +83,7 @@ is replaced with SP-C2's numbers.
 ### K4: Web tools (≈ 2 days)
 | Task | Description | Spec | Done when |
 |---|---|---|---|
-| K4.1 | `web_search`: separate grounded call, query filter, "never send to the web" list. | TOOL-11, TOOL-17, CSEC-3 | Unit tests for the filter; integration test with a scripted search. |
+| K4.1 | `web_search`: separate grounded call, query filter, "never send to the web" list; "Use the web" and that list in the app's Settings → Cookie. | TOOL-11, TOOL-17, CSEC-3 | Unit tests for the filter; integration test with a scripted search. |
 | K4.2 | `web_fetch`: link allow rule, address checks on every redirect, size, time and type limits, HTML to text. | TOOL-12, CSEC-4 | Unit tests for private, loopback, link-local and metadata addresses and a redirect to one; integration test against a local page. |
 | K4.3 | Hostile-content tests: a page and an event title that tell her to save a memory or fetch a link with hub data. | CSEC-6 | Both attempts refused in integration tests. |
 
@@ -140,7 +140,8 @@ K7 2.
 | SP-C4 | price found (below); the answer quality and data terms are not checked yet. |
 | SP-C5 | the format works with a synthetic clip (below); a clip recorded in the app is still to do. |
 | K1.1–K1.7 | built 2026-10-02 on `cookie/k1-backend`; not merged or deployed. |
-| K2–K7 | not started. |
+| K2.1–K2.5 | built 2026-10-02 on `cookie/k2-ios-chat` (stacked on K1); not merged, no TestFlight build yet. |
+| K3–K7 | not started. |
 
 **K1 as built (2026-10-02):**
 - *Schema (K1.1).* Migration `0027_assistant`: `assistant_turns` and
@@ -167,6 +168,30 @@ K7 2.
   `gemini-3.8-flash` with thinking off: made-up answers 0; answerable
   right 32 of 33 (97%); too long 0; no reply from the model 2 (both
   timed out, see SP-C2). Pass.
+
+**K2 as built (2026-10-02):**
+- *HubKit (K2.1).* `HubKit/Assistant/AssistantTypes.swift`: the chat's
+  rules (bubbles from turns, source lines, which conversation a
+  follow-up continues, the question limit), tested against hand-written
+  fixtures. The two Cookie GETs are never cached on the phone (CSEC-8).
+- *Button (K2.2).* An overlay in `RootView`, so it is over every tab and
+  pushed screen; hidden while locked, behind the privacy cover, signed
+  out, and on the video review screen (the whole screen, not only the
+  full-screen player). It moves up while the undo banner shows. Its
+  VoiceOver name is "Ask Cookie", so it isn't confused with the
+  Settings row.
+- *Chat (K2.3).* A sheet. The chat lives in memory for as long as the
+  app runs and is fetched again (last 30 turns) on the next start;
+  signing out forgets it.
+- *Settings (K2.4).* More → Settings → Cookie: this month's spend, the
+  monthly limit (a stepper, US$0–50) and "Clear history". **"Use the
+  web" is left out until K4**: a switch for tools that don't exist yet
+  would mislead. Memory and "Spoken answers" join in K3 and K6.
+- *Tests (K2.5).* `tests/e2e/assistant.spec.ts` (API through the built
+  server, fake model, responses checked against `openapi.json`);
+  `HubAppUITests/CookieTests` (ask, bark, history after a restart,
+  settings and clear). The UI tests' server now needs
+  `ASSISTANT_LLM=fake` (ios/README).
 
 **Still open from K1:** the eval's two timeouts and the speed (spec
 K-11); nothing here has run on Cloud Run yet, and Terraform doesn't set

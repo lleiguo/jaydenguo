@@ -32,6 +32,9 @@ struct VideoDetailScreen: View {
         }
         .navigationTitle(review.map { "\(VideoSport.text($0.sport.rawValue, source: $0.sportSource.rawValue)) · \($0.filmedOn)" } ?? "Review")
         .navigationBarTitleDisplayMode(.inline)
+        // Cookie's button stays off the player (intent 0007, CK-1).
+        .onAppear { model.cookieHiddenBy += 1 }
+        .onDisappear { model.cookieHiddenBy -= 1 }
         // VID-5: follow the job while it runs.
         .task(id: model.changes) {
             await refresh()

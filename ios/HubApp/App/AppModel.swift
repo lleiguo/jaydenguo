@@ -48,6 +48,11 @@ final class AppModel {
     var newReviewDraft: PendingReview?
     /// Shows the "turn on notifications?" explanation (PUSH-3).
     var askForNotifications = false
+    /// The chat with Cookie is open (intent 0007, CK-4).
+    var cookieOpen = false
+    /// Screens that hide Cookie's button while they show: the video
+    /// player (CK-1).
+    var cookieHiddenBy = 0
     /// This phone's notification kinds, once registered.
     private(set) var notificationSettings: Components.Schemas.DeviceSettings?
     /// Set when iOS can't give this build a push token (a Personal Team
@@ -58,10 +63,12 @@ final class AppModel {
 
     let client: HubClient
     let lock: AppLock
+    let cookie: CookieStore
 
     init(client: HubClient, events: AsyncStream<HubEvent>, lock: AppLock) {
         self.client = client
         self.lock = lock
+        cookie = CookieStore(client: client)
         phase = client.isSignedIn ? .signedIn : .signedOut
         Task { [weak self] in
             for await event in events { self?.handle(event) }
@@ -141,6 +148,8 @@ final class AppModel {
 
     private func wipe() {
         // The client already removed the token and the offline cache (SEC-3).
+        cookie.reset()
+        cookieOpen = false
         widgetItems = nil
         offlineSince = nil
         WidgetCenter.shared.reloadAllTimelines()
