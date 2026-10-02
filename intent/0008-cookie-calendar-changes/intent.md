@@ -1,8 +1,9 @@
 # Intent: Cookie changes the calendar
-Status: draft (2026-10-02). Drafted by Claude from the owner's request.
-The owner chose where described events are written (option B, the
-household Google Calendar) in chat on 2026-10-02; the other open
-questions stand on their defaults until answered.
+Status: approved (owner, 2026-10-02, in chat, with the spec and plan).
+Drafted by Claude from the owner's request.
+The owner chose the household Google Calendar for described events the
+same day; the open questions below are answered by the defaults in
+spec §6.
 Owner: Jayden's parent (lleiguo).
 
 "One thing I want the AI assistant to be able to do is to create
@@ -179,6 +180,11 @@ What B asks of the spec:
   with no words.
 
 ## Things to check first (before a spec)
+Checked 2026-10-02; the answers are in [spec.md](spec.md) §2. In short:
+no Gmail source is connected in production, extraction can't run on
+Claude today, and the web service can't use a Google grant, so the
+worker does the writing.
+
 1. **Is email reading working in production at all?** Suggestions are
    extracted by Claude on Vertex AI, and the project's Claude quota was
    still 0 when last checked. If so, no suggestions exist to act on, and
