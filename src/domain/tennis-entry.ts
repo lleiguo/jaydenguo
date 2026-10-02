@@ -142,19 +142,29 @@ export function statusFromList(
 const overlaps = (a: { startDate: string; endDate: string }, b: { startDate: string; endDate: string }) =>
   a.startDate <= b.endDate && b.startDate <= a.endDate;
 
-export type Candidate = {
+const sameClub = (a: { venue: string | null }, b: { venue: string | null }) => {
+  const key = (v: string | null) => v?.trim().toLowerCase().replace(/\s+/g, " ") || null;
+  return key(a.venue) !== null && key(a.venue) === key(b.venue);
+};
+
+// Two tournaments he can't both be entered for: overlapping dates, unless
+// they're at the same club (owner, 2026-10-01: enter both; if he gets into
+// both draws the owner withdraws one).
+const clashes = (a: Committed, b: Committed) => overlaps(a, b) && !sameClub(a, b);
+
+export type Committed = { startDate: string; endDate: string; venue: string | null };
+
+export type Candidate = Committed & {
   tournamentId: string;
-  startDate: string;
-  endDate: string;
   driveMinutes: number | null;
 };
 
-// Which candidates to enter: never two tournaments on overlapping dates,
-// and never one that overlaps a tournament he's already in. Closest first;
-// an unknown drive time goes last.
+// Which candidates to enter: never two tournaments on overlapping dates at
+// different clubs, and never one that overlaps a tournament at another club
+// that he's already in. Closest first; an unknown drive time goes last.
 export function chooseEntries<C extends Candidate>(
   candidates: C[],
-  committed: { startDate: string; endDate: string }[],
+  committed: Committed[],
 ): { enter: C[]; skip: { candidate: C; because: C | null }[] } {
   const order = [...candidates].sort(
     (a, b) =>
@@ -165,9 +175,9 @@ export function chooseEntries<C extends Candidate>(
   const enter: C[] = [];
   const skip: { candidate: C; because: C | null }[] = [];
   for (const c of order) {
-    const clash = enter.find((e) => overlaps(e, c));
+    const clash = enter.find((e) => clashes(e, c));
     if (clash) skip.push({ candidate: c, because: clash });
-    else if (committed.some((t) => overlaps(t, c))) skip.push({ candidate: c, because: null });
+    else if (committed.some((t) => clashes(t, c))) skip.push({ candidate: c, because: null });
     else enter.push(c);
   }
   return { enter, skip };
