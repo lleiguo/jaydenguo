@@ -105,6 +105,10 @@ export async function clearHistory(db: DbOrTx, olderThan?: Date): Promise<number
   return rows.length;
 }
 
+// MEM-9: the daily tidy-up clears the words of turns older than 90 days.
+export const pruneHistory = (db: DbOrTx, now = new Date()) =>
+  clearHistory(db, new Date(now.getTime() - LIMITS.historyDays * 86_400_000));
+
 // LIM-5: what Cookie has cost this month, in the home time zone.
 export async function monthSpendUsd(db: DbOrTx, now: Date): Promise<number> {
   const tz = await getHomeTimeZone(db);

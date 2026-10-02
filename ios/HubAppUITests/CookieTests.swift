@@ -10,8 +10,13 @@ final class CookieTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         token = try devToken()
-        // Each test starts with an empty chat.
+        // Each test starts with an empty chat and an empty memory.
         request("DELETE", "/api/v1/assistant/turns")
+        let memories = request("GET", "/api/v1/assistant/memories")
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["memories"] as? [[String: Any]]
+        for id in (memories ?? []).compactMap({ $0["id"] as? String }) {
+            request("DELETE", "/api/v1/assistant/memories/\(id)")
+        }
     }
 
     private func devToken() throws -> String {
@@ -126,5 +131,51 @@ final class CookieTests: XCTestCase {
         app.buttons["cookieButton"].tap()
         XCTAssertTrue(app.textFields["cookieField"].firstMatch.waitForExistence(timeout: 10) || app.textViews["cookieField"].firstMatch.exists)
         XCTAssertFalse(app.descendants(matching: .any)["cookieQuestion"].firstMatch.exists)
+    }
+
+    /// MEM-2, MEM-4: a fact saved in the chat can be undone there, and the
+    /// Memory list adds, shows and forgets facts.
+    func testRememberingUndoAndTheMemoryList() throws {
+        let app = launch()
+        app.buttons["cookieButton"].tap()
+        ask(app, "Remember that the spare key is under the blue pot")
+        let answer = app.descendants(matching: .any)["cookieAnswer"].firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 20))
+        XCTAssertTrue(answer.label.contains("From Memory"), answer.label)
+        XCTAssertTrue(app.staticTexts["Saved to memory"].waitForExistence(timeout: 10))
+        app.buttons["cookieUndo"].tap()
+        XCTAssertTrue(app.staticTexts["Not saved after all."].waitForExistence(timeout: 10))
+
+        // Saved again, and left.
+        ask(app, "Remember that recycling goes out on Tuesday")
+        XCTAssertTrue(app.staticTexts["Saved to memory"].waitForExistence(timeout: 20))
+        app.buttons["Done"].tap()
+
+        app.tabBars.buttons["More"].tap()
+        let row = app.collectionViews.buttons["Cookie"].firstMatch
+        for _ in 0..<4 where !row.isHittable { app.swipeUp() }
+        row.tap()
+        app.buttons["cookieMemoryLink"].tap()
+        XCTAssertTrue(app.navigationBars["Memory"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["recycling goes out on Tuesday"].waitForExistence(timeout: 10))
+        // The undone fact is under Forgotten, not in the list.
+        XCTAssertEqual(app.buttons.matching(identifier: "cookieMemory").count, 1)
+        XCTAssertTrue(app.staticTexts["the spare key is under the blue pot"].exists)
+
+        // Add one by hand.
+        app.buttons["cookieAddMemory"].tap()
+        let field = app.textFields["cookieMemoryText"].firstMatch.exists ? app.textFields["cookieMemoryText"].firstMatch : app.textViews["cookieMemoryText"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
+        field.typeText("Locker 12, second floor")
+        app.buttons["cookieMemorySave"].tap()
+        XCTAssertTrue(app.staticTexts["Locker 12, second floor"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons.matching(identifier: "cookieMemory").count, 2)
+
+        // Forget it with a swipe.
+        app.staticTexts["Locker 12, second floor"].swipeLeft()
+        app.buttons["Forget"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Forgotten. It can be restored for 30 days."].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons.matching(identifier: "cookieMemory").count, 1)
     }
 }

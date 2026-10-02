@@ -5,6 +5,7 @@ public typealias CookieAnswer = Components.Schemas.AskResult
 public typealias CookieTurn = Components.Schemas.TurnView
 public typealias CookieSource = Components.Schemas.AssistantSource
 public typealias CookieSettings = Components.Schemas.AssistantSettingsResponse
+public typealias CookieMemory = Components.Schemas.MemoryView
 
 /// One bubble in the chat with Cookie (intent 0007, CK-4).
 public struct CookieMessage: Identifiable, Equatable, Sendable {
@@ -27,14 +28,30 @@ public struct CookieMessage: Identifiable, Equatable, Sendable {
     public let sourceLine: String?
     /// Web pages she used, to open in the browser.
     public let links: [Link]
+    /// A fact this answer saved or forgot, with the id to undo it (MEM-2).
+    public let memory: MemoryChange?
 
-    public init(id: String, role: Role, text: String, kind: Kind = .answer, sourceLine: String? = nil, links: [Link] = []) {
+    public struct MemoryChange: Equatable, Sendable {
+        public enum Kind: Sendable { case saved, forgot }
+        public let kind: Kind
+        public let id: String
+        public let text: String
+
+        /// "Saved to memory" / "Forgotten", beside the Undo button.
+        public var label: String { kind == .saved ? "Saved to memory" : "Forgotten" }
+    }
+
+    public init(
+        id: String, role: Role, text: String, kind: Kind = .answer, sourceLine: String? = nil, links: [Link] = [],
+        memory: MemoryChange? = nil
+    ) {
         self.id = id
         self.role = role
         self.text = text
         self.kind = kind
         self.sourceLine = sourceLine
         self.links = links
+        self.memory = memory
     }
 
     /// What VoiceOver reads for the bubble.
@@ -73,10 +90,22 @@ public enum CookieChat {
     }
 
     public static func message(_ answer: CookieAnswer) -> CookieMessage {
-        CookieMessage(
+        // Only a fresh answer can be undone; history shows what was said.
+        let memory: CookieMessage.MemoryChange? =
+            answer.saved.map { .init(kind: .saved, id: $0.id, text: $0.text) }
+            ?? answer.forgot.map { .init(kind: .forgot, id: $0.id, text: $0.text) }
+        return CookieMessage(
             id: answer.turnId, role: .cookie, text: answer.text, kind: kind(answer.outcome.rawValue),
-            sourceLine: sourceLine(answer.sources), links: links(answer.sources)
+            sourceLine: sourceLine(answer.sources), links: links(answer.sources), memory: memory
         )
+    }
+
+    /// MEM-1: the server refuses longer facts.
+    public static let factLimit = 300
+
+    public static func fact(_ draft: String) -> String? {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty || text.count > factLimit ? nil : text
     }
 
     /// The conversation a new question continues: the last turn's, while
@@ -116,5 +145,14 @@ public enum CookieChat {
             else { return nil }
             return .init(label: source.label, url: url)
         }
+    }
+}
+
+extension CookieMemory {
+    /// "Saved by pat on 2 Oct" (MEM-4): the account's name, not its address.
+    public func savedLine(_ time: HomeTime) -> String {
+        let who = savedBy.split(separator: "@").first.map(String.init) ?? savedBy
+        let when = HomeTime.parse(forgottenAt ?? createdAt).map { time.dayTitle(time.localDate($0)) } ?? ""
+        return forgottenAt == nil ? "Saved by \(who) · \(when)" : "Forgotten · \(when)"
     }
 }

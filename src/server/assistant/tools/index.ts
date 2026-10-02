@@ -1,5 +1,6 @@
 import { calendarTool } from "./calendar";
 import { costsTool } from "./costs";
+import { memoryForgetTool, memorySaveTool, memorySearchTool } from "./memory";
 import { schoolTool } from "./school";
 import { swimmingTool } from "./swimming";
 import { tennisTool } from "./tennis";
@@ -8,7 +9,7 @@ import type { Tool } from "./types";
 import { videosTool } from "./videos";
 
 // Cookie's tools, in the order the prompt gives them (TOOL-17): the hub
-// first. Memory and the web join this list in plan K3 and K4.
+// first, then her memory. The web joins in plan K4.
 export const HUB_TOOLS = [
   todayTool,
   calendarTool,
@@ -19,4 +20,9 @@ export const HUB_TOOLS = [
   costsTool,
 ] as Tool[];
 
-export type { Tool, ToolContext } from "./types";
+export const MEMORY_TOOLS = [memorySearchTool, memorySaveTool, memoryForgetTool] as Tool[];
+
+export const ALL_TOOLS = [...HUB_TOOLS, ...MEMORY_TOOLS];
+
+export { newTurn } from "./types";
+export type { Tool, ToolContext, TurnState } from "./types";

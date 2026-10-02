@@ -8,6 +8,9 @@ import { signInAs } from "./support/session";
 // greets, and barks at anything else. Every response is checked against
 // openapi.json by `apiSend`.
 
+// One chat and one memory for the account: the tests take turns.
+test.describe.configure({ mode: "serial" });
+
 test("Cookie answers, barks, keeps history and settings, and clears the chat", async ({ context }, info) => {
   test.skip(info.project.name !== "desktop", "one shared chat; one project is enough");
   await signInAs(context, OWNER);
@@ -55,6 +58,61 @@ test("Cookie answers, barks, keeps history and settings, and clears the chat", a
   expect((await apiSend(context, "GET", "/api/v1/assistant/settings")).monthSpendUsd).toBe(
     settings.monthSpendUsd,
   );
+});
+
+test("Cookie remembers, recalls, forgets and restores a fact (MEM-1..5)", async ({ context }, info) => {
+  test.skip(info.project.name !== "desktop", "one shared memory; one project is enough");
+  await signInAs(context, OWNER);
+  for (const m of (await apiSend(context, "GET", "/api/v1/assistant/memories")).memories)
+    await apiSend(context, "DELETE", `/api/v1/assistant/memories/${m.id}`);
+
+  const told = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+    text: "Remember that the spare key is under the blue pot.",
+  });
+  expect(told).toMatchObject({
+    outcome: "answer",
+    sources: [{ kind: "memory", label: "Memory" }],
+    saved: { text: "the spare key is under the blue pot", via: "chat", savedBy: OWNER },
+    forgot: null,
+  });
+  const asked = await apiSend(context, "POST", "/api/v1/assistant/ask", { text: "Where is the spare key?" });
+  expect(asked).toMatchObject({ outcome: "answer", saved: null });
+  expect(asked.text).toContain("under the blue pot");
+
+  // A password is refused, by chat and by hand (MEM-6).
+  const secret = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+    text: "Remember that the wifi password is tulip-7781.",
+  });
+  expect(secret.saved).toBeNull();
+  const refused = await context.request.post("/api/v1/assistant/memories", {
+    data: { text: "The alarm passcode is 4410" },
+    headers: { origin: APP_URL },
+  });
+  expect(refused.status()).toBe(400);
+  expect((await refused.json()).error).toMatch(/doesn't keep passwords/);
+
+  // By hand: add, edit.
+  const added = await apiSend(context, "POST", "/api/v1/assistant/memories", {
+    text: "Recycling goes out on Tuesday",
+  });
+  expect(added).toMatchObject({ via: "settings", forgottenAt: null });
+  const edited = await apiSend(context, "PATCH", `/api/v1/assistant/memories/${added.id}`, {
+    text: "Recycling goes out on Wednesday",
+  });
+  expect(edited.text).toBe("Recycling goes out on Wednesday");
+  expect((await apiSend(context, "GET", "/api/v1/assistant/memories")).memories).toHaveLength(2);
+
+  // Forget by chat, find it under forgotten, restore it.
+  const forgot = await apiSend(context, "POST", "/api/v1/assistant/ask", { text: "Forget the spare key" });
+  expect(forgot).toMatchObject({ outcome: "answer", forgot: { id: told.saved.id }, saved: null });
+  expect(
+    (await apiSend(context, "POST", "/api/v1/assistant/ask", { text: "Where is the spare key?" })).outcome,
+  ).toBe("bark");
+  const forgotten = await apiSend(context, "GET", "/api/v1/assistant/memories?forgotten=true");
+  expect(forgotten.memories.map((m: { id: string }) => m.id)).toContain(told.saved.id);
+  const restored = await apiSend(context, "POST", `/api/v1/assistant/memories/${told.saved.id}/restore`);
+  expect(restored.forgottenAt).toBeNull();
+  expect((await apiSend(context, "GET", "/api/v1/assistant/memories")).memories).toHaveLength(2);
 });
 
 test("Cookie refuses an empty or over-long question (LIM-3)", async ({ context }) => {

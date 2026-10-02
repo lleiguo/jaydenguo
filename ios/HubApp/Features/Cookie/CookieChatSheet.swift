@@ -21,7 +21,10 @@ struct CookieChatSheet: View {
                             Caption(error)
                         }
                         if store.messages.isEmpty, !store.isLoading { CookieHint() }
-                        ForEach(store.messages) { CookieBubble(message: $0) }
+                        ForEach(store.messages) { message in
+                            CookieBubble(message: message)
+                            if message.memory != nil { MemoryUndo(message: message) }
+                        }
                         if store.isAsking {
                             HStack(spacing: 8) {
                                 ProgressView()
@@ -83,6 +86,35 @@ struct CookieChatSheet: View {
     private func send(_ store: CookieStore) {
         guard store.canSend else { return }
         Task { await store.send() }
+    }
+}
+
+/// "Saved to memory · Undo" under an answer, for 10 seconds (MEM-2).
+private struct MemoryUndo: View {
+    @Environment(AppModel.self) private var model
+    let message: CookieMessage
+    @State private var expired = false
+
+    var body: some View {
+        if let change = message.memory {
+            HStack(spacing: 8) {
+                Label(change.label, systemImage: change.kind == .saved ? "checkmark.circle" : "trash")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if !expired {
+                    Button("Undo") {
+                        Task { if let said = await model.cookie.undo(message) { model.show(said) } }
+                    }
+                    .font(.caption.bold())
+                    .accessibilityIdentifier("cookieUndo")
+                }
+            }
+            .padding(.leading, 40)
+            .task(id: message.id) {
+                try? await Task.sleep(for: .seconds(10))
+                expired = true
+            }
+        }
     }
 }
 

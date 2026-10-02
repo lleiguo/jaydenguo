@@ -44,6 +44,7 @@ import Testing
         "getCosts": { _ = try await $0.api.getCosts().ok.body.json },
         "listAssistantTurns": { _ = try await $0.api.listAssistantTurns().ok.body.json },
         "getAssistantSettings": { _ = try await $0.api.getAssistantSettings().ok.body.json },
+        "listAssistantMemories": { _ = try await $0.api.listAssistantMemories().ok.body.json },
         "askAssistant": { _ = try await $0.api.askAssistant(body: .json(.init(text: "Hi"))).ok.body.json },
         "listSuggestions": { _ = try await $0.api.listSuggestions().ok.body.json },
         "listMeets": { _ = try await $0.api.listMeets().ok.body.json },

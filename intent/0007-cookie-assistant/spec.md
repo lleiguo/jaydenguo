@@ -94,7 +94,7 @@ Cookie has exactly these tools. Adding one is a spec change.
 
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| TOOL-15 | Narrow inputs, capped outputs. | Each tool has a zod schema for its input and output. Results are compact JSON (no IDs the model doesn't need, no nulls), cut at 6,000 characters with `more: true`. A unit test fails if the system prompt plus all tool definitions grow past 8,000 characters. |
+| TOOL-15 | Narrow inputs, capped outputs. | Each tool has a zod schema for its input and output. Results are compact JSON (no IDs the model doesn't need, no nulls), cut at 6,000 characters with `more: true`. A unit test fails if the system prompt plus all tool definitions grow past 10,000 characters (8,000 until the memory tools were added in K3: the seven hub tools and the prompt alone came to 7,400). |
 | TOOL-16 | Every person, not only Jayden. | Calendar and school tools take any person from Settings → People. Tennis and swimming hold the primary person's data today, and say so when asked about someone else. |
 | TOOL-17 | Hub and memory first. | The prompt orders the tools: hub, then memory, then the web. The web is used only when those can't answer or the question asks for it, and only if "Use the web" is on in Settings. |
 | TOOL-18 | What every question starts with. | The date and time in the home time zone, the people's names, and the VOX-3 spelling list. Nothing else from the hub is sent unless a tool is called. |
@@ -102,12 +102,12 @@ Cookie has exactly these tools. Adding one is a spec change.
 ### 2.5 Memory (MEM)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| MEM-1 | Saved only when told. | `memory_save` runs only when the question asks her to remember something. The server refuses it in a question where a web tool has already run, so a web page can't plant a fact. One fact per save, at most 300 characters, with search keywords in both languages. |
+| MEM-1 | Saved only when told. | `memory_save` runs only when the question asks her to remember something: the server checks the question's own words for "remember", "记住" and the like, so text in a tool result can never start a save. It also refuses a save in a question where a web tool has already run. One fact per question, at most 300 characters, with search keywords in both languages. |
 | MEM-2 | She confirms. | The answer repeats what was saved in one line. The chat shows "Saved to memory" with Undo for 10 s. |
 | MEM-3 | Found across languages. | A fact saved in English is found by a Mandarin question and the reverse: search matches the fact's text and its bilingual keywords. The eval set (§4.6) has cases for both directions. |
 | MEM-4 | Visible and editable. | Settings → Cookie → Memory in the app: each fact with who saved it and when; add, edit, forget. Forgotten facts can be restored for 30 days, then are deleted for good. |
-| MEM-5 | Forget by voice. | "Cookie, forget …" finds the fact, forgets it and says which one. If more than one matches, she asks which. |
-| MEM-6 | No secrets. | She refuses to remember passwords, card numbers and sign-in codes, and the Memory screen says not to store them. |
+| MEM-5 | Forget by voice. | "Cookie, forget …" finds the fact, forgets it and says which one. If more than one matches, she asks which. As with saving, the server checks that the question's own words ask for it, and one fact per question. |
+| MEM-6 | No secrets. | She refuses to remember passwords, card numbers and sign-in codes, and the Memory screen says not to store them. The server refuses a fact that names one (password, passcode, PIN, 密码, 验证码 …) or holds a card-length number, by chat and by hand. |
 | MEM-7 | One memory for the family. | Shared by every allow-listed account. |
 | MEM-8 | Follow-ups. | Each question carries the text of up to 6 earlier turns from the same conversation in the last 30 minutes (at most 2,000 characters). Audio and tool results from earlier turns are never sent again. |
 | MEM-9 | History. | The chat shows past turns, newest last. "Clear history" in Settings removes the text of every turn. Turn text is removed automatically after 90 days; token and cost numbers stay for the Costs page. |
@@ -207,7 +207,7 @@ US$14 per 1,000. Speech is priced in SP-C3.
 ### 4.3 API (all under `/api/v1/assistant`, documented in `openapi.json`)
 | Route | Does |
 |---|---|
-| `POST /ask` | `{ conversationId?, text? , audio?: { data, mimeType } }` → `{ turnId, conversationId, heard, language, outcome, text, sources, saved? }`. Audio is base64 in JSON, so the generated client needs nothing special. |
+| `POST /ask` | `{ conversationId?, text? , audio?: { data, mimeType } }` → `{ turnId, conversationId, heard, language, outcome, text, sources, saved, forgot }` (`saved` and `forgot` are the fact this question saved or forgot, or null). Audio is base64 in JSON, so the generated client needs nothing special. |
 | `GET /turns/{id}/speech` | The answer as audio. 404 for someone else's turn or cleared text. |
 | `GET /turns`, `DELETE /turns` | History, newest last, paged. Clear history. |
 | `GET /memories`, `POST /memories` | List (with forgotten ones on request), add. |
@@ -224,8 +224,9 @@ US$14 per 1,000. Speech is priced in SP-C3.
   updated by and at, how it was saved (voice, chat or settings),
   forgotten at.
 - Settings key `assistant` for §4.3's settings.
-- The daily worker job clears turn text after 90 days and deletes
-  memories forgotten more than 30 days ago.
+- The daily sync run (`sync all`) clears turn text after 90 days and
+  deletes memories forgotten more than 30 days ago, next to the
+  notification clean-up. No new scheduled job.
 
 ### 4.5 Clients
 - **iPhone.** `HubKit/Assistant/`: client, types, recorder (AVFoundation,

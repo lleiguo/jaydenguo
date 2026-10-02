@@ -1,0 +1,24 @@
+{
+  "memories": [
+    {
+      "id": "7c1d2e3f-0000-4000-8000-000000000001",
+      "text": "The spare key is under the blue pot",
+      "about": [],
+      "via": "chat",
+      "savedBy": "owner@example.test",
+      "createdAt": "2026-10-02T15:00:00.000Z",
+      "updatedAt": null,
+      "forgottenAt": null
+    },
+    {
+      "id": "7c1d2e3f-0000-4000-8000-000000000002",
+      "text": "奶奶的生日是三月五号",
+      "about": [],
+      "via": "settings",
+      "savedBy": "owner@example.test",
+      "createdAt": "2026-10-01T09:30:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z",
+      "forgottenAt": null
+    }
+  ]
+}

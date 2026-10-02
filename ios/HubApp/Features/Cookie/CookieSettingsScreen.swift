@@ -3,7 +3,8 @@ import HubKit
 import SwiftUI
 
 /// Settings → Cookie (intent 0007): what she has cost this month against
-/// the monthly limit (LIM-5), and clearing the chat (MEM-9).
+/// the monthly limit (LIM-5), her memory (MEM-4), and clearing the chat
+/// (MEM-9).
 struct CookieSettingsScreen: View {
     @Environment(AppModel.self) private var model
     @State private var state: Loadable<CookieSettings> = .loading
@@ -29,6 +30,12 @@ struct CookieSettingsScreen: View {
                     Text("This month")
                 } footer: {
                     Text("An estimate in US dollars, from what each question used. At the limit Cookie stops answering until next month, or until you raise it.")
+                }
+                Section {
+                    NavigationLink { CookieMemoryScreen() } label: { Label("Memory", systemImage: "brain") }
+                        .accessibilityIdentifier("cookieMemoryLink")
+                } footer: {
+                    Text("What Cookie was told to remember.")
                 }
                 Section {
                     Button("Clear history", role: .destructive) { confirmClear = true }

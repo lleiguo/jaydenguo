@@ -3,12 +3,33 @@ import type { ToolKind } from "@/domain/assistant";
 import type { Person } from "@/domain/people";
 import { wallClock } from "@/domain/time";
 import type { Db } from "../../db/client";
+import type { MemoryView } from "../memory";
 
 // One of Cookie's tools (intent 0007, spec §2.4). The list is fixed: adding
 // a tool is a spec change. Hub tools only read, through the loaders the
 // pages use.
 
-export type ToolContext = { db: Db; now: Date; timeZone: string; people: Person[] };
+export type ToolContext = {
+  db: Db;
+  now: Date;
+  timeZone: string;
+  people: Person[];
+  // Who is asking, and their question's own words: memory tools act only
+  // on what the question asks for (MEM-1, MEM-5).
+  userId: string;
+  question: string;
+  // What this question has done so far.
+  turn: TurnState;
+};
+
+export type TurnState = {
+  // A web tool has run: nothing may be saved after that (MEM-1).
+  webRan: boolean;
+  saved: MemoryView | null;
+  forgot: MemoryView | null;
+};
+
+export const newTurn = (): TurnState => ({ webRan: false, saved: null, forgot: null });
 
 export type Tool<I = unknown> = {
   name: string;

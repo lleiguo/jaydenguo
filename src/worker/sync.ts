@@ -19,6 +19,8 @@ import { syncRecords } from "../server/sync/apply";
 import { defaultEmailExtractor, syncEmails } from "../server/email/apply";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
 import { notifyClashes, notifyNextMatches, notifySuggestions, notifySyncFailed } from "../server/push/kinds";
+import { pruneMemories } from "../server/assistant/memory";
+import { pruneHistory } from "../server/assistant/turns";
 import { pruneNotifications } from "../server/push/notify";
 import type { JobContext } from "./context";
 import { workerBrowserSession } from "./browser-session";
@@ -274,7 +276,11 @@ export async function syncJob(args: string[], ctx: JobContext) {
   // GCO-1: the Google Calendar copy follows the daily sync.
   if (target === "all") await calendarCopyJob([], ctx);
   // Notifications are kept 90 days.
-  if (target === "all") ctx.log("notifications pruned", { removed: await pruneNotifications(db) });
+  if (target === "all") {
+    ctx.log("notifications pruned", { removed: await pruneNotifications(db) });
+    // Cookie (intent 0007, MEM-4, MEM-9): old chat text and long-forgotten facts.
+    ctx.log("assistant pruned", { turns: await pruneHistory(db), memories: await pruneMemories(db) });
+  }
   ctx.log("sync job done", { results });
 }
 

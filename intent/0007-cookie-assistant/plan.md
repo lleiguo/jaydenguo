@@ -78,7 +78,7 @@ is replaced with SP-C2's numbers.
 |---|---|---|---|
 | K3.1 | `memory_search`, `memory_save`, `memory_forget`; keyword search over text and bilingual keywords. | TOOL-8..10, MEM-1, MEM-3, MEM-5..8 | Integration tests, including refusal after a web tool and both language directions. |
 | K3.2 | Memory routes; in the app, the Memory list in Settings → Cookie and "Saved to memory · Undo" in the chat. | MEM-2, MEM-4 | API e2e: save by chat, undo, edit, forget, restore. UI test for the Memory list. |
-| K3.3 | Daily clean-up: turn text after 90 days, forgotten memories after 30. | MEM-4, MEM-9 | Integration test with old rows. |
+| K3.3 | Daily clean-up: turn text after 90 days, forgotten memories after 30 (in the daily sync run). | MEM-4, MEM-9 | Integration test with old rows. |
 
 ### K4: Web tools (≈ 2 days)
 | Task | Description | Spec | Done when |
@@ -136,12 +136,14 @@ K7 2.
 | Task | Status |
 |---|---|
 | SP-C2 | done 2026-10-02 (below). |
-| SP-C1, SP-C3 | not started. SP-C1 needs the owner's recordings (O-1). |
+| SP-C1 | done 2026-10-02 (below): passes, at the bar. |
+| SP-C3 | not started. |
 | SP-C4 | price found (below); the answer quality and data terms are not checked yet. |
-| SP-C5 | the format works with a synthetic clip (below); a clip recorded in the app is still to do. |
+| SP-C5 | Voice Memos clips from the iPhone (48 kHz mono AAC, `.m4a`) are accepted as `audio/mp4` (SP-C1); a clip recorded by the app itself is still to do in K6. |
 | K1.1–K1.7 | built 2026-10-02 on `cookie/k1-backend`; not merged or deployed. |
 | K2.1–K2.5 | built 2026-10-02 on `cookie/k2-ios-chat` (stacked on K1); not merged, no TestFlight build yet. |
-| K3–K7 | not started. |
+| K3.1–K3.3 | built 2026-10-02 on `cookie/k3-memory`; not merged. |
+| K4–K7 | not started. |
 
 **K1 as built (2026-10-02):**
 - *Schema (K1.1).* Migration `0027_assistant`: `assistant_turns` and
@@ -193,6 +195,36 @@ K7 2.
   settings and clear). The UI tests' server now needs
   `ASSISTANT_LLM=fake` (ios/README).
 
+**K3 as built (2026-10-02):**
+- *Tools (K3.1).* `memory_search`, `memory_save`, `memory_forget`
+  (`src/server/assistant/tools/memory.ts`), in the prompt after the hub
+  tools. Saving and forgetting are gated on the question's own words
+  (`asksToRemember`, `asksToForget` in `src/domain/assistant.ts`), not
+  only on the prompt: a hostile event title can't start either. A fact
+  that names a password or holds a card-length number is refused
+  (`looksSecret`). One save and one forget per question.
+- *Search.* In memory over all facts: a search word matches a fact's
+  text or its keywords, in either direction; most matches first, then
+  newest; 8 at most. A fact added by hand has no keywords, so it is
+  found by the words in its text only.
+- *Prompt size.* The memory tools took the prompt and tool list from
+  7,400 to 8,900 characters, over TOOL-15's 8,000. The budget is now
+  10,000 (spec updated): about 30% more tokens in per round.
+- *Routes (K3.2).* `GET`/`POST /memories`, `PATCH`/`DELETE
+  /memories/{id}`, `POST /memories/{id}/restore`. The ask response
+  gained `saved` and `forgot`. "Undo" in the chat forgets what was
+  saved, or restores what was forgotten.
+- *App (K3.2).* Settings → Cookie → Memory: the list, add, edit, swipe
+  to forget, a Forgotten section with restore. "Saved to memory · Undo"
+  under the answer for 10 s. The memory list is never cached on the
+  phone.
+- *Clean-up (K3.3).* In the daily `sync all` run, beside the
+  notification clean-up, so there is no new scheduled job or Terraform.
+- *Tests.* Unit (the three rules), integration (save, both language
+  directions, refusals, one per question, forget and restore, edit,
+  clean-up), API e2e, a UI test (remember, undo, the Memory list), and
+  seven memory cases in the eval set.
+
 **Still open from K1:** the eval's two timeouts and the speed (spec
 K-11); nothing here has run on Cloud Run yet, and Terraform doesn't set
 `ASSISTANT_MODEL` or the cap until K5.3 (the defaults work without).
@@ -234,3 +266,44 @@ sentence spoken by a macOS voice ("Jayden 明天几点有 swim practice？").
   Cookie's calls now time out at 12 s with one retry and 25 s per
   question, and 2 of 43 questions still got no reply in one run. All of
   this is from a home connection; K7.1 measures from Cloud Run.
+
+### SP-C1: transcripts of real mixed-language questions (2026-10-02, done)
+
+The owner recorded 20 questions on the iPhone (O-1): 9 in English, 3
+in Mandarin and 8 mixing both. `scripts/assistant-transcripts.ts` sent
+them to `gemini-3.8-flash` and printed what was heard beside what was
+said. The clips and the sentences stay on the owner's Mac; nothing from
+them is in the repo.
+
+- **Result: 18 of 20 with every key term right** (names, subjects, sport
+  terms, the event and distance), with the spelling list. That is the
+  pass bar in VOX-1, with nothing to spare. One run, one speaker.
+- **The two misses.** One Mandarin clip named one child and was heard
+  as the other, in every run: the worst kind of miss, because the
+  answer would be about the wrong child. One mixed clip lost "this
+  week" to a similar-sounding phrase in one run and was right in
+  another. The transcript on screen (VOX-2) is what catches both.
+- **Harmless differences**, not counted as misses: a name said in
+  Mandarin written in English, "swim" heard as "swimming", grammar
+  tidied ("has" to "have"), a question mark added.
+- **The spelling list matters (VOX-3).** Without the people's names,
+  the primary person's name was misspelt in 10 of 20 clips. With them,
+  never.
+- **Speed.** The transcript alone took a median 2.6 s. Vertex was slow
+  and patchy during the test (single calls of 10–50 s, one 504).
+- **Sent the way the spec draws it** (the clip goes into the tool loop,
+  and the transcript comes back in the final `answer` or `bark`): the
+  first tool call was the right one for 19 of 20 clips, so she
+  understands the questions. But the transcript only exists once the
+  loop ends, and a loop that hits its limit ends with none. This was
+  measured with empty tool results, so its timings mean nothing.
+
+**For K5.1: transcribe first, then ask.** One call turns the clip into
+text (with the spelling list); the text then goes through the same loop
+as a typed question. The transcript is always there and shows while she
+is still looking, the answer is about exactly the words on screen, and
+voice reuses the path the eval set already covers. It costs one more
+model call per spoken question (about 2.5 s and a few hundredths of a
+cent). Spec §4.1 and §3 say "one call gives the transcript and the tool
+calls"; they change when K5.1 is built. Chirp is not needed.
+

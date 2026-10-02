@@ -36,6 +36,38 @@ import Testing
         #expect(message.spokenLabel == "Cookie: Woof! I'm Cookie.")
     }
 
+    @Test func aSavedFactCanBeUndoneFromTheAnswer() throws {
+        let fact = CookieMemory(
+            id: "m1", text: "The spare key is under the blue pot", about: [], via: .chat,
+            savedBy: "pat@example.test", createdAt: "2026-10-02T15:00:00.000Z"
+        )
+        let source = CookieSource(kind: .memory, label: "Memory")
+        let saved = CookieChat.message(.init(
+            turnId: "t1", conversationId: "c1", heard: "Remember the spare key is under the blue pot", language: .en,
+            outcome: .answer, text: "Saved: the spare key is under the blue pot.", sources: [source], saved: fact
+        ))
+        #expect(saved.memory == .init(kind: .saved, id: "m1", text: fact.text))
+        #expect(saved.memory?.label == "Saved to memory")
+        #expect(saved.sourceLine == "From Memory")
+        let forgot = CookieChat.message(.init(
+            turnId: "t2", conversationId: "c1", heard: "Forget the spare key", language: .en,
+            outcome: .answer, text: "Forgotten.", sources: [source], forgot: fact
+        ))
+        #expect(forgot.memory?.kind == .forgot)
+        #expect(forgot.memory?.label == "Forgotten")
+    }
+
+    @Test func theMemoryListSaysWhoSavedEachFactAndWhen() async throws {
+        let memories = try await client.api.listAssistantMemories().ok.body.json.memories
+        #expect(memories.count == 2)
+        let time = HomeTime(identifier: "America/Toronto")
+        #expect(memories[0].savedLine(time).hasPrefix("Saved by owner · "))
+        #expect(!memories[0].savedLine(time).contains("@"))
+        #expect(CookieChat.fact("  Locker 12  ") == "Locker 12")
+        #expect(CookieChat.fact("") == nil)
+        #expect(CookieChat.fact(String(repeating: "a", count: 301)) == nil)
+    }
+
     @Test func webSourcesBecomeLinksOnlyWhenHTTPS() {
         let sources: [CookieSource] = [
             .init(kind: .web, label: "Pool hours", url: "https://pool.example/hours"),

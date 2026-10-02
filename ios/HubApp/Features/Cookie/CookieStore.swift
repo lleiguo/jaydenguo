@@ -64,6 +64,26 @@ final class CookieStore {
         }
     }
 
+    /// "Undo" under an answer that saved or forgot a fact (MEM-2): forgets
+    /// what was saved, or brings back what was forgotten.
+    func undo(_ message: CookieMessage) async -> String? {
+        guard let change = message.memory, let index = messages.firstIndex(where: { $0.id == message.id }) else { return nil }
+        do {
+            switch change.kind {
+            case .saved: _ = try await client.api.forgetAssistantMemory(path: .init(id: change.id)).ok
+            case .forgot: _ = try await client.api.restoreAssistantMemory(path: .init(id: change.id)).ok
+            }
+        } catch {
+            return HubError.from(error)?.message ?? "Couldn't undo that."
+        }
+        // The answer stays; the Undo goes.
+        messages[index] = CookieMessage(
+            id: message.id, role: message.role, text: message.text, kind: message.kind,
+            sourceLine: message.sourceLine, links: message.links
+        )
+        return change.kind == .saved ? "Not saved after all." : "Restored."
+    }
+
     /// After "Clear history", and on sign-out (SEC-3).
     func reset() {
         messages = []
