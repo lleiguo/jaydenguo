@@ -252,6 +252,11 @@ test("a school day's classes fold into one School block that expands and collaps
     await expect(calEvent(page, `Brother last ${RUN}`)).toBeVisible();
     await expect(his).toHaveCount(1);
     await expect(calEvent(page, `His first ${RUN}`)).toHaveCount(0);
+    // One open at a time: opening his own folds his brother's (owner, 2026-10-02).
+    await his.click();
+    await expect(calEvent(page, `His first ${RUN}`)).toBeVisible();
+    await expect(calEvent(page, `Brother first ${RUN}`)).toHaveCount(0);
+    await expect(thursday.filter({ hasText: brotherName })).toHaveCount(1);
   } finally {
     await apiSend(context, "DELETE", `/api/v1/people/${brother}`);
   }

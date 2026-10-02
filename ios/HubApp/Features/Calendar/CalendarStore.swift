@@ -24,9 +24,9 @@ final class CalendarStore {
             if let index { model.saveWidgets(index, filters: filters) }
         }
     }
-    /// School days opened to show each class (SCH-1), for this visit.
-    /// School blocks opened to show their classes, by block id.
-    var expandedSchool: Set<String> = []
+    /// The school block opened to show its classes (SCH-1), by block id,
+    /// for this visit. One at a time: opening another folds this one.
+    var expandedSchool: String?
     /// The agenda hides what's already over unless asked, for this visit.
     var showPast = false
 
@@ -90,15 +90,23 @@ final class CalendarStore {
         /// Days with two or more classes fold them into one block per
         /// child (SCH-1).
         var school: [SchoolBlock] = []
+        /// The block that's open here: its classes are among `timed`.
+        var openSchool: SchoolBlock?
 
         var isEmpty: Bool { allDay.isEmpty && timed.isEmpty && school.isEmpty }
     }
 
     func items(on date: String) -> DayItems {
         let (allDay, timed) = DayLayout.events(on: date, from: shown, homeTime: homeTime)
-        let blocks = SchoolBlock.blocks(timed, homeTime: homeTime).filter { $0.date == date && !expandedSchool.contains($0.id) }
+        let all = SchoolBlock.blocks(timed, homeTime: homeTime).filter { $0.date == date }
+        let blocks = all.filter { $0.id != expandedSchool }
         let folded = Set(blocks.flatMap { $0.classes.map(\.id) })
-        return DayItems(allDay: allDay, timed: timed.filter { !folded.contains($0.id) }, school: blocks)
+        return DayItems(
+            allDay: allDay,
+            timed: timed.filter { !folded.contains($0.id) },
+            school: blocks,
+            openSchool: all.first { $0.id == expandedSchool }
+        )
     }
 
     /// Over already: timed events that have ended, all-day ones from
@@ -119,6 +127,7 @@ final class CalendarStore {
         items.allDay.removeAll { isPast($0, now: now) }
         items.timed.removeAll { isPast($0, now: now) }
         items.school.removeAll { isPast($0, now: now) }
+        if let open = items.openSchool, isPast(open, now: now) { items.openSchool = nil }
         return items
     }
 

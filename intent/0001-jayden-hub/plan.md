@@ -492,6 +492,11 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   division don't close the other's day. No migration. The key dates
   source covers both when both are its owners and a title rule gives each
   division's items to its child.
+- M4.2, one school block open at a time (owner, 2026-10-02): opening a
+  child's block folds whichever was open (web and the iPhone app). In the
+  app the open block keeps a row of its own to fold it again: in the
+  agenda above the day's events, in the day and week views in the all-day
+  row. The web keeps its "Collapse school" button.
 - M4.3 deferred (owner, 2026-09-28): homework and grades wait. When they
   resume: SP-5's result (Classroom connect with his school account) is
   still unreported. The fallback is Veracross, now signed in: each child
