@@ -6,6 +6,7 @@ import SwiftUI
 struct CookieChatSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @FocusState private var typing: Bool
     private let bottom = "bottom"
 
@@ -50,17 +51,37 @@ struct CookieChatSheet: View {
             }
         }
         .task { await store.loadIfNeeded() }
+        // Closing the chat mid-recording throws the recording away.
+        .onDisappear { if model.cookieTalk.isRecording { model.cookieTalk.reset() } }
     }
 
     private func field(_ store: CookieStore) -> some View {
         @Bindable var store = store
+        let talk = model.cookieTalk
         let tooLong = store.draft.count > CookieChat.questionLimit
         return VStack(alignment: .leading, spacing: 4) {
             if tooLong {
                 Text("That's too long: \(store.draft.count) of \(CookieChat.questionLimit) characters.")
                     .font(.caption).foregroundStyle(.red)
             }
+            if talk.isRecording {
+                Label("Listening… \(CookieVoice.clock(talk.elapsed)). Tap the microphone to send.", systemImage: "waveform")
+                    .font(.caption).foregroundStyle(.red)
+                    .accessibilityIdentifier("cookieListening")
+            } else if case .hint(let text, let settings) = talk.phase {
+                HStack {
+                    Text(text).font(.caption).foregroundStyle(.secondary)
+                    if settings {
+                        Button("Open Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                        }
+                        .font(.caption.bold())
+                    }
+                }
+                .accessibilityIdentifier("cookieHint")
+            }
             HStack(alignment: .bottom, spacing: 8) {
+                mic(talk)
                 TextField("Ask Cookie", text: $store.draft, axis: .vertical)
                     .lineLimit(1...4)
                     .focused($typing)
@@ -81,6 +102,26 @@ struct CookieChatSheet: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(.bar)
+    }
+
+    /// CK-5: a way to speak that needs no long press. Tap to start, tap
+    /// to send; while she is speaking it stops her instead.
+    private func mic(_ talk: CookieTalk) -> some View {
+        Button {
+            if talk.isSpeaking { return talk.stopSpeaking() }
+            typing = false
+            Task { await talk.toggle(offline: model.offlineSince != nil) }
+        } label: {
+            Image(systemName: talk.isSpeaking ? "speaker.slash.circle.fill" : talk.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                .font(.system(size: 32))
+                .foregroundStyle(talk.isRecording ? AnyShapeStyle(.red) : AnyShapeStyle(.tint))
+                .scaleEffect(talk.isRecording ? 1 + talk.level * 0.25 : 1)
+                .animation(.linear(duration: 0.08), value: talk.level)
+        }
+        .disabled(talk.phase == .asking || (model.cookie.isAsking && !talk.isSpeaking))
+        .accessibilityLabel(talk.isSpeaking ? "Stop speaking" : talk.isRecording ? "Stop and send" : "Speak to Cookie")
+        .accessibilityIdentifier("cookieMic")
+        .sensoryFeedback(.impact(weight: .medium), trigger: talk.began)
     }
 
     private func send(_ store: CookieStore) {

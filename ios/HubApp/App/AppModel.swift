@@ -64,11 +64,14 @@ final class AppModel {
     let client: HubClient
     let lock: AppLock
     let cookie: CookieStore
+    /// Talking to her: recording and speech (plan K6).
+    let cookieTalk: CookieTalk
 
     init(client: HubClient, events: AsyncStream<HubEvent>, lock: AppLock) {
         self.client = client
         self.lock = lock
         cookie = CookieStore(client: client)
+        cookieTalk = CookieTalk(store: cookie, client: client)
         phase = client.isSignedIn ? .signedIn : .signedOut
         Task { [weak self] in
             for await event in events { self?.handle(event) }
@@ -148,6 +151,7 @@ final class AppModel {
 
     private func wipe() {
         // The client already removed the token and the offline cache (SEC-3).
+        cookieTalk.reset()
         cookie.reset()
         cookieOpen = false
         widgetItems = nil

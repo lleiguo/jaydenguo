@@ -54,6 +54,8 @@ targets:
           - CFBundleURLName: com.jaydenguo.hub
             CFBundleURLSchemes: [jaydenguohub]
         NSFaceIDUsageDescription: Face ID keeps the hub locked when someone else picks up your phone.
+        # Cookie listens only while her button is held (intent 0007, CK-6).
+        NSMicrophoneUsageDescription: Cookie listens while you hold her button, to hear your question. Recordings aren't kept.
         HubAppGroup: $(HUB_APP_GROUP)
         # Background app refresh keeps the widgets current (EXT-2).
         UIBackgroundModes: [fetch]

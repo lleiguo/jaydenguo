@@ -48,9 +48,18 @@ final class CookieTests: XCTestCase {
         return fetch(r)
     }
 
-    private func launch() -> XCUIApplication {
+    /// With `speaking`, the app "records" a fixture clip (synthetic speech),
+    /// so the microphone is never used; the stand-in server hears "What's
+    /// on today?" in any clip.
+    private func launch(speaking: Bool = false) throws -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-HubBaseURL", server, "-HubUITestToken", token, "-HubNoLock"]
+        if speaking {
+            let clip = URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+                .appendingPathComponent("tests/fixtures/assistant/question.m4a")
+            app.launchArguments += ["-HubCookieClip", try Data(contentsOf: clip).base64EncodedString()]
+        }
         app.launch()
         XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20))
         return app
@@ -67,7 +76,7 @@ final class CookieTests: XCTestCase {
     /// CK-1, CK-4, CHR-2, CHR-4: the button is on every tab; a tap opens the
     /// chat; an answer names its source; an unknown gets a bark.
     func testAskingAndABark() throws {
-        let app = launch()
+        let app = try launch()
         let button = app.buttons["cookieButton"]
         XCTAssertTrue(button.waitForExistence(timeout: 10))
         for tab in ["Calendar", "Tennis", "Swimming", "More", "Today"] {
@@ -97,13 +106,13 @@ final class CookieTests: XCTestCase {
 
     /// MEM-9: history comes back from the server after a restart.
     func testHistoryComesBackAfterARestart() throws {
-        var app = launch()
+        var app = try launch()
         app.buttons["cookieButton"].tap()
         ask(app, "Hello Cookie")
         XCTAssertTrue(app.descendants(matching: .any)["cookieAnswer"].firstMatch.waitForExistence(timeout: 20))
         app.terminate()
 
-        app = launch()
+        app = try launch()
         app.buttons["cookieButton"].tap()
         let question = app.descendants(matching: .any)["cookieQuestion"].firstMatch
         XCTAssertTrue(question.waitForExistence(timeout: 20))
@@ -113,7 +122,7 @@ final class CookieTests: XCTestCase {
     /// LIM-5, MEM-9: Settings → Cookie shows the month's spend and limit,
     /// and clears the chat.
     func testSettingsShowTheLimitAndClearTheChat() throws {
-        let app = launch()
+        let app = try launch()
         app.buttons["cookieButton"].tap()
         ask(app, "Hello Cookie")
         XCTAssertTrue(app.descendants(matching: .any)["cookieAnswer"].firstMatch.waitForExistence(timeout: 20))
@@ -140,7 +149,7 @@ final class CookieTests: XCTestCase {
     /// MEM-2, MEM-4: a fact saved in the chat can be undone there, and the
     /// Memory list adds, shows and forgets facts.
     func testRememberingUndoAndTheMemoryList() throws {
-        let app = launch()
+        let app = try launch()
         app.buttons["cookieButton"].tap()
         ask(app, "Remember that the spare key is under the blue pot")
         let answer = app.descendants(matching: .any)["cookieAnswer"].firstMatch
@@ -190,7 +199,7 @@ final class CookieTests: XCTestCase {
     /// searches.
     func testTheWebIsOffUntilSwitchedOn() throws {
         request("PATCH", "/api/v1/assistant/settings", body: #"{"web":false,"privateTerms":[]}"#)
-        let app = launch()
+        let app = try launch()
         app.buttons["cookieButton"].tap()
         ask(app, "Search for pool opening hours")
         XCTAssertTrue(app.descendants(matching: .any)["cookieBark"].firstMatch.waitForExistence(timeout: 20))
@@ -223,5 +232,73 @@ final class CookieTests: XCTestCase {
         ask(app, "Search for Maple School term dates")
         XCTAssertTrue(app.descendants(matching: .any)["cookieBark"].firstMatch.waitForExistence(timeout: 20))
         request("PATCH", "/api/v1/assistant/settings", body: #"{"web":false,"privateTerms":[]}"#)
+    }
+
+    /// CK-2, CK-3, VOX-2: holding her button asks out loud; what she heard
+    /// and her answer show in a bubble, and tapping it opens the chat.
+    func testHoldingTheButtonAsksOutLoud() throws {
+        let app = try launch(speaking: true)
+        let button = app.buttons["cookieButton"]
+        XCTAssertTrue(button.waitForExistence(timeout: 10))
+        button.press(forDuration: 1.5)
+
+        let bubble = app.buttons["cookieBubble"].firstMatch
+        XCTAssertTrue(bubble.waitForExistence(timeout: 20))
+        XCTAssertTrue(bubble.label.hasPrefix("You asked: What's on today?"), bubble.label)
+        XCTAssertTrue(bubble.label.contains("From Today"), bubble.label)
+        // The chat wasn't opened by the hold.
+        XCTAssertFalse(app.navigationBars["Cookie"].exists)
+
+        bubble.tap()
+        XCTAssertTrue(app.navigationBars["Cookie"].waitForExistence(timeout: 10))
+        let question = app.descendants(matching: .any)["cookieQuestion"].firstMatch
+        XCTAssertTrue(question.waitForExistence(timeout: 10))
+        XCTAssertEqual(question.label, "You asked: What's on today?")
+        XCTAssertTrue(app.descendants(matching: .any)["cookieAnswer"].firstMatch.exists)
+    }
+
+    /// CK-2: a press too short to be a question is thrown away, with a hint.
+    func testAShortPressIsNotAQuestion() throws {
+        let app = try launch(speaking: true)
+        let button = app.buttons["cookieButton"]
+        XCTAssertTrue(button.waitForExistence(timeout: 10))
+        button.press(forDuration: 0.4)
+        let hint = app.descendants(matching: .any)["cookieHint"].firstMatch
+        XCTAssertTrue(hint.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Hold to talk"].exists)
+        XCTAssertFalse(app.navigationBars["Cookie"].exists)
+    }
+
+    /// CK-5, VOX-5: the chat's mic button needs no long press (tap to start,
+    /// tap to send), and "Spoken answers" can be switched off.
+    func testTheMicButtonAndSpokenAnswers() throws {
+        request("PATCH", "/api/v1/assistant/settings", body: #"{"speak":true}"#)
+        let app = try launch(speaking: true)
+        app.buttons["cookieButton"].tap()
+        let mic = app.buttons["cookieMic"]
+        XCTAssertTrue(mic.waitForExistence(timeout: 10))
+        XCTAssertEqual(mic.label, "Speak to Cookie")
+        mic.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["cookieListening"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(mic.label, "Stop and send")
+        mic.tap()
+        let question = app.descendants(matching: .any)["cookieQuestion"].firstMatch
+        XCTAssertTrue(question.waitForExistence(timeout: 20))
+        XCTAssertEqual(question.label, "You asked: What's on today?")
+        XCTAssertTrue(app.descendants(matching: .any)["cookieAnswer"].firstMatch.waitForExistence(timeout: 10))
+        app.buttons["Done"].tap()
+
+        app.tabBars.buttons["More"].tap()
+        let row = app.collectionViews.buttons["Cookie"].firstMatch
+        for _ in 0..<4 where !row.isHittable { app.swipeUp() }
+        row.tap()
+        let toggle = app.switches["cookieSpeak"].firstMatch
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        XCTAssertEqual(toggle.value as? String, "1")
+        toggle.switches.firstMatch.exists ? toggle.switches.firstMatch.tap() : toggle.tap()
+        let deadline = Date.now.addingTimeInterval(10)
+        while toggle.value as? String != "0", Date.now < deadline { usleep(200_000) }
+        XCTAssertEqual(toggle.value as? String, "0")
+        request("PATCH", "/api/v1/assistant/settings", body: #"{"speak":true}"#)
     }
 }

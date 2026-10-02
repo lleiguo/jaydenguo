@@ -71,7 +71,10 @@ DATABASE_URL=postgres://hub:hub@localhost:5433/hub_fixtures APP_URL=http://local
 ```
 
 `ASSISTANT_LLM=fake` gives Cookie a stand-in model (intent 0007), so the
-chat tests don't call Vertex AI.
+chat tests don't call Vertex AI. Her voice tests never use the
+microphone: they start the app with `-HubCookieClip <base64>` (debug
+builds only), which makes the recorder hand over that clip, a made-up
+voice from `tests/fixtures/assistant/question.m4a`.
 
 `pnpm seed` puts the sample email suggestions back, so the tests that use
 them up can run again; re-run it between full test runs.

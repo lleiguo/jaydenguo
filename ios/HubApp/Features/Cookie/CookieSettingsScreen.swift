@@ -3,7 +3,7 @@ import HubKit
 import SwiftUI
 
 /// Settings → Cookie (intent 0007): what she has cost this month against
-/// the monthly limit (LIM-5), the web (TOOL-17, CSEC-3), her memory
+/// the monthly limit (LIM-5), spoken answers (VOX-5), the web (TOOL-17, CSEC-3), her memory
 /// (MEM-4), and clearing the chat (MEM-9).
 struct CookieSettingsScreen: View {
     @Environment(AppModel.self) private var model
@@ -30,6 +30,12 @@ struct CookieSettingsScreen: View {
                     Text("This month")
                 } footer: {
                     Text("An estimate in US dollars, from what each question used. At the limit Cookie stops answering until next month, or until you raise it.")
+                }
+                Section {
+                    Toggle("Spoken answers", isOn: Binding(get: { settings.speak }, set: { on in Task { await setSpeak(on) } }))
+                        .accessibilityIdentifier("cookieSpeak")
+                } footer: {
+                    Text("When you talk to Cookie, she answers out loud as well as in writing. Typed questions are never read out.")
                 }
                 Section {
                     Toggle("Use the web", isOn: Binding(get: { settings.web }, set: { on in Task { await setWeb(on) } }))
@@ -69,12 +75,17 @@ struct CookieSettingsScreen: View {
         let next = await load { try await model.client.api.getAssistantSettings().ok.body.json }
         if case .failed = next, state.value != nil { return }
         state = next
+        if let settings = next.value { model.cookie.spokenAnswers = settings.speak }
     }
 
     private func setCap(_ cap: Double) async {
         await update("Couldn't change the limit.") {
             try await model.client.api.updateAssistantSettings(body: .json(.init(monthlyCapUsd: cap))).ok.body.json
         }
+    }
+
+    private func setSpeak(_ on: Bool) async {
+        await update("Couldn't change that.") { try await model.client.api.updateAssistantSettings(body: .json(.init(speak: on))).ok.body.json }
     }
 
     private func setWeb(_ on: Bool) async {
@@ -90,7 +101,9 @@ struct CookieSettingsScreen: View {
     @discardableResult
     private func update(_ fallback: String, _ work: () async throws -> CookieSettings) async -> Bool {
         do {
-            state = .loaded(try await work())
+            let settings = try await work()
+            state = .loaded(settings)
+            model.cookie.spokenAnswers = settings.speak
             return true
         } catch {
             model.show(HubError.from(error)?.message ?? fallback)
