@@ -571,19 +571,22 @@
         "day": "2026-09-29",
         "video": 0,
         "email": 0,
-        "explanation": 0
+        "explanation": 0,
+        "assistant": 0
       },
       {
         "day": "2026-09-30",
         "video": 0.1,
         "email": 0,
-        "explanation": 0
+        "explanation": 0,
+        "assistant": 0
       }
     ],
     "month": {
       "video": 0.1,
       "email": 0,
-      "explanation": 0
+      "explanation": 0,
+      "assistant": 0
     }
   }
 }

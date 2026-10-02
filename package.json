@@ -22,7 +22,8 @@
     "job": "tsx src/worker/main.ts",
     "smoke": "tsx src/worker/main.ts smoke",
     "seed": "tsx src/worker/main.ts seed",
-    "openapi": "tsx scripts/openapi.ts"
+    "openapi": "tsx scripts/openapi.ts",
+    "assistant:eval": "tsx scripts/assistant-eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/vertex-sdk": "^0.19.11",

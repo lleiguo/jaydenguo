@@ -1,7 +1,8 @@
 # Intent: Cookie, a voice-first family assistant in the app
-Status: approved to go to spec (owner, 2026-10-01, in chat: "go ahead
-with a plan.md and spec.md"). Drafted by Claude from the owner's request.
-The open questions are not answered yet; spec §6 lists the defaults taken.
+Status: approved (owner, 2026-10-02, in chat: "spec and plan looks good,
+let's start the implementation"). Drafted by Claude from the owner's
+request. Open questions answered 2026-10-02 by keeping the defaults in
+spec §6.
 Owner: Jayden's parent (lleiguo).
 
 "I'd like to build an AI assistant into the app, the name is 'Cookie',
@@ -160,8 +161,8 @@ in front of the same model.
 - Keep running costs low.
 
 ## Assumptions (defaults until the owner says otherwise)
-- iPhone app first. The website gets the chat box (typing only) in the
-  same intent, voice on the website later.
+- iPhone app only (owner, 2026-10-02). Whether the website gets Cookie
+  is decided later, in its own intent.
 - No wake word and no always-on listening. She listens only while the
   icon is held.
 - She saves a memory only when told to, never on her own from
@@ -181,7 +182,8 @@ in front of the same model.
    player, Face ID lock)? Should it be draggable?
 4. Are there things she should refuse to say out loud, since the
    children will hear her (costs, for example)?
-5. Should the website get voice too, or is typing enough there?
+5. Should the website get Cookie at all, and with voice? (Owner,
+   2026-10-02: app only for now; decided later.)
 6. How long should conversation history be kept: forever like the
    calendar, or a rolling window?
 7. Which voice: a plain friendly one, or something more dog-like? And

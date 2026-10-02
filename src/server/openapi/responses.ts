@@ -7,6 +7,9 @@
 
 import type { CalendarPayload, ClashView, EventView, Undo } from "@/lib/calendar-types";
 import type { Person } from "@/domain/people";
+import type { AskResult } from "../assistant/ask";
+import type { AssistantSettings } from "../assistant/settings";
+import type { TurnView } from "../assistant/turns";
 import type { listSessions } from "../auth/session";
 import type { copyAccounts, CopySettings, setCopy } from "../calendar-copy";
 import type { getSeries } from "../calendar/mutations";
@@ -120,3 +123,9 @@ export type VideoSettingsResponse = { google: { drive: boolean; photos: boolean 
 // detect → DetectOutput, review and combinedReview → ReviewOutput.
 export type DetectOutput = Detected;
 export type ReviewOutput = Review;
+
+// Cookie, the family assistant (intent 0007)
+export type AssistantAnswer = AskResult;
+export type AssistantTurnsResponse = { turns: TurnView[]; more: boolean };
+// `monthSpendUsd` is estimated from tokens and list prices (LIM-6).
+export type AssistantSettingsResponse = AssistantSettings & { monthSpendUsd: number };

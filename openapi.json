@@ -4868,6 +4868,219 @@
           }
         }
       }
+    },
+    "/api/v1/assistant/ask": {
+      "post": {
+        "operationId": "askAssistant",
+        "summary": "Ask Cookie a question; she answers from the hub or barks.",
+        "description": "Spec: CK-4, CHR-1..7, LIM-1..6",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "conversationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assistant/turns": {
+      "get": {
+        "operationId": "listAssistantTurns",
+        "summary": "This account's chat with Cookie, newest last.",
+        "description": "Spec: MEM-9",
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantTurnsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "clearAssistantHistory",
+        "summary": "Clear the words of every turn; costs stay.",
+        "description": "Spec: MEM-9",
+        "responses": {
+          "204": {
+            "description": "Done."
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assistant/settings": {
+      "get": {
+        "operationId": "getAssistantSettings",
+        "summary": "Cookie's monthly cap, spoken answers, web use and this month's spend.",
+        "description": "Spec: LIM-5, VOX-5, TOOL-17, CSEC-3",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantSettingsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateAssistantSettings",
+        "summary": "Change Cookie's settings.",
+        "description": "Spec: LIM-5, VOX-5, TOOL-17, CSEC-3",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "monthlyCapUsd": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 200
+                  },
+                  "speak": {
+                    "type": "boolean"
+                  },
+                  "web": {
+                    "type": "boolean"
+                  },
+                  "privateTerms": {
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 60
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantSettingsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4896,6 +5109,128 @@
         },
         "required": [
           "eventId"
+        ]
+      },
+      "AskResult": {
+        "type": "object",
+        "properties": {
+          "turnId": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "heard": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "zh",
+              "mixed"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "answer",
+              "bark",
+              "limit",
+              "error"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssistantSource"
+            }
+          }
+        },
+        "required": [
+          "turnId",
+          "conversationId",
+          "heard",
+          "language",
+          "outcome",
+          "text",
+          "sources"
+        ]
+      },
+      "AssistantSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "monthlyCapUsd": {
+            "type": "number"
+          },
+          "speak": {
+            "type": "boolean"
+          },
+          "web": {
+            "type": "boolean"
+          },
+          "privateTerms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "monthSpendUsd": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "monthlyCapUsd",
+          "speak",
+          "web",
+          "privateTerms",
+          "monthSpendUsd"
+        ]
+      },
+      "AssistantSource": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "hub",
+              "memory",
+              "web",
+              "conversation",
+              "self"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label"
+        ]
+      },
+      "AssistantTurnsResponse": {
+        "type": "object",
+        "properties": {
+          "turns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TurnView"
+            }
+          },
+          "more": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "turns",
+          "more"
         ]
       },
       "Backtest": {
@@ -5600,20 +5935,24 @@
               "month": {
                 "type": "object",
                 "properties": {
-                  "video": {
+                  "email": {
                     "type": "number"
                   },
-                  "email": {
+                  "video": {
                     "type": "number"
                   },
                   "explanation": {
                     "type": "number"
+                  },
+                  "assistant": {
+                    "type": "number"
                   }
                 },
                 "required": [
-                  "video",
                   "email",
-                  "explanation"
+                  "video",
+                  "explanation",
+                  "assistant"
                 ]
               }
             },
@@ -6431,13 +6770,17 @@
           },
           "explanation": {
             "type": "number"
+          },
+          "assistant": {
+            "type": "number"
           }
         },
         "required": [
           "day",
           "video",
           "email",
-          "explanation"
+          "explanation",
+          "assistant"
         ]
       },
       "Forecast": {
@@ -9670,6 +10013,77 @@
           "events",
           "entryStatus",
           "record"
+        ]
+      },
+      "TurnView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "text",
+              "voice"
+            ]
+          },
+          "heard": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "answer",
+              "bark",
+              "limit",
+              "error"
+            ]
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "en",
+              "zh",
+              "mixed",
+              null
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssistantSource"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "mode",
+          "heard",
+          "text",
+          "outcome",
+          "language",
+          "sources",
+          "createdAt"
         ]
       },
       "Undo": {
