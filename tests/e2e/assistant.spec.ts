@@ -115,6 +115,52 @@ test("Cookie remembers, recalls, forgets and restores a fact (MEM-1..5)", async 
   expect((await apiSend(context, "GET", "/api/v1/assistant/memories")).memories).toHaveLength(2);
 });
 
+test("Cookie uses the web only when it is switched on (TOOL-11, TOOL-12, TOOL-17)", async ({
+  context,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "one shared setting; one project is enough");
+  await signInAs(context, OWNER);
+  await apiSend(context, "PATCH", "/api/v1/assistant/settings", { web: false, privateTerms: [] });
+  const off = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+    text: "Search for pool opening hours",
+  });
+  expect(off.outcome).toBe("bark");
+
+  const on = await apiSend(context, "PATCH", "/api/v1/assistant/settings", {
+    web: true,
+    privateTerms: ["Maple School"],
+  });
+  expect(on).toMatchObject({ web: true, privateTerms: ["Maple School"] });
+  try {
+    const found = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+      text: "Search for pool opening hours",
+    });
+    expect(found).toMatchObject({
+      outcome: "answer",
+      text: "A made-up web answer about pool opening hours.",
+      sources: [
+        { kind: "web", label: "example.com", url: "https://example.com/found" },
+        { kind: "web", label: "Google: pool opening hours" },
+      ],
+    });
+    // A search naming something on the private list is refused (CSEC-3).
+    const named = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+      text: "Search for Maple School term dates",
+    });
+    expect(named.outcome).toBe("bark");
+    // A link in the question is read, and named as the source.
+    const page = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+      text: "What are the hours on https://pool.example/hours",
+    });
+    expect(page).toMatchObject({
+      outcome: "answer",
+      sources: [{ kind: "web", label: "A made-up page", url: "https://pool.example/hours" }],
+    });
+  } finally {
+    await apiSend(context, "PATCH", "/api/v1/assistant/settings", { web: false, privateTerms: [] });
+  }
+});
+
 test("Cookie refuses an empty or over-long question (LIM-3)", async ({ context }) => {
   await signInAs(context, OWNER);
   for (const text of ["   ", "a".repeat(501)]) {

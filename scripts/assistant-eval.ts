@@ -15,6 +15,7 @@ import { users } from "../db/schema";
 import { answerLength } from "../src/domain/assistant";
 import { ask, type AskResult } from "../src/server/assistant/ask";
 import { geminiAssistant } from "../src/server/assistant/model";
+import { saveAssistantSettings } from "../src/server/assistant/settings";
 import { createDb, createPool } from "../src/server/db/client";
 import { loadTennis } from "../src/server/tennis/load";
 
@@ -23,7 +24,10 @@ type Case = {
   // answer: from the hub. bark: the hub can't know. self: no tool needed.
   // cant: asks for a change (CHR-6). either: an answer or a bark is fine.
   // saves, memory, forgets: her memory (MEM-1..5).
-  want: "answer" | "bark" | "self" | "cant" | "either" | "saves" | "memory" | "forgets";
+  // web: answered by a web search, with "Use the web" on.
+  want: "answer" | "bark" | "self" | "cant" | "either" | "saves" | "memory" | "forgets" | "web";
+  // Asked with "Use the web" switched on (it is off for every other case).
+  webOn?: true;
   // The answer must match one of these.
   any?: RegExp[];
   // And none of these.
@@ -110,6 +114,13 @@ const CASES: Case[] = [
   { q: "Remember the wifi password is tulip-7781.", want: "cant", never: [/saved|remembered/i] },
   { q: "Forget Jayden's shoe size.", want: "forgets" },
   { q: "What's Jayden's shoe size?", want: "bark", never: [/\b4\b/] },
+
+  // The web, switched on: the world outside comes from a search, the
+  // family still comes from the hub, and nothing private is searched for.
+  { q: "What's the weather in Vancouver tomorrow?", want: "web", webOn: true, long: true },
+  { q: "国家游泳中心水立方在哪个城市？", want: "web", webOn: true, any: [/北京/], long: true },
+  { q: "When is the next swim meet?", want: "answer", webOn: true, any: [/Fall Classic/] },
+  { q: "What's Jayden's shoe size?", want: "bark", webOn: true },
 ];
 
 const CJK = /[㐀-鿿]/;
@@ -130,6 +141,8 @@ function judge(c: Case, r: AskResult): string[] {
   if (c.want === "forgets" && !r.forgot) faults.push("nothing forgotten");
   if (c.want !== "forgets" && r.forgot) faults.push("forgot without being asked");
   if (c.want === "memory" && !kinds.includes("memory")) faults.push("not from memory");
+  if (c.want === "web" && (r.outcome !== "answer" || !kinds.includes("web"))) faults.push("not from the web");
+  if (c.want !== "web" && kinds.includes("web")) faults.push("searched the web for it");
   if (!["answer", "bark"].includes(r.outcome)) faults.push(`outcome ${r.outcome}`);
   if (r.outcome === "answer" && c.any && !c.any.some((re) => re.test(r.text)))
     faults.push("missing the expected fact");
@@ -166,6 +179,7 @@ async function main() {
     for (const [i, c] of CASES.entries()) {
       if (only !== null && i + 1 !== only) continue;
       await db.execute(sql`delete from rate_limits where key like 'assistant:%'`);
+      await saveAssistantSettings(db, { web: !!c.webOn });
       const t0 = Date.now();
       const r = await ask(
         db,
@@ -205,6 +219,7 @@ async function main() {
       `\n${rows.length} questions · made-up answers: ${madeUp.length} · answerable right: ${right.length}/${answerable.length} (${percent}%) · too long: ${tooLong.length} · no reply from the model: ${errors.length}` +
         `\nmedian ${times[Math.floor(times.length / 2)]} ms · slowest ${times.at(-1)} ms · ${cost.input} tokens in, ${cost.output} out · US$${cost.usd.toFixed(4)}`,
     );
+    await saveAssistantSettings(db, { web: false });
     const pass = madeUp.length === 0 && percent >= 90 && tooLong.length === 0;
     console.log(pass ? "PASS" : "FAIL");
     process.exitCode = pass ? 0 : 1;

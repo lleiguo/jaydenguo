@@ -138,12 +138,13 @@ K7 2.
 | SP-C2 | done 2026-10-02 (below). |
 | SP-C1 | done 2026-10-02 (below): passes, at the bar. |
 | SP-C3 | not started. |
-| SP-C4 | price found (below); the answer quality and data terms are not checked yet. |
+| SP-C4 | done 2026-10-02 (below). |
 | SP-C5 | Voice Memos clips from the iPhone (48 kHz mono AAC, `.m4a`) are accepted as `audio/mp4` (SP-C1); a clip recorded by the app itself is still to do in K6. |
 | K1.1–K1.7 | built 2026-10-02 on `cookie/k1-backend`; not merged or deployed. |
 | K2.1–K2.5 | built 2026-10-02 on `cookie/k2-ios-chat` (stacked on K1); not merged, no TestFlight build yet. |
 | K3.1–K3.3 | built 2026-10-02 on `cookie/k3-memory`; not merged. |
-| K4–K7 | not started. |
+| K4.1–K4.3 | built 2026-10-02 on `cookie/k4-web` (stacked on K3); not merged. |
+| K5–K7 | not started. |
 
 **K1 as built (2026-10-02):**
 - *Schema (K1.1).* Migration `0027_assistant`: `assistant_turns` and
@@ -224,6 +225,49 @@ K7 2.
   directions, refusals, one per question, forget and restore, edit,
   clean-up), API e2e, a UI test (remember, undo, the Memory list), and
   seven memory cases in the eval set.
+
+**K4 as built (2026-10-02):**
+- *Google's terms changed the design* (spec §4.7, read in SP-C4). A
+  search's answer must be shown as it is and not mixed or rewritten, so
+  `web_search` **ends the question**: the server returns Google's
+  answer word for word with its pages and searches as links, and it
+  never goes back to Cookie's model. And a result's links may not be
+  followed by software, so `web_fetch` reads **only a link written in
+  the question**, not one from a search. Spec TOOL-11, TOOL-12, CSEC-3
+  and CSEC-4 are rewritten to match.
+- *Search (K4.1).* `src/server/assistant/web.ts`: one grounded call that
+  sees only the query and is asked for two sentences in the question's
+  language, or `NO_ANSWER`. An answer with no page behind it is treated
+  as no answer. The query filter (`webQueryProblem`) refuses the
+  people's names and the private words. Each Google search is counted
+  at US$0.014 against the cap, though the first 5,000 a month are free.
+- *Off means absent.* While "Use the web" is off the web tools and the
+  prompt's web paragraph aren't sent, so they cost no tokens.
+- *Fetch (K4.2).* `guardedFetch`: `node:https` with a DNS lookup that
+  refuses non-public addresses at connection time, so there is no gap
+  between checking an address and using it. Tried live: a public page
+  reads; the metadata host and a name that resolves to 127.0.0.1 are
+  refused; a site that blocks bots answers 403 and she says so. The
+  "integration test against a local page" became unit tests with a
+  made-up transport, because the fetcher refuses local addresses by
+  design.
+- *Hostile content (K4.3).* A page and an event title that tell her to
+  save a memory, fetch another link or search for a person: all refused
+  (integration tests).
+- *App.* Settings → Cookie: "Use the web" and "Never send to the web"
+  (add and remove words). Web answers show their pages and searches as
+  links under the bubble.
+- *Limits.* A second search or a second page in one question is over
+  LIM-1 and ends it in a bark.
+- *Eval, 2026-10-02 (K3 and K4 together), 54 questions:* made-up
+  answers 0; answerable right 39 of 43 (91%); too long 0; no reply from
+  the model 6 (Vertex was still failing now and then, and all four
+  wrong answers were among those). Every memory case that got a reply
+  was right: saved in one language and recalled in the other, a
+  password refused, forgotten, then a bark. With the web on, two world
+  questions were answered by a live search with their pages, a hub
+  question still came from the hub, and a family question the hub can't
+  answer got a bark, not a search. Median 7.9 s on a bad Vertex day.
 
 **Still open from K1:** the eval's two timeouts and the speed (spec
 K-11); nothing here has run on Cloud Run yet, and Terraform doesn't set
@@ -306,4 +350,20 @@ voice reuses the path the eval set already covers. It costs one more
 model call per spoken question (about 2.5 s and a few hundredths of a
 cent). Spec §4.1 and §3 say "one call gives the transcript and the tool
 calls"; they change when K5.1 is built. Chirp is not needed.
+
+### SP-C4: search grounding (2026-10-02, done)
+
+- **It works as a separate call that sees only the query.** Four
+  questions (pool hours, a tennis rule, tomorrow's weather, a venue's
+  address in Mandarin) each came back with a one- or two-sentence
+  answer in the query's language and 1–4 source pages.
+- **Sources** come as a site name and a Google redirect link, not the
+  page's own address. One search prompt made 1–4 Google searches.
+- **Speed:** 4–17 s per search. Much slower than a hub question.
+- **Price:** 5,000 searches a month free, then US$14 per 1,000; plus
+  about 60 tokens in and 40–140 out.
+- **Data terms** (Service Specific Terms, read 2026-10-02): queries are
+  stored up to three days for debugging, not tied to the customer or
+  its users. The use restrictions are summarised in spec §4.7; they
+  changed the design of both web tools.
 

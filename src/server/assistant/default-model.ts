@@ -1,4 +1,5 @@
 import { geminiAssistant, scriptedAssistant, type AssistantModel, type ModelCall } from "./model";
+import { fakeFetch, fakeSearch, geminiSearch, guardedFetch, type PageFetch, type WebSearch } from "./web";
 
 // Gemini on Vertex AI in production; a stand-in when ASSISTANT_LLM=fake
 // (local development and end-to-end tests; never on Cloud Run).
@@ -11,6 +12,12 @@ export function defaultAssistant(): AssistantModel {
   return geminiAssistant();
 }
 
+// The web to match: the real search and page fetcher, or made-up ones.
+export function defaultWeb(): { search: WebSearch; fetch: PageFetch } {
+  if (process.env.ASSISTANT_LLM === "fake") return { search: fakeSearch, fetch: fakeFetch };
+  return { search: (query, language) => geminiSearch()(query, language), fetch: guardedFetch() };
+}
+
 const textOf = (parts: { text?: string }[] | undefined) => parts?.map((p) => p.text ?? "").join("") ?? "";
 
 type FakeFact = { id: string; fact: string };
@@ -18,7 +25,8 @@ type FakeFact = { id: string; fact: string };
 // Answers a handful of fixed questions so the chat can be tried without
 // Vertex AI: "today" looks at the Today view, "hello" greets, "remember …"
 // saves the rest of the sentence, "forget …" forgets the first fact that
-// matches, and anything else is looked up in memory, then gets a bark.
+// matches, "search for …" searches the web, a link is read, and anything
+// else is looked up in memory, then gets a bark.
 export function fakeAssistant(): AssistantModel {
   return scriptedAssistant((request, round): ModelCall[] => {
     const question = textOf(
@@ -56,6 +64,15 @@ export function fakeAssistant(): AssistantModel {
     }
     if (/^(hi|hello|你好)/i.test(question))
       return say(zh ? "汪！我是 Cookie。" : "Woof! I'm Cookie.", ["self"]);
+
+    const link = question.match(/https:\/\/\S+/)?.[0];
+    if (link) {
+      if (round === 1) return [{ name: "web_fetch", args: { url: link } }];
+      const page = result as { text?: string } | undefined;
+      return page?.text ? say(page.text, ["web"]) : bark;
+    }
+    const search = question.match(/^(?:search(?: the web)? for|搜索)\s*(.+?)[.。?？]?$/i);
+    if (search) return round === 1 ? [{ name: "web_search", args: { query: search[1] } }] : bark;
 
     const remember = question.match(/^(?:remember(?: that)?|记住)\s*(.+?)[.。]?$/i);
     if (remember) {

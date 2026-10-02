@@ -4,6 +4,9 @@ import type { Person } from "@/domain/people";
 import { wallClock } from "@/domain/time";
 import type { Db } from "../../db/client";
 import type { MemoryView } from "../memory";
+import type { AssistantSettings } from "../settings";
+import type { AssistantSource } from "../turns";
+import type { PageFetch, WebSearch } from "../web";
 
 // One of Cookie's tools (intent 0007, spec §2.4). The list is fixed: adding
 // a tool is a spec change. Hub tools only read, through the loaders the
@@ -20,6 +23,8 @@ export type ToolContext = {
   question: string;
   // What this question has done so far.
   turn: TurnState;
+  settings: AssistantSettings;
+  web: { search: WebSearch; fetch: PageFetch };
 };
 
 export type TurnState = {
@@ -27,9 +32,22 @@ export type TurnState = {
   webRan: boolean;
   saved: MemoryView | null;
   forgot: MemoryView | null;
+  // A web search's answer: it ends the question, word for word.
+  webAnswer: { text: string; sources: AssistantSource[] } | null;
+  // Pages read with web_fetch, for the answer's sources (CHR-4).
+  webSources: AssistantSource[];
+  // What the searches cost, on top of Cookie's own model calls.
+  webCost: { inputTokens: number; outputTokens: number; costUsd: number; searches: number };
 };
 
-export const newTurn = (): TurnState => ({ webRan: false, saved: null, forgot: null });
+export const newTurn = (): TurnState => ({
+  webRan: false,
+  saved: null,
+  forgot: null,
+  webAnswer: null,
+  webSources: [],
+  webCost: { inputTokens: 0, outputTokens: 0, costUsd: 0, searches: 0 },
+});
 
 export type Tool<I = unknown> = {
   name: string;

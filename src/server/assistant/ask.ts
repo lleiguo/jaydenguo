@@ -25,11 +25,12 @@ import { LlmError } from "../llm/types";
 import { listPeople } from "../people";
 import { getHomeTimeZone } from "../settings";
 import type { AssistantModel, ModelCall } from "./model";
-import { answerInput, barkInput, contextLine, declarations, SYSTEM_PROMPT } from "./prompt";
+import { answerInput, barkInput, contextLine, declarations, systemPrompt } from "./prompt";
 import { getAssistantSettings } from "./settings";
 import type { MemoryView } from "./memory";
-import { ALL_TOOLS, newTurn, type Tool, type ToolContext } from "./tools";
+import { HUB_TOOLS, MEMORY_TOOLS, newTurn, WEB_TOOLS, type Tool, type ToolContext } from "./tools";
 import { monthSpendUsd, recentTurns, type AssistantSource } from "./turns";
+import { geminiSearch, guardedFetch, type PageFetch, type WebSearch } from "./web";
 
 // One question to Cookie, end to end (intent 0007, spec §4.1): limits, the
 // tool loop (at most LIMITS.rounds rounds), the grounding check, then the
@@ -58,6 +59,8 @@ export type AskDeps = {
   model: AssistantModel;
   now?: Date;
   tools?: Tool[];
+  // The web, when "Use the web" is on (TOOL-17).
+  web?: { search: WebSearch; fetch: PageFetch };
   // One line per turn: IDs, names and numbers only, never words (CSEC-7).
   log?: (fields: Record<string, unknown>) => void;
 };
@@ -86,7 +89,6 @@ export async function ask(
   input: { userId: string; conversationId?: string; text: string },
 ): Promise<AskResult> {
   const now = deps.now ?? new Date();
-  const tools = deps.tools ?? ALL_TOOLS;
   const turn = newTurn();
   const log = deps.log ?? consoleLog;
   const started = Date.now();
@@ -120,9 +122,10 @@ export async function ask(
         tools: runs.map(({ name, ms, chars }) => ({ name, ms, chars })),
         model,
         modelVersion,
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens,
-        costUsd: usage.costUsd,
+        inputTokens: usage.inputTokens + turn.webCost.inputTokens,
+        outputTokens: usage.outputTokens + turn.webCost.outputTokens,
+        searches: turn.webCost.searches,
+        costUsd: usage.costUsd + turn.webCost.costUsd,
         createdAt: now,
       })
       .returning({ id: assistantTurns.id });
@@ -166,7 +169,20 @@ export async function ask(
     listPeople(db),
     recentTurns(db, conversationId, now),
   ]);
-  const ctx: ToolContext = { db, now, timeZone, people, userId: input.userId, question: heard, turn };
+  // The web tools aren't even described to the model while the web is off.
+  const tools = deps.tools ?? [...HUB_TOOLS, ...MEMORY_TOOLS, ...(settings.web ? WEB_TOOLS : [])];
+  const webOn = tools.some((t) => t.kind === "web");
+  const ctx: ToolContext = {
+    db,
+    now,
+    timeZone,
+    people,
+    userId: input.userId,
+    question: heard,
+    turn,
+    settings,
+    web: deps.web ?? { search: (q, l) => geminiSearch()(q, l), fetch: guardedFetch() },
+  };
   const contents: Content[] = [
     ...history.flatMap((t): Content[] => [
       { role: "user", parts: [{ text: t.heard }] },
@@ -174,7 +190,7 @@ export async function ask(
     ]),
     { role: "user", parts: [{ text: `${contextLine(now, timeZone, people)}\n${heard}` }] },
   ];
-  const request = { system: SYSTEM_PROMPT, tools: declarations(tools), contents };
+  const request = { system: systemPrompt(webOn), tools: declarations(tools), contents };
   const counts = noCalls();
   const bark = (why: string) => finish("bark", barkLine(language), [], language, why);
 
@@ -205,7 +221,12 @@ export async function ask(
       const ran = [...new Set(runs.filter((r) => r.ok).map((r) => kindOf(tools, r.name)))];
       const grounded = checkGrounding(said.data.sources, ran, history.length > 0);
       if (!grounded.ok) return bark(grounded.reason);
-      return finish("answer", said.data.text, sourcesOf(said.data.sources, tools, runs), said.data.language);
+      return finish(
+        "answer",
+        said.data.text,
+        sourcesOf(said.data.sources, tools, runs, turn.webSources),
+        said.data.language,
+      );
     }
     if (!result.calls.length) return bark("no tool call");
 
@@ -239,6 +260,9 @@ export async function ask(
         functionResponse: { id: call.id, name: call.name, response: { result: JSON.parse(text) as unknown } },
       });
     }
+    // A web search's answer is Google's: it goes out word for word, with
+    // its links, and ends the question (see ./web.ts).
+    if (turn.webAnswer) return finish("answer", turn.webAnswer.text, turn.webAnswer.sources, language, "web");
     contents.push(result.content, { role: "user", parts: responses });
   }
   return bark("round limit");
@@ -247,11 +271,17 @@ export async function ask(
 const kindOf = (tools: Tool[], name: string): ToolKind => tools.find((t) => t.name === name)?.kind ?? "end";
 
 // CHR-4: where the answer came from, as the clients show it.
-function sourcesOf(claimed: SourceKind[], tools: Tool[], runs: ToolRun[]): AssistantSource[] {
+function sourcesOf(
+  claimed: SourceKind[],
+  tools: Tool[],
+  runs: ToolRun[],
+  pages: AssistantSource[],
+): AssistantSource[] {
   const out: AssistantSource[] = [];
   for (const kind of new Set(claimed)) {
     if (kind === "conversation") out.push({ kind, label: "Earlier in this chat" });
     else if (kind === "self") out.push({ kind, label: "Cookie" });
+    else if (kind === "web") out.push(...pages);
     else {
       const labels = runs
         .filter((r) => r.ok)

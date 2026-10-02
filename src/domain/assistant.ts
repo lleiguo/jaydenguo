@@ -217,3 +217,88 @@ const SECRET_WORD =
   /pass\s?(word|code|phrase)|\bpin\b|\bcvv\b|security code|sign-?in code|verification code|密码|验证码|口令/i;
 const CARD_NUMBER = /(?:\d[ -]?){13,19}/;
 export const looksSecret = (text: string) => SECRET_WORD.test(text) || CARD_NUMBER.test(text);
+
+// --- The web (TOOL-11, TOOL-12, CSEC-3, CSEC-4) ---------------------------------
+
+export const WEB_LIMITS = {
+  queryChars: 120,
+  redirects: 3,
+  timeoutMs: 5000,
+  bytes: 1024 * 1024,
+  pageChars: 8000,
+  sources: 3,
+} as const;
+
+// CSEC-3: a search query carries nothing about the family. `privateWords`
+// are the people's names and the owner's "never send to the web" list.
+// Returns what is wrong, in words the model can act on, or null.
+export function webQueryProblem(query: string, privateWords: readonly string[]): string | null {
+  const q = query.trim();
+  if (!q) return "the query is empty";
+  if (q.length > WEB_LIMITS.queryChars) return `keep the query under ${WEB_LIMITS.queryChars} characters`;
+  const lower = q.toLowerCase();
+  const hit = privateWords
+    .map((w) => w.trim().toLowerCase())
+    .filter((w) => w.length >= 2)
+    .some((w) =>
+      // A Latin word must match as a whole word ("Sam" isn't in "same").
+      /^[\x00-\x7f]+$/.test(w)
+        ? new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`).test(lower)
+        : lower.includes(w),
+    );
+  return hit ? "the query names someone or something private; ask it without names" : null;
+}
+
+// CSEC-4: the links written in the question itself. A page can be fetched
+// only if its link is one of these, so nothing a tool returned (a search
+// result, a page's own text) can send her to another address.
+export function linksIn(question: string): string[] {
+  return (question.match(/https:\/\/[^\s<>"'）)，。]+/g) ?? []).map((u) => u.replace(/[.,;:!?]+$/, ""));
+}
+
+// Whether a fetch may go to this address: public unicast only. Private,
+// loopback, link-local (which holds the cloud metadata server), carrier
+// NAT, multicast and unspecified addresses are all refused, in IPv4, IPv6
+// and IPv4 written inside IPv6.
+export function isPublicAddress(ip: string): boolean {
+  const mapped = ip.toLowerCase().match(/^(?:::ffff:|64:ff9b::)(\d+\.\d+\.\d+\.\d+)$/);
+  const v4 = (mapped ? mapped[1] : ip).match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4) {
+    const [a, b] = v4.slice(1).map(Number);
+    if (v4.slice(1).some((n) => Number(n) > 255)) return false;
+    if (a === 0 || a === 10 || a === 127 || a >= 224) return false;
+    if (a === 100 && b >= 64 && b <= 127) return false;
+    if (a === 169 && b === 254) return false;
+    if (a === 172 && b >= 16 && b <= 31) return false;
+    if (a === 192 && (b === 168 || b === 0)) return false;
+    if (a === 198 && (b === 18 || b === 19)) return false;
+    return true;
+  }
+  const v6 = ip.toLowerCase();
+  if (!v6.includes(":")) return false;
+  if (v6 === "::" || v6 === "::1") return false;
+  // fc00::/7 unique local, fe80::/10 link-local, ff00::/8 multicast.
+  if (/^f[cd]/.test(v6) || /^fe[89ab]/.test(v6) || /^ff/.test(v6)) return false;
+  // Anything else written with an embedded IPv4 is refused rather than parsed.
+  if (v6.includes(".")) return false;
+  return true;
+}
+
+// The first reason a URL may not be fetched, or null: HTTPS on its usual
+// port, a host name (not a bare address), no sign-in details in it.
+export function fetchUrlProblem(url: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return "that isn't a link";
+  }
+  if (u.protocol !== "https:") return "only https links can be read";
+  if (u.port && u.port !== "443") return "only the usual https port can be read";
+  if (u.username || u.password) return "links with sign-in details can't be read";
+  const host = u.hostname.replace(/^\[|\]$/g, "");
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || host.includes(":")) return "links to a bare address can't be read";
+  if (!host.includes(".") || /(^|\.)(localhost|internal|local)$/i.test(host))
+    return "that isn't a public site";
+  return null;
+}
