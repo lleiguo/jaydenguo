@@ -221,3 +221,15 @@ test("Cookie refuses a recording she can't use, and a question that is both or n
     expect(res.status()).toBe(400);
   }
 });
+
+test("an ID that isn't one is simply not found", async ({ context }) => {
+  await signInAs(context, OWNER);
+  const headers = { origin: APP_URL };
+  expect((await context.request.delete("/api/v1/assistant/memories/not-an-id", { headers })).status()).toBe(
+    404,
+  );
+  expect(
+    (await context.request.post("/api/v1/assistant/memories/not-an-id/restore", { headers })).status(),
+  ).toBe(404);
+  expect((await context.request.get("/api/v1/assistant/turns/not-an-id/speech")).status()).toBe(404);
+});

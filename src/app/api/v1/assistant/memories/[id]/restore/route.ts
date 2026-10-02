@@ -1,7 +1,7 @@
 import { restoreMemory } from "@/server/assistant/memory";
-import { api } from "@/server/http";
+import { idOf, quietApi } from "@/server/assistant/quiet";
 
 // MEM-4: bring a forgotten fact back.
-export const POST = api<{ id: string }>(async ({ db, params }) =>
-  Response.json(await restoreMemory(db, params.id)),
+export const POST = quietApi<{ id: string }>(async ({ db, params }) =>
+  Response.json(await restoreMemory(db, idOf(params))),
 );

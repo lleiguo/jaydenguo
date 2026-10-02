@@ -19,6 +19,9 @@ export const webSearchTool: Tool<z.infer<typeof searchInput>> = {
     "Search the web for something about the world outside the family (opening hours, an address, a rule, the weather). Its answer goes to the family directly and ends the question.",
   input: searchInput,
   async run(ctx, q) {
+    // A page she just read could ask for a search that carries what the
+    // hub told her (CSEC-6). Nothing is searched for after a page.
+    if (ctx.turn.webSources.length) return problem("you can't search in a question that read a page");
     const refused = webQueryProblem(q.query, [
       ...ctx.people.map((p) => p.name),
       ...ctx.settings.privateTerms,

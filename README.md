@@ -163,6 +163,34 @@ restore test.
   Calendar; "Copy now" retries. Deleting the "Jayden (hub)" calendar in
   Google Calendar is fine: the next run makes a new one.
 
+### Cookie, the assistant in the app (intent 0007)
+
+- **Every question gets "Cookie can't answer right now":** the web
+  service can't reach Vertex AI. Check `terraform apply` is clean: it
+  gives the web service `VERTEX_PROJECT`, `ASSISTANT_MODEL` and the
+  `aiplatform.user` role. Then look for `jsonPayload.message="assistant
+turn"` in the web service's logs: each line has the outcome and, for
+  an error, `why` (`unavailable`, `quota`, `deadline`). The logs never
+  hold the question or the answer.
+- **She answers in writing but the phone's own voice reads it:** her
+  voice isn't answering, or the month's spend is at 80% of the limit.
+  Look for `"assistant speech failed"` with a status. 403 means the
+  Text-to-Speech API is off or refused for the web service account.
+- **"Cookie has reached this month's limit":** raise it in the app,
+  Settings → Cookie. The default comes from `assistant_monthly_cap_usd`.
+- **A different voice:** set `assistant_voice` (a Chirp 3 HD speaker
+  name, e.g. `Kore`) in the Terraform variables and apply. Samples:
+  `pnpm tsx scripts/assistant-voices.ts <a folder outside the repo>`.
+- **A new model or prompt:** change `assistant_model`, then run the eval
+  set over seed data before deploying (`pnpm assistant:eval`; it refuses
+  any other database). Pass: no made-up answers, 90% of the answerable
+  ones right.
+- **Slow answers:** a question is one or two model calls of 1–4 s each,
+  plus one more for a spoken question. If Vertex AI is slow she gives up
+  after 25 s.
+- **Wrong or unwanted memory:** the app, Settings → Cookie → Memory.
+  **Web search** is off until switched on there.
+
 ### Costs page
 
 Settings → Costs shows the bill from the Cloud Billing export to BigQuery,

@@ -26,9 +26,11 @@ import {
 import { fakeAssistant } from "@/server/assistant/default-model";
 import { declarations, SYSTEM_PROMPT, systemPrompt } from "@/server/assistant/prompt";
 import { googleSpeech, speechCostUsd, voiceFor } from "@/server/assistant/speech";
+import { errorKind } from "@/server/assistant/quiet";
 import { ALL_TOOLS } from "@/server/assistant/tools";
 import { stamp } from "@/server/assistant/tools/types";
 import { FetchRefused, guardedFetch, publicLookup, type Transport } from "@/server/assistant/web";
+import { geminiAssistant } from "@/server/assistant/model";
 import { geminiTranscriber } from "@/server/assistant/transcribe";
 import type { Generate } from "@/server/llm/gemini";
 import { costUsd } from "@/server/llm/pricing";
@@ -221,6 +223,13 @@ describe("web rules (CSEC-3, CSEC-4)", () => {
       "fe80::1",
       "::ffff:127.0.0.1",
       "::ffff:169.254.169.254",
+      // The same addresses written without dots, and other IPv6 forms that carry an IPv4 one.
+      "::ffff:7f00:1",
+      "::ffff:a9fe:a9fe",
+      "::7f00:1",
+      "64:ff9b::a9fe:a9fe",
+      "2002:a9fe:a9fe::1",
+      "2001:0:4136:e378:8000:63bf:3fff:fdd2",
       "not-an-address",
     ])
       expect(isPublicAddress(ip), ip).toBe(false);
@@ -552,5 +561,37 @@ describe("voice (VOX-5, LIM-3)", () => {
       "gemini-3.8-flash",
     )({ data: clip, mimeType: "audio/mp4" }, []);
     expect(none.text).toBe("");
+  });
+});
+
+describe("what goes wrong, without the words (CSEC-7)", () => {
+  it("logs an error's kind, never its message", () => {
+    // A database error's message quotes the failed query's values.
+    const err = Object.assign(
+      new Error('Failed query: insert into "assistant_turns" … params: the alarm code is 4321'),
+      {
+        name: "DrizzleQueryError",
+        cause: Object.assign(new Error("value too long"), { name: "PostgresError", code: "22001" }),
+      },
+    );
+    expect(errorKind(err)).toBe("DrizzleQueryError PostgresError 22001");
+    expect(errorKind(err)).not.toContain("4321");
+    expect(errorKind("the alarm code is 4321")).toBe("error");
+    expect(errorKind(Object.assign(new Error("x"), { name: "the alarm code is 4321" }))).toBe("error");
+    expect(errorKind(null)).toBe("error");
+  });
+
+  it("says she can't answer when Vertex AI isn't set up, and doesn't crash", async () => {
+    const before = process.env.VERTEX_PROJECT;
+    delete process.env.VERTEX_PROJECT;
+    try {
+      const model = geminiAssistant();
+      await expect(model.round({ system: "s", tools: [], contents: [] })).rejects.toBeInstanceOf(LlmError);
+      await expect(
+        geminiTranscriber()({ data: Buffer.from("x"), mimeType: "audio/mp4" }, []),
+      ).rejects.toBeInstanceOf(LlmError);
+    } finally {
+      if (before !== undefined) process.env.VERTEX_PROJECT = before;
+    }
   });
 });

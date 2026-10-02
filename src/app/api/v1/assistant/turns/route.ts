@@ -1,8 +1,8 @@
 import { clearHistory, listTurns, turnsQuery } from "@/server/assistant/turns";
-import { api } from "@/server/http";
+import { quietApi } from "@/server/assistant/quiet";
 
 // MEM-9: this account's chat with Cookie, newest last.
-export const GET = api(async ({ db, request, session }) => {
+export const GET = quietApi(async ({ db, request, session }) => {
   const q = turnsQuery.parse(Object.fromEntries(new URL(request.url).searchParams));
   return Response.json(
     await listTurns(db, session.userId, {
@@ -13,7 +13,7 @@ export const GET = api(async ({ db, request, session }) => {
 });
 
 // "Clear history": removes the words of every turn.
-export const DELETE = api(async ({ db }) => {
+export const DELETE = quietApi(async ({ db }) => {
   await clearHistory(db);
   return new Response(null, { status: 204 });
 });

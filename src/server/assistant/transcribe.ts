@@ -58,13 +58,11 @@ const HEARD = {
   },
 };
 
-export function geminiTranscriber(
-  generate: Generate = vertexGenerate(),
-  model = ASSISTANT_MODEL(),
-): Transcriber {
+export function geminiTranscriber(generate?: Generate, model = ASSISTANT_MODEL()): Transcriber {
   return async (clip, names) => {
     let response;
     try {
+      generate ??= vertexGenerate();
       response = await generate({
         model,
         contents: [

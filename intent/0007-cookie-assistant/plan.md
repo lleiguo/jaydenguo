@@ -146,8 +146,10 @@ K7 2.
 | K3.1–K3.3 | built 2026-10-02 on `cookie/k3-memory`; not merged. |
 | K4.1–K4.3 | built 2026-10-02 on `cookie/k4-web` (stacked on K3); not merged. |
 | K5.1–K5.3 | built 2026-10-02 on `cookie/k5-voice`; not merged, Terraform not applied (O-3). |
-| K6.1–K6.4 | built 2026-10-02 on `cookie/k6-ios-voice`; not merged. Tried on the simulator; not yet on a phone (O-6). |
-| K7 | not started. |
+| K6.1–K6.4 | merged 2026-10-02 (#77). Tried on the simulator; not yet on a phone (O-6). |
+| K7.1 | eval done 2026-10-02 (below): pass. Timings from Cloud Run and on the phone wait for O-3. |
+| K7.2 | done 2026-10-02: [security-review.md](security-review.md); six findings fixed, seven risks for the owner to accept. |
+| K7.3 | Code deploys by itself on merge. Runbook notes written (README → Runbook → Cookie); build number set to 6 (another change took 5). **Waiting on the owner:** apply Terraform (O-3), then the TestFlight build and a few days' use (O-6). |
 
 **K1 as built (2026-10-02):**
 - *Schema (K1.1).* Migration `0027_assistant`: `assistant_turns` and
@@ -373,6 +375,39 @@ K7 2.
   and the silent switch (she speaks even when the phone is on silent,
   because the question was asked out loud), and VoiceOver end to end.
   These are O-6.
+
+**K7 as built (2026-10-02):**
+- *Eval (K7.1).* `pnpm assistant:eval` on `gemini-3.8-flash`, prompt
+  `cookie-3`, seed data, 54 questions (typed; English, Mandarin, mixed;
+  hub, memory, the web on and off): **made-up answers 0; answerable
+  right 42 of 43 (98%); too long 0; no reply from the model 1** (a
+  Vertex timeout, the one miss). Pass. Median 4.1 s, slowest 20.6 s,
+  from the owner's Mac. 215,000 tokens in, 6,600 out: US$0.23 for the
+  run, about 0.4 cents a question.
+- *Speed (VOX-6) is still not met and not yet measured where it
+  counts.* 4.1 s median against the 3 s target, typed, from a home
+  connection; a spoken question adds the transcription call (about 2 s)
+  and the speech (about 1–2 s after the text). The owner accepted this
+  (spec K-11). Measuring from Cloud Run and on the phone needs Terraform
+  applied first.
+- *Security review (K7.2).* `security-review.md`. Fixed: error logs
+  that could quote a question or a memory; a page that could talk her
+  into a web search; IPv6 forms of private addresses; path IDs that
+  aren't IDs; a recording left on the phone by a crash; and (not
+  security) a crash, not "can't answer right now", when Vertex AI isn't
+  set up, which is production's state until O-3.
+- *Release (K7.3).* What is done: the runbook notes, and the app's
+  build number is 6 (another change took 5 while this was in review). What isn't, and why: **Terraform is the owner's to
+  apply (O-3)**, and until it is, production has her code but she
+  answers every question with "Cookie can't answer right now"; a
+  TestFlight build before that would show exactly that, so it follows
+  O-3. Checked 2026-10-02: the web service has none of her settings and
+  no role on Vertex AI yet.
+- *After O-3, to finish K7:* ask her a typed and a spoken question in
+  production and read the timings from the logs (`assistant turn`,
+  `ms`); confirm Text-to-Speech answers for the web service account;
+  upload build 6; the owner uses her for a few days (O-6) and picks a
+  voice (O-7).
 
 **Still open from K1:** the eval's timeouts and the speed (spec K-11);
 nothing here has run on Cloud Run yet.

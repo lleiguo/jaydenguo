@@ -116,7 +116,8 @@ holds its team ID with no `.dev` suffix.
    Developer or Marketing role, then TestFlight → **Internal Testing** → a
    group with both of you.
 3. App Store Connect → the app → **App Privacy**: "Data not collected" (the
-   app sends data only to your own site).
+   app sends data only to your own site). That still holds with Cookie: a
+   recording goes to your own site and isn't kept.
 
 **Each release**
 

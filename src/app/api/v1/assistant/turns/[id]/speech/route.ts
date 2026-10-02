@@ -1,17 +1,15 @@
-import { z } from "zod";
 import { defaultSpeech } from "@/server/assistant/default-model";
 import { speakTurn } from "@/server/assistant/speech";
-import { api, HttpError } from "@/server/http";
+import { idOf, quietApi } from "@/server/assistant/quiet";
 
 // VOX-5: the answer of one of this account's turns as speech. Made on
 // request and stored nowhere (CSEC-2); any error tells the app to use the
 // phone's own voice.
-export const GET = api<{ id: string }>(async ({ db, params, session }) => {
-  if (!z.uuid().safeParse(params.id).success) throw new HttpError(404, "not found");
+export const GET = quietApi<{ id: string }>(async ({ db, params, session }) => {
   const audio = await speakTurn(
     db,
     { speech: defaultSpeech() },
-    { userId: session.userId, turnId: params.id },
+    { userId: session.userId, turnId: idOf(params) },
   );
   return new Response(new Uint8Array(audio.data), {
     headers: {

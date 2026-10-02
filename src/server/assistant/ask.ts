@@ -31,6 +31,7 @@ import { listPeople } from "../people";
 import { getHomeTimeZone } from "../settings";
 import type { AssistantModel, ModelCall } from "./model";
 import { answerInput, barkInput, contextLine, declarations, systemPrompt } from "./prompt";
+import { errorKind } from "./quiet";
 import { getAssistantSettings } from "./settings";
 import type { MemoryView } from "./memory";
 import { geminiTranscriber, spellingList, type Clip, type Transcriber } from "./transcribe";
@@ -305,7 +306,8 @@ export async function ask(
             severity: "ERROR",
             message: "assistant tool failed",
             tool: call.name,
-            error: String(err),
+            // The kind only: a database error's message quotes values (CSEC-7).
+            error: errorKind(err),
           }),
         );
         value = { error: "that lookup failed" };

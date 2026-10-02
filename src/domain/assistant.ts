@@ -291,7 +291,10 @@ export function isPublicAddress(ip: string): boolean {
   }
   const v6 = ip.toLowerCase();
   if (!v6.includes(":")) return false;
-  if (v6 === "::" || v6 === "::1") return false;
+  // "::", "::1", and IPv4 carried inside IPv6 however it is written:
+  // mapped (::ffff:…), compatible (::…), NAT64 (64:ff9b:…), 6to4 (2002:…)
+  // and Teredo (2001:0:…).
+  if (/^(::|64:ff9b:|2002:|2001:0?0?0?0:)/.test(v6)) return false;
   // fc00::/7 unique local, fe80::/10 link-local, ff00::/8 multicast.
   if (/^f[cd]/.test(v6) || /^fe[89ab]/.test(v6) || /^ff/.test(v6)) return false;
   // Anything else written with an embedded IPv4 is refused rather than parsed.

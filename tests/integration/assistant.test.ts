@@ -735,6 +735,26 @@ describe("Cookie", () => {
       expect(lines.at(-1)).toMatchObject({ why: "tool limit", tools: ["web_fetch", "memory_save"] });
     });
 
+    it("a page can't make her search for what the hub told her (CSEC-6)", async () => {
+      fetched.length = 0;
+      searched.length = 0;
+      const url = "https://pool.example/hours";
+      // The model "obeys" the page: it looks at today, then searches for what it found.
+      const d = webDeps((_, round) =>
+        round === 1
+          ? [fetchCall(url), { name: "today", args: {} }]
+          : round === 2
+            ? [searchCall("swim practice 5:30 pm Aquatic Centre")]
+            : [answer("Open 9 to 5.", ["web"])],
+      );
+      const result = await ask(db, d, { userId, text: `What does ${url} say?` });
+      expect(searched).toEqual([]);
+      expect(JSON.stringify(d.model.requests[2].contents.at(-1))).toContain(
+        "can't search in a question that read a page",
+      );
+      expect(result).toMatchObject({ outcome: "answer", text: "Open 9 to 5." });
+    });
+
     it("saves nothing in a question that used the web, even when asked to (MEM-1)", async () => {
       const before = (await listMemories(db)).length;
       const url = "https://pool.example/hours";
