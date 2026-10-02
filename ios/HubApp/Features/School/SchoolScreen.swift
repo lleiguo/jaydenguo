@@ -12,18 +12,21 @@ struct SchoolScreen: View {
 
     var body: some View {
         RemoteContent(fetch: {
-            async let day = model.client.api.getSchoolDay().ok.body.json.schoolDay
+            async let days = model.client.api.getSchoolDay().ok.body.json.schoolDays
             async let sources = model.client.api.listSources().ok.body.json.sources
-            return try await (day: day, portal: sources.first { $0.kind == "veracross" }?.config.string("portalUrl"))
+            return try await (days: days, portal: sources.first { $0.kind == "veracross" }?.config.string("portalUrl"))
         }) { data in
             List {
-                if let day = data.day {
-                    Section(day.today ? "Today at school" : "Next school day: \(model.homeTime.dayTitle(day.date))") {
+                // One section per child, named once there's more than one.
+                ForEach(data.days, id: \.person.id) { day in
+                    let heading = day.today ? "Today at school" : "Next school day: \(model.homeTime.dayTitle(day.date))"
+                    Section(data.days.count > 1 ? "\(day.person.name): \(heading)" : heading) {
                         ForEach(day.periods, id: \.id) { period in
                             periodRow(period)
                         }
                     }
-                } else {
+                }
+                if data.days.isEmpty {
                     Section { Caption("No classes in the next week.") }
                 }
                 Section("Key dates and closures") {

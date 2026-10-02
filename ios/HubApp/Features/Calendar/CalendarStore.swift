@@ -25,7 +25,8 @@ final class CalendarStore {
         }
     }
     /// School days opened to show each class (SCH-1), for this visit.
-    var expandedSchoolDays: Set<String> = []
+    /// School blocks opened to show their classes, by block id.
+    var expandedSchool: Set<String> = []
     /// The agenda hides what's already over unless asked, for this visit.
     var showPast = false
 
@@ -86,19 +87,18 @@ final class CalendarStore {
     struct DayItems {
         var allDay: [CalendarEvent]
         var timed: [CalendarEvent]
-        /// Days with two or more classes fold them into one block (SCH-1).
-        var school: SchoolBlock?
+        /// Days with two or more classes fold them into one block per
+        /// child (SCH-1).
+        var school: [SchoolBlock] = []
 
-        var isEmpty: Bool { allDay.isEmpty && timed.isEmpty && school == nil }
+        var isEmpty: Bool { allDay.isEmpty && timed.isEmpty && school.isEmpty }
     }
 
     func items(on date: String) -> DayItems {
         let (allDay, timed) = DayLayout.events(on: date, from: shown, homeTime: homeTime)
-        guard !expandedSchoolDays.contains(date),
-              let block = SchoolBlock.blocks(timed, homeTime: homeTime).first(where: { $0.date == date })
-        else { return DayItems(allDay: allDay, timed: timed) }
-        let folded = Set(block.classes.map(\.id))
-        return DayItems(allDay: allDay, timed: timed.filter { !folded.contains($0.id) }, school: block)
+        let blocks = SchoolBlock.blocks(timed, homeTime: homeTime).filter { $0.date == date && !expandedSchool.contains($0.id) }
+        let folded = Set(blocks.flatMap { $0.classes.map(\.id) })
+        return DayItems(allDay: allDay, timed: timed.filter { !folded.contains($0.id) }, school: blocks)
     }
 
     /// Over already: timed events that have ended, all-day ones from
@@ -118,7 +118,7 @@ final class CalendarStore {
         guard !showPast else { return items }
         items.allDay.removeAll { isPast($0, now: now) }
         items.timed.removeAll { isPast($0, now: now) }
-        if let block = items.school, isPast(block, now: now) { items.school = nil }
+        items.school.removeAll { isPast($0, now: now) }
         return items
     }
 
@@ -126,6 +126,7 @@ final class CalendarStore {
     func mark(_ block: SchoolBlock) -> ClashMark { index?.mark(for: block.classes.map(\.id), filters: filters) ?? .none }
     func clashes(of e: CalendarEvent) -> [CalendarIndex.ClashWith] { index?.clashes(of: e.id) ?? [] }
     func ownerNames(_ e: CalendarEvent) -> String? { index?.ownerNames(e) }
+    func ownerNames(_ block: SchoolBlock) -> String? { index?.ownerNames(block.owners) }
     func event(_ id: String) -> CalendarEvent? { index?.byId[id] }
 
     // MARK: Actions

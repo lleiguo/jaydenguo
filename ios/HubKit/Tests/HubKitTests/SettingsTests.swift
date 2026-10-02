@@ -27,6 +27,9 @@ import Testing
         let day = try #require(try await client.api.getSchoolDay().ok.body.json.schoolDay)
         #expect(day.periods.map(\.title) == ["Math", "English", "Science", "French"])
         #expect(day.periods.allSatisfy { $0.room != nil && $0.teachers != nil })
+        // Every child's day, the primary person's first.
+        let days = try await client.api.getSchoolDay().ok.body.json.schoolDays
+        #expect(days.map(\.person.name) == ["Child"])
     }
 
     @Test func providersMatchTheWebsite() {

@@ -160,9 +160,9 @@ struct AgendaView: View {
                                     .foregroundStyle(.secondary)
                             }
                             ForEach(items.allDay, id: \.id) { row($0, now: now) }
-                            if let block = items.school {
-                                SchoolBlockRow(block: block, homeTime: store.homeTime, mark: store.mark(block)) {
-                                    store.expandedSchoolDays.insert(block.date)
+                            ForEach(items.school) { block in
+                                SchoolBlockRow(block: block, homeTime: store.homeTime, mark: store.mark(block), owners: store.ownerNames(block)) {
+                                    store.expandedSchool.insert(block.id)
                                 }
                             }
                             ForEach(items.timed, id: \.id) { row($0, now: now) }
@@ -247,6 +247,8 @@ struct SchoolBlockRow: View {
     let block: SchoolBlock
     let homeTime: HomeTime
     let mark: ClashMark
+    /// Whose school day, unless it's only the primary person's.
+    let owners: String?
     let expand: () -> Void
 
     var body: some View {
@@ -256,7 +258,7 @@ struct SchoolBlockRow: View {
             } content: {
                 VStack(alignment: .leading) {
                     HStack {
-                        Label("School", systemImage: EventCategory.schoolClass.symbol)
+                        Label(owners.map { "School · \($0)" } ?? "School", systemImage: EventCategory.schoolClass.symbol)
                         ClashSymbol(mark: mark)
                     }
                     Text("\(homeTime.range(block.start, block.end)) · \(block.classes.count) classes")

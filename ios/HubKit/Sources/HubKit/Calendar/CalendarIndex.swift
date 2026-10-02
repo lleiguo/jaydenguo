@@ -74,35 +74,40 @@ public struct CalendarIndex: Sendable {
     }
 
     /// The people an event names: none when it's only the primary person's.
-    public func ownerNames(_ e: CalendarEvent) -> String? {
+    public func ownerNames(_ e: CalendarEvent) -> String? { ownerNames(e.owners) }
+
+    public func ownerNames(_ owners: [String]) -> String? {
         let primary = payload.people.first { $0.isPrimary }?.id
-        if e.owners.count == 1, e.owners.first == primary { return nil }
-        let names = payload.people.filter { e.owners.contains($0.id) }.map(\.name)
+        if owners.count == 1, owners.first == primary { return nil }
+        let names = payload.people.filter { owners.contains($0.id) }.map(\.name)
         return names.isEmpty ? nil : names.joined(separator: ", ")
     }
 }
 
 /// SCH-1: a day's classes show as one "School" block until expanded; a day
-/// with one class needs no block.
+/// with one class needs no block. Each child has his own block: brothers'
+/// timetables don't mix.
 public struct SchoolBlock: Sendable, Identifiable {
     public let date: String
+    public let owners: [String]
     public let start: String
     public let end: String
     public let classes: [CalendarEvent]
-    public var id: String { "school:\(date)" }
+    public var id: String { "school:\(date):\(owners.sorted().joined(separator: "+"))" }
 
     public static func blocks(_ events: [CalendarEvent], homeTime: HomeTime) -> [SchoolBlock] {
-        var byDay: [String: [CalendarEvent]] = [:]
+        struct Key: Hashable { let date: String; let owners: [String] }
+        var byKey: [Key: [CalendarEvent]] = [:]
         for e in events where e.category == .schoolClass && !e.allDay {
             guard let s = e.startDate else { continue }
-            byDay[homeTime.localDate(s), default: []].append(e)
+            byKey[Key(date: homeTime.localDate(s), owners: e.owners.sorted()), default: []].append(e)
         }
-        return byDay.compactMap { date, classes -> SchoolBlock? in
+        return byKey.compactMap { key, classes -> SchoolBlock? in
             guard classes.count >= 2 else { return nil }
             let sorted = classes.sorted { ($0.startDate ?? .distantPast) < ($1.startDate ?? .distantPast) }
             let last = sorted.max { ($0.endDate ?? .distantPast) < ($1.endDate ?? .distantPast) }!
-            return SchoolBlock(date: date, start: sorted[0].start, end: last.end, classes: sorted)
+            return SchoolBlock(date: key.date, owners: sorted[0].owners, start: sorted[0].start, end: last.end, classes: sorted)
         }
-        .sorted { $0.date < $1.date }
+        .sorted { ($0.date, $0.start, $0.id) < ($1.date, $1.start, $1.id) }
     }
 }

@@ -61,7 +61,9 @@ struct TimeGridView: View {
         let spans: [(date: String, start: Date, end: Date)] = days.flatMap { date -> [(String, Date, Date)] in
             let items = store.items(on: date)
             var spans = items.timed.compactMap { e in e.startDate.flatMap { s in e.endDate.map { (date, s, $0) } } }
-            if let b = items.school, let s = HomeTime.parse(b.start), let e = HomeTime.parse(b.end) { spans.append((date, s, e)) }
+            for b in items.school {
+                if let s = HomeTime.parse(b.start), let e = HomeTime.parse(b.end) { spans.append((date, s, e)) }
+            }
             return spans
         }
         let focus: (date: String, at: Date)?
@@ -161,14 +163,16 @@ struct TimeGridView: View {
             if store.closures.contains(date) {
                 Rectangle().fill(Color.secondary.opacity(0.06)).frame(width: width, height: hourHeight * 24)
             }
-            if let school = items.school,
-               let p = DayLayout.place([school], on: date, homeTime: store.homeTime, start: { HomeTime.parse($0.start) }, end: { HomeTime.parse($0.end) }).first {
-                Button { store.expandedSchoolDays.insert(date) } label: {
-                    block(tint: EventCategory.schoolClass.color, title: "School", subtitle: "\(school.classes.count) classes", mark: store.mark(school), compact: days.count > 1)
+            // Brothers' school days sit side by side.
+            ForEach(DayLayout.place(items.school, on: date, homeTime: store.homeTime, start: { HomeTime.parse($0.start) }, end: { HomeTime.parse($0.end) }), id: \.item.id) { p in
+                let school = p.item
+                let slotWidth = width / CGFloat(p.columns)
+                Button { store.expandedSchool.insert(school.id) } label: {
+                    block(tint: EventCategory.schoolClass.color, title: store.ownerNames(school).map { "School · \($0)" } ?? "School", subtitle: "\(school.classes.count) classes", mark: store.mark(school), compact: days.count > 1)
                 }
                 .buttonStyle(.plain)
-                .frame(width: width - 2, height: height(p))
-                .offset(y: y(p.startMinute))
+                .frame(width: slotWidth - 2, height: height(p))
+                .offset(x: CGFloat(p.column) * slotWidth, y: y(p.startMinute))
                 .accessibilityHint("Shows each class")
             }
             ForEach(placed, id: \.item.id) { p in

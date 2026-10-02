@@ -1,13 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { schoolBlocks } from "@/domain/school-blocks";
 
-// SCH-1: classes fold into one block per school day.
+// SCH-1: classes fold into one block per child per school day.
 
 const tz = "America/Toronto";
-const cls = (id: string, start: string, end: string, category = "school_class", allDay = false) => ({
+const cls = (
+  id: string,
+  start: string,
+  end: string,
+  category = "school_class",
+  allDay = false,
+  owners = ["jayden"],
+) => ({
   id,
   category,
   allDay,
+  owners,
   start: new Date(start).toISOString(),
   end: new Date(end).toISOString(),
 });
@@ -25,7 +33,9 @@ describe("schoolBlocks", () => {
     );
     expect(blocks).toHaveLength(1);
     expect(blocks[0]).toMatchObject({
+      key: "2028-01-04:jayden",
       date: "2028-01-04",
+      owners: ["jayden"],
       start: "2028-01-04T13:30:00.000Z",
       end: "2028-01-04T20:00:00.000Z",
     });
@@ -54,6 +64,28 @@ describe("schoolBlocks", () => {
         ],
         tz,
       ),
+    ).toEqual([]);
+  });
+
+  it("keeps each child's classes in his own block", () => {
+    const his = (id: string, from: string, to: string, owner: string) =>
+      cls(id, `2028-01-04T${from}:00-05:00`, `2028-01-04T${to}:00-05:00`, "school_class", false, [owner]);
+    const blocks = schoolBlocks(
+      [
+        his("e1", "08:00", "09:00", "brother"),
+        his("j1", "08:30", "09:20", "jayden"),
+        his("e2", "14:30", "15:30", "brother"),
+        his("j2", "14:00", "15:00", "jayden"),
+      ],
+      tz,
+    );
+    expect(blocks.map((b) => [b.key, b.classes.map((c) => c.id)])).toEqual([
+      ["2028-01-04:brother", ["e1", "e2"]],
+      ["2028-01-04:jayden", ["j1", "j2"]],
+    ]);
+    // One class each is no block for either.
+    expect(
+      schoolBlocks([his("e1", "08:00", "09:00", "brother"), his("j1", "08:30", "09:20", "jayden")], tz),
     ).toEqual([]);
   });
 });

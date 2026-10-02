@@ -50,7 +50,8 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
   const [series, setSeries] = useState<Parameters<typeof EventForm>[0]["series"]>();
   const [toast, setToast] = useState<Toast | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  // SCH-1: school days show one "School" block until tapped (per visit).
+  // SCH-1: school days show one "School" block per child until tapped (per
+  // visit), by block key.
   const [expandedSchool, setExpandedSchool] = useState<ReadonlySet<string>>(new Set());
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -75,11 +76,11 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
   const people = useMemo(() => data?.people ?? [], [data]);
   // Names on an event, unless it's only the primary person's.
   const ownerLabel = useCallback(
-    (e: EventView) => {
+    ({ owners }: { owners: string[] }) => {
       const primary = people.find((p) => p.isPrimary)?.id;
-      if (e.owners.length === 1 && e.owners[0] === primary) return null;
+      if (owners.length === 1 && owners[0] === primary) return null;
       return people
-        .filter((p) => e.owners.includes(p.id))
+        .filter((p) => owners.includes(p.id))
         .map((p) => p.name)
         .join(", ");
     },
@@ -125,17 +126,20 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
     };
     const folded = new Set<string>();
     for (const b of blocks) {
-      if (expandedSchool.has(b.date)) continue;
+      if (expandedSchool.has(b.key)) continue;
       for (const c of b.classes) folded.add(c.id);
       const { open, clash } = clashState(b.classes.map((c) => c.id));
       out.push({
-        id: `school:${b.date}`,
+        id: `school:${b.key}`,
         title: "School",
         start: b.start,
         end: b.end,
         editable: false,
         className: ["hub-ev", "cat-school_class", open ? "hub-clash" : ""].filter(Boolean).join(" "),
-        extendedProps: { schoolBlock: { date: b.date, count: b.classes.length }, clash },
+        extendedProps: {
+          schoolBlock: { key: b.key, date: b.date, count: b.classes.length, owner: ownerLabel(b) },
+          clash,
+        },
       });
     }
     for (const e of shown) {
@@ -168,7 +172,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
       out.push({ start: d, end: next, allDay: true, display: "background", className: "hub-closure-bg" });
     }
     return out;
-  }, [data, filters, clashesOf, shown, blocks, expandedSchool]);
+  }, [data, filters, clashesOf, shown, blocks, expandedSchool, ownerLabel]);
 
   const done = useCallback(
     (message: string, undo?: Undo) => {
@@ -247,7 +251,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
         >
           Filters
         </button>
-        {blocks.some((b) => expandedSchool.has(b.date)) && (
+        {blocks.some((b) => expandedSchool.has(b.key)) && (
           <button
             className="rounded-full border px-3 py-1 text-sm"
             onClick={() => setExpandedSchool(new Set())}
@@ -355,8 +359,8 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
             }}
             eventClick={(arg) => {
               arg.jsEvent.preventDefault();
-              const block = arg.event.extendedProps.schoolBlock as { date: string } | undefined;
-              if (block) setExpandedSchool((s) => new Set(s).add(block.date));
+              const block = arg.event.extendedProps.schoolBlock as { key: string } | undefined;
+              if (block) setExpandedSchool((s) => new Set(s).add(block.key));
               else if (arg.event.id) setSelected(arg.event.id);
             }}
             eventDrop={onDrop}
@@ -373,7 +377,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
                 </span>
               );
               const block = arg.event.extendedProps.schoolBlock as
-                { date: string; count: number } | undefined;
+                { date: string; count: number; owner: string | null } | undefined;
               if (block) {
                 return (
                   <div
@@ -389,6 +393,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
                     {clashMark}
                     {arg.timeText && <span>{arg.timeText}</span>}
                     <span className="hub-title">School · {block.count} classes</span>
+                    {block.owner && <span className="hub-owner">· {block.owner}</span>}
                   </div>
                 );
               }

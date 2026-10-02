@@ -36,7 +36,7 @@ struct MonthView: View {
 
     private func dayCell(_ date: String, inMonth: Bool) -> some View {
         let items = store.items(on: date)
-        let events = items.allDay + items.timed + (items.school?.classes.prefix(1).map { $0 } ?? [])
+        let events = items.allDay + items.timed + items.school.flatMap { $0.classes.prefix(1) }
         let categories = Array(NSOrderedSet(array: events.map(\.category.rawValue))).compactMap { $0 as? String }.compactMap(EventCategory.init(rawValue:))
         let clash = events.contains { store.mark($0) == .clash }
         return Button {

@@ -1,10 +1,11 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { sources, syncRuns, tennisEntries } from "@db/schema";
+import { events, sources, syncRuns, tennisEntries } from "@db/schema";
 import type { Category } from "@/domain/constants";
 import { createEvent } from "@/server/calendar/mutations";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
+import { addPerson, removePerson } from "@/server/people";
 import { tennisOverview } from "@/server/tennis/overview";
 import { loadToday } from "@/server/today";
 
@@ -94,6 +95,58 @@ describe("Today", () => {
     ]);
     expect(t.people.some((p) => p.isPrimary)).toBe(true);
     expect(t.cursor).toBeGreaterThan(0);
+  });
+
+  it("has each child's school day, the primary person's first (SCH-1)", async () => {
+    const brother = await addPerson(db, "Brother Today-test");
+    const timetable = async (name: string, ownerIds: string[], classes: [string, string, string][]) => {
+      const [{ id }] = await db.insert(sources).values({ kind: "veracross", name }).returning();
+      await db.insert(events).values(
+        classes.map(([title, start, end], i) => ({
+          sourceId: id,
+          externalId: `p${i}`,
+          category: "school_class",
+          title,
+          startUtc: at(start),
+          endUtc: at(end),
+          ownerIds,
+        })),
+      );
+      return id;
+    };
+    // His classes are over for today; his brother's (later bell) aren't.
+    const ids = [
+      await timetable(
+        "His timetable",
+        [],
+        [
+          ["Math 4X", "2031-05-14T13:00:00Z", "2031-05-14T14:00:00Z"],
+          ["Art 4X", "2031-05-15T13:00:00Z", "2031-05-15T14:00:00Z"],
+        ],
+      ),
+      await timetable(
+        "Brother's timetable",
+        [brother],
+        [
+          ["Physics 9", "2031-05-14T18:30:00Z", "2031-05-14T19:30:00Z"],
+          ["English 9", "2031-05-14T19:40:00Z", "2031-05-14T20:40:00Z"],
+        ],
+      ),
+    ];
+    try {
+      const t = await loadToday(db, now);
+      expect(t.schoolDays.map((d) => [d.person.name, d.today, d.periods.map((p) => p.title)])).toEqual([
+        [t.people.find((p) => p.isPrimary)!.name, false, ["Art 4X"]],
+        ["Brother Today-test", true, ["Physics 9", "English 9"]],
+      ]);
+      expect(t.schoolDay).toEqual(t.schoolDays[0]);
+    } finally {
+      for (const id of ids) {
+        await db.delete(events).where(sql`${events.sourceId} = ${id}`);
+        await db.delete(sources).where(sql`${sources.id} = ${id}`);
+      }
+      await removePerson(db, brother);
+    }
   });
 
   it("lists what's waiting on the owner", async () => {

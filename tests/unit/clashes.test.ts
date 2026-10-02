@@ -83,6 +83,19 @@ describe("detectClashes", () => {
     expect(run([cls, swim, closure])).toEqual([]);
   });
 
+  it("a closure is only for the people it belongs to", () => {
+    const cls = ev("2026-10-05T19:00:00Z", "2026-10-05T20:00:00Z", { category: "school_class" });
+    const swim = ev("2026-10-05T19:30:00Z", "2026-10-05T20:30:00Z", { category: "swimming" });
+    const day = { category: "school_closure", allDay: true } as const;
+    const hisBrothers = ev("2026-10-05T00:00:00Z", "2026-10-06T00:00:00Z", { ...day, owners: ["ethan"] });
+    expect(run([cls, swim, hisBrothers])).toHaveLength(1);
+    const wholeSchool = ev("2026-10-05T00:00:00Z", "2026-10-06T00:00:00Z", {
+      ...day,
+      owners: ["jayden", "ethan"],
+    });
+    expect(run([cls, swim, wholeSchool])).toEqual([]);
+  });
+
   it("classes don't clash with each other, and all-day events never clash", () => {
     const c1 = ev("2026-10-05T13:00:00Z", "2026-10-05T14:00:00Z", { category: "school_class" });
     const c2 = ev("2026-10-05T14:00:00Z", "2026-10-05T15:00:00Z", { category: "school_class" });

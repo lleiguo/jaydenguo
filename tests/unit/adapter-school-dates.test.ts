@@ -83,7 +83,7 @@ describe("normaliseSchoolDates", () => {
         id: String(i),
         category: r.category,
         attendance: r.attendance,
-        owners: [],
+        owners: ["jayden"],
         allDay: r.allDay,
         start: r.startUtc,
         end: r.endUtc,

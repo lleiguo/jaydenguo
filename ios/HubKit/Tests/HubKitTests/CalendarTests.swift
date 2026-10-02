@@ -161,4 +161,17 @@ func payload(_ events: [CalendarEvent], clashes: [(String, String, String?)] = [
         #expect(blocks[0].date == "2026-10-05")
         #expect(blocks[0].end == "2026-10-05T14:15:00.000Z")
     }
+
+    @Test func keepsEachChildsClassesInHisOwnBlock() {
+        let toronto = HomeTime(identifier: "America/Toronto")
+        let cls = { (id: String, from: String, to: String, owner: String) in
+            event(id, "2026-10-05T\(from):00.000Z", "2026-10-05T\(to):00.000Z", category: "school_class", owners: [owner])
+        }
+        let blocks = SchoolBlock.blocks([
+            cls("e1", "12:00", "13:00", "p2"), cls("j1", "12:30", "13:15", "p1"),
+            cls("e2", "18:30", "19:30", "p2"), cls("j2", "18:00", "19:00", "p1"),
+        ], homeTime: toronto)
+        #expect(blocks.map(\.id) == ["school:2026-10-05:p2", "school:2026-10-05:p1"])
+        #expect(blocks.map { $0.classes.map(\.id) } == [["e1", "e2"], ["j1", "j2"]])
+    }
 }

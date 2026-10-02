@@ -7566,13 +7566,29 @@
           },
           "timeZone": {
             "type": "string"
+          },
+          "person": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
           }
         },
         "required": [
           "date",
           "today",
           "periods",
-          "timeZone"
+          "timeZone",
+          "person"
         ]
       },
       "SchoolPeriod": {
@@ -7625,8 +7641,17 @@
           "schoolDay": {
             "$ref": "#/components/schemas/SchoolDay",
             "x-nullable": true
+          },
+          "schoolDays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SchoolDay"
+            }
           }
-        }
+        },
+        "required": [
+          "schoolDays"
+        ]
       },
       "SeriesResponse": {
         "type": "object",
@@ -9290,6 +9315,12 @@
             "$ref": "#/components/schemas/SchoolDay",
             "x-nullable": true
           },
+          "schoolDays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SchoolDay"
+            }
+          },
           "nextMatches": {
             "type": "array",
             "items": {
@@ -9510,6 +9541,7 @@
           "closures",
           "clashes",
           "cursor",
+          "schoolDays",
           "nextMatches",
           "waiting"
         ]
