@@ -14,6 +14,8 @@ final class CookieStore {
     /// Why history couldn't be loaded, in words to show.
     private(set) var loadError: String?
     var draft = ""
+    /// Nil until Settings → Cookie or the first spoken answer fetches it.
+    var spokenAnswers: Bool?
 
     private let client: HubClient
     private var loaded = false
@@ -47,21 +49,44 @@ final class CookieStore {
     func send() async {
         guard !isAsking, let text = CookieChat.question(draft) else { return }
         draft = ""
+        messages.append(CookieMessage(id: UUID().uuidString, role: .you, text: text))
+        _ = await ask { .json(.init(conversationId: $0, text: text)) } bubbles: { [CookieChat.message($0)] }
+    }
+
+    /// A spoken question (CK-2, CK-5): the recording goes up, and what she
+    /// heard comes back with her answer (VOX-2). Nil when she couldn't be
+    /// reached; the chat then says why.
+    func ask(clip: Data) async -> CookieAnswer? {
+        guard !isAsking else { return nil }
+        return await ask { CookieVoice.body(clip: clip, conversationId: $0) } bubbles: { CookieChat.messages(spoken: $0) }
+    }
+
+    private func ask(
+        _ body: (String?) -> Operations.AskAssistant.Input.Body, bubbles: (CookieAnswer) -> [CookieMessage]
+    ) async -> CookieAnswer? {
         isAsking = true
         defer { isAsking = false }
-        messages.append(CookieMessage(id: UUID().uuidString, role: .you, text: text))
         // A follow-up continues the conversation; after a pause it's a new one (MEM-8).
         if let last = lastAskedAt, Date.now.timeIntervalSince(last) >= CookieChat.followUpWindow { conversationId = nil }
         do {
-            let answer = try await client.api
-                .askAssistant(body: .json(.init(conversationId: conversationId, text: text))).ok.body.json
+            let answer = try await client.api.askAssistant(body: body(conversationId)).ok.body.json
             conversationId = answer.conversationId
             lastAskedAt = .now
-            messages.append(CookieChat.message(answer))
+            messages.append(contentsOf: bubbles(answer))
+            return answer
         } catch {
             let why = HubError.from(error)?.message ?? "Cookie couldn't be reached. Try again."
             messages.append(CookieMessage(id: UUID().uuidString, role: .cookie, text: why, kind: .notice))
+            return nil
         }
+    }
+
+    /// "Spoken answers" in Settings → Cookie (VOX-5), fetched once and
+    /// kept up to date by that screen. On until known otherwise.
+    func spokenAnswersOn() async -> Bool {
+        if let spokenAnswers { return spokenAnswers }
+        spokenAnswers = try? await client.api.getAssistantSettings().ok.body.json.speak
+        return spokenAnswers ?? true
     }
 
     /// "Undo" under an answer that saved or forgot a fact (MEM-2): forgets
@@ -92,5 +117,6 @@ final class CookieStore {
         loaded = false
         loadError = nil
         draft = ""
+        spokenAnswers = nil
     }
 }

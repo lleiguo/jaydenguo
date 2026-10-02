@@ -79,8 +79,9 @@ public enum CookieChat {
     public static func messages(_ turns: [CookieTurn]) -> [CookieMessage] {
         turns.flatMap { turn -> [CookieMessage] in
             guard let heard = turn.heard, let text = turn.text else { return [] }
-            return [
-                CookieMessage(id: turn.id + "-q", role: .you, text: heard),
+            // A recording with no words in it has no question to show.
+            let question = heard.isEmpty ? [] : [CookieMessage(id: turn.id + "-q", role: .you, text: heard)]
+            return question + [
                 CookieMessage(
                     id: turn.id, role: .cookie, text: text, kind: kind(turn.outcome.rawValue),
                     sourceLine: sourceLine(turn.sources), links: links(turn.sources)

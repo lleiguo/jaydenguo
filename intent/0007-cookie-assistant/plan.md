@@ -140,13 +140,14 @@ K7 2.
 | SP-C1 | done 2026-10-02 (below): passes, at the bar. |
 | SP-C3 | measured 2026-10-02 (below); the owner's pick by ear is open. Built with "Leda". |
 | SP-C4 | done 2026-10-02 (below). |
-| SP-C5 | Voice Memos clips from the iPhone (48 kHz mono AAC, `.m4a`) are accepted as `audio/mp4` (SP-C1); a clip recorded by the app itself is still to do in K6. |
+| SP-C5 | Voice Memos clips from the iPhone (48 kHz mono AAC, `.m4a`) are accepted as `audio/mp4` (SP-C1); a clip recorded by the app itself (16 kHz mono AAC, 24 kbit/s, about 3 kB a second) is accepted too, tried on the simulator in K6. A real phone is still to try (O-6). |
 | K1.1–K1.7 | built 2026-10-02 on `cookie/k1-backend`; not merged or deployed. |
 | K2.1–K2.5 | built 2026-10-02 on `cookie/k2-ios-chat` (stacked on K1); not merged, no TestFlight build yet. |
 | K3.1–K3.3 | built 2026-10-02 on `cookie/k3-memory`; not merged. |
 | K4.1–K4.3 | built 2026-10-02 on `cookie/k4-web` (stacked on K3); not merged. |
 | K5.1–K5.3 | built 2026-10-02 on `cookie/k5-voice`; not merged, Terraform not applied (O-3). |
-| K6–K7 | not started. |
+| K6.1–K6.4 | built 2026-10-02 on `cookie/k6-ios-voice`; not merged. Tried on the simulator; not yet on a phone (O-6). |
+| K7 | not started. |
 
 **K1 as built (2026-10-02):**
 - *Schema (K1.1).* Migration `0027_assistant`: `assistant_turns` and
@@ -322,6 +323,56 @@ K7 2.
   (the five spoken-question cases, four speech cases), API e2e (a clip
   in, speech out, refusals). The fixture clip is a macOS voice saying
   "What's on today?".
+
+**K6 as built (2026-10-02):**
+- *Rules in HubKit, audio in the app (K6.1).* The plan put the recorder
+  and player in HubKit. Built instead: `HubKit/Assistant/CookieVoice.swift`
+  holds the rules (what lifting the finger does, the level ring, the
+  ask body, what is read aloud, which phone voice), tested without a
+  simulator; the AVFoundation code is in the app
+  (`HubApp/Features/Cookie/CookieAudio.swift`), because the audio
+  session only exists on iOS and HubKit's tests run on the Mac.
+- *Recording.* AAC in an MPEG-4 file, 16 kHz mono, in a protected
+  temporary file that is deleted as soon as the clip is read or the
+  recording cancelled (CSEC-2). **The microphone is started off the
+  main thread:** the first try on the simulator froze the screen inside
+  the system's "start recording" call. If the microphone hasn't started
+  after 3 s she says so, and typing still works.
+- *Hold to talk (K6.2).* On her button: 0.2 s starts recording with a
+  haptic, a red ring that swells with the voice, and "Listening… 0:02";
+  lifting sends; sliding off turns the ring grey and lifting cancels;
+  under half a second shows "Hold to talk"; 30 s sends by itself. A
+  plain tap still opens the chat. Offline, a hold says so (CK-7).
+- *Microphone permission (CK-6).* Asked on the first hold, with the
+  reason. Refused: a line says the microphone is off, with a button to
+  Settings.
+- *Bubble and speech (K6.3).* What she heard and her answer show in a
+  bubble by the button; tapping it opens the chat, where the same turn
+  is. The answer is read by the server's voice; if that gives anything
+  but audio, by the phone's voice in the answer's language. A tap on
+  her button, or a new hold, stops the speech. The bubble closes 5 s
+  after she stops speaking (8 s when nothing is spoken). There is no
+  separate bark sound: the voice says "Woof!" (spec K-8).
+- *The chat's mic button (K6.4).* Tap to start, tap to send, so nothing
+  needs a long press (CK-5); while she speaks, the same button stops
+  her. A spoken question in the chat is answered in the chat and read
+  aloud; typed ones are never read.
+- *Settings.* "Spoken answers" in Settings → Cookie. Off, nothing is
+  read and no speech is fetched.
+- *Leaving the app* stops the recording and the speech. Speech uses a
+  playback-only audio session, so it never touches the microphone.
+- *Tests.* HubKit: 10 tests of the rules. UI tests
+  (`HubAppUITests/CookieTests`): hold to ask and the bubble, a short
+  press, the mic button, the "Spoken answers" switch. They start the
+  app with `-HubCookieClip` (debug builds only), which hands the
+  recorder a made-up clip, so the microphone is never used in a test.
+- *By hand on the simulator:* the real recorder, a hold, the level
+  ring, and the server accepting the app's own recording.
+- **Not yet tried, and only a phone can:** how the voices sound, the
+  haptics, the microphone question as the system shows it, Bluetooth
+  and the silent switch (she speaks even when the phone is on silent,
+  because the question was asked out loud), and VoiceOver end to end.
+  These are O-6.
 
 **Still open from K1:** the eval's timeouts and the speed (spec K-11);
 nothing here has run on Cloud Run yet.

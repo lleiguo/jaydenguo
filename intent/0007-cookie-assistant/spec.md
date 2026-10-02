@@ -186,7 +186,7 @@ inside the free million characters a month.
  answer(...) or bark(...) → grounding check (CHR-3) → save turn + cost
         │  { turnId, heard, outcome, text, sources, saved? }
         ▼
- iPhone: show text → GET …/turns/{id}/speech → play (bark sound first)
+ iPhone: show text → GET …/turns/{id}/speech → play
 ```
 
 - **Forced tool calls.** The model must always call a tool, and
@@ -235,12 +235,14 @@ inside the free million characters a month.
   notification clean-up. No new scheduled job.
 
 ### 4.5 Clients
-- **iPhone.** `HubKit/Assistant/`: client, types, recorder (AVFoundation,
-  `.playAndRecord`), player. `HubApp/Features/Cookie/`: the floating
-  button as an overlay in `RootView`, the bubble, the chat sheet, and
-  Settings → Cookie (Memory, History, Spoken answers, Use the web, cap).
-  `NSMicrophoneUsageDescription` in `project.yml`. A bark sound in the
-  asset catalogue. No new packages (SEC-4).
+- **iPhone.** `HubKit/Assistant/`: client, types and the voice rules
+  (tested on the Mac). `HubApp/Features/Cookie/`: the recorder
+  (AVFoundation, started off the main thread) and the speaker, the
+  floating button as an overlay in `RootView`, the bubble, the chat
+  sheet, and Settings → Cookie (Memory, History, Spoken answers, Use
+  the web, cap). `NSMicrophoneUsageDescription` in `project.yml`. No
+  bark sound in the asset catalogue until the owner supplies one (K-8):
+  the voice says "Woof!". No new packages (SEC-4).
 - **Web.** No chat on the website (CK-8). The Costs page shows Cookie's
   cost line, as it does for every AI feature.
 

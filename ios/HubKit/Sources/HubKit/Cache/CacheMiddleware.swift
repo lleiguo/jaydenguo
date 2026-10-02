@@ -12,7 +12,7 @@ struct CacheMiddleware: ClientMiddleware {
     /// Live-only answers: the change feed must never replay an old cursor,
     /// and nothing from Cookie is kept on the phone (intent 0007, CSEC-8).
     static let liveOnly: Set<String> = [
-        "getChanges", "listAssistantTurns", "getAssistantSettings", "listAssistantMemories",
+        "getChanges", "listAssistantTurns", "getAssistantSettings", "listAssistantMemories", "getAssistantSpeech",
     ]
     static let cachedAtField = HTTPField.Name("X-Hub-Cached-At")!
 
