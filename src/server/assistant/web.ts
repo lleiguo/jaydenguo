@@ -47,10 +47,11 @@ const searchSystem = (language: Language) =>
     language === "en" ? "English" : "Simplified Chinese"
   }. If the results don't answer it, reply with exactly ${NO_ANSWER}.`;
 
-export function geminiSearch(generate: Generate = vertexGenerate(), model = ASSISTANT_MODEL()): WebSearch {
+export function geminiSearch(generate?: Generate, model = ASSISTANT_MODEL()): WebSearch {
   return async (query, language) => {
     let response;
     try {
+      generate ??= vertexGenerate();
       response = await generate({
         model,
         contents: [{ role: "user", parts: [{ text: query }] }],

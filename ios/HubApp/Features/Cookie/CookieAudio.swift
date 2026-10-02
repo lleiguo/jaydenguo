@@ -49,6 +49,15 @@ private actor CookieTape {
         self.recorder = recorder
     }
 
+    /// A recording left behind by a crash is removed at the next launch.
+    func sweep() {
+        let folder = FileManager.default.temporaryDirectory
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        for file in files where file.lastPathComponent.hasPrefix("cookie-") && file.pathExtension == "m4a" && file != url {
+            try? FileManager.default.removeItem(at: file)
+        }
+    }
+
     func level() -> Double {
         guard let recorder else { return 0 }
         recorder.updateMeters()
@@ -81,6 +90,10 @@ final class CookieRecorder {
     /// Goes up with every start and stop, so a slow start that was
     /// cancelled meanwhile is thrown away when it lands.
     private var run = 0
+
+    init() {
+        Task { [tape] in await tape.sweep() }
+    }
 
     #if DEBUG
     /// UI tests pass a clip (`-HubCookieClip <base64>`), so nothing is

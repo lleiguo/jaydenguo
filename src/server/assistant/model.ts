@@ -34,14 +34,14 @@ export const ASSISTANT_MODEL = () => process.env.ASSISTANT_MODEL ?? "gemini-3.8-
 
 // Gemini Flash on Vertex AI (plan SP-C2): tool calling forced, thinking
 // off (the lowest setting; LIM-2).
-export function geminiAssistant(
-  generate: Generate = vertexGenerate(),
-  model = ASSISTANT_MODEL(),
-): AssistantModel {
+export function geminiAssistant(generate?: Generate, model = ASSISTANT_MODEL()): AssistantModel {
   return {
     async round(req) {
       let response;
       try {
+        // Made here, so Vertex AI not being set up is "can't answer right
+        // now" like any other failure, not a crash.
+        generate ??= vertexGenerate();
         response = await generate({
           model,
           contents: req.contents,
