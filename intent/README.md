@@ -21,4 +21,4 @@ Rules:
 | 0004 | [iPhone app](0004-ios-app/) | approved 2026-09-28 (chat) | approved 2026-09-28 (chat) | approved 2026-09-28; N0–N8 merged (#45–#61), on-phone checks in the plan's Status |
 | 0005 | [Video sport](0005-video-sport/) | approved 2026-09-30 (chat) | approved 2026-09-30 (chat) | approved 2026-09-30; done, merged in #56 |
 | 0006 | [Video reviews by Gemini alone](0006-video-gemini-only/) | approved 2026-10-01 (chat) | built from the request 2026-10-01; concerns G-1, G-2 for the owner | built 2026-10-01 |
-| 0007 | [Cookie, the family assistant](0007-cookie-assistant/) | approved 2026-10-02 (chat); defaults kept | approved 2026-10-02 (chat); owner decisions recorded in §5 | approved 2026-10-02; K1 built, spikes and K2–K7 in the plan's Status |
+| 0007 | [Cookie, the family assistant](0007-cookie-assistant/) | approved 2026-10-02 (chat); defaults kept | approved 2026-10-02 (chat); owner decisions recorded in §5 | approved 2026-10-02; K1 and K2 built, spikes and K3–K7 in the plan's Status |

@@ -23,6 +23,7 @@ struct MoreScreen: View {
                 NavigationLink(value: Route.sources) { Label("Sources", systemImage: "arrow.triangle.2.circlepath") }
                 NavigationLink(value: Route.accounts) { Label("Accounts", systemImage: "key") }
                 NavigationLink { ClashesScreen() } label: { Label("Clashes", systemImage: "exclamationmark.triangle") }
+                NavigationLink { CookieSettingsScreen() } label: { Label("Cookie", systemImage: "pawprint") }
                 NavigationLink { CostsScreen() } label: { Label("Costs", systemImage: "dollarsign.circle") }
                 NavigationLink { DeletedScreen() } label: { Label("Deleted", systemImage: "trash") }
                 NavigationLink { SessionsScreen() } label: { Label("Sessions", systemImage: "iphone.and.arrow.forward") }

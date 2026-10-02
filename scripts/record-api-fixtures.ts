@@ -45,6 +45,9 @@ async function main() {
   const saved: Record<string, unknown> = {};
   for (const op of operations) {
     if (op.method !== "GET" || op.binary || op.path.includes("{")) continue;
+    // Cookie's fixtures (intent 0007) are written by hand: a recorded chat
+    // would depend on what was last asked.
+    if (op.path.startsWith("/api/v1/assistant/")) continue;
     saved[op.operationId] = await get(withQuery[op.operationId] ?? op.path);
     save(op.operationId, saved[op.operationId]);
   }

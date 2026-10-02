@@ -67,8 +67,11 @@ createdb -h localhost -p 5433 -U hub hub_fixtures
 DATABASE_URL=postgres://hub:hub@localhost:5433/hub_fixtures pnpm db:migrate
 export MEDIA_DIR=~/.cache/jaydenguo/media-fixtures   # the sample review's video
 DATABASE_URL=postgres://hub:hub@localhost:5433/hub_fixtures pnpm seed
-DATABASE_URL=postgres://hub:hub@localhost:5433/hub_fixtures APP_URL=http://localhost:3200 pnpm dev --port 3200
+DATABASE_URL=postgres://hub:hub@localhost:5433/hub_fixtures APP_URL=http://localhost:3200 ASSISTANT_LLM=fake pnpm dev --port 3200
 ```
+
+`ASSISTANT_LLM=fake` gives Cookie a stand-in model (intent 0007), so the
+chat tests don't call Vertex AI.
 
 `pnpm seed` puts the sample email suggestions back, so the tests that use
 them up can run again; re-run it between full test runs.

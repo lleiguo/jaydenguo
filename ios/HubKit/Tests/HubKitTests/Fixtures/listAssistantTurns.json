@@ -1,0 +1,59 @@
+{
+  "turns": [
+    {
+      "id": "5b0f6c1e-3a52-4f0e-9d53-0c7f6f1b2a01",
+      "conversationId": "9a2b7c44-11de-4c7b-8d0a-3a1f0e5d6c01",
+      "mode": "text",
+      "heard": "What's on today?",
+      "text": "Today: Swim squad, Math, English, Science, French.",
+      "outcome": "answer",
+      "language": "en",
+      "sources": [
+        {
+          "kind": "hub",
+          "label": "Today"
+        }
+      ],
+      "createdAt": "2026-10-02T14:00:05.000Z"
+    },
+    {
+      "id": "5b0f6c1e-3a52-4f0e-9d53-0c7f6f1b2a02",
+      "conversationId": "9a2b7c44-11de-4c7b-8d0a-3a1f0e5d6c01",
+      "mode": "text",
+      "heard": "And where is swim squad?",
+      "text": "At Birch Aquatic Centre.",
+      "outcome": "answer",
+      "language": "en",
+      "sources": [
+        {
+          "kind": "conversation",
+          "label": "Earlier in this chat"
+        }
+      ],
+      "createdAt": "2026-10-02T14:01:10.000Z"
+    },
+    {
+      "id": "5b0f6c1e-3a52-4f0e-9d53-0c7f6f1b2a03",
+      "conversationId": "9a2b7c44-11de-4c7b-8d0a-3a1f0e5d6c02",
+      "mode": "text",
+      "heard": "他的鞋码是多少？",
+      "text": "汪！这个我不知道。",
+      "outcome": "bark",
+      "language": "zh",
+      "sources": [],
+      "createdAt": "2026-10-02T15:30:00.000Z"
+    },
+    {
+      "id": "5b0f6c1e-3a52-4f0e-9d53-0c7f6f1b2a04",
+      "conversationId": "9a2b7c44-11de-4c7b-8d0a-3a1f0e5d6c03",
+      "mode": "text",
+      "heard": "Hi Cookie",
+      "text": "Cookie needs a rest. Try again in a few minutes.",
+      "outcome": "limit",
+      "language": "en",
+      "sources": [],
+      "createdAt": "2026-10-02T15:40:00.000Z"
+    }
+  ],
+  "more": false
+}

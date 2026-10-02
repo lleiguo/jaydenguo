@@ -9,8 +9,9 @@ struct CacheMiddleware: ClientMiddleware {
     let cache: ResponseCache
     let onEvent: @Sendable (HubEvent) -> Void
 
-    /// Live-only answers: the change feed must never replay an old cursor.
-    static let liveOnly: Set<String> = ["getChanges"]
+    /// Live-only answers: the change feed must never replay an old cursor,
+    /// and nothing from Cookie is kept on the phone (intent 0007, CSEC-8).
+    static let liveOnly: Set<String> = ["getChanges", "listAssistantTurns", "getAssistantSettings"]
     static let cachedAtField = HTTPField.Name("X-Hub-Cached-At")!
 
     func intercept(

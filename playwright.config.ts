@@ -69,6 +69,8 @@ export default defineConfig({
         MEDIA_DIR: path.join(os.tmpdir(), "jaydenguo-e2e-media"),
         // Email suggestions likewise (plan M5.8).
         EMAIL_LLM: "fake",
+        // And Cookie (intent 0007).
+        ASSISTANT_LLM: "fake",
         // Jobs the site starts run as local processes of the built worker.
         WORKER_COMMAND: `node ${path.resolve("dist/worker.mjs")}`,
         COMMIT_SWIM_BASE_URL: `http://127.0.0.1:${FAKE_COMMIT_PORT}`,
