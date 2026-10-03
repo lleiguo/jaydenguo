@@ -648,12 +648,13 @@ function AddSource({
           />
         </label>
       ) : usable.length === 0 ? (
-        <p>
+        <p role="note" className="text-amber-700 dark:text-amber-400">
           First add {ACCOUNT_NOUN[kind][0]} on the{" "}
           <a className="underline" href="/settings/accounts">
             Accounts page
           </a>
-          .
+          {kind === "gmail" ? " (“Connect Gmail (coach emails)”)" : ""}. Until then this source can&apos;t be
+          added.
         </p>
       ) : (
         <label className="flex flex-col">
@@ -674,7 +675,7 @@ function AddSource({
       {kind === "gmail" && (
         <>
           <label className="flex flex-col">
-            Senders to read (one per line; *@club.ca for a whole club)
+            Senders to read (one per line; *@club.ca for a whole club, *@*.club.ca to include its subdomains)
             <textarea
               name="senders"
               rows={3}
@@ -758,7 +759,7 @@ function AddSource({
       {error && <p className="text-red-700 dark:text-red-400">{error}</p>}
       <button
         type="submit"
-        className="self-start rounded bg-blue-700 px-3 py-1 text-white"
+        className="self-start rounded bg-blue-700 px-3 py-1 text-white disabled:cursor-not-allowed disabled:bg-neutral-400 dark:disabled:bg-neutral-600"
         disabled={usable.length === 0 && !NO_ACCOUNT.includes(kind)}
       >
         Add source

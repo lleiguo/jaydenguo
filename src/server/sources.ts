@@ -55,7 +55,7 @@ const configSchema = z.object({
   portalUrl: z.string().trim().max(300).optional(),
   studentFirstName: z.string().trim().max(60).optional(),
   // gmail (EML-1): the only senders and labels read. "*@club.ca" is a
-  // whole domain.
+  // whole domain; "*@*.club.ca" also takes in its subdomains.
   senders: z
     .array(
       z
@@ -63,8 +63,8 @@ const configSchema = z.object({
         .trim()
         .toLowerCase()
         .regex(
-          /^(\*@[^\s@*]+\.[^\s@*]+|[^\s@*]+@[^\s@*]+\.[^\s@*]+)$/,
-          "a sender is an email address or *@domain",
+          /^(\*@(\*\.)?[^\s@*]+\.[^\s@*]+|[^\s@*]+@[^\s@*]+\.[^\s@*]+)$/,
+          "a sender is an email address, *@club.ca or *@*.club.ca",
         ),
     )
     .max(30)

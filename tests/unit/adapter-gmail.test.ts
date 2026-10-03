@@ -38,6 +38,17 @@ describe("gmail adapter", () => {
     expect(fromAddress("Coach Sam <Coach@Club.example>")).toBe("coach@club.example");
   });
 
+  it("takes in a domain's subdomains with *@*.domain", () => {
+    const senders = ["*@*.veracross.example"];
+    expect(senderAllowed("noreply@school.veracross.example", senders)).toBe(true);
+    expect(senderAllowed("news@veracross.example", senders)).toBe(true);
+    expect(senderAllowed("x@notveracross.example", senders)).toBe(false);
+    expect(senderAllowed("x@veracross.example.evil", senders)).toBe(false);
+    expect(gmailQuery(parseGmailConfig({ senders, labels: [] }))).toBe(
+      "{from:veracross.example} newer_than:14d",
+    );
+  });
+
   it("keeps only allow-listed messages, even if the search returned more (EML-1)", () => {
     const batch = normaliseGmail(raw, ctx({ senders: ["*@club.example"], labels: ["Jayden"] }));
     expect(batch.emails!.map((e) => e.id)).toEqual(["msg-practice", "msg-labelled"]);
