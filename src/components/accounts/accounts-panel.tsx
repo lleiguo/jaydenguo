@@ -147,6 +147,13 @@ export function AccountsPanel() {
           <a className="rounded-md border px-3 py-2 text-sm" href="/accounts/google/connect?feature=videos">
             Connect Drive and Photos (videos)
           </a>
+          {/* Cookie adds events she is asked to the household calendar (intent 0008, GCW-3). */}
+          <a
+            className="rounded-md border px-3 py-2 text-sm"
+            href="/accounts/google/connect?feature=calendar_write"
+          >
+            Let Cookie add events
+          </a>
         </div>
       </ProviderSection>
 

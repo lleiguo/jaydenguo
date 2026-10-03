@@ -17,6 +17,7 @@ import { localDate } from "../domain/time";
 import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
 import { defaultEmailExtractor, syncEmails } from "../server/email/apply";
+import { assistantActionsJob } from "./assistant-actions";
 import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
 import { notifyClashes, notifyNextMatches, notifySuggestions, notifySyncFailed } from "../server/push/kinds";
 import { pruneMemories } from "../server/assistant/memory";
@@ -273,6 +274,8 @@ export async function syncJob(args: string[], ctx: JobContext) {
   for (const id of ids) results[id] = (await syncSource(db, id, trigger, ctx.log)).status;
   // The daily run also keeps open-ended repeating events written out ahead.
   if (target === "all") ctx.log("series extended", { series: await extendAllSeries(db) });
+  // Intent 0008: anything Cookie added that didn't reach Google yet.
+  if (target === "all") await assistantActionsJob([], ctx);
   // GCO-1: the Google Calendar copy follows the daily sync.
   if (target === "all") await calendarCopyJob([], ctx);
   // Notifications are kept 90 days.

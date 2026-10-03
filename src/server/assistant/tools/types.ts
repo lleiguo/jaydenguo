@@ -27,6 +27,8 @@ export type ToolContext = {
   turn: TurnState;
   settings: AssistantSettings;
   web: { search: WebSearch; fetch: PageFetch };
+  // Starts the worker that writes an added event to Google (intent 0008).
+  launch?: (args: string[]) => Promise<void>;
 };
 
 export type TurnState = {

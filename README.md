@@ -188,6 +188,16 @@ turn"` in the web service's logs: each line has the outcome and, for
 - **Slow answers:** a question is one or two model calls of 1–4 s each,
   plus one more for a spoken question. If Vertex AI is slow she gives up
   after 25 s.
+- **Adding events (intent 0008):** Cookie adds an event to the household
+  Google Calendar only when asked, and only once Settings → Accounts →
+  "Let Cookie add events" has been granted by the Google account that
+  owns that calendar. The event is in the hub at once; the worker job
+  `assistant:actions` writes it to Google within about 20 seconds (the
+  daily sync catches up anything missed). If Google refuses, the hub's
+  event is removed and a "Couldn't add to the family calendar"
+  notification goes out. Its log line is `"assistant action failed"`
+  with a status. Undo in the chat takes it back out of both for ten
+  minutes.
 - **Wrong or unwanted memory:** the app, Settings → Cookie → Memory.
   **Web search** is off until switched on there.
 

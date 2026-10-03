@@ -5554,6 +5554,9 @@
           },
           "monthSpendUsd": {
             "type": "number"
+          },
+          "canAdd": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -5562,7 +5565,8 @@
           "web",
           "privateTerms",
           "addCalendarSourceId",
-          "monthSpendUsd"
+          "monthSpendUsd",
+          "canAdd"
         ]
       },
       "AssistantSource": {

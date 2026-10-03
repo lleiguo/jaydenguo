@@ -1253,7 +1253,7 @@ describe("Cookie", () => {
           tools: undefined,
           web: { search: fakeSearch, fetch: fakeFetch },
         };
-        process.env.ASSISTANT_CALENDAR_ADD = "on";
+        process.env.ASSISTANT_CALENDAR_ADD = "fake";
         const fromPage = await ask(db, afterWeb, { userId, text: `Add what ${url} says to the calendar` });
         expect(fromPage.did).toBeNull();
         expect(JSON.stringify(afterWeb.model.requests[2].contents.at(-1))).toContain("used the web");
