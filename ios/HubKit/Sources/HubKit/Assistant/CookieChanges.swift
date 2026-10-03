@@ -118,17 +118,28 @@ extension CookieChat {
     public static let settleInterval: Duration = .seconds(4)
     public static let settleLimit: TimeInterval = 3 * 60
 
-    /// History with each answer's changes brought up to date from fresh
-    /// turns; everything else stays as it is.
+    /// History brought up to date from fresh turns: each answer's changes
+    /// as they are now, whether it still waits for an email summary, and
+    /// the summaries that have arrived since (intent 0009, ERA-1), added at
+    /// the end. Everything else stays as it is.
     public static func refreshed(_ messages: [CookieMessage], from turns: [CookieTurn]) -> [CookieMessage] {
-        let changes = Dictionary(
-            turns.compactMap { turn in turn.did.map { (turn.id, CookieChanges(turnId: turn.id, did: $0)) } },
-            uniquingKeysWith: { a, _ in a }
-        )
-        return messages.map { message in
-            guard message.changes != nil, let fresh = changes[message.id] else { return message }
-            return message.with(changes: fresh)
+        let byId = Dictionary(turns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let known = Set(messages.map(\.id))
+        let updated = messages.map { message -> CookieMessage in
+            guard let turn = byId[message.id] else { return message }
+            var next = message
+            if message.changes != nil, let did = turn.did { next = next.with(changes: CookieChanges(turnId: turn.id, did: did)) }
+            if message.waitingUntil != nil, turn.waiting == nil { next = next.notWaiting() }
+            return next
         }
+        let arrived = turns.filter { $0.followup == true && !known.contains($0.id) }
+        return updated + CookieChat.messages(arrived)
+    }
+
+    /// Whether the chat should ask the server again: a card being added,
+    /// or an email summary on its way.
+    public static func needsRefresh(_ messages: [CookieMessage], now: Date = .now) -> Bool {
+        messages.contains { $0.changes?.isSettling == true || $0.isWaiting(now: now) }
     }
 }
 

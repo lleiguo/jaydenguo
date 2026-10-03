@@ -196,6 +196,36 @@ final class CookieTests: XCTestCase {
         XCTAssertTrue(undone.waitForExistence(timeout: 10))
     }
 
+    /// Intent 0009, plan R3.2: asked about an email, she says she's checking,
+    /// the chat shows it waiting, and her follow-up arrives in place. The
+    /// seed's email source has no Google account, so the follow-up is that
+    /// Gmail isn't connected: still a follow-up, from the worker. Needs the
+    /// server with ASSISTANT_LLM=fake (launch config `web-cookie-email`).
+    func testReadingAnEmailFollowsUp() throws {
+        let sources = request("GET", "/api/v1/sources")
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["sources"] as? [[String: Any]]
+        let mail = try XCTUnwrap(
+            sources?.first { $0["name"] as? String == "Coach email (sample)" }?["id"] as? String, "run `pnpm seed`"
+        )
+        request("PATCH", "/api/v1/sources/\(mail)", body: #"{"enabled":true}"#)
+        defer { request("PATCH", "/api/v1/sources/\(mail)", body: #"{"enabled":false}"#) }
+
+        let app = try launch()
+        app.buttons["cookieButton"].tap()
+        ask(app, "Summarize the email about extra practice")
+        let answer = app.descendants(matching: .any)["cookieAnswer"].firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 20))
+        XCTAssertTrue(answer.label.contains("checking the mail"), answer.label)
+        let waiting = app.descendants(matching: .any)["cookieWaiting"].firstMatch
+        XCTAssertTrue(waiting.waitForExistence(timeout: 5))
+
+        let followup = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == 'cookieAnswer' AND label CONTAINS 'Gmail'")
+        ).firstMatch
+        XCTAssertTrue(followup.waitForExistence(timeout: 45), "the worker's follow-up arrives in the chat")
+        XCTAssertTrue(waiting.waitForNonExistence(timeout: 10))
+    }
+
     /// LIM-5, MEM-9: Settings → Cookie shows the month's spend and limit,
     /// and clears the chat.
     func testSettingsShowTheLimitAndClearTheChat() throws {

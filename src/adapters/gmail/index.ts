@@ -160,6 +160,21 @@ export function normaliseGmail(raw: GmailRaw, ctx: AdapterContext): NormalisedBa
   return { records: [], window: { from: ctx.now, to: ctx.now }, warnings, emails };
 }
 
+// The messages a Gmail search finds, in full, with the account's labels
+// (to check the allow-list's labels by ID).
+export async function searchGmail(token: string, q: string, max: number): Promise<GmailRaw> {
+  const labels = await gmail<{ labels?: { id: string; name: string }[] }>(token, "labels");
+  const labelIds = Object.fromEntries((labels.labels ?? []).map((l) => [l.name.toLowerCase(), l.id]));
+  const list = await gmail<{ messages?: { id: string }[] }>(
+    token,
+    `messages?maxResults=${max}&q=${encodeURIComponent(q)}`,
+  );
+  const messages: GmailMessage[] = [];
+  for (const { id } of list.messages ?? [])
+    messages.push(await gmail<GmailMessage>(token, `messages/${encodeURIComponent(id)}?format=full`));
+  return { messages, labelIds };
+}
+
 async function gmail<T>(token: string, path: string): Promise<T> {
   let res: Response;
   try {
@@ -185,16 +200,7 @@ export const gmailAdapter: Adapter<GmailRaw> = {
     if (!c.senders.length && !c.labels.length)
       throw new SyncError("Add at least one sender or label to read on the Sources page.");
     const token = await googleAccessToken(ctx.credential.secret);
-    const labels = await gmail<{ labels?: { id: string; name: string }[] }>(token, "labels");
-    const labelIds = Object.fromEntries((labels.labels ?? []).map((l) => [l.name.toLowerCase(), l.id]));
-    const list = await gmail<{ messages?: { id: string }[] }>(
-      token,
-      `messages?maxResults=${MAX_MESSAGES}&q=${encodeURIComponent(gmailQuery(c))}`,
-    );
-    const messages: GmailMessage[] = [];
-    for (const { id } of list.messages ?? [])
-      messages.push(await gmail<GmailMessage>(token, `messages/${encodeURIComponent(id)}?format=full`));
-    return { messages, labelIds };
+    return searchGmail(token, gmailQuery(c), MAX_MESSAGES);
   },
   normalise: normaliseGmail,
 };

@@ -22,6 +22,8 @@ export type ToolContext = {
   // on what the question asks for (MEM-1, MEM-5).
   userId: string;
   question: string;
+  // The conversation the question belongs to (a follow-up answer goes in it).
+  conversationId: string;
   // The question was spoken, not typed.
   spoken?: boolean;
   // What this question has done so far.
@@ -45,6 +47,9 @@ export type TurnState = {
   // turn, and what was added, for the line the server can say itself.
   actionIds: string[];
   did: { title: string; date: string; start: string | null; names: string[]; everyone: boolean } | null;
+  // An email this question asked her to read (intent 0009): the summary
+  // follows as another turn.
+  emailRead: { id: string; until: string } | null;
   // Email suggestions this question applied (EMS-3, EMS-4).
   applied: { title: string; kind: AppliedKind }[];
   // What the searches cost, on top of Cookie's own model calls.
@@ -59,6 +64,7 @@ export const newTurn = (): TurnState => ({
   webSources: [],
   actionIds: [],
   did: null,
+  emailRead: null,
   applied: [],
   webCost: { inputTokens: 0, outputTokens: 0, costUsd: 0, searches: 0 },
 });

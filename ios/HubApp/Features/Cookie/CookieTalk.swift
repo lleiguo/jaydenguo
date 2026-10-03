@@ -39,10 +39,16 @@ final class CookieTalk {
     /// Whether the answer goes to the bubble by the button, or only into
     /// the open chat.
     private var fromChat = false
+    /// A spoken question whose email summary is on its way (intent 0009,
+    /// ERA-4): its conversation, and the language to read it in.
+    private var awaiting: (conversationId: String, language: String)?
+    /// Whether the chat is on screen, to read a summary aloud there.
+    var chatOpen: () -> Bool = { false }
 
     init(store: CookieStore, client: HubClient) {
         self.store = store
         self.client = client
+        store.onFollowup = { [weak self] message in self?.followed(message) }
     }
 
     var isRecording: Bool { if case .recording = phase { true } else { false } }
@@ -183,17 +189,37 @@ final class CookieTalk {
         }
         let message = CookieChat.message(answer)
         phase = fromChat ? .idle : .answered(heard: answer.heard, answer: message)
+        if answer.waiting != nil { awaiting = (answer.conversationId, answer.language.rawValue) }
         await speak(answer)
+    }
+
+    /// ERA-4: the summary of an email a spoken question asked for. In the
+    /// bubble if it's still up, and read aloud if the bubble or the chat
+    /// is on screen; otherwise only shown in the chat.
+    private func followed(_ message: CookieMessage) {
+        guard let wanted = awaiting, message.conversationId == wanted.conversationId else { return }
+        awaiting = nil
+        let inBubble: Bool
+        if case .answered = phase { inBubble = true } else { inBubble = false }
+        guard inBubble || chatOpen() else { return }
+        if inBubble { phase = .answered(heard: "", answer: message) }
+        Task { await speak(turn: message.id, text: message.text, language: wanted.language, fromWeb: false) }
     }
 
     // MARK: Speech (VOX-5, CK-3)
 
     private func speak(_ answer: CookieAnswer) async {
-        guard CookieVoice.speaks(answer, spokenAnswers: await store.spokenAnswersOn()) else {
+        await speak(
+            turn: answer.turnId, text: answer.text, language: answer.language.rawValue,
+            fromWeb: answer.sources.contains { $0.kind == .web }
+        )
+    }
+
+    private func speak(turn: String, text: String, language: String, fromWeb: Bool) async {
+        guard await store.spokenAnswersOn(), !CookieVoice.spokenText(text).isEmpty else {
             // Nothing to hear, so leave time to read.
             return closeLater(after: lingerAfterAnswer + 3)
         }
-        let turn = answer.turnId
         let finished: @MainActor @Sendable () -> Void = { [weak self] in self?.spoke(turn) }
         speaking = turn
         // Stopped, or a new question began, while her voice was being fetched.
@@ -202,10 +228,9 @@ final class CookieTalk {
         if let audio, await speaker.play(audio, onFinish: finished) { return }
         guard speaking == turn else { return }
         // The phone's own voice: her voice didn't answer, or the month's spend is near the cap.
-        let fromWeb = answer.sources.contains { $0.kind == .web }
         await speaker.say(
-            CookieVoice.spokenText(answer.text, fromWeb: fromWeb, language: answer.language.rawValue),
-            language: answer.language.rawValue, onFinish: finished
+            CookieVoice.spokenText(text, fromWeb: fromWeb, language: language),
+            language: language, onFinish: finished
         )
     }
 

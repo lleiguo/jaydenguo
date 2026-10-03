@@ -63,6 +63,14 @@ export function fakeAssistant(): AssistantModel {
     const result = (last?.response as { result?: Record<string, unknown> } | undefined)?.result;
     const words = question.toLowerCase().match(/[a-z]{3,}|[\u3400-\u9fff]{2,}/g) ?? [];
 
+    // "Summarize the email about the field trip" (intent 0009, ERD-1).
+    const read = question.match(/^(?:summarize|read) the email about (.+?)[.?]?$/i);
+    if (read) {
+      if (round === 1) return [{ name: "email_read", args: { about: read[1] } }];
+      return result?.checking
+        ? say("I'm checking the mail; the summary will appear here in a minute.", ["self"])
+        : say(String(result?.error ?? "I couldn't look for that email."), ["self"]);
+    }
     // "Update my calendar from today's email" (intent 0008, EMS-4).
     if (/^update my calendar from today'?s email/i.test(question)) {
       if (round === 1) return [{ name: "suggestions_apply_today", args: {} }];

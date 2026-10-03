@@ -296,3 +296,61 @@ test("Cookie adds an event when asked, shows what she did, and takes it back (00
     await apiSend(context, "PATCH", "/api/v1/assistant/settings", { addCalendarSourceId: null });
   }
 });
+
+test("Cookie reads an email when asked, and the summary follows (0009 ERD-1, ERA-1, ERA-6)", async ({
+  page,
+  context,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "one shared chat; one project is enough");
+  test.setTimeout(90_000);
+  await signInAs(context, OWNER);
+  // A Gmail source over the fake Gmail, as on the Sources page.
+  // The fake Google offers fixed accounts; this test runs on desktop only.
+  const account = "gmail-desktop@example.test";
+  await page.goto("/settings/accounts");
+  await page.getByRole("link", { name: "Connect Gmail (coach emails)" }).click();
+  await page.getByRole("link", { name: account }).click();
+  await expect(page).toHaveURL(/\/settings\/accounts$/);
+  const creds = await apiSend(context, "GET", "/api/v1/credentials");
+  const cred = creds.credentials.find((c: { label: string }) => c.label.includes(account));
+  await apiSend(context, "POST", "/api/v1/sources", {
+    kind: "gmail",
+    name: `Cookie reads ${Date.now()}`,
+    credentialId: cred.id,
+    config: { senders: ["*@club.example"], labels: [] },
+    categoryMapping: { default: "other", rules: [] },
+  });
+
+  const asked = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+    text: "Summarize the email about extra practice",
+  });
+  expect(asked).toMatchObject({ outcome: "answer", waiting: { kind: "email" } });
+  expect(asked.text).toMatch(/checking the mail/);
+
+  // The worker (started by the question) reads the fake Gmail; the
+  // stand-in summarizer (EMAIL_LLM=fake) names the email by its subject.
+  await expect
+    .poll(
+      async () => {
+        const history = await apiSend(context, "GET", "/api/v1/assistant/turns?limit=5");
+        return history.turns.find(
+          (t: { followup?: boolean; conversationId: string }) =>
+            t.followup && t.conversationId === asked.conversationId,
+        );
+      },
+      { timeout: 45_000, intervals: [1000] },
+    )
+    .toMatchObject({
+      // Shown as a typed turn to app builds before follow-ups existed.
+      mode: "text",
+      heard: "",
+      outcome: "answer",
+      text: expect.stringContaining("Extra practice"),
+      sources: [
+        { kind: "hub", label: "Extra practice", email: true, url: expect.stringContaining("msg-practice") },
+      ],
+    });
+  const history = await apiSend(context, "GET", "/api/v1/assistant/turns?limit=5");
+  const question = history.turns.find((t: { id: string }) => t.id === asked.turnId);
+  expect(question.waiting).toBeNull();
+});

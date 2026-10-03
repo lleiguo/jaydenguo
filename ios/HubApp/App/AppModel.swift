@@ -76,6 +76,7 @@ final class AppModel {
         cookie = CookieStore(client: client)
         cookieTalk = CookieTalk(store: cookie, client: client)
         phase = client.isSignedIn ? .signedIn : .signedOut
+        cookieTalk.chatOpen = { [weak self] in self?.cookieOpen ?? false }
         Task { [weak self] in
             for await event in events { self?.handle(event) }
         }
@@ -260,6 +261,8 @@ final class AppModel {
 
     /// Opens a page in its tab (links, Today's cards).
     func go(_ route: Route) {
+        // Cookie's chat opens over whatever tab is showing.
+        if route == .cookie { return cookieOpen = true }
         selectedTab = route.tab
         switch route {
         case .tennis: tennisPath = []
@@ -356,9 +359,22 @@ final class AppModel {
                 environment: .init(rawValue: Push.environment)!,
                 topic: Bundle.main.bundleIdentifier ?? "com.jaydenguo.hub"
             ))).ok.body.json
+            await offerCookieNotifications()
         } catch {
             pushProblem = HubError.from(error)?.message ?? "Couldn't turn on notifications for this phone."
         }
+    }
+
+    /// "Cookie's answer is ready" (intent 0009, ERA-3) is new: the server
+    /// doesn't list it, so builds that don't know it never get it. This
+    /// build turns it on once, like the other kinds' defaults.
+    private func offerCookieNotifications() async {
+        let key = "cookieNotificationsOffered"
+        guard let settings = notificationSettings, settings.registered, !UserDefaults.standard.bool(forKey: key)
+        else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        let kinds = Set(settings.kinds.map(\.rawValue)).union(["cookie"])
+        await setNotificationKinds(Array(kinds))
     }
 
     func pushUnavailable() {

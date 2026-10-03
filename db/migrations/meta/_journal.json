@@ -204,6 +204,20 @@
       "when": 1790973794309,
       "tag": "0028_assistant_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791040653455,
+      "tag": "0029_assistant_email_reads",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791040889905,
+      "tag": "0030_notification_kind_cookie",
+      "breakpoints": true
     }
   ]
 }

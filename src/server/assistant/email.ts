@@ -11,16 +11,32 @@ import type { ToolContext } from "./tools/types";
 // source has read stays on the Suggestions page until a parent asks her to
 // apply it, by the same path as the page's Approve.
 
-export type EmailSource = { id: string; enabled: boolean; lastSuccessAt: Date | null };
+export type EmailSource = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  lastSuccessAt: Date | null;
+  credentialId: string | null;
+  config: unknown;
+};
 
-// The email source she reads suggestions from: the first Gmail source.
-// Without one she isn't given the email tools.
+// The email source she reads from: the newest Gmail source that's switched
+// on (the family has one; the newest is the one set up last). Without one
+// she isn't given the email tools. The worker reading an email for her
+// (intent 0009) makes the same choice.
 export async function emailSource(db: DbOrTx): Promise<EmailSource | null> {
   const [row] = await db
-    .select({ id: sources.id, enabled: sources.enabled, lastSuccessAt: sources.lastSuccessAt })
+    .select({
+      id: sources.id,
+      name: sources.name,
+      enabled: sources.enabled,
+      lastSuccessAt: sources.lastSuccessAt,
+      credentialId: sources.credentialId,
+      config: sources.config,
+    })
     .from(sources)
     .where(eq(sources.kind, "gmail"))
-    .orderBy(desc(sources.enabled), sources.createdAt)
+    .orderBy(desc(sources.enabled), desc(sources.createdAt))
     .limit(1);
   return row ?? null;
 }

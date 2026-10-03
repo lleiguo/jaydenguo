@@ -25,6 +25,8 @@ public enum Route: Equatable, Sendable, Hashable {
     case settings
     /// Settings → App → Notifications (PUSH-3).
     case notifications
+    /// The chat with Cookie: where her follow-up answers land (intent 0009, ERA-3).
+    case cookie
 
     public init?(url: URL, siteHost: String = "jaydenguo.com") {
         let parts: [String]
@@ -58,6 +60,7 @@ public enum Route: Equatable, Sendable, Hashable {
         case (1, "sources", _, _), (2, "settings", "sources", _): self = .sources
         case (1, "accounts", _, _), (2, "settings", "accounts", _): self = .accounts
         case (2, "settings", "notifications", _): self = .notifications
+        case (1, "cookie", _, _): self = .cookie
         case (1, "settings", _, _): self = .settings
         default: return nil
         }
@@ -66,7 +69,7 @@ public enum Route: Equatable, Sendable, Hashable {
     /// The tab a route belongs to.
     public var tab: Tab {
         switch self {
-        case .today: .today
+        case .today, .cookie: .today
         case .calendar, .event, .clashes: .calendar
         case .tennis, .tournament, .player, .tennisResults, .tennisAccuracy: .tennis
         case .swimming, .meet, .swimEvent: .swimming

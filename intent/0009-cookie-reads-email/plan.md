@@ -67,4 +67,47 @@ About 4 working days: R1 1, R2 1.5, R3 1, R4 0.5.
 | Task | Status |
 |---|---|
 | O-1 | done 2026-10-03: approved; R-1 kept as written. |
-| R1–R4 | started 2026-10-03. |
+| R1–R3 | built 2026-10-03 on `cookie/email-read`; not merged. |
+| R4.1–R4.2 | done 2026-10-03 (below). |
+| R4.3 | build number 9 set; upload after merge. |
+| SP-R1 | made-up mail done (below); the production check with the owner's allow-list waits for Gmail (O-2). |
+| SP-R2 | waits for production. |
+
+**As built (2026-10-03):**
+- *Request (R1).* Migration `0029_assistant_email_reads` (the table and the
+  `followup` turn mode) and `0030_notification_kind_cookie`. `email_read`
+  is one of the email tools (offered once there is an email source),
+  refused without an enabled one, after one per question, or past 10 an
+  hour. The ask response and turns carry `waiting`.
+- *Old app builds (found in review, F-1).* The API sends no new values in
+  existing lists. A follow-up is mode `text` plus `followup: true`; the
+  email source is kind `hub` plus `email: true`. The notification kind
+  `cookie` is opt-in (`OPT_IN_KINDS`): never listed, never a default; the
+  app turns it on once and shows its own switch. Build 8 sees the summary
+  as an ordinary answer "From Field trip on Friday".
+- *Worker (R2).* `assistant:email <id>` searches the allow-list narrowed by
+  the parent's words; if that finds nothing, the allow-list's mail over
+  the same days (10 emails, 1,500 characters each) for the model to pick
+  from. Flash summarizes with a structured call: pick, summary, others.
+  The follow-up turn carries the cost. The daily sync closes reads still
+  pending after 30 minutes. Locally `EMAIL_LLM=fake` stands in for the
+  summarizer.
+- *App (R3).* "Checking the mail…" under the answer, in the chat and the
+  bubble; the store asks for turns every 4 s until the summary arrives (3
+  minutes at most) and adds it in place. After a spoken question the
+  bubble stays up 45 s; if it or the chat is on screen when the summary
+  arrives, she reads it aloud. The summary's subject is a link to Gmail.
+  `jaydenguohub://open/cookie` (the notification's target) opens the chat.
+- *Tests.* Unit (the query, the schema), integration (13 new: the request,
+  the summary and no email text kept, the wider search, a hostile email,
+  failure and the daily close, the limits, the notification to the asker
+  only), e2e (ask → worker → follow-up through the fake Gmail, in under
+  5 s locally), HubKit (waiting, follow-ups), UI
+  (`testReadingAnEmailFollowsUp`; all 11 Cookie UI tests pass).
+- *Eval (R4.1).* `scripts/email-read-check.ts`: the summarizer over four
+  made-up emails (one hostile), six questions in English and Chinese,
+  one with no match: 6/6, US$0.015. Cookie's eval: four reading questions
+  and two that mustn't read, all pass; the email suggestion cases (68–73)
+  still pass.
+- *Review (R4.2).* [security-review.md](security-review.md): F-1 fixed;
+  three accepted risks.

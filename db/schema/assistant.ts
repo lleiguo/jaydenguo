@@ -126,3 +126,35 @@ export const assistantActions = pgTable(
     check("assistant_actions_state_chk", sql`${t.state} in (${inList(ACTION_STATES)})`),
   ],
 );
+
+// An email Cookie was asked to read (intent 0009, §3.3): what to look for,
+// and how it went. The worker reads the mail and writes the summary as a
+// follow-up turn. Never the email's text, subject or sender (ERSEC-1).
+export const EMAIL_READ_STATES = ["pending", "done", "failed"] as const;
+export const assistantEmailReads = pgTable(
+  "assistant_email_reads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // The question's turn, once saved; the follow-up goes in its conversation.
+    turnId: uuid("turn_id").references(() => assistantTurns.id, { onDelete: "set null" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    conversationId: uuid("conversation_id").notNull(),
+    // What the parent asked for, in their words.
+    about: text("about").notNull(),
+    fromHint: text("from_hint"),
+    days: integer("days").notNull(),
+    language: text("language"),
+    state: text("state").notNull().default("pending"),
+    followupTurnId: uuid("followup_turn_id").references(() => assistantTurns.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    finishedAt: ts("finished_at"),
+  },
+  (t) => [
+    index("assistant_email_reads_user_idx").on(t.userId, t.createdAt),
+    index("assistant_email_reads_turn_idx").on(t.turnId),
+    check("assistant_email_reads_state_chk", sql`${t.state} in (${inList(EMAIL_READ_STATES)})`),
+    check("assistant_email_reads_days_chk", sql`${t.days} between 1 and 30`),
+  ],
+);
