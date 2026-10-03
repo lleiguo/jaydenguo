@@ -37,6 +37,12 @@ struct EventSheet: View {
                 if e.schoolClosed { Label("School is closed this day", systemImage: "xmark.octagon") }
                 if let place = e.locationName { Label(place, systemImage: "mappin.and.ellipse") }
                 if let notes = e.notes, !notes.isEmpty { Text(notes) }
+                if e.beingAdded == true {
+                    // Cookie added it; the worker writes it to the family's Google Calendar (intent 0008, GCW-4).
+                    Label("Being added to the family calendar", systemImage: "arrow.triangle.2.circlepath")
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("eventBeingAdded")
+                }
                 if e.isCancelled { Label("Cancelled by the source", systemImage: "xmark.circle").foregroundStyle(.warning) }
                 if e.isSkipped { Label("Skipped: he won't go", systemImage: "forward.end").foregroundStyle(.warning) }
             }

@@ -26,6 +26,9 @@ export const CHANGE_LIMITS = {
   // ADD-5: a timed event with no end.
   defaultMinutes: 60,
   titleChars: 120,
+  // EMS-2: pending suggestions she is shown; EMS-4: applied in one go.
+  listed: 10,
+  batch: 5,
 } as const;
 
 // ADD-2: she adds an event only when the question itself asks her to, so
@@ -33,6 +36,39 @@ export const CHANGE_LIMITS = {
 const ADD =
   /\b(add|put|schedule|book|create|set up)\b|添加|新增|安排|预约|预订|记到|放到|加(一?个|上|到|进)|约(一?个|了)/i;
 export const asksToAdd = (question: string) => ADD.test(question);
+
+// EMS-3, EMS-4: the same, for applying email suggestions, which a parent
+// may also ask for as "approve", "accept" or "update my calendar".
+const APPLY = /\b(apply|approve|accept|update)\b|更新|同意|批准|采纳|应用|确认/i;
+export const asksToApply = (question: string) => ADD.test(question) || APPLY.test(question);
+
+// What applying a suggestion did to the calendar.
+export type AppliedKind = "added" | "moved" | "cancelled";
+export const appliedKind = (kind: string): AppliedKind =>
+  kind === "change" ? "moved" : kind === "cancel" ? "cancelled" : "added";
+
+type Sure = "high" | "medium" | "low";
+
+// EMS-4: why a suggestion from today's email is left for the parent rather
+// than applied in a batch; null when it can be applied.
+export function leftBecause(s: {
+  kind: string;
+  date: string | null;
+  targetEventId: string | null;
+  confidence: Record<string, Sure>;
+}): string | null {
+  const unsure = unsureFields(s.confidence);
+  if (unsure.length) return `not sure of the ${unsure.join(" and ")}`;
+  if (s.kind === "new" && !s.date) return "no date";
+  if (s.kind !== "new" && !s.targetEventId) return "the event it's about isn't on the calendar";
+  return null;
+}
+
+// The fields a suggestion isn't sure of, to say when it is applied (EMS-3).
+export const unsureFields = (confidence: Record<string, Sure>) =>
+  Object.entries(confidence)
+    .filter(([field, sure]) => field !== "overall" && sure === "low")
+    .map(([field]) => field);
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 const DAY_WORDS: Record<string, number> = {
@@ -147,6 +183,11 @@ export function eventTimes(
   return { start, end, allDay: false };
 }
 
+// ADD-5: "all day" must be in the parent's words; the model saying so
+// isn't enough (a haircut with no time isn't all day).
+const ALL_DAY = /\ball[- ]day\b|\bwhole day\b|全天|一整天|整天/i;
+export const saysAllDay = (question: string) => ALL_DAY.test(question);
+
 const EVERYONE = /^(everyone|everybody|all|family|the family|whole family|大家|全家|所有人)$/i;
 
 export type Who = { everyone: boolean; ids: string[]; names: string[] };
@@ -187,6 +228,19 @@ export function titleWithNames(title: string, who: Who): string {
   if (who.everyone) return plain;
   const missing = who.names.filter((n) => !named(plain, n));
   return missing.length ? `${missing.join(" & ")} ${plain}` : plain;
+}
+
+// The same for email suggestions she applied (EMS-3, EMS-4).
+export function appliedLine(
+  language: string | null | undefined,
+  applied: { title: string; kind: AppliedKind }[],
+) {
+  const zh = language === "zh" || language === "mixed";
+  const words = zh
+    ? { added: "已添加", moved: "已改时间", cancelled: "已取消" }
+    : { added: "added", moved: "moved", cancelled: "cancelled" };
+  const parts = applied.map((a) => (zh ? `${words[a.kind]}：${a.title}` : `${a.title} ${words[a.kind]}`));
+  return zh ? `按邮件建议，${parts.join("；")}。` : `From the email suggestions: ${parts.join("; ")}.`;
 }
 
 // The line the server says itself when the model's own ending can't

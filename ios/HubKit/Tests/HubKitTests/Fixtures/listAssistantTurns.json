@@ -57,6 +57,41 @@
       "sources": [],
       "createdAt": "2026-10-02T15:40:00.000Z",
       "did": null
+    },
+    {
+      "id": "5b0f6c1e-3a52-4f0e-9d53-0c7f6f1b2a06",
+      "conversationId": "9a2b7c44-11de-4c7b-8d0a-3a1f0e5d6c04",
+      "mode": "voice",
+      "heard": "Add a dentist appointment for Sam on Thursday December 3rd at 6 pm",
+      "text": "Adding: dentist appointment, Thursday December 3, 6 pm, for Sam.",
+      "outcome": "answer",
+      "language": "en",
+      "sources": [
+        {
+          "kind": "hub",
+          "label": "Calendar"
+        }
+      ],
+      "createdAt": "2026-10-02T15:50:00.000Z",
+      "did": {
+        "kind": "calendar",
+        "undoUntil": "2026-10-02T16:00:00.000Z",
+        "events": [
+          {
+            "id": "7c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e01",
+            "title": "dentist appointment",
+            "start": "2026-12-03T23:00:00.000Z",
+            "end": "2026-12-04T00:00:00.000Z",
+            "allDay": false,
+            "owners": [
+              "Sam"
+            ],
+            "state": "adding",
+            "change": "added",
+            "via": "cookie"
+          }
+        ]
+      }
     }
   ],
   "more": false

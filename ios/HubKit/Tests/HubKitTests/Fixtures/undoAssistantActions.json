@@ -1,0 +1,19 @@
+{
+  "kind": "calendar",
+  "undoUntil": null,
+  "events": [
+    {
+      "id": null,
+      "title": "dentist appointment",
+      "start": "2026-12-03T23:00:00.000Z",
+      "end": "2026-12-04T00:00:00.000Z",
+      "allDay": false,
+      "owners": [
+        "Sam"
+      ],
+      "state": "undone",
+      "change": "added",
+      "via": "cookie"
+    }
+  ]
+}

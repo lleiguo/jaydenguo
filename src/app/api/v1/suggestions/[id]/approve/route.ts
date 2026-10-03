@@ -12,6 +12,6 @@ export const POST = api<{ id: string }>(async ({ db, session, params, request })
     throw new HttpError(400, "body must be JSON");
   }
   const input = body === null ? null : approveInput.parse(body);
-  const result = await approveSuggestion(db, session.email, z.uuid().parse(params.id), input);
-  return Response.json(result);
+  const { eventId } = await approveSuggestion(db, session.email, z.uuid().parse(params.id), input);
+  return Response.json({ eventId });
 });

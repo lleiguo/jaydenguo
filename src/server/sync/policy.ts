@@ -12,6 +12,10 @@ export function minGapMs(kind: string): number {
   return (Number.isFinite(minutes) && minutes >= 0 ? minutes : 60) * 60_000;
 }
 
+// Cookie may start a read of the email source when it last read more than
+// this long ago, inside the hourly limit (intent 0008, EMS-5).
+export const COOKIE_READ_GAP_MS = 30 * 60_000;
+
 // A run still "running" after this long died without finishing (the worker
 // job's own timeout is 30 minutes).
 export const STALE_RUN_MS = 35 * 60_000;

@@ -119,6 +119,83 @@ final class CookieTests: XCTestCase {
         XCTAssertEqual(question.label, "You asked: Hello Cookie")
     }
 
+    /// Intent 0008, plan E3.2: an added event is a card under the answer;
+    /// it opens the event, which says it is being added; Undo takes it
+    /// back. Needs the server started with ASSISTANT_CALENDAR_ADD=fake
+    /// (launch config `web-cookie-add`) and the seed's household calendar.
+    func testAddingAnEventAndUndo() throws {
+        let sources = request("GET", "/api/v1/sources")
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["sources"] as? [[String: Any]]
+        let household = try XCTUnwrap(
+            sources?.first { $0["name"] as? String == "Household calendar (sample)" }?["id"] as? String,
+            "run `pnpm seed`"
+        )
+        request("PATCH", "/api/v1/assistant/settings", body: #"{"addCalendarSourceId":"\#(household)"}"#)
+        defer { request("PATCH", "/api/v1/assistant/settings", body: #"{"addCalendarSourceId":null}"#) }
+        // Two weeks ahead, so it's never in the past or too far off.
+        let day = Date.now.addingTimeInterval(14 * 86_400).formatted(.iso8601.year().month().day())
+
+        let app = try launch()
+        app.buttons["cookieButton"].tap()
+        ask(app, "Add dentist for Brother on \(day) at 18:00")
+        let answer = app.descendants(matching: .any)["cookieAnswer"].firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 20))
+        // The title carries whose it is (GCW-6).
+        XCTAssertTrue(answer.label.contains("Adding: Brother dentist"), answer.label)
+        let card = app.descendants(matching: .any)["cookieCard"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        XCTAssertTrue(card.label.hasPrefix("Brother dentist. "), card.label)
+        XCTAssertTrue(card.label.contains("For Brother"), card.label)
+        // The stand-in Google never writes, so it stays on its way.
+        XCTAssertTrue(card.label.contains("Being added to the family calendar"), card.label)
+
+        // The card opens the event on the calendar.
+        card.tap()
+        let mark = app.descendants(matching: .any)["eventBeingAdded"].firstMatch
+        XCTAssertTrue(mark.waitForExistence(timeout: 20))
+        XCTAssertTrue(app.tabBars.buttons["Calendar"].isSelected)
+        app.buttons["Done"].firstMatch.tap()
+
+        // Undo, back in the chat.
+        app.buttons["cookieButton"].tap()
+        let undo = app.buttons["cookieChangeUndo"].firstMatch
+        XCTAssertTrue(undo.waitForExistence(timeout: 10))
+        XCTAssertEqual(undo.label, "Undo adding Brother dentist")
+        undo.tap()
+        let undone = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == 'cookieCard' AND label CONTAINS 'Undone'")
+        ).firstMatch
+        XCTAssertTrue(undone.waitForExistence(timeout: 10))
+        XCTAssertFalse(undo.exists)
+    }
+
+    /// Intent 0008, plan E5.4: today's email suggestions applied at once.
+    /// The seed's moved game is applied and shown as a card; its extra
+    /// practice, unsure of the place, is left. Undo puts it back. Needs a
+    /// fresh `pnpm seed` (the sample emails count as today's).
+    func testApplyingTodaysEmailAndUndo() throws {
+        let app = try launch()
+        app.buttons["cookieButton"].tap()
+        ask(app, "Update my calendar from today's email")
+        let answer = app.descendants(matching: .any)["cookieAnswer"].firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 20))
+        XCTAssertTrue(answer.label.contains("1 moved"), answer.label)
+        XCTAssertTrue(answer.label.contains("1 left"), answer.label)
+        let card = app.descendants(matching: .any)["cookieCard"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        XCTAssertTrue(card.label.hasPrefix("Game vs Green Giants. "), card.label)
+        XCTAssertTrue(card.label.contains("Moved, as the email said"), card.label)
+
+        let undo = app.buttons["cookieChangeUndo"].firstMatch
+        XCTAssertTrue(undo.waitForExistence(timeout: 10))
+        XCTAssertEqual(undo.label, "Undo moving Game vs Green Giants")
+        undo.tap()
+        let undone = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == 'cookieCard' AND label CONTAINS 'Undone'")
+        ).firstMatch
+        XCTAssertTrue(undone.waitForExistence(timeout: 10))
+    }
+
     /// LIM-5, MEM-9: Settings → Cookie shows the month's spend and limit,
     /// and clears the chat.
     func testSettingsShowTheLimitAndClearTheChat() throws {
@@ -137,7 +214,10 @@ final class CookieTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Spent so far"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.descendants(matching: .any)["cookieCap"].firstMatch.exists)
 
-        app.buttons["cookieClear"].tap()
+        // Below the other sections: Form rows load as they scroll in.
+        let clear = app.buttons["cookieClear"]
+        for _ in 0..<4 where !(clear.exists && clear.isHittable) { app.swipeUp() }
+        clear.tap()
         app.buttons["Clear history"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Cookie's history is cleared."].waitForExistence(timeout: 10))
 
@@ -168,7 +248,10 @@ final class CookieTests: XCTestCase {
         let row = app.collectionViews.buttons["Cookie"].firstMatch
         for _ in 0..<4 where !row.isHittable { app.swipeUp() }
         row.tap()
-        app.buttons["cookieMemoryLink"].tap()
+        let memory = app.buttons["cookieMemoryLink"]
+        XCTAssertTrue(app.navigationBars["Cookie"].waitForExistence(timeout: 10))
+        for _ in 0..<4 where !(memory.waitForExistence(timeout: 2) && memory.isHittable) { app.swipeUp() }
+        memory.tap()
         XCTAssertTrue(app.navigationBars["Memory"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["recycling goes out on Tuesday"].waitForExistence(timeout: 10))
         // The undone fact is under Forgotten, not in the list.

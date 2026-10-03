@@ -20,6 +20,9 @@ final class AppModel {
     private(set) var phase: Phase
     var selectedTab: Route.Tab = .today
     var pendingRoute: Route?
+    /// The home date of an event opened from outside the calendar (one of
+    /// Cookie's cards), so the calendar loads its week first.
+    var pendingEventDay: String?
     /// The Tennis and Swimming stacks, so links can open a page in them.
     var tennisPath: [Route] = []
     var swimmingPath: [Route] = []
@@ -267,6 +270,18 @@ final class AppModel {
         case .video: morePath = [.videos, route]
         default: pendingRoute = route
         }
+    }
+
+    /// Opens an event on the calendar from one of Cookie's cards (intent
+    /// 0008, ACT-1). The chat closes first: a sheet can't open while
+    /// another is still closing.
+    func openEvent(id: String, day: String) async {
+        if cookieOpen {
+            cookieOpen = false
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        pendingEventDay = day
+        go(.event(id: id))
     }
 
     // MARK: Launch time (INFR-2)

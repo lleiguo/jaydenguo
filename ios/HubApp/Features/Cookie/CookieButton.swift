@@ -121,33 +121,39 @@ struct CookieButton: View {
             }
             .accessibilityIdentifier("cookieBubbleLooking")
         case .answered(let heard, let answer):
-            Button {
-                talk.closeBubble()
-                model.cookieOpen = true
-            } label: {
-                card {
-                    if !heard.isEmpty {
-                        Text("“\(heard)”").font(.caption).foregroundStyle(.secondary)
-                            .accessibilityIdentifier("cookieBubbleHeard")
+            card {
+                Button {
+                    talk.closeBubble()
+                    model.cookieOpen = true
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if !heard.isEmpty {
+                            Text("“\(heard)”").font(.caption).foregroundStyle(.secondary)
+                                .accessibilityIdentifier("cookieBubbleHeard")
+                        }
+                        Text(answer.text).font(.subheadline).foregroundStyle(.primary)
+                            .accessibilityIdentifier("cookieBubbleAnswer")
+                        if let line = answer.sourceLine {
+                            Text(line).font(.caption2).foregroundStyle(.secondary)
+                        }
+                        if talk.isSpeaking {
+                            // Shown while she reads it out, so silence is the phone's volume, not her.
+                            Label("Speaking. Tap Cookie to stop.", systemImage: "speaker.wave.2.fill")
+                                .font(.caption2).foregroundStyle(.tint)
+                                .accessibilityIdentifier("cookieSpeaking")
+                        }
                     }
-                    Text(answer.text).font(.subheadline).foregroundStyle(.primary)
-                        .accessibilityIdentifier("cookieBubbleAnswer")
-                    if let line = answer.sourceLine {
-                        Text(line).font(.caption2).foregroundStyle(.secondary)
-                    }
-                    if talk.isSpeaking {
-                        // Shown while she reads it out, so silence is the phone's volume, not her.
-                        Label("Speaking. Tap Cookie to stop.", systemImage: "speaker.wave.2.fill")
-                            .font(.caption2).foregroundStyle(.tint)
-                            .accessibilityIdentifier("cookieSpeaking")
-                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel((heard.isEmpty ? "" : "You asked: \(heard). ") + answer.spokenLabel)
+                .accessibilityHint("Opens the chat")
+                .accessibilityIdentifier("cookieBubble")
+                // CASEC-4: what she added, read back as a card, with Undo one tap away.
+                if answer.changes != nil { CookieChangeCards(turnId: answer.id).padding(.top, 4) }
             }
-            .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel((heard.isEmpty ? "" : "You asked: \(heard). ") + answer.spokenLabel)
-            .accessibilityHint("Opens the chat")
-            .accessibilityIdentifier("cookieBubble")
         case .hint(let text, let settings):
             card {
                 Text(text).font(.subheadline)

@@ -346,7 +346,7 @@ describe("the prompt (TOOL-15, TOOL-17)", () => {
   const tools = declarations(ALL_TOOLS);
 
   it("stays under the size budget with every tool definition", () => {
-    const size = systemPrompt(true, true).length + JSON.stringify(tools).length;
+    const size = systemPrompt(true, true, true).length + JSON.stringify(tools).length;
     expect(size).toBeLessThanOrEqual(LIMITS.promptChars);
     // With the web off, its tools and its paragraph aren't sent at all;
     // the same goes for adding to the calendar (intent 0008).
@@ -355,9 +355,12 @@ describe("the prompt (TOOL-15, TOOL-17)", () => {
     expect(SYSTEM_PROMPT).not.toContain("calendar_add");
     expect(systemPrompt(false, true)).toContain("calendar_add");
     expect(systemPrompt(true, false)).not.toContain("calendar_add");
+    // And the email tools, without an email source.
+    expect(systemPrompt(true, true)).not.toContain("suggestion_apply");
+    expect(systemPrompt(false, false, true)).toContain("suggestion_apply");
   });
 
-  it("lists the hub tools first, then adding, memory, the web, then answer and bark", () => {
+  it("lists the hub tools first, then the changes, memory, the web, then answer and bark", () => {
     expect(tools.map((t) => t.name)).toEqual([
       "today",
       "calendar",
@@ -367,6 +370,9 @@ describe("the prompt (TOOL-15, TOOL-17)", () => {
       "videos",
       "costs",
       "calendar_add",
+      "suggestions",
+      "suggestion_apply",
+      "suggestions_apply_today",
       "memory_search",
       "memory_save",
       "memory_forget",

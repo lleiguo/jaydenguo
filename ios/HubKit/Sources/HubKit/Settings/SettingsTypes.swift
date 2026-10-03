@@ -71,6 +71,8 @@ public enum Providers {
     /// The Google features connected through the website's Google flow.
     public static let googleFeatures: [(feature: String, label: String)] = [
         ("calendar", "Google Calendar"),
+        // Cookie adds events she's asked for to the household calendar (intent 0008, GCW-3).
+        ("calendar_write", "Let Cookie add events"),
         ("classroom", "School account (Classroom)"),
         ("gmail", "Gmail (coach emails)"),
         ("videos", "Drive and Photos (videos)"),

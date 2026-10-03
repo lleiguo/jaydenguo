@@ -5439,6 +5439,14 @@
           "accepted"
         ]
       },
+      "AppliedKind": {
+        "type": "string",
+        "enum": [
+          "added",
+          "cancelled",
+          "moved"
+        ]
+      },
       "ApproveResponse": {
         "type": "object",
         "properties": {
@@ -6616,7 +6624,7 @@
         "properties": {
           "kind": {
             "type": "string",
-            "const": "added"
+            "const": "calendar"
           },
           "undoUntil": {
             "type": [
@@ -6672,6 +6680,16 @@
               "undone",
               "adding"
             ]
+          },
+          "change": {
+            "$ref": "#/components/schemas/AppliedKind"
+          },
+          "via": {
+            "type": "string",
+            "enum": [
+              "email",
+              "cookie"
+            ]
           }
         },
         "required": [
@@ -6681,7 +6699,9 @@
           "end",
           "allDay",
           "owners",
-          "state"
+          "state",
+          "change",
+          "via"
         ]
       },
       "DrawPrediction": {
@@ -7045,6 +7065,9 @@
             ]
           },
           "repeats": {
+            "type": "boolean"
+          },
+          "beingAdded": {
             "type": "boolean"
           },
           "lastSyncedAt": {

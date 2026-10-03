@@ -63,6 +63,18 @@ export function fakeAssistant(): AssistantModel {
     const result = (last?.response as { result?: Record<string, unknown> } | undefined)?.result;
     const words = question.toLowerCase().match(/[a-z]{3,}|[\u3400-\u9fff]{2,}/g) ?? [];
 
+    // "Update my calendar from today's email" (intent 0008, EMS-4).
+    if (/^update my calendar from today'?s email/i.test(question)) {
+      if (round === 1) return [{ name: "suggestions_apply_today", args: {} }];
+      if (result?.error) return say(String(result.error), ["self"]);
+      if (result?.checking) return say("I'm checking the mail; ask me again in a minute.", ["hub"]);
+      const n = (k: string) => Number(result?.[k] ?? 0);
+      const left = (result?.left as unknown[] | undefined)?.length ?? 0;
+      return say(
+        `From today's email: ${n("added")} added, ${n("moved")} moved, ${n("cancelled")} cancelled, ${left} left.`,
+        ["hub"],
+      );
+    }
     if (/today|今天/i.test(question)) {
       if (round === 1) return [{ name: "today", args: {} }];
       const titles = ((result?.events as { title: string }[] | undefined) ?? []).map((e) => e.title);

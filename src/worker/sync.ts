@@ -18,7 +18,13 @@ import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
 import { defaultEmailExtractor, syncEmails } from "../server/email/apply";
 import { assistantActionsJob } from "./assistant-actions";
-import { FAILURE_ALERT_THRESHOLD, SOURCE_TIMEOUT_MS, STALE_RUN_MS, minGapMs } from "../server/sync/policy";
+import {
+  COOKIE_READ_GAP_MS,
+  FAILURE_ALERT_THRESHOLD,
+  SOURCE_TIMEOUT_MS,
+  STALE_RUN_MS,
+  minGapMs,
+} from "../server/sync/policy";
 import { notifyClashes, notifyNextMatches, notifySuggestions, notifySyncFailed } from "../server/push/kinds";
 import { pruneMemories } from "../server/assistant/memory";
 import { pruneHistory } from "../server/assistant/turns";
@@ -56,6 +62,8 @@ export async function syncSource(
   trigger: Trigger,
   log: Logger,
   now: () => Date = () => new Date(),
+  // A shorter wait than the hourly limit, for a read Cookie starts (EMS-5).
+  gapMs?: number,
 ): Promise<SyncOutcome> {
   // Session-level advisory lock on a dedicated connection: a second run of
   // the same source while one is going is ignored (SYNC-2).
@@ -68,7 +76,7 @@ export async function syncSource(
     );
     if (!rows[0].ok) return { status: "skipped", reason: "already running" };
     try {
-      return await runLocked(db, sourceId, trigger, log, now);
+      return await runLocked(db, sourceId, trigger, log, now, gapMs);
     } finally {
       await lockClient.query("select pg_advisory_unlock(hashtext($1))", [lockKey]);
     }
@@ -83,6 +91,7 @@ async function runLocked(
   trigger: Trigger,
   log: Logger,
   now: () => Date,
+  gapMs?: number,
 ): Promise<SyncOutcome> {
   const [source] = await db.select().from(sources).where(eq(sources.id, sourceId));
   if (!source) return { status: "skipped", reason: "no such source" };
@@ -108,7 +117,8 @@ async function runLocked(
     .where(and(eq(syncRuns.sourceId, sourceId), eq(syncRuns.status, "succeeded")))
     .orderBy(desc(syncRuns.startedAt))
     .limit(1);
-  if (last && now().getTime() - last.startedAt.getTime() < minGapMs(source.kind)) {
+  const gap = gapMs !== undefined ? Math.min(gapMs, minGapMs(source.kind)) : minGapMs(source.kind);
+  if (last && now().getTime() - last.startedAt.getTime() < gap) {
     log("sync skipped: ran recently", { sourceId, lastRun: last.startedAt.toISOString() });
     return { status: "skipped", reason: "ran recently" };
   }
@@ -260,9 +270,11 @@ async function runLocked(
   }
 }
 
-// `sync <source-id | all> [manual | scheduled]`
+// `sync <source-id | all> [manual | scheduled] [cookie]`: "cookie" is a read
+// of the email source Cookie started, allowed after half an hour (EMS-5).
 export async function syncJob(args: string[], ctx: JobContext) {
-  const [target, triggerArg] = args;
+  const [target, triggerArg, by] = args;
+  const gap = by === "cookie" && target !== "all" ? COOKIE_READ_GAP_MS : undefined;
   const trigger: Trigger = triggerArg === "manual" ? "manual" : "scheduled";
   if (!target) throw new Error("usage: sync <source-id | all> [manual | scheduled]");
   const db = await ctx.db();
@@ -271,7 +283,7 @@ export async function syncJob(args: string[], ctx: JobContext) {
       ? (await db.select({ id: sources.id }).from(sources).where(eq(sources.enabled, true))).map((s) => s.id)
       : [target];
   const results: Record<string, SyncOutcome["status"]> = {};
-  for (const id of ids) results[id] = (await syncSource(db, id, trigger, ctx.log)).status;
+  for (const id of ids) results[id] = (await syncSource(db, id, trigger, ctx.log, undefined, gap)).status;
   // The daily run also keeps open-ended repeating events written out ahead.
   if (target === "all") ctx.log("series extended", { series: await extendAllSeries(db) });
   // Intent 0008: anything Cookie added that didn't reach Google yet.

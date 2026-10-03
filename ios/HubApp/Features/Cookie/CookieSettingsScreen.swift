@@ -4,11 +4,14 @@ import SwiftUI
 
 /// Settings → Cookie (intent 0007): what she has cost this month against
 /// the monthly limit (LIM-5), spoken answers (VOX-5), the web (TOOL-17, CSEC-3), her memory
-/// (MEM-4), and clearing the chat (MEM-9).
+/// (MEM-4), clearing the chat (MEM-9), and the calendar she adds events to
+/// (intent 0008, GCW-1, GCW-8).
 struct CookieSettingsScreen: View {
     @Environment(AppModel.self) private var model
     @State private var state: Loadable<CookieSettings> = .loading
     @State private var confirmClear = false
+    /// The Google calendars the hub reads, any of which she could add to.
+    @State private var calendars: [SourceView] = []
 
     private static let money = FloatingPointFormatStyle<Double>.Currency(code: "USD")
 
@@ -49,6 +52,7 @@ struct CookieSettingsScreen: View {
                 } footer: {
                     Text("Off, Cookie answers only from the hub and her memory. On, she can search Google or read a link you give her. A search never includes the family's names or the words on this list, and its answer is Google's, shown as it is. Google keeps searches for up to three days.")
                 }
+                adding(settings)
                 Section {
                     NavigationLink { CookieMemoryScreen() } label: { Label("Memory", systemImage: "brain") }
                         .accessibilityIdentifier("cookieMemoryLink")
@@ -71,7 +75,50 @@ struct CookieSettingsScreen: View {
         }
     }
 
+    @ViewBuilder
+    private func adding(_ settings: CookieSettings) -> some View {
+        Section {
+            if calendars.count > 1 {
+                Picker("Calendar she adds to", selection: Binding(
+                    get: { settings.addCalendarSourceId ?? "" },
+                    set: { id in Task { await setAddCalendar(id) } }
+                )) {
+                    if settings.addCalendarSourceId == nil { Text("Choose…").tag("") }
+                    ForEach(calendars, id: \.id) { Text($0.name).tag($0.id) }
+                }
+                .accessibilityIdentifier("cookieAddCalendar")
+            }
+            if settings.canAdd {
+                Label("Cookie can add events", systemImage: "calendar.badge.plus")
+                    .accessibilityIdentifier("cookieCanAdd")
+            } else {
+                Button {
+                    model.go(.accounts)
+                } label: {
+                    Label("Connect Google to let Cookie add events", systemImage: "link.badge.plus")
+                }
+                .accessibilityIdentifier("cookieConnectAdd")
+            }
+        } header: {
+            Text("Adding events")
+        } footer: {
+            Text(settings.canAdd
+                ? "Ask her to add one event, like “add a dentist appointment for Sam on Thursday at 6 pm”. It shows in the hub at once and on the family's Google Calendar a few seconds later. Each answer has Undo for ten minutes."
+                : "Cookie can add an event you ask for to the family's Google Calendar once Google allows it: on the Accounts page, connect Google and choose “Let Cookie add events”.")
+        }
+    }
+
+    private func setAddCalendar(_ id: String) async {
+        guard !id.isEmpty else { return }
+        await update("Couldn't change the calendar.") {
+            try await model.client.api.updateAssistantSettings(body: .json(.init(addCalendarSourceId: id))).ok.body.json
+        }
+    }
+
     private func refresh() async {
+        if let sources = try? await model.client.api.listSources().ok.body.json.sources {
+            calendars = sources.filter { $0.kind == "google_calendar" }
+        }
         let next = await load { try await model.client.api.getAssistantSettings().ok.body.json }
         if case .failed = next, state.value != nil { return }
         state = next

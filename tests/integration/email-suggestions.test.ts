@@ -20,6 +20,7 @@ import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import { approveSuggestion, listSuggestions, rejectSuggestion } from "@/server/email/suggestions";
 import { createLogger } from "@/server/log";
+import { COOKIE_READ_GAP_MS } from "@/server/sync/policy";
 import { syncSource } from "@/worker/sync";
 import { createGmailFake } from "../e2e/support/fake-gmail";
 
@@ -142,6 +143,24 @@ describe("email suggestions", () => {
     expect(Object.keys(messages[0])).not.toContain("text");
   });
 
+  it("a read Cookie starts waits half an hour, not the hour (intent 0008, EMS-5)", async () => {
+    process.env.SYNC_MIN_GAP_MINUTES = "60";
+    try {
+      const at = (minutes: number) => () => new Date(now().getTime() + minutes * 60_000);
+      expect(await syncSource(db, sourceId, "manual", log, at(0))).toMatchObject({ status: "succeeded" });
+      expect(await syncSource(db, sourceId, "manual", log, at(20), COOKIE_READ_GAP_MS)).toMatchObject({
+        status: "skipped",
+      });
+      expect(await syncSource(db, sourceId, "manual", log, at(35), COOKIE_READ_GAP_MS)).toMatchObject({
+        status: "succeeded",
+      });
+      // Anyone else still waits the hour.
+      expect(await syncSource(db, sourceId, "manual", log, at(40))).toMatchObject({ status: "skipped" });
+    } finally {
+      process.env.SYNC_MIN_GAP_MINUTES = "0";
+    }
+  });
+
   it("approving a new event adds it with its email source and a link to the message (EML-3)", async () => {
     await syncSource(db, sourceId, "manual", log, now);
     const practice = (await mine()).find((s) => s.subject === "Extra practice")!;
@@ -257,7 +276,7 @@ describe("email suggestions", () => {
         .from(syncRuns)
         .where(eq(syncRuns.sourceId, sourceId))
         .orderBy(syncRuns.startedAt);
-      expect(last.errorMessage).toMatch(/Claude on Vertex AI isn't set up/);
+      expect(last.errorMessage).toMatch(/Vertex AI isn't set up/);
       expect(await db.select().from(emailMessages).where(eq(emailMessages.sourceId, sourceId))).toEqual([]);
     } finally {
       process.env.EMAIL_LLM = "fake";

@@ -112,6 +112,12 @@ private struct CalendarContent: View {
     private func openRoute() {
         switch model.pendingRoute {
         case .event(let id):
+            // An event outside the loaded weeks: load its week; the sheet fills in when it arrives.
+            if store.event(id) == nil {
+                if let day = model.pendingEventDay { store.anchor = day }
+                Task { await store.reload() }
+            }
+            model.pendingEventDay = nil
             selected = EventRef(id: id)
             model.pendingRoute = nil
         case .calendar(let date):

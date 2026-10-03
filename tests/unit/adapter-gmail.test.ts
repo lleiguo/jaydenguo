@@ -95,7 +95,7 @@ describe("email extraction", () => {
       ],
     };
     expect(extractionSchema.safeParse(answer).success).toBe(true);
-    const model = scriptedModel("claude", () => answer);
+    const model = scriptedModel("gemini", () => answer);
     const result = await modelExtractor(model)(email, [], "America/Toronto");
     expect(result.suggestions).toHaveLength(1);
     expect(model.requests[0].purpose).toBe("email");

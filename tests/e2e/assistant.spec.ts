@@ -257,8 +257,17 @@ test("Cookie adds an event when asked, shows what she did, and takes it back (00
     expect(added).toMatchObject({
       outcome: "answer",
       did: {
-        kind: "added",
-        events: [{ title: `${name} dentist`, owners: [name], state: "adding", allDay: false }],
+        kind: "calendar",
+        events: [
+          {
+            title: `${name} dentist`,
+            owners: [name],
+            state: "adding",
+            allDay: false,
+            change: "added",
+            via: "cookie",
+          },
+        ],
       },
     });
     expect(added.text).toMatch(/^Adding: /);

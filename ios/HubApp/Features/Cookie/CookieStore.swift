@@ -21,6 +21,7 @@ final class CookieStore {
     private var loaded = false
     private var conversationId: String?
     private var lastAskedAt: Date?
+    private var settling = false
 
     init(client: HubClient) {
         self.client = client
@@ -102,11 +103,52 @@ final class CookieStore {
             return HubError.from(error)?.message ?? "Couldn't undo that."
         }
         // The answer stays; the Undo goes.
-        messages[index] = CookieMessage(
-            id: message.id, role: message.role, text: message.text, kind: message.kind,
-            sourceLine: message.sourceLine, links: message.links
-        )
+        messages[index] = message.withoutMemory()
         return change.kind == .saved ? "Not saved after all." : "Restored."
+    }
+
+    // MARK: Changes to the calendar (intent 0008, ACT-1, ACT-3)
+
+    /// "Undo" under an answer that added events: they leave the hub at
+    /// once, and the family calendar shortly after. Words for the banner.
+    func undoChanges(_ changes: CookieChanges) async -> String {
+        do {
+            let after = try await client.undoCookieChanges(turnId: changes.turnId)
+            replaceChanges(after)
+            return after.cards.count == 1 ? "Undone." : "Undone: \(after.cards.count) changes."
+        } catch {
+            return HubError.from(error)?.message ?? "Couldn't undo that."
+        }
+    }
+
+    /// Whether a card is still waiting on the worker.
+    var isSettling: Bool { messages.contains { $0.changes?.isSettling == true } }
+
+    /// While a card says "Being added…" and the chat or the bubble shows it,
+    /// asks the server again every few seconds, for a few minutes at most.
+    func settle() async {
+        // One loop for every card on screen.
+        guard !settling else { return }
+        settling = true
+        defer { settling = false }
+        let started = Date.now
+        while isSettling, Date.now.timeIntervalSince(started) < CookieChat.settleLimit {
+            try? await Task.sleep(for: CookieChat.settleInterval)
+            guard !Task.isCancelled else { return }
+            guard let turns = try? await client.api.listAssistantTurns(query: .init(limit: 30)).ok.body.json.turns
+            else { continue }
+            messages = CookieChat.refreshed(messages, from: turns)
+        }
+    }
+
+    /// The changes of one answer, as they are now.
+    func changes(of turnId: String) -> CookieChanges? {
+        messages.first { $0.id == turnId }?.changes
+    }
+
+    private func replaceChanges(_ changes: CookieChanges) {
+        guard let index = messages.firstIndex(where: { $0.id == changes.turnId }) else { return }
+        messages[index] = messages[index].with(changes: changes)
     }
 
     /// After "Clear history", and on sign-out (SEC-3).

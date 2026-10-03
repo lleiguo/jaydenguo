@@ -14,6 +14,11 @@ public enum CookieVoice {
     public static let longestClip: TimeInterval = 30
     /// CK-3: the bubble closes this long after she stops speaking.
     public static let bubbleLinger: TimeInterval = 5
+    /// Longer when the answer added an event, so there is time to read the
+    /// card and tap Undo (intent 0008, CASEC-4).
+    public static func linger(_ answer: CookieMessage) -> TimeInterval {
+        answer.changes == nil ? bubbleLinger : 15
+    }
     /// What the recorder writes: AAC in an MPEG-4 file (plan SP-C5).
     public static let clipType = "audio/mp4"
     public static let sampleRate = 16_000.0

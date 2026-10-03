@@ -18,7 +18,7 @@ import { ask } from "@/server/assistant/ask";
 import { scriptedAssistant, type ModelCall } from "@/server/assistant/model";
 import { saveAssistantSettings } from "@/server/assistant/settings";
 import { CHANGE_TOOLS, HUB_TOOLS } from "@/server/assistant/tools";
-import { loadCalendar } from "@/server/calendar/load";
+import { loadCalendar, loadEvent } from "@/server/calendar/load";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import { addPerson, listPeople } from "@/server/people";
@@ -194,8 +194,12 @@ describe("Cookie writes what she added to the family calendar (plan E2)", () => 
     const result = await add({ people: [people[0].name] }, launched);
     // The question started the worker (GCW-4).
     expect(launched).toEqual([["assistant:actions"]]);
+    // Until the worker has written it, the event's screen says it is on its way (§4.5).
+    const pending = await actionOf(result.turnId);
+    expect((await loadEvent(db, pending.eventId!))?.beingAdded).toBe(true);
     const google = fakeGoogle();
     expect(await run(google)).toMatchObject({ added: 1, failed: 0 });
+    expect((await loadEvent(db, pending.eventId!))?.beingAdded).toBeUndefined();
 
     // What Google was sent: the title with the name in front, in UTC with the home zone named.
     const [written] = [...google.events.values()];

@@ -1,5 +1,5 @@
 import { and, desc, eq, gt, isNotNull, isNull, lt, max, sql } from "drizzle-orm";
-import { changeLog, conflicts, eventOverrides, events, sources } from "@db/schema";
+import { assistantActions, changeLog, conflicts, eventOverrides, events, sources } from "@db/schema";
 import { closedFor, closuresByPerson, detectClashes, type ClashEvent } from "../../domain/clashes";
 import type { Attendance, Category } from "../../domain/constants";
 import { householdDuplicates } from "../../domain/duplicates";
@@ -21,6 +21,7 @@ type Row = {
   event: typeof events.$inferSelect;
   override: typeof eventOverrides.$inferSelect | null;
   source: { id: string; name: string; kind: string } | null;
+  beingAdded: boolean;
 };
 
 function baseQuery(db: DbOrTx) {
@@ -29,6 +30,12 @@ function baseQuery(db: DbOrTx) {
       event: events,
       override: eventOverrides,
       source: { id: sources.id, name: sources.name, kind: sources.kind },
+      beingAdded: sql<boolean>`exists (
+        select 1 from ${assistantActions}
+        where ${assistantActions.eventId} = ${events.id}
+          and ${assistantActions.state} = 'pending'
+          and ${assistantActions.undoneAt} is null
+      )`,
     })
     .from(events)
     .leftJoin(eventOverrides, and(eq(eventOverrides.eventId, events.id), isNull(eventOverrides.clearedAt)))
@@ -64,6 +71,7 @@ function toView(r: Row, closed: Map<string, Set<string>>, homeTz: string, people
     source: r.source?.id ? r.source : null,
     seriesId: e.seriesId,
     repeats: !!repeatKey({ ...e, sourceKind: r.source?.kind ?? null }),
+    beingAdded: r.beingAdded || undefined,
     lastSyncedAt: iso(e.lastSyncedAt),
     override: o
       ? {
