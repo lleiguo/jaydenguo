@@ -60,10 +60,12 @@ export function parseGmailConfig(config: Record<string, unknown>): GmailConfig {
 const quote = (s: string) => (/[\s"()]/.test(s) ? `"${s.replace(/"/g, "")}"` : s);
 
 // The Gmail search for the allow-list: from any listed sender (a leading
-// "*@" means the whole domain) or with any listed label.
+// "*@" means the whole domain, "*@*." the domain and its subdomains, which
+// Gmail finds as "from:domain") or with any listed label. Gmail's search
+// is wider than the list; `senderAllowed` keeps only what the list allows.
 export function gmailQuery(c: GmailConfig): string {
   const terms = [
-    ...c.senders.map((s) => `from:${quote(s.replace(/^\*@/, "@"))}`),
+    ...c.senders.map((s) => `from:${quote(s.replace(/^\*@\*\./, "").replace(/^\*@/, "@"))}`),
     ...c.labels.map((l) => `label:${quote(l.replace(/\s+/g, "-"))}`),
   ];
   return `{${terms.join(" ")}} newer_than:${c.lookbackDays ?? LOOKBACK_DAYS}d`;
@@ -76,7 +78,14 @@ export function fromAddress(from: string): string {
 
 export function senderAllowed(address: string, senders: string[]): boolean {
   const a = address.toLowerCase();
-  return senders.some((s) => (s.startsWith("*@") ? a.endsWith(s.slice(1)) : a === s));
+  const domain = a.slice(a.lastIndexOf("@") + 1);
+  return senders.some((s) => {
+    if (s.startsWith("*@*.")) {
+      const d = s.slice(4);
+      return domain === d || domain.endsWith(`.${d}`);
+    }
+    return s.startsWith("*@") ? a.endsWith(s.slice(1)) : a === s;
+  });
 }
 
 const b64 = (data: string) =>

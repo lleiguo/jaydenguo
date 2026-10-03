@@ -23,12 +23,13 @@ test("allowed emails become suggestions, and an approved one lands on the calend
   await form.getByLabel("Type").selectOption("gmail");
   await form.getByLabel("Name").fill(name);
   await form.getByLabel("Google account").selectOption({ label: `Google (${account})` });
-  await form.getByLabel(/Senders to read/).fill("*@club.example");
+  // The domain and its subdomains; the fake coach writes from club.example itself.
+  await form.getByLabel(/Senders to read/).fill("*@*.club.example");
   await form.getByLabel(/Gmail labels to read/).fill("Jayden");
   await form.getByRole("button", { name: "Add source" }).click();
 
   const card = page.getByTestId("source").filter({ has: page.getByRole("heading", { name }) });
-  await expect(card).toContainText("Reads only: *@club.example, label Jayden");
+  await expect(card).toContainText("Reads only: *@*.club.example, label Jayden");
   await card.getByRole("button", { name: "Refresh" }).click();
   await expect(card).toContainText("2 added", { timeout: 30_000 });
 
