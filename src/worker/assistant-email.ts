@@ -1,6 +1,6 @@
 import { and, eq, lt } from "drizzle-orm";
 import { z } from "zod";
-import { assistantEmailReads, assistantTurns, sources } from "@db/schema";
+import { assistantEmailReads, assistantTurns } from "@db/schema";
 import { googleAccessToken } from "../adapters/google-calendar";
 import {
   gmailQuery,
@@ -12,6 +12,7 @@ import {
 } from "../adapters/gmail";
 import type { Language } from "../domain/assistant";
 import { EMAIL_MODEL } from "../server/email/apply";
+import { emailSource } from "../server/assistant/email";
 import { READ_LIMITS, readQuery } from "../server/assistant/email-read";
 import type { AssistantSource } from "../server/assistant/turns";
 import type { Db } from "../server/db/client";
@@ -183,12 +184,9 @@ export async function runEmailRead(db: Db, readId: string, deps: EmailReadDeps):
   };
 
   try {
-    const [source] = await db
-      .select()
-      .from(sources)
-      .where(and(eq(sources.kind, "gmail"), eq(sources.enabled, true)))
-      .limit(1);
-    if (!source) return await finish("failed", lines.notConnected, null);
+    // The source the question's tool chose (ERD-2).
+    const source = await emailSource(db);
+    if (!source?.enabled) return await finish("failed", lines.notConnected, null);
     const config = parseGmailConfig(source.config as Record<string, unknown>);
     const reader = await (deps.readerFor ?? gmailReader)(db, source.credentialId);
     const homeTimeZone = deps.homeTimeZone ?? (await getHomeTimeZone(db));
