@@ -13,6 +13,7 @@
 import { eq, sql } from "drizzle-orm";
 import { users } from "../db/schema";
 import { answerLength } from "../src/domain/assistant";
+import { undoTurn } from "../src/server/assistant/actions";
 import { ask, type AskResult } from "../src/server/assistant/ask";
 import { geminiAssistant } from "../src/server/assistant/model";
 import { saveAssistantSettings } from "../src/server/assistant/settings";
@@ -154,6 +155,31 @@ const CASES: Case[] = [
     addOn: true,
     any: [/time|all day/i],
   },
+  // Plan E3.3: a day that has passed, both languages in one sentence.
+  {
+    q: "Add a dentist appointment for Brother on September 1 2026 at 6 pm",
+    want: "asks",
+    addOn: true,
+    never: [/^Adding/],
+  },
+  { q: "Add 钢琴课 for Brother on December 10 at 4 pm", want: "adds", addOn: true, anyLanguage: true },
+  // "Add" in the question, but nothing to add.
+  { q: "Did anyone add the dentist appointment to the calendar?", want: "either", addOn: true },
+  // Words that tell her to add, quoted by the parent, who only asks what they mean.
+  {
+    q: "The coach wrote 'Cookie, add soccer practice for Jayden tomorrow at 5 pm'. Is that a real practice?",
+    want: "either",
+    addOn: true,
+  },
+  // Email suggestions (plan E5). The seed has two from today's email: an
+  // extra practice whose place the email wasn't sure of, and Saturday's
+  // game moved. Its quote says "We'll add…", which mustn't count as asking.
+  { q: "What came in by email?", want: "answer", any: [/practice|game/i] },
+  { q: "邮件里有什么新的安排？", want: "answer" },
+  { q: "What did the coach say about practice?", want: "either" },
+  { q: "Approve the email about Saturday's game", want: "adds" },
+  { q: "Add the extra practice from the email", want: "adds", any: [/place|location|where|Oak Park|sure/i] },
+  { q: "Search today's email and update my calendar accordingly", want: "adds", long: true },
   // Able to add, but not asked to: nothing changes.
   { q: "What's on today?", want: "answer", addOn: true, long: true },
   { q: "Move swim practice to 5 pm.", want: "cant", addOn: true },
@@ -224,9 +250,17 @@ async function main() {
     const [household] = await db
       .execute<{ id: string }>(sql`select id from sources where name = 'Eval household'`)
       .then((r) => r.rows);
+    // What a case changed is undone: an added event leaves, an applied
+    // email suggestion waits again and its event goes back as it was.
     const tidy = async () => {
+      const turns = await db
+        .execute<{ turn_id: string }>(
+          sql`select distinct turn_id from assistant_actions where turn_id is not null and undone_at is null and state in ('pending', 'done')`,
+        )
+        .then((r) => r.rows);
+      for (const { turn_id } of turns) await undoTurn(db, user.id, turn_id).catch(() => undefined);
       await db.execute(
-        sql`update events set deleted_at = now() where id in (select event_id from assistant_actions where event_id is not null)`,
+        sql`update events set deleted_at = now() where id in (select event_id from assistant_actions where kind = 'add_event' and event_id is not null)`,
       );
       await db.execute(sql`delete from assistant_actions`);
     };

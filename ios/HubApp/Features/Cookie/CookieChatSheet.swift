@@ -25,6 +25,7 @@ struct CookieChatSheet: View {
                         ForEach(store.messages) { message in
                             CookieBubble(message: message)
                             if message.memory != nil { MemoryUndo(message: message) }
+                            if message.changes != nil { CookieChangeCards(turnId: message.id).padding(.leading, 36) }
                         }
                         if store.isAsking {
                             HStack(spacing: 8) {

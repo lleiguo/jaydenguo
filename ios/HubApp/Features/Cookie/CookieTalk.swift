@@ -191,7 +191,7 @@ final class CookieTalk {
     private func speak(_ answer: CookieAnswer) async {
         guard CookieVoice.speaks(answer, spokenAnswers: await store.spokenAnswersOn()) else {
             // Nothing to hear, so leave time to read.
-            return closeLater(after: CookieVoice.bubbleLinger + 3)
+            return closeLater(after: lingerAfterAnswer + 3)
         }
         let turn = answer.turnId
         let finished: @MainActor @Sendable () -> Void = { [weak self] in self?.spoke(turn) }
@@ -213,7 +213,7 @@ final class CookieTalk {
         guard speaking == turn else { return }
         speaking = nil
         speaker.rest()
-        if case .answered = phase { closeLater(after: CookieVoice.bubbleLinger) }
+        if case .answered = phase { closeLater(after: lingerAfterAnswer) }
     }
 
     /// CK-3: tapping her while she speaks stops the speech.
@@ -222,7 +222,7 @@ final class CookieTalk {
         speaking = nil
         speaker.stop()
         speaker.rest()
-        if case .answered = phase { closeLater(after: CookieVoice.bubbleLinger) }
+        if case .answered = phase { closeLater(after: lingerAfterAnswer) }
     }
 
     // MARK: The bubble
@@ -240,6 +240,11 @@ final class CookieTalk {
     private func showMicrophoneOff() {
         phase = .hint("Cookie can't hear you: the microphone is off for Hub. You can still type.", settings: true)
         closeLater(after: 8)
+    }
+
+    private var lingerAfterAnswer: TimeInterval {
+        if case .answered(_, let answer) = phase { return CookieVoice.linger(answer) }
+        return CookieVoice.bubbleLinger
     }
 
     private func closeLater(after seconds: TimeInterval) {

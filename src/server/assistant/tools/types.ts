@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { ToolKind } from "@/domain/assistant";
+import type { AppliedKind } from "@/domain/assistant-changes";
 import type { Person } from "@/domain/people";
 import { wallClock } from "@/domain/time";
 import type { Db } from "../../db/client";
@@ -44,6 +45,8 @@ export type TurnState = {
   // turn, and what was added, for the line the server can say itself.
   actionIds: string[];
   did: { title: string; date: string; start: string | null; names: string[]; everyone: boolean } | null;
+  // Email suggestions this question applied (EMS-3, EMS-4).
+  applied: { title: string; kind: AppliedKind }[];
   // What the searches cost, on top of Cookie's own model calls.
   webCost: { inputTokens: number; outputTokens: number; costUsd: number; searches: number };
 };
@@ -56,6 +59,7 @@ export const newTurn = (): TurnState => ({
   webSources: [],
   actionIds: [],
   did: null,
+  applied: [],
   webCost: { inputTokens: 0, outputTokens: 0, costUsd: 0, searches: 0 },
 });
 

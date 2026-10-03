@@ -27,6 +27,9 @@ export type EventView = {
   // "skip every repeat" applies. Optional so the app still reads answers
   // cached before the field existed.
   repeats?: boolean;
+  // Cookie added it and the worker hasn't written it to the family's
+  // Google Calendar yet (intent 0008, GCW-4). Optional, like `repeats`.
+  beingAdded?: boolean;
   lastSyncedAt: string | null;
   override: {
     id: string;

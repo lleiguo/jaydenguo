@@ -1,6 +1,7 @@
 import { calendarTool } from "./calendar";
 import { CHANGE_TOOLS } from "./changes";
 import { costsTool } from "./costs";
+import { EMAIL_TOOLS } from "./email";
 import { memoryForgetTool, memorySaveTool, memorySearchTool } from "./memory";
 import { schoolTool } from "./school";
 import { swimmingTool } from "./swimming";
@@ -31,7 +32,11 @@ export const WEB_TOOLS = [webSearchTool, webFetchTool] as Tool[];
 // 0008, GCW-8).
 export { CHANGE_TOOLS };
 
-export const ALL_TOOLS = [...HUB_TOOLS, ...CHANGE_TOOLS, ...MEMORY_TOOLS, ...WEB_TOOLS];
+// Offered only when there is an email source to have suggestions from
+// (intent 0008, EMS-2).
+export { EMAIL_TOOLS };
+
+export const ALL_TOOLS = [...HUB_TOOLS, ...CHANGE_TOOLS, ...EMAIL_TOOLS, ...MEMORY_TOOLS, ...WEB_TOOLS];
 
 export { newTurn } from "./types";
 export type { Tool, ToolContext, TurnState } from "./types";

@@ -70,7 +70,10 @@ export function geminiModel(generate: Generate = vertexGenerate(), model = GEMIN
         response.promptFeedback?.blockReason ||
         (candidate?.finishReason && BLOCKED.has(candidate.finishReason))
       )
-        throw new LlmError("refusal", "Gemini declined to review this video.");
+        throw new LlmError(
+          "refusal",
+          req.media ? "Gemini declined to review this video." : "Gemini declined to answer this.",
+        );
       if (candidate?.finishReason === "MAX_TOKENS")
         throw new LlmError("invalid_output", "Gemini's answer was cut off before it finished.");
       const text = response.text ?? "";

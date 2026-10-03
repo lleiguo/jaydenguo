@@ -24,7 +24,7 @@ import Testing
         #expect(bark.kind == .bark)
         #expect(bark.sourceLine == nil)
         #expect(bark.spokenLabel == "Cookie barked: 汪！这个我不知道。")
-        #expect(messages.last?.kind == .notice)
+        #expect(messages.first { $0.text.hasPrefix("Cookie needs a rest") }?.kind == .notice)
     }
 
     @Test func anAnswerFromHerselfNamesNoSource() async throws {
@@ -91,6 +91,107 @@ import Testing
         #expect(CookieChat.question("   ") == nil)
         #expect(CookieChat.question(String(repeating: "a", count: 500)) != nil)
         #expect(CookieChat.question(String(repeating: "a", count: 501)) == nil)
+    }
+
+    // MARK: Changes to the calendar (intent 0008, plan E3.1)
+
+    @Test func anAddedEventIsACardUnderTheAnswer() async throws {
+        let turns = try await client.api.listAssistantTurns().ok.body.json.turns
+        let messages = CookieChat.messages(turns)
+        #expect(messages.filter { $0.changes != nil }.count == 1)
+        let answer = try #require(messages.last)
+        let changes = try #require(answer.changes)
+        #expect(changes.turnId == answer.id)
+        let card = try #require(changes.cards.first)
+        let time = HomeTime(identifier: "America/Toronto", locale: Locale(identifier: "en_US"))
+        // 23:00 UTC on 3 December is 6 pm at home.
+        #expect(card.whenLine(time).hasPrefix("Thursday, December 3 · 6:00"))
+        #expect(card.whoLine == "For Sam")
+        #expect(card.state == .adding)
+        #expect(card.stateLine == "Being added to the family calendar…")
+        #expect(card.opens)
+        #expect(card.spokenLabel(time).hasPrefix("dentist appointment. Thursday, December 3"))
+        #expect(changes.isSettling)
+    }
+
+    @Test func undoIsOfferedForTenMinutesOnly() async throws {
+        let turns = try await client.api.listAssistantTurns().ok.body.json.turns
+        let changes = try #require(CookieChat.messages(turns).last?.changes)
+        let until = try #require(HomeTime.parse("2026-10-02T16:00:00.000Z"))
+        #expect(changes.canUndo(now: until.addingTimeInterval(-1)))
+        #expect(!changes.canUndo(now: until))
+    }
+
+    @Test func anAllDayEventKeepsItsDate() {
+        let did = CookieDid(kind: .calendar, undoUntil: nil, events: [
+            .init(
+                id: "e1", title: "Field trip", start: "2026-12-04T00:00:00.000Z", end: "2026-12-05T00:00:00.000Z",
+                allDay: true, owners: ["Sam", "Alex"], state: .added, change: .added, via: .cookie
+            ),
+        ])
+        let changes = CookieChanges(turnId: "t1", did: did)
+        let card = changes.cards[0]
+        let time = HomeTime(identifier: "America/Toronto", locale: Locale(identifier: "en_US"))
+        #expect(card.whenLine(time) == "Friday, December 4 · All day")
+        #expect(card.whoLine == "For Sam and Alex")
+        #expect(!changes.canUndo())
+        #expect(!changes.isSettling)
+    }
+
+    @Test func aFailedOrUndoneEventDoesNotOpen() {
+        let did = CookieDid(kind: .calendar, undoUntil: nil, events: [
+            .init(id: nil, title: "Dentist", start: "2026-12-04T02:00:00.000Z", end: "2026-12-04T03:00:00.000Z",
+                  allDay: false, owners: [], state: .failed, change: .added, via: .cookie),
+            .init(id: "e2", title: "Dentist", start: "2026-12-04T02:00:00.000Z", end: "2026-12-04T03:00:00.000Z",
+                  allDay: false, owners: [], state: .undone, change: .added, via: .cookie),
+        ])
+        let cards = CookieChanges(turnId: "t1", did: did).cards
+        #expect(cards.map(\.opens) == [false, false])
+        #expect(cards[0].stateLine == "Couldn't be added to the family calendar")
+        #expect(cards[0].whoLine == nil)
+        #expect(Set(cards.map(\.id)).count == 2)
+    }
+
+    @Test func anAppliedEmailSuggestionSaysWhatItDid() {
+        let did = CookieDid(kind: .calendar, undoUntil: "2026-10-02T16:00:00.000Z", events: [
+            .init(id: "e1", title: "Extra practice", start: "2026-12-09T23:00:00.000Z", end: "2026-12-10T00:30:00.000Z",
+                  allDay: false, owners: ["Sam"], state: .added, change: .added, via: .email),
+            .init(id: "e2", title: "Game", start: "2026-12-12T18:00:00.000Z", end: "2026-12-12T19:30:00.000Z",
+                  allDay: false, owners: ["Sam"], state: .added, change: .moved, via: .email),
+            .init(id: "e3", title: "Practice", start: "2026-12-08T23:00:00.000Z", end: "2026-12-09T00:30:00.000Z",
+                  allDay: false, owners: ["Sam"], state: .added, change: .cancelled, via: .email),
+        ])
+        let cards = CookieChanges(turnId: "t1", did: did).cards
+        #expect(cards.map(\.stateLine) == ["Added from email", "Moved, as the email said", "Cancelled, as the email said"])
+        #expect(cards.allSatisfy { $0.fromEmail })
+        #expect(cards.allSatisfy { $0.opens })
+        #expect(!CookieChanges(turnId: "t1", did: did).isSettling)
+    }
+
+    @Test func undoReturnsWhatTheAnswerDidAfterwards() async throws {
+        let transport = FixtureTransport()
+        let changes = try await testClient(transport: transport).undoCookieChanges(turnId: "t1")
+        #expect(transport.requests.first?.operationID == "undoAssistantActions")
+        #expect(transport.requests.first?.request.path == "/api/v1/assistant/actions/t1/undo")
+        #expect(changes.cards.map(\.state) == [.undone])
+        #expect(!changes.canUndo())
+    }
+
+    @Test func freshTurnsUpdateOnlyTheCards() async throws {
+        let turns = try await client.api.listAssistantTurns().ok.body.json.turns
+        let messages = CookieChat.messages(turns)
+        var later = turns
+        let last = later.removeLast()
+        var did = try #require(last.did)
+        did.events[0].state = .added
+        later.append(.init(
+            id: last.id, conversationId: last.conversationId, mode: last.mode, heard: last.heard, text: last.text,
+            outcome: last.outcome, language: last.language, sources: last.sources, did: did, createdAt: last.createdAt
+        ))
+        let refreshed = CookieChat.refreshed(messages, from: later)
+        #expect(refreshed.last?.changes?.cards.first?.state == .added)
+        #expect(refreshed.last?.text == messages.last?.text)
+        #expect(Array(refreshed.dropLast()) == Array(messages.dropLast()))
     }
 
     /// CSEC-8: nothing from Cookie is kept on the phone, so offline there

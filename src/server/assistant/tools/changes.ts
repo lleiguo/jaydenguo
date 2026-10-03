@@ -6,6 +6,7 @@ import {
   dayInWords,
   dayProblem,
   eventTimes,
+  saysAllDay,
   titleWithNames,
   whoIsIt,
 } from "@/domain/assistant-changes";
@@ -50,7 +51,8 @@ export const calendarAddTool: Tool<z.infer<typeof addInput>> = {
     // ADD-2, CASEC-1: the question's own words, never a tool result's.
     if (!asksToAdd(ctx.question)) return problem("the question didn't ask you to add anything");
     if (ctx.turn.webRan) return problem("nothing can be added in a question that used the web");
-    if (ctx.turn.did) return problem("one event per question; this question already added one");
+    if (ctx.turn.did || ctx.turn.actionIds.length)
+      return problem("one change per question; this question already made one");
     const dayAgo = new Date(ctx.now.getTime() - 86_400_000);
     if ((await changesSince(ctx.db, dayAgo)) >= CHANGE_LIMITS.perDay)
       return problem("that's enough changes for one day; say the calendar screen can add it");
@@ -65,7 +67,7 @@ export const calendarAddTool: Tool<z.infer<typeof addInput>> = {
     if ("problem" in who) return problem(who.problem);
     const day = dayProblem(q.date, q.weekday, localDate(ctx.now, ctx.timeZone));
     if (day) return problem(day);
-    const times = eventTimes(q, ctx.timeZone);
+    const times = eventTimes({ ...q, allDay: q.allDay && saysAllDay(ctx.question) }, ctx.timeZone);
     if ("problem" in times) return problem(times.problem);
 
     // The title and category as the household sync will see them, so

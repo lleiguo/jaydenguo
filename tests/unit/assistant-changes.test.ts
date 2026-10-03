@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   addingLine,
+  appliedLine,
   asksToAdd,
+  asksToApply,
+  saysAllDay,
+  leftBecause,
+  unsureFields,
   dayInWords,
   dayProblem,
   eventTimes,
@@ -147,5 +152,79 @@ describe("what the server says when her own ending can't stand (ADD-7)", () => {
     expect(addingLine("en", event)).toBe("Adding: Sam dentist, Thursday, December 3, 2026, 18:00, for Sam.");
     expect(addingLine("zh", event)).toBe("正在添加：Sam dentist，2026-12-03 18:00，Sam。");
     expect(addingLine("en", { ...event, start: null, everyone: true })).toContain("all day, for everyone");
+  });
+});
+
+describe("all day (ADD-5)", () => {
+  it("only when the parent says so", () => {
+    for (const q of [
+      "Add sports day for Jayden on Friday, all day",
+      "Put the all-day trip in",
+      "周五全天的活动",
+    ])
+      expect(saysAllDay(q), q).toBe(true);
+    for (const q of ["Put Jayden's haircut on the calendar for tomorrow", "Add a day trip Friday"])
+      expect(saysAllDay(q), q).toBe(false);
+  });
+});
+
+describe("email suggestions (EMS-3, EMS-4)", () => {
+  it("applies only when the question asks for it", () => {
+    for (const q of [
+      "Add the swim meet one",
+      "Approve the practice suggestion",
+      "Search today's email and update my calendar accordingly",
+      "把今天邮件里的更新一下日历",
+      "同意那个比赛改时间的建议",
+    ])
+      expect(asksToApply(q), q).toBe(true);
+    for (const q of ["What came in by email?", "邮件里有什么新消息？", "Is Saturday's game still on?"])
+      expect(asksToApply(q), q).toBe(false);
+  });
+
+  const sure = { overall: "high", title: "high", date: "high", time: "high", location: "high" } as const;
+
+  it("leaves the unsure, the undated and the unmatched for the parent", () => {
+    expect(
+      leftBecause({ kind: "new", date: "2033-05-04", targetEventId: null, confidence: sure }),
+    ).toBeNull();
+    expect(
+      leftBecause({
+        kind: "new",
+        date: "2033-05-04",
+        targetEventId: null,
+        confidence: { ...sure, time: "low", location: "low" },
+      }),
+    ).toBe("not sure of the time and location");
+    // "overall" is a summary, not a field.
+    expect(
+      leftBecause({
+        kind: "new",
+        date: "2033-05-04",
+        targetEventId: null,
+        confidence: { ...sure, overall: "low" },
+      }),
+    ).toBeNull();
+    expect(leftBecause({ kind: "new", date: null, targetEventId: null, confidence: sure })).toBe("no date");
+    expect(leftBecause({ kind: "cancel", date: null, targetEventId: null, confidence: sure })).toMatch(
+      /isn't on the calendar/,
+    );
+    expect(
+      leftBecause({ kind: "change", date: "2033-05-04", targetEventId: "e1", confidence: sure }),
+    ).toBeNull();
+    expect(unsureFields({ ...sure, location: "low" })).toEqual(["location"]);
+  });
+
+  it("says what was applied in the question's language", () => {
+    const applied = [
+      { title: "Extra practice", kind: "added" as const },
+      { title: "Game vs Green Giants", kind: "moved" as const },
+    ];
+    expect(appliedLine("en", applied)).toBe(
+      "From the email suggestions: Extra practice added; Game vs Green Giants moved.",
+    );
+    expect(appliedLine("zh", applied)).toBe(
+      "按邮件建议，已添加：Extra practice；已改时间：Game vs Green Giants。",
+    );
   });
 });

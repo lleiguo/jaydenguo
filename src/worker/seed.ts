@@ -514,6 +514,11 @@ export async function seedJob(_args: string[], ctx: JobContext) {
     })
     .onConflictDoNothing();
 
+  // A household Google Calendar for Cookie to add events to (intent 0008),
+  // with ASSISTANT_CALENDAR_ADD=fake and Settings → Cookie pointing at it.
+  // Switched off like the rest, so nothing ever tries to read it.
+  await source("Household calendar (sample)", "google_calendar", "other");
+
   // Email suggestions (EML): a new practice and a moved game from a made-up
   // coach, back to pending on every run so the app's tests can use them.
   const gmail = await source("Coach email (sample)", "gmail", "soccer");
@@ -586,7 +591,8 @@ export async function seedJob(_args: string[], ctx: JobContext) {
       })
       .onConflictDoUpdate({
         target: [emailMessages.sourceId, emailMessages.gmailMessageId],
-        set: { subject: sg.subject },
+        // Today's email on every run, for Cookie's "today's email" (intent 0008).
+        set: { subject: sg.subject, receivedAt: new Date() },
       })
       .returning({ id: emailMessages.id });
     const values = {

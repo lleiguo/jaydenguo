@@ -30,6 +30,8 @@ public struct CookieMessage: Identifiable, Equatable, Sendable {
     public let links: [Link]
     /// A fact this answer saved or forgot, with the id to undo it (MEM-2).
     public let memory: MemoryChange?
+    /// Events this answer added, as cards with Undo (intent 0008, ACT-1).
+    public let changes: CookieChanges?
 
     public struct MemoryChange: Equatable, Sendable {
         public enum Kind: Sendable { case saved, forgot }
@@ -43,7 +45,7 @@ public struct CookieMessage: Identifiable, Equatable, Sendable {
 
     public init(
         id: String, role: Role, text: String, kind: Kind = .answer, sourceLine: String? = nil, links: [Link] = [],
-        memory: MemoryChange? = nil
+        memory: MemoryChange? = nil, changes: CookieChanges? = nil
     ) {
         self.id = id
         self.role = role
@@ -52,6 +54,20 @@ public struct CookieMessage: Identifiable, Equatable, Sendable {
         self.sourceLine = sourceLine
         self.links = links
         self.memory = memory
+        self.changes = changes
+    }
+
+    /// The same answer with its changes as they are now.
+    public func with(changes: CookieChanges?) -> CookieMessage {
+        CookieMessage(
+            id: id, role: role, text: text, kind: kind, sourceLine: sourceLine, links: links, memory: memory,
+            changes: changes
+        )
+    }
+
+    /// The same answer without its memory Undo, once used or expired.
+    public func withoutMemory() -> CookieMessage {
+        CookieMessage(id: id, role: role, text: text, kind: kind, sourceLine: sourceLine, links: links, changes: changes)
     }
 
     /// What VoiceOver reads for the bubble.
@@ -84,7 +100,9 @@ public enum CookieChat {
             return question + [
                 CookieMessage(
                     id: turn.id, role: .cookie, text: text, kind: kind(turn.outcome.rawValue),
-                    sourceLine: sourceLine(turn.sources), links: links(turn.sources)
+                    sourceLine: sourceLine(turn.sources), links: links(turn.sources),
+                    // Unlike a saved fact, a change keeps its Undo for ten minutes, after a restart too.
+                    changes: turn.did.map { CookieChanges(turnId: turn.id, did: $0) }
                 ),
             ]
         }
@@ -97,7 +115,8 @@ public enum CookieChat {
             ?? answer.forgot.map { .init(kind: .forgot, id: $0.id, text: $0.text) }
         return CookieMessage(
             id: answer.turnId, role: .cookie, text: answer.text, kind: kind(answer.outcome.rawValue),
-            sourceLine: sourceLine(answer.sources), links: links(answer.sources), memory: memory
+            sourceLine: sourceLine(answer.sources), links: links(answer.sources), memory: memory,
+            changes: answer.did.map { CookieChanges(turnId: answer.turnId, did: $0) }
         )
     }
 

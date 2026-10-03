@@ -23,7 +23,7 @@ import {
   type SourceKind,
   type ToolKind,
 } from "@/domain/assistant";
-import { addingLine } from "@/domain/assistant-changes";
+import { addingLine, appliedLine } from "@/domain/assistant-changes";
 import { hit } from "../auth/rate-limit";
 import { HttpError } from "../errors";
 import type { Db } from "../db/client";
@@ -37,8 +37,10 @@ import { getAssistantSettings } from "./settings";
 import type { MemoryView } from "./memory";
 import { geminiTranscriber, spellingList, type Clip, type Transcriber } from "./transcribe";
 import { canAdd, claimActions, didFor, type Did } from "./actions";
+import { emailSource } from "./email";
 import {
   CHANGE_TOOLS,
+  EMAIL_TOOLS,
   HUB_TOOLS,
   MEMORY_TOOLS,
   newTurn,
@@ -251,11 +253,13 @@ export async function ask(
   const tools = deps.tools ?? [
     ...HUB_TOOLS,
     ...((await canAdd(db, settings)) ? CHANGE_TOOLS : []),
+    ...((await emailSource(db)) ? EMAIL_TOOLS : []),
     ...MEMORY_TOOLS,
     ...(settings.web ? WEB_TOOLS : []),
   ];
   const webOn = tools.some((t) => t.kind === "web");
   const changeOn = tools.some((t) => t.name === "calendar_add");
+  const emailOn = tools.some((t) => t.name === "suggestions");
   const ctx: ToolContext = {
     db,
     now,
@@ -276,14 +280,22 @@ export async function ask(
     ]),
     { role: "user", parts: [{ text: `${contextLine(now, timeZone, people)}\n${heard}` }] },
   ];
-  const request = { system: systemPrompt(webOn, changeOn), tools: declarations(tools), contents };
+  const request = { system: systemPrompt(webOn, changeOn, emailOn), tools: declarations(tools), contents };
   const counts = noCalls();
   // If an event was added and her own ending can't stand, the server
   // says what was added: a bark would hide a change that did happen.
   const bark = (why: string) =>
     turn.did
       ? finish("answer", addingLine(language, turn.did), [{ kind: "hub", label: "Calendar" }], language, why)
-      : finish("bark", barkLine(language), [], language, why);
+      : turn.applied.length
+        ? finish(
+            "answer",
+            appliedLine(language, turn.applied),
+            [{ kind: "hub", label: "Suggestions" }],
+            language,
+            why,
+          )
+        : finish("bark", barkLine(language), [], language, why);
 
   for (let round = 1; round <= LIMITS.rounds; round++) {
     if (Date.now() - started > LIMITS.deadlineMs)

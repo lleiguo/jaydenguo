@@ -6,7 +6,8 @@ import { fromAddress } from "../../adapters/gmail";
 import type { Db } from "../db/client";
 import type { Logger } from "../log";
 import { LlmError } from "../llm/types";
-import { claudeModel } from "../llm/claude";
+import { geminiModel, vertexGenerate } from "../llm/gemini";
+import { ASSISTANT_MODEL } from "../assistant/model";
 import { EMAIL_PROMPT_VERSION, modelExtractor, type Extractor, type UpcomingEvent } from "./extract";
 
 // After a Gmail sync (plan M5.8): each allow-listed email is read once.
@@ -16,8 +17,11 @@ import { EMAIL_PROMPT_VERSION, modelExtractor, type Extractor, type UpcomingEven
 
 const UPCOMING_DAYS = 60;
 
-// Claude on Vertex AI; stand-ins with EMAIL_LLM=fake (local and tests);
-// null when Vertex AI isn't set up.
+// Gemini Flash on Vertex AI, the model Cookie uses (intent 0008, EMS-1;
+// it was Claude, whose quota on this project was 0); stand-ins with
+// EMAIL_LLM=fake (local and tests); null when Vertex AI isn't set up.
+export const EMAIL_MODEL = () => process.env.EMAIL_MODEL ?? ASSISTANT_MODEL();
+
 export function defaultEmailExtractor(): Extractor | null {
   if (process.env.EMAIL_LLM === "fake") {
     if (process.env.K_SERVICE || process.env.CLOUD_RUN_JOB)
@@ -25,7 +29,7 @@ export function defaultEmailExtractor(): Extractor | null {
     return fakeExtractor;
   }
   if (!process.env.VERTEX_PROJECT) return null;
-  return modelExtractor(claudeModel());
+  return modelExtractor(geminiModel(vertexGenerate(), EMAIL_MODEL()));
 }
 
 // One suggestion per email that names a date as YYYY-MM-DD; enough to try
@@ -109,9 +113,7 @@ export async function syncEmails(
   const fresh = emails.filter((e) => !done.has(e.id));
   if (!fresh.length) return { read: 0, suggestions: 0 };
   if (!opts.extractor)
-    throw new SyncError(
-      "Claude on Vertex AI isn't set up, so the emails can't be read into suggestions yet.",
-    );
+    throw new SyncError("Vertex AI isn't set up, so the emails can't be read into suggestions yet.");
 
   const upcoming = await upcomingEvents(db, opts.now);
   const byLabel = new Map(upcoming.map((e) => [e.label, e.id]));

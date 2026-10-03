@@ -4,6 +4,7 @@ import { emailMessages, emailSuggestions, events, sources } from "@db/schema";
 import { CATEGORIES } from "../../domain/constants";
 import { zonedToUtc } from "../../domain/time";
 import { createEvent, moveEvent, skipEvent } from "../calendar/mutations";
+import type { Undo } from "../../lib/calendar-types";
 import type { Db } from "../db/client";
 import { HttpError } from "../errors";
 import { getHomeTimeZone } from "../settings";
@@ -130,13 +131,15 @@ export async function approveSuggestion(
   actor: string,
   id: string,
   input: z.infer<typeof approveInput> | null,
-): Promise<{ eventId: string | null }> {
+): Promise<{ eventId: string | null; undo: Undo | null }> {
   const s = await pending(db, id);
   const ex = s.extracted as Extracted;
   let eventId: string | null = null;
+  // How to take back a change or a cancellation (Cookie's Undo, 0008 ACT-3).
+  let undo: Undo | null = null;
   if (s.kind === "cancel") {
     if (!s.targetEventId) throw new HttpError(409, "The event this cancels is gone.");
-    await skipEvent(db, actor, s.targetEventId, true);
+    undo = await skipEvent(db, actor, s.targetEventId, true);
   } else {
     const fields = input ?? {
       title: ex.title,
@@ -150,7 +153,7 @@ export async function approveSuggestion(
     const t = times(parsed, await getHomeTimeZone(db));
     if (s.kind === "change") {
       if (!s.targetEventId) throw new HttpError(409, "The event this changes is gone.");
-      await moveEvent(db, actor, s.targetEventId, { start: t.start, end: t.end });
+      undo = await moveEvent(db, actor, s.targetEventId, { start: t.start, end: t.end });
     } else {
       eventId = await createEvent(
         db,
@@ -176,7 +179,16 @@ export async function approveSuggestion(
     .where(and(eq(emailSuggestions.id, id), eq(emailSuggestions.status, "pending")))
     .returning({ id: emailSuggestions.id });
   if (!done) throw new HttpError(409, "This suggestion was already decided.");
-  return { eventId };
+  return { eventId, undo };
+}
+
+// Cookie's Undo (intent 0008, ACT-3): an applied suggestion goes back to
+// waiting on the Suggestions page. Its event is dealt with by the caller.
+export async function unapproveSuggestion(db: Db, id: string) {
+  await db
+    .update(emailSuggestions)
+    .set({ status: "pending", eventId: null, decidedAt: null })
+    .where(and(eq(emailSuggestions.id, id), eq(emailSuggestions.status, "approved")));
 }
 
 export async function rejectSuggestion(db: Db, id: string) {

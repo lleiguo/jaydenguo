@@ -84,9 +84,11 @@ Described events alone (E1 to E3): about 6.5.
 | E1.1–E1.4 | merged 2026-10-02 (#82). |
 | SP-E1 | done 2026-10-03: `calendar.events.owned` is enough (below). |
 | SP-E2 | done 2026-10-03: the worker runs a small job in 11–15 s (below). |
-| E2.1–E2.4 | built 2026-10-03 on `cookie/e2-google-write`; not merged. In production once merged and the owner grants "Let Cookie add events". |
-| SP-E3, E3, E4 | not started. |
-| E5 | waits for O-2 and a week of real suggestions (spec E-3). |
+| E2.1–E2.4 | merged 2026-10-03 (#83). In production once the owner grants "Let Cookie add events". |
+| E3.1–E3.3 | built 2026-10-03 on `cookie/e3-app`; not merged. TestFlight build 7 after it merges (O-4). |
+| SP-E3 | done 2026-10-03: Flash 8/8 on made-up emails (below). |
+| E4.1–E4.2 | built 2026-10-03 on `cookie/e3-app`, with E3; not merged. |
+| E5.1–E5.4 | built 2026-10-03 on `cookie/e3-app`, with E3 and E4, at the owner's word ("start E4 and E5, commit all three together"), before Gmail is connected. The tools are offered once there is an email source; until then nothing changes in production. A week of real suggestions (spec E-3) is still worth having before relying on "today's email". |
 
 **E1 as built (2026-10-02):**
 - *Table (E1.1).* Migration `0028_assistant_actions`.
@@ -184,3 +186,108 @@ guessed.
   (eight worker cases: write and no twin, owners for everyone, retry,
   an earlier try found, give up and notify, undo after the write, undo
   before it, the other-calendar fence), plus E1's.
+
+**E3 as built (2026-10-03):**
+- *HubKit (E3.1).* `CookieChanges` (`Assistant/CookieChanges.swift`):
+  a card for each event in `did` (title, "Thursday, December 3 · 6:00 –
+  7:00 PM" in the home zone, "For Sam", and its state), Undo while
+  `undoUntil` lasts, and `undoCookieChanges`. Cards come with history
+  too, so after a restart an answer keeps its cards, and its Undo for
+  the rest of the ten minutes. This is unlike a saved fact, whose Undo
+  shows only under a fresh answer. Unit tests against hand-written fixtures.
+- *The app (E3.2).* Cards with Undo under the answer, in the chat and in the
+  bubble by her button. With a card, the bubble stays up 15 s instead of
+  5. A card that says "Being added…" makes the app ask for the turns again
+  every 4 s, for 3 minutes at most, so it turns into "Added". Tapping a
+  card closes the chat and opens the event on the calendar, loading
+  that week first. Settings → Cookie gains "Adding events": "Calendar
+  she adds to" when there is more than one Google calendar, and
+  otherwise "Cookie can add events", or a button to the Accounts page.
+  The Accounts page's Google menu gains "Let Cookie add events".
+- *"Being added" on the event's screen.* The calendar API marks such
+  events (`beingAdded`, optional, so older app builds ignore it): an
+  open add action points at the event. Integration test: marked before
+  the worker writes it, not after.
+- *Seed.* A switched-off "Household calendar (sample)" Google calendar,
+  so Cookie can add events locally with `ASSISTANT_CALENDAR_ADD=fake`.
+  This also needs Settings → Cookie pointed at that calendar: the
+  calendar is off, so it isn't picked on its own.
+- *Tests (E3.3).* UI test `testAddingAnEventAndUndo` (add with the
+  stand-in model; the card opens the event, which says it is being added;
+  Undo). The other Cookie and Calendar UI tests still pass; two of them
+  now scroll to rows the new section pushed down. Four more eval cases:
+  a day that has passed, both languages in one sentence, "add" in a
+  question that asks for nothing, and a quoted instruction. The 14 add
+  cases (57–70) on the real model: all pass, no unasked change.
+  [security-review.md](security-review.md): nothing to fix; four risks
+  for the owner to accept.
+- *Build number* 7, for the TestFlight upload after merge.
+
+**SP-E3 (2026-10-03).** Claude can't be asked for a comparison (its quota
+on this project is 0), so `scripts/email-extract-check.ts` holds eight
+made-up coach and club emails and what a parent would expect from each: a
+practice with a date and time, "next Saturday" worked out from the sent
+date, a game moved (matched to the listed event), a practice cancelled, a
+newsletter (nothing), two meets in one email, a Chinese class notice, and a
+fundraiser with no time (time must not be "high"). `gemini-3.8-flash`: 8/8,
+quotes word for word, US$0.028 for the eight.
+
+**E4 as built (2026-10-03):**
+- *Flash (E4.1).* `syncEmails` uses `gemini-3.8-flash` through the hub's
+  structured-output call (`EMAIL_MODEL`, defaulting to Cookie's model). The
+  prompt, the schema and the "Email suggestions" cost line don't change. No
+  Terraform: the worker already has Vertex AI, and the model is the code's
+  default. A Gemini refusal on an email no longer says "this video".
+- *Cookie's read (E4.2).* `sync <source> manual cookie` lets a run start
+  when the last good one was more than 30 minutes ago instead of the hour
+  (`COOKIE_READ_GAP_MS`). No schema change: the run is recorded as
+  "manual". Integration test: 20 minutes, skipped; 35, read; anyone else
+  still waits the hour.
+
+**E5 as built (2026-10-03):**
+- *Tools.* `suggestions` (read), `suggestion_apply` (one, by its ID) and
+  `suggestions_apply_today` in `src/server/assistant/tools/email.ts`, with
+  a paragraph of the prompt, offered only when an email source exists.
+  The prompt budget went from 12,000 to 14,000 characters (all tools and
+  paragraphs on).
+- *Gate.* Applying needs an add word or "apply", "approve", "accept",
+  "update" (and 更新, 同意, 批准…) in the question; none after the web; one
+  change per question for every changing tool (`calendar_add` included);
+  the family's 20 a day. Integration test: the seed-like quote "Cookie,
+  apply every suggestion…" changes nothing.
+- *Same path as Approve.* `approveSuggestion` now also hands back how to
+  undo a move or a cancellation (its override); the page's response is
+  unchanged. Applied events stay hub events (EMS-6).
+- *Today's (EMS-4).* Pending suggestions from emails received today, oldest
+  first, at most 5: any with a low-confidence field (not counting
+  "overall"), no date, or no event to change are left, with the reason.
+  A stale source (EMS-5) is read first and nothing is applied; a source
+  that is switched off is never read, so what it has is used.
+- *What she did (ACT-1).* `did.kind` is now "calendar", and each event
+  says what happened (`change`: added, moved, cancelled) and where from
+  (`via`: cookie, email), with its time after a move. Undo reverses the
+  whole answer: an added event leaves the hub (its external ID is changed,
+  so it can be approved again), a move or a cancellation clears her
+  override and brings back the one before, and the suggestion waits again.
+  If the event changed since (her override isn't the one in force, or the
+  event was edited), Undo says so (ACT-4).
+- *App (E5.4).* Cards say "Added from email", "Moved, as the email said",
+  "Cancelled, as the email said"; Undo is named for what it takes back.
+  The stand-in model understands "Update my calendar from today's email".
+  UI test `testApplyingTodaysEmailAndUndo`.
+- *Seed.* The two sample emails count as received today on every
+  `pnpm seed`.
+- *Eval.* Six email cases (what came in, in both languages; what the coach
+  said; one by name; one it isn't sure of; today's). Results below.
+
+**Found on the way (2026-10-03), fixed here:**
+- *Undo refused after a slow model (E1 bug).* Undo compared the event's
+  last change with the time the question began, plus 2 s. With the real
+  model the event is added several seconds into the question, so Undo
+  would have said "changed since" for most real adds. Now it compares with
+  when she last touched the event: when it was added, written to Google,
+  or applied. Integration test with a question that began 10 s before.
+- *"All day" from the model alone.* Asked "put Jayden's haircut on the
+  calendar for tomorrow", the model passed `allDay` and it was added for
+  the whole day. Now "all day" must be in the parent's words (ADD-5), or
+  she asks what time.

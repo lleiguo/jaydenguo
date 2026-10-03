@@ -1116,7 +1116,7 @@ describe("Cookie", () => {
       expect(result.outcome).toBe("answer");
       expect(result.sources).toEqual([{ kind: "hub", label: "Calendar" }]);
       expect(result.did).toMatchObject({
-        kind: "added",
+        kind: "calendar",
         events: [
           { title: `${primary} dentist appointment`, allDay: false, owners: [primary], state: "adding" },
         ],
@@ -1210,6 +1210,8 @@ describe("Cookie", () => {
         [{ people: [] }, "no person was named"],
         [{ people: ["Alex"] }, "no one called Alex"],
         [{ start: undefined, people: [primary] }, "no time was given"],
+        // "All day" only when the parent said it, not because the model did.
+        [{ start: undefined, allDay: true, people: [primary] }, "no time was given"],
         [{ date: "2033-03-01", people: [primary] }, "has passed"],
       ];
       for (const [args, said] of cases) {
@@ -1231,7 +1233,7 @@ describe("Cookie", () => {
       );
       const result = await ask(db, twice, { userId, text: "Add a dentist appointment and a haircut" });
       expect(result.did?.events).toHaveLength(1);
-      expect(lastToolResult(twice)).toContain("one event per question");
+      expect(lastToolResult(twice)).toContain("one change per question");
       const [row] = await added();
       await db.delete(assistantActions);
       await db
@@ -1314,6 +1316,24 @@ describe("Cookie", () => {
         .update(events)
         .set({ deletedAt: new Date() })
         .where(sql`${events.id} = ${row.event!.id}`);
+    });
+
+    it("can be undone when the model took a while before adding (ACT-3)", async () => {
+      // On the real clock, the question began ten seconds before the event
+      // was added, as when the model thinks before it calls the tool.
+      const began = new Date(Date.now() - 10_000);
+      const soon = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+      const d = {
+        ...addDeps((_req, round) =>
+          round === 1 ? [addCall({ people: [primary], date: soon })] : [answer("Adding: dentist.", ["hub"])],
+        ),
+        now: began,
+      };
+      const result = await ask(db, d, { userId, text: "Add a dentist appointment" });
+      expect(result.did?.events[0].state).toBe("adding");
+      const undone = await undoTurn(db, userId, result.turnId, new Date());
+      expect(undone.events[0].state).toBe("undone");
+      await db.delete(assistantActions);
     });
 
     it("undoes what an answer added, for the parent who asked, for ten minutes (ACT-3, ACT-4)", async () => {

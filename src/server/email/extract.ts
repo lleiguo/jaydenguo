@@ -3,7 +3,7 @@ import { CATEGORIES } from "../../domain/constants";
 import type { EmailMessage } from "../../adapters/gmail";
 import type { StructuredModel } from "../llm/types";
 
-// Suggestions from coach and club emails (EML-2, plan M5.8): Claude reads
+// Suggestions from coach and club emails (EML-2, plan M5.8): a model reads
 // one allow-listed email and lists the new events, changes and
 // cancellations it mentions, each with the fields it found, a short quote
 // from the email and how sure it is of each field. It never writes to the
