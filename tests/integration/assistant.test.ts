@@ -224,7 +224,44 @@ describe("Cookie", () => {
     const result = await ask(db, d, { userId, text: "Keep looking" });
     expect(result.outcome).toBe("bark");
     expect(d.model.requests).toHaveLength(LIMITS.rounds);
-    expect(lines.at(-1)).toMatchObject({ why: "round limit" });
+    // The fourth round's lookup isn't run: three were, then she had to finish.
+    expect(lines.at(-1)).toMatchObject({ why: "round limit", tools: ["today", "today", "today"] });
+  });
+
+  it("makes her finish on the last round with what she has found (LIM-1)", async () => {
+    // Three rounds of looking, as a question across several areas does.
+    const d = deps((_req, round) =>
+      round === 1
+        ? [{ name: "memory_search", args: { keywords: ["swim"] } }]
+        : round === 2
+          ? [{ name: "swimming", args: { view: "summary" } }]
+          : round === 3
+            ? [{ name: "today", args: {} }]
+            : [answer("Swim practice at 5:30 pm.", ["hub"])],
+    );
+    const result = await ask(db, d, { userId, text: "Is it tennis or swimming today?" });
+    expect(result).toMatchObject({ outcome: "answer", text: "Swim practice at 5:30 pm." });
+    // Only the last round is limited to the two tools that end the question,
+    // and the tool list itself never changes.
+    expect(d.model.requests.map((r) => r.only)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      ["answer", "bark"],
+    ]);
+    expect(d.model.requests[3].tools).toEqual(d.model.requests[0].tools);
+  });
+
+  it("makes her finish once her lookups are used up (LIM-1)", async () => {
+    // Five lookups in one round is all she gets.
+    const d = deps((_req, round) =>
+      round === 1
+        ? Array.from({ length: LIMITS.toolCalls }, () => ({ name: "today", args: {} }))
+        : [answer("Swim practice at 5:30 pm.", ["hub"])],
+    );
+    const result = await ask(db, d, { userId, text: "What's on today?" });
+    expect(result.outcome).toBe("answer");
+    expect(d.model.requests.map((r) => r.only)).toEqual([undefined, ["answer", "bark"]]);
   });
 
   it("stops after five tool calls (LIM-1)", async () => {

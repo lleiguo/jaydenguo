@@ -12,7 +12,14 @@ export type ToolDeclaration = { name: string; description: string; parameters: R
 
 export type ModelCall = { id?: string; name: string; args: Record<string, unknown> };
 
-export type RoundRequest = { system: string; tools: ToolDeclaration[]; contents: Content[] };
+export type RoundRequest = {
+  system: string;
+  tools: ToolDeclaration[];
+  contents: Content[];
+  // The only tools she may call this round: on her last round, the two
+  // that end the question. The tool list itself stays the same.
+  only?: string[];
+};
 
 export type RoundResult = {
   calls: ModelCall[];
@@ -56,7 +63,12 @@ export function geminiAssistant(generate?: Generate, model = ASSISTANT_MODEL()):
                 })),
               },
             ],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: {
+              functionCallingConfig: {
+                mode: FunctionCallingConfigMode.ANY,
+                ...(req.only ? { allowedFunctionNames: req.only } : {}),
+              },
+            },
             thinkingConfig: { thinkingBudget: 0 },
             maxOutputTokens: LIMITS.outputTokens,
             // Someone is waiting: the SDK's default (5 attempts, backing

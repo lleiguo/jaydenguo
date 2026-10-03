@@ -75,6 +75,9 @@ const CASES: Case[] = [
   { q: "Jayden 今天上什么课？", want: "answer", long: true },
   { q: "Who teaches Jayden science?", want: "answer", any: [/Chen/] },
   { q: "Are there any clashes this week?", want: "answer", long: true },
+  // Across several areas: she must finish within her rounds, not bark at the limit.
+  { q: "Is Jayden playing tennis or swimming this weekend?", want: "either", long: true },
+  { q: "Jayden 这个周末打网球还是游泳？", want: "either", long: true },
   { q: "Where is hockey this weekend?", want: "answer", any: [/Pine Arena/] },
   { q: "What did the latest video review say to fix?", want: "either", long: true, any: [/AI/i] },
   { q: "Where is soccer practice?", want: "either" },

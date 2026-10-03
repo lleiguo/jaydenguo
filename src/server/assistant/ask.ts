@@ -256,9 +256,13 @@ export async function ask(
   for (let round = 1; round <= LIMITS.rounds; round++) {
     if (Date.now() - started > LIMITS.deadlineMs)
       return finish("error", errorLine(language), [], language, "deadline");
+    // LIM-1: on her last round, or with her lookups used up, she may only
+    // finish: answer from what she has found, or bark. Otherwise a
+    // question could spend every round looking and end with nothing.
+    const last = round === LIMITS.rounds || counts.total >= LIMITS.toolCalls;
     let result;
     try {
-      result = await deps.model.round(request);
+      result = await deps.model.round(last ? { ...request, only: ["answer", "bark"] } : request);
     } catch (err) {
       if (!(err instanceof LlmError)) throw err;
       return finish("error", errorLine(language), [], language, err.kind);
@@ -288,6 +292,7 @@ export async function ask(
       );
     }
     if (!result.calls.length) return bark("no tool call");
+    if (last) return bark("round limit");
 
     const responses: Part[] = [];
     for (const call of result.calls) {
