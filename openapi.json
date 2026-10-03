@@ -5049,6 +5049,45 @@
         }
       }
     },
+    "/api/v1/assistant/actions/{turnId}/undo": {
+      "post": {
+        "operationId": "undoAssistantActions",
+        "summary": "Take back what one of Cookie's answers changed, within ten minutes.",
+        "description": "Spec: 0008 ACT-3, ACT-4",
+        "parameters": [
+          {
+            "name": "turnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Did"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assistant/settings": {
       "get": {
         "operationId": "getAssistantSettings",
@@ -5107,6 +5146,14 @@
                       "minLength": 1,
                       "maxLength": 60
                     }
+                  },
+                  "addCalendarSourceId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   }
                 }
               }
@@ -5451,6 +5498,10 @@
           "forgot": {
             "$ref": "#/components/schemas/MemoryView",
             "x-nullable": true
+          },
+          "did": {
+            "$ref": "#/components/schemas/Did",
+            "x-nullable": true
           }
         },
         "required": [
@@ -5495,6 +5546,12 @@
               "type": "string"
             }
           },
+          "addCalendarSourceId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "monthSpendUsd": {
             "type": "number"
           }
@@ -5504,6 +5561,7 @@
           "speak",
           "web",
           "privateTerms",
+          "addCalendarSourceId",
           "monthSpendUsd"
         ]
       },
@@ -6547,6 +6605,79 @@
         "required": [
           "token",
           "expiresAt"
+        ]
+      },
+      "Did": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "added"
+          },
+          "undoUntil": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DidEvent"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "undoUntil",
+          "events"
+        ]
+      },
+      "DidEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "allDay": {
+            "type": "boolean"
+          },
+          "owners": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "added",
+              "failed",
+              "undone",
+              "adding"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "start",
+          "end",
+          "allDay",
+          "owners",
+          "state"
         ]
       },
       "DrawPrediction": {
@@ -10442,6 +10573,10 @@
             "items": {
               "$ref": "#/components/schemas/AssistantSource"
             }
+          },
+          "did": {
+            "$ref": "#/components/schemas/Did",
+            "x-nullable": true
           },
           "createdAt": {
             "type": "string"

@@ -31,7 +31,8 @@ export const LIMITS = {
   deadlineMs: 25_000,
   // TOOL-15
   resultChars: 6000,
-  promptChars: 10_000,
+  // Raised from 10,000 when she learned to add an event (intent 0008).
+  promptChars: 12_000,
   // LIM-2, LIM-3
   outputTokens: 500,
   questionChars: 500,

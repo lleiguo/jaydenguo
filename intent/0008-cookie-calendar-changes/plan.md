@@ -81,5 +81,46 @@ Described events alone (E1 to E3): about 6.5.
 
 | Task | Status |
 |---|---|
-| Spikes, E1–E4 | not started. |
+| E1.1–E1.4 | built 2026-10-02 on `cookie/e1-add-tool`; not merged. Switched off in production until E2. |
+| Spikes, E2–E4 | not started. |
 | E5 | waits for O-2 and a week of real suggestions (spec E-3). |
+
+**E1 as built (2026-10-02):**
+- *Table (E1.1).* Migration `0028_assistant_actions`.
+- *Rules (E1.2).* `src/domain/assistant-changes.ts`: the add gate in
+  English and Chinese ("参加" and the like don't open it), the day and
+  weekday check, times, whose it is, the title with the names in front.
+  The owner's "Monday December 3rd" is a unit test and an eval case: she
+  answers that December 3, 2026 is a Thursday and asks which was meant.
+- *Tool (E1.3).* `calendar_add` in `src/server/assistant/tools/changes.ts`.
+  The event is an ordinary hub event with the people named as its
+  owners, the title and category as the household sync would give them,
+  and "[account] (Cookie)" in its history. The tool hands back what was
+  added and any clash for her to read out.
+- *Off until she can write to Google.* The tool and its paragraph of
+  the prompt are sent only when `ASSISTANT_CALENDAR_ADD=on` and a
+  household Google Calendar source exists. Production doesn't set it, so
+  nothing changes there until E2, which replaces the switch with "the
+  grant is connected" (GCW-8).
+- *If her own ending can't stand after an add* (a source she can't
+  claim, a bad call), the server says "Adding: …" itself, where it would
+  otherwise bark: a bark would hide a change that did happen.
+- *Answer and history (E1.4).* `did` on the ask response and on each
+  turn; `POST /assistant/actions/{turnId}/undo` (ten minutes, the
+  account that asked, refused if the event was changed since).
+  Settings gained `addCalendarSourceId`, checked to be one of the hub's
+  Google calendars.
+- *Prompt size.* The tool took the prompt and tool list to 11,700
+  characters; the budget is 12,000 (was 10,000; spec 0007 TOOL-15).
+- *Tests.* Unit (the rules), integration (nine cases: add, category and
+  clash, the gate with a hostile event title, the five things she asks
+  about, one per question, none after the web, not offered until able,
+  the daily limit, the server's own line, Undo), API e2e, and ten eval
+  cases with a new pass bar of zero unasked changes. The ten, on the
+  real model: all right.
+- *For E2:* the hub's event names its owners outright. When the worker
+  turns it into the household source's record, a title that would give
+  different owners on the next read ("everyone" is the case) needs an
+  owner override written with it, or the sync would reset them.
+- *Not in E1:* the app shows nothing new yet (E3). The stand-in model
+  understands "Add <what> for <who> on <date> at <time>" for tests.

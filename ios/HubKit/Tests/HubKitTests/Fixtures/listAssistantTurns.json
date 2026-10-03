@@ -14,7 +14,8 @@
           "label": "Today"
         }
       ],
-      "createdAt": "2026-10-02T14:00:05.000Z"
+      "createdAt": "2026-10-02T14:00:05.000Z",
+      "did": null
     },
     {
       "id": "5b0f6c1e-3a52-4f0e-9d53-0c7f6f1b2a02",
@@ -30,7 +31,8 @@
           "label": "Earlier in this chat"
         }
       ],
-      "createdAt": "2026-10-02T14:01:10.000Z"
+      "createdAt": "2026-10-02T14:01:10.000Z",
+      "did": null
     },
     {
       "id": "5b0f6c1e-3a52-4f0e-9d53-0c7f6f1b2a03",
@@ -41,7 +43,8 @@
       "outcome": "bark",
       "language": "zh",
       "sources": [],
-      "createdAt": "2026-10-02T15:30:00.000Z"
+      "createdAt": "2026-10-02T15:30:00.000Z",
+      "did": null
     },
     {
       "id": "5b0f6c1e-3a52-4f0e-9d53-0c7f6f1b2a04",
@@ -52,7 +55,8 @@
       "outcome": "limit",
       "language": "en",
       "sources": [],
-      "createdAt": "2026-10-02T15:40:00.000Z"
+      "createdAt": "2026-10-02T15:40:00.000Z",
+      "did": null
     }
   ],
   "more": false

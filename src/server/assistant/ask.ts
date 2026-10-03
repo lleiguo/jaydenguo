@@ -23,6 +23,7 @@ import {
   type SourceKind,
   type ToolKind,
 } from "@/domain/assistant";
+import { addingLine } from "@/domain/assistant-changes";
 import { hit } from "../auth/rate-limit";
 import { HttpError } from "../errors";
 import type { Db } from "../db/client";
@@ -35,7 +36,16 @@ import { errorKind } from "./quiet";
 import { getAssistantSettings } from "./settings";
 import type { MemoryView } from "./memory";
 import { geminiTranscriber, spellingList, type Clip, type Transcriber } from "./transcribe";
-import { HUB_TOOLS, MEMORY_TOOLS, newTurn, WEB_TOOLS, type Tool, type ToolContext } from "./tools";
+import { addTarget, claimActions, didFor, type Did } from "./actions";
+import {
+  CHANGE_TOOLS,
+  HUB_TOOLS,
+  MEMORY_TOOLS,
+  newTurn,
+  WEB_TOOLS,
+  type Tool,
+  type ToolContext,
+} from "./tools";
 import { monthSpendUsd, recentTurns, type AssistantSource } from "./turns";
 import { geminiSearch, guardedFetch, type PageFetch, type WebSearch } from "./web";
 
@@ -85,6 +95,8 @@ export type AskResult = {
   // A fact this question saved or forgot, for "Saved to memory · Undo" (MEM-2).
   saved: MemoryView | null;
   forgot: MemoryView | null;
+  // What this question changed, with its Undo (intent 0008, ACT-1).
+  did: Did | null;
 };
 
 export type AskDeps = {
@@ -134,6 +146,7 @@ export async function ask(
   let language = languageOf(heard);
 
   const usage = { inputTokens: 0, outputTokens: 0, costUsd: 0 };
+  let people: Awaited<ReturnType<typeof listPeople>> = [];
   let model: string | null = null;
   let modelVersion: string | null = null;
   const runs: ToolRun[] = [];
@@ -167,6 +180,8 @@ export async function ask(
         createdAt: now,
       })
       .returning({ id: assistantTurns.id });
+    await claimActions(db, turn.actionIds, row.id);
+    const did = turn.actionIds.length ? ((await didFor(db, [row.id], people)).get(row.id) ?? null) : null;
     log({
       turnId: row.id,
       outcome,
@@ -186,6 +201,7 @@ export async function ask(
       sources,
       saved: turn.saved,
       forgot: turn.forgot,
+      did,
     };
   };
 
@@ -202,11 +218,12 @@ export async function ask(
   if (capState(await monthSpendUsd(db, now), settings.monthlyCapUsd) === "over")
     return finish("limit", capLine(language), [], language, "cap");
 
-  const [timeZone, people, history] = await Promise.all([
+  const [timeZone, everyone, history] = await Promise.all([
     getHomeTimeZone(db),
     listPeople(db),
     recentTurns(db, conversationId, now),
   ]);
+  people = everyone;
 
   // VOX-1..3: the clip becomes text first, so the words are known whatever
   // happens next, and a spoken question takes the same path as a typed one.
@@ -228,8 +245,15 @@ export async function ask(
     if (!heard) return finish("bark", unheardLine(language), [], language, "nothing heard");
   }
   // The web tools aren't even described to the model while the web is off.
-  const tools = deps.tools ?? [...HUB_TOOLS, ...MEMORY_TOOLS, ...(settings.web ? WEB_TOOLS : [])];
+  // Nor is adding to the calendar, until she is able to (intent 0008, GCW-8).
+  const tools = deps.tools ?? [
+    ...HUB_TOOLS,
+    ...((await canAdd(db, settings)) ? CHANGE_TOOLS : []),
+    ...MEMORY_TOOLS,
+    ...(settings.web ? WEB_TOOLS : []),
+  ];
   const webOn = tools.some((t) => t.kind === "web");
+  const changeOn = tools.some((t) => t.name === "calendar_add");
   const ctx: ToolContext = {
     db,
     now,
@@ -249,9 +273,14 @@ export async function ask(
     ]),
     { role: "user", parts: [{ text: `${contextLine(now, timeZone, people)}\n${heard}` }] },
   ];
-  const request = { system: systemPrompt(webOn), tools: declarations(tools), contents };
+  const request = { system: systemPrompt(webOn, changeOn), tools: declarations(tools), contents };
   const counts = noCalls();
-  const bark = (why: string) => finish("bark", barkLine(language), [], language, why);
+  // If an event was added and her own ending can't stand, the server
+  // says what was added: a bark would hide a change that did happen.
+  const bark = (why: string) =>
+    turn.did
+      ? finish("answer", addingLine(language, turn.did), [{ kind: "hub", label: "Calendar" }], language, why)
+      : finish("bark", barkLine(language), [], language, why);
 
   for (let round = 1; round <= LIMITS.rounds; round++) {
     if (Date.now() - started > LIMITS.deadlineMs)
@@ -331,6 +360,13 @@ export async function ask(
     contents.push(result.content, { role: "user", parts: responses });
   }
   return bark("round limit");
+}
+
+// GCW-8: whether she can add to the family calendar. Until the worker
+// writes to Google (plan E2) this is a switch for development and tests.
+async function canAdd(db: Db, settings: Awaited<ReturnType<typeof getAssistantSettings>>) {
+  if (process.env.ASSISTANT_CALENDAR_ADD !== "on") return false;
+  return (await addTarget(db, settings)) !== null;
 }
 
 const kindOf = (tools: Tool[], name: string): ToolKind => tools.find((t) => t.name === name)?.kind ?? "end";

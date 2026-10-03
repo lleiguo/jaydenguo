@@ -42,6 +42,14 @@ export default async function globalSetup() {
     await pool.query("delete from tennis_draws");
     await pool.query("delete from tennis_tournaments");
     await pool.query("delete from tennis_players");
+    // Cookie's add tool (intent 0008) needs a household Google Calendar
+    // source to add to. Switched off, so nothing ever tries to read it.
+    await pool.query("delete from assistant_actions");
+    await pool.query(
+      `insert into sources (kind, name, enabled, category_mapping, config)
+       select 'google_calendar', 'E2E household', false, '{"default":"other"}', '{"calendarId":"household@example.test"}'
+       where not exists (select 1 from sources where name = 'E2E household')`,
+    );
   } finally {
     await pool.end();
   }

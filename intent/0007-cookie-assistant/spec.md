@@ -94,7 +94,7 @@ Cookie has exactly these tools. Adding one is a spec change.
 
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| TOOL-15 | Narrow inputs, capped outputs. | Each tool has a zod schema for its input and output. Results are compact JSON (no IDs the model doesn't need, no nulls), cut at 6,000 characters with `more: true`. A unit test fails if the system prompt plus all tool definitions grow past 10,000 characters (8,000 until the memory tools were added in K3: the seven hub tools and the prompt alone came to 7,400). |
+| TOOL-15 | Narrow inputs, capped outputs. | Each tool has a zod schema for its input and output. Results are compact JSON (no IDs the model doesn't need, no nulls), cut at 6,000 characters with `more: true`. A unit test fails if the system prompt plus all tool definitions grow past 12,000 characters (10,000 until she learned to add an event in intent 0008; 8,000 until the memory tools were added in K3: the seven hub tools and the prompt alone came to 7,400). |
 | TOOL-16 | Every person, not only Jayden. | Calendar and school tools take any person from Settings → People. Tennis and swimming hold the primary person's data today, and say so when asked about someone else. |
 | TOOL-17 | Hub and memory first. | The prompt orders the tools: hub, then memory, then the web. The web is used only when those can't answer or the question asks for it, and only if "Use the web" is on in Settings. While it is off, the web tools and the prompt's paragraph about them aren't sent to the model at all. |
 | TOOL-18 | What every question starts with. | The date and time in the home time zone, the people's names, and the VOX-3 spelling list. Nothing else from the hub is sent unless a tool is called. |

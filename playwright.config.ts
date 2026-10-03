@@ -71,6 +71,8 @@ export default defineConfig({
         EMAIL_LLM: "fake",
         // And Cookie (intent 0007).
         ASSISTANT_LLM: "fake",
+        // Cookie may add events (intent 0008); nothing is written to Google.
+        ASSISTANT_CALENDAR_ADD: "on",
         // Jobs the site starts run as local processes of the built worker.
         WORKER_COMMAND: `node ${path.resolve("dist/worker.mjs")}`,
         COMMIT_SWIM_BASE_URL: `http://127.0.0.1:${FAKE_COMMIT_PORT}`,
