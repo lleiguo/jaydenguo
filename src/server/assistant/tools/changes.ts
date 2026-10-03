@@ -95,6 +95,9 @@ export const calendarAddTool: Tool<z.infer<typeof addInput>> = {
       })
       .returning({ id: assistantActions.id });
     ctx.turn.actionIds.push(action.id);
+    // GCW-4: the worker writes it to Google; the daily sync catches up if
+    // this start is lost.
+    await ctx.launch?.(["assistant:actions"]).catch(() => undefined);
     const startsAt = times.allDay ? null : clock(times.start, ctx.timeZone);
     ctx.turn.did = { title, date: q.date, start: startsAt, names: who.names, everyone: who.everyone };
 

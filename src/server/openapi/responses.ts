@@ -132,6 +132,6 @@ export type AssistantTurnsResponse = { turns: TurnView[]; more: boolean };
 // What an answer changed, with each event's state (intent 0008, ACT-1).
 export type AssistantDid = Did;
 // `monthSpendUsd` is estimated from tokens and list prices (LIM-6).
-export type AssistantSettingsResponse = AssistantSettings & { monthSpendUsd: number };
+export type AssistantSettingsResponse = AssistantSettings & { monthSpendUsd: number; canAdd: boolean };
 export type { MemoryView };
 export type AssistantMemoriesResponse = { memories: MemoryView[] };

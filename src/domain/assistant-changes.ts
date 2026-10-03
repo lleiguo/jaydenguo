@@ -12,6 +12,10 @@ export type ActionKind = (typeof ACTION_KINDS)[number];
 export const ACTION_STATES = ["pending", "done", "failed", "undone"] as const;
 export type ActionState = (typeof ACTION_STATES)[number];
 
+// GCW-3: the narrowest Google permission that can add to the household
+// calendar: events on calendars the account owns (plan SP-E1).
+export const ADD_SCOPE = "https://www.googleapis.com/auth/calendar.events.owned";
+
 export const CHANGE_LIMITS = {
   // CASEC-5: across the family.
   perDay: 20,

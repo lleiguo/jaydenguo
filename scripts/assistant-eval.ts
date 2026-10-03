@@ -238,7 +238,7 @@ async function main() {
       if (only !== null && i + 1 !== only) continue;
       await db.execute(sql`delete from rate_limits where key like 'assistant:%'`);
       await saveAssistantSettings(db, { web: !!c.webOn, addCalendarSourceId: c.addOn ? household.id : null });
-      if (c.addOn) process.env.ASSISTANT_CALENDAR_ADD = "on";
+      if (c.addOn) process.env.ASSISTANT_CALENDAR_ADD = "fake";
       else delete process.env.ASSISTANT_CALENDAR_ADD;
       const t0 = Date.now();
       const r = await ask(

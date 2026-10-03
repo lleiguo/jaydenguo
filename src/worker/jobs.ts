@@ -8,6 +8,7 @@ import { seedJob } from "./seed";
 import { smokeJob, syncJob } from "./sync";
 import { tennisAcceptanceJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
 import { videoReviewJob } from "./video/review";
+import { assistantActionsJob } from "./assistant-actions";
 import { calendarCopyJob } from "./calendar-copy";
 import { costsSyncJob } from "./costs";
 
@@ -57,6 +58,10 @@ export const jobs: Record<string, Job> = {
   "video:review": {
     description: "Fetch a linked video and review it: video:review <id>",
     run: (args, ctx) => videoReviewJob(args, ctx),
+  },
+  "assistant:actions": {
+    description: "Write what Cookie added to the household Google Calendar, and take back what was undone",
+    run: assistantActionsJob,
   },
   "calendar:copy": {
     description: "Copy the calendar to the Jayden (hub) Google Calendar: calendar:copy [delete]",

@@ -36,7 +36,7 @@ import { errorKind } from "./quiet";
 import { getAssistantSettings } from "./settings";
 import type { MemoryView } from "./memory";
 import { geminiTranscriber, spellingList, type Clip, type Transcriber } from "./transcribe";
-import { addTarget, claimActions, didFor, type Did } from "./actions";
+import { canAdd, claimActions, didFor, type Did } from "./actions";
 import {
   CHANGE_TOOLS,
   HUB_TOOLS,
@@ -107,6 +107,8 @@ export type AskDeps = {
   tools?: Tool[];
   // The web, when "Use the web" is on (TOOL-17).
   web?: { search: WebSearch; fetch: PageFetch };
+  // Starts worker jobs (intent 0008: writing an added event to Google).
+  launch?: (args: string[]) => Promise<void>;
   // One line per turn: IDs, names and numbers only, never words (CSEC-7).
   log?: (fields: Record<string, unknown>) => void;
 };
@@ -265,6 +267,7 @@ export async function ask(
     turn,
     settings,
     web: deps.web ?? { search: (q, l) => geminiSearch()(q, l), fetch: guardedFetch() },
+    launch: deps.launch,
   };
   const contents: Content[] = [
     ...history.flatMap((t): Content[] => [
@@ -360,13 +363,6 @@ export async function ask(
     contents.push(result.content, { role: "user", parts: responses });
   }
   return bark("round limit");
-}
-
-// GCW-8: whether she can add to the family calendar. Until the worker
-// writes to Google (plan E2) this is a switch for development and tests.
-async function canAdd(db: Db, settings: Awaited<ReturnType<typeof getAssistantSettings>>) {
-  if (process.env.ASSISTANT_CALENDAR_ADD !== "on") return false;
-  return (await addTarget(db, settings)) !== null;
 }
 
 const kindOf = (tools: Tool[], name: string): ToolKind => tools.find((t) => t.name === name)?.kind ?? "end";

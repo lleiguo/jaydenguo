@@ -4,5 +4,6 @@
   "web": false,
   "privateTerms": [],
   "monthSpendUsd": 0.12,
-  "addCalendarSourceId": null
+  "addCalendarSourceId": null,
+  "canAdd": false
 }

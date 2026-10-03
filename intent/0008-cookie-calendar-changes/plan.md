@@ -81,8 +81,11 @@ Described events alone (E1 to E3): about 6.5.
 
 | Task | Status |
 |---|---|
-| E1.1–E1.4 | built 2026-10-02 on `cookie/e1-add-tool`; not merged. Switched off in production until E2. |
-| Spikes, E2–E4 | not started. |
+| E1.1–E1.4 | merged 2026-10-02 (#82). |
+| SP-E1 | done 2026-10-03: `calendar.events.owned` is enough (below). |
+| SP-E2 | done 2026-10-03: the worker runs a small job in 11–15 s (below). |
+| E2.1–E2.4 | built 2026-10-03 on `cookie/e2-google-write`; not merged. In production once merged and the owner grants "Let Cookie add events". |
+| SP-E3, E3, E4 | not started. |
 | E5 | waits for O-2 and a week of real suggestions (spec E-3). |
 
 **E1 as built (2026-10-02):**
@@ -124,3 +127,60 @@ Described events alone (E1 to E3): about 6.5.
   owner override written with it, or the sync would reset them.
 - *Not in E1:* the app shows nothing new yet (E3). The stand-in model
   understands "Add <what> for <who> on <date> at <time>" for tests.
+
+**SP-E1 (2026-10-03).** In Google's OAuth Playground, with the owner
+signed in and only `calendar.events.owned` granted: an event added to the
+Household calendar (200; Household is the organiser, the owner's account
+the creator) and deleted again (204). So the owner's account owns that
+calendar and the narrow scope is enough (spec E-2's wider scope isn't
+needed). Seen on the way: a 10:00 −08:00 time in January 2028 came back
+as 11:00 −07:00 in America/Vancouver, so the writer sends UTC with the
+zone named and the hub compares instants, never wall times.
+
+**SP-E2 (2026-10-03).** The production worker's no-op job, started three
+times with `gcloud run jobs execute --wait`: 13.2, 14.7 and 11.4 s from
+start to finish. With the two Google calls, an added event reaches the
+family calendar in about 20 seconds, not "about a minute" as the spec
+guessed.
+
+**E2 as built (2026-10-03):**
+- *The grant (E2.1).* A Google feature `calendar_write` asking for
+  `calendar.events.owned`. The hub keeps one credential per Google
+  account and adds scopes to it, so this joins the owner's existing
+  Google connection rather than being a credential of its own (spec
+  §4.3 said a new row). She can add (`canAdd`, also on the settings
+  response) when the household source's Google account has that scope.
+  Website: Settings → Accounts → "Let Cookie add events"; the app's
+  button comes with E3.
+- *The writer.* `src/adapters/google-calendar/writer.ts`, bound to one
+  calendar: find what an action added (by a private tag on the Google
+  event), add, delete by a recorded ID. A retry after a lost answer finds
+  the tagged event instead of adding a second.
+- *The worker (E2.2).* `assistant:actions` (`src/worker/assistant-actions.ts`),
+  started by the question and by Undo, and run by the daily sync to
+  catch up. Under the household source's sync lock it writes the event,
+  reads Google's answer back through the same code the household sync
+  uses, and makes the hub's event that Google event's record (source,
+  Google ID, hash), so the next sync finds nothing to change and adds no
+  twin (integration test). When the title alone would give other owners
+  ("everyone"), an owner override keeps the people she was asked for.
+- *Failures (GCW-7).* Google busy: tries again after 15 s and 60 s.
+  Refused, or no permission: no retry. Either way, at the end the hub's
+  event is removed and a notification says it couldn't be added. **It
+  uses the existing "a source keeps failing" notification kind**, so it
+  reaches every phone that has that kind on, not only the parent who
+  asked (spec GCW-7 said the parent who asked): a new kind would be a
+  new value old app builds can't read.
+- *Undo after the write (E2.3).* The event leaves the hub at once; the
+  worker deletes it from Google, only by the ID it recorded and only in
+  the calendar it wrote to (tested with a record naming another
+  calendar).
+- *Terraform (E2.4).* Nothing new: the web service already may start
+  the worker with arguments, and the worker already opens Google grants.
+- *Local and tests.* `ASSISTANT_CALENDAR_ADD=fake` (was `on`) lets her
+  add without a grant and starts no worker; events then stay "adding".
+  Refused on Cloud Run.
+- *Tests.* Unit (the writer's requests, the event body), integration
+  (eight worker cases: write and no twin, owners for everyone, retry,
+  an earlier try found, give up and notify, undo after the write, undo
+  before it, the other-calendar fence), plus E1's.
