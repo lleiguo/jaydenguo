@@ -21,7 +21,7 @@ import { CHANGE_TOOLS, HUB_TOOLS } from "@/server/assistant/tools";
 import { loadCalendar } from "@/server/calendar/load";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
-import { listPeople } from "@/server/people";
+import { addPerson, listPeople } from "@/server/people";
 import { syncRecords } from "@/server/sync/apply";
 import { runAssistantActions } from "@/worker/assistant-actions";
 
@@ -165,6 +165,10 @@ describe("Cookie writes what she added to the family calendar (plan E2)", () => 
           .returning({ id: sources.id })
       )[0].id;
     await saveAssistantSettings(db, { addCalendarSourceId: sourceId });
+    // "Everyone" has to mean more than the calendar's default owner (the
+    // primary person), as it does in a family: add a second person if
+    // this database has only one.
+    if ((await listPeople(db)).length < 2) await addPerson(db, "Cookie test sibling");
     people = await listPeople(db);
     // This account's chat starts empty, so "the latest turn" is this run's.
     await db.delete(assistantActions);
