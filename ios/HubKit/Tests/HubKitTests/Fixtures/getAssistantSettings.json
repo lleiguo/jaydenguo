@@ -3,5 +3,6 @@
   "speak": true,
   "web": false,
   "privateTerms": [],
-  "monthSpendUsd": 0.12
+  "monthSpendUsd": 0.12,
+  "addCalendarSourceId": null
 }

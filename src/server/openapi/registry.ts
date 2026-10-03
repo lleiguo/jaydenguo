@@ -933,6 +933,14 @@ export const operations: Operation[] = [
     binary: "audio/mpeg",
   },
   {
+    method: "POST",
+    path: "/api/v1/assistant/actions/{turnId}/undo",
+    operationId: "undoAssistantActions",
+    summary: "Take back what one of Cookie's answers changed, within ten minutes.",
+    spec: "0008 ACT-3, ACT-4",
+    response: "AssistantDid",
+  },
+  {
     method: "GET",
     path: "/api/v1/assistant/settings",
     operationId: "getAssistantSettings",

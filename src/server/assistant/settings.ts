@@ -17,6 +17,9 @@ export type AssistantSettings = {
   web: boolean;
   // CSEC-3: words that never go into a web search.
   privateTerms: string[];
+  // Intent 0008, GCW-1: the Google Calendar source she adds events to;
+  // null means the only one there is.
+  addCalendarSourceId: string | null;
 };
 
 export const assistantSettingsInput = z
@@ -25,6 +28,7 @@ export const assistantSettingsInput = z
     speak: z.boolean(),
     web: z.boolean(),
     privateTerms: z.array(z.string().trim().min(1).max(60)).max(100),
+    addCalendarSourceId: z.uuid().nullable(),
   })
   .partial();
 
@@ -40,6 +44,7 @@ export async function getAssistantSettings(db: DbOrTx): Promise<AssistantSetting
     speak: true,
     web: false,
     privateTerms: [],
+    addCalendarSourceId: null,
     ...((row?.value as Partial<AssistantSettings>) ?? {}),
   };
 }

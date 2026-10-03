@@ -197,6 +197,13 @@
       "when": 1790947061464,
       "tag": "0027_assistant",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1790973794309,
+      "tag": "0028_assistant_actions",
+      "breakpoints": true
     }
   ]
 }

@@ -38,6 +38,10 @@ export type TurnState = {
   webAnswer: { text: string; sources: AssistantSource[] } | null;
   // Pages read with web_fetch, for the answer's sources (CHR-4).
   webSources: AssistantSource[];
+  // An event this question added (intent 0008): the actions to tie to the
+  // turn, and what was added, for the line the server can say itself.
+  actionIds: string[];
+  did: { title: string; date: string; start: string | null; names: string[]; everyone: boolean } | null;
   // What the searches cost, on top of Cookie's own model calls.
   webCost: { inputTokens: number; outputTokens: number; costUsd: number; searches: number };
 };
@@ -48,6 +52,8 @@ export const newTurn = (): TurnState => ({
   forgot: null,
   webAnswer: null,
   webSources: [],
+  actionIds: [],
+  did: null,
   webCost: { inputTokens: 0, outputTokens: 0, costUsd: 0, searches: 0 },
 });
 

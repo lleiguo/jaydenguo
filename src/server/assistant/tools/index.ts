@@ -1,4 +1,5 @@
 import { calendarTool } from "./calendar";
+import { CHANGE_TOOLS } from "./changes";
 import { costsTool } from "./costs";
 import { memoryForgetTool, memorySaveTool, memorySearchTool } from "./memory";
 import { schoolTool } from "./school";
@@ -26,7 +27,11 @@ export const MEMORY_TOOLS = [memorySearchTool, memorySaveTool, memoryForgetTool]
 // Offered only while "Use the web" is on (TOOL-17).
 export const WEB_TOOLS = [webSearchTool, webFetchTool] as Tool[];
 
-export const ALL_TOOLS = [...HUB_TOOLS, ...MEMORY_TOOLS, ...WEB_TOOLS];
+// Offered only when she is able to add to the family calendar (intent
+// 0008, GCW-8).
+export { CHANGE_TOOLS };
+
+export const ALL_TOOLS = [...HUB_TOOLS, ...CHANGE_TOOLS, ...MEMORY_TOOLS, ...WEB_TOOLS];
 
 export { newTurn } from "./types";
 export type { Tool, ToolContext, TurnState } from "./types";

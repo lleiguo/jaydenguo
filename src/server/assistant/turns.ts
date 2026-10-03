@@ -5,6 +5,7 @@ import { LIMITS, type AssistantOutcome, type Language, type SourceKind } from "@
 import { localDate, zonedToUtc } from "@/domain/time";
 import type { DbOrTx } from "../db/client";
 import { getHomeTimeZone } from "../settings";
+import { didFor, type Did } from "./actions";
 
 // Cookie's turns: one question and its answer (intent 0007, MEM-8, MEM-9).
 
@@ -20,12 +21,14 @@ export type TurnView = {
   outcome: AssistantOutcome;
   language: Language | null;
   sources: AssistantSource[];
+  // What the turn changed, as it stands now (intent 0008, ACT-1).
+  did: Did | null;
   createdAt: string;
 };
 
 type Row = typeof assistantTurns.$inferSelect;
 
-export const turnView = (r: Row): TurnView => ({
+export const turnView = (r: Row, did: Did | null = null): TurnView => ({
   id: r.id,
   conversationId: r.conversationId,
   mode: r.mode as TurnView["mode"],
@@ -34,6 +37,7 @@ export const turnView = (r: Row): TurnView => ({
   outcome: r.outcome as AssistantOutcome,
   language: r.language as Language | null,
   sources: r.sources as AssistantSource[],
+  did,
   createdAt: r.createdAt.toISOString(),
 });
 
@@ -87,7 +91,12 @@ export async function listTurns(
     )
     .orderBy(desc(assistantTurns.createdAt))
     .limit(limit + 1);
-  return { turns: rows.slice(0, limit).reverse().map(turnView), more: rows.length > limit };
+  const shown = rows.slice(0, limit).reverse();
+  const did = await didFor(
+    db,
+    shown.map((r) => r.id),
+  );
+  return { turns: shown.map((r) => turnView(r, did.get(r.id) ?? null)), more: rows.length > limit };
 }
 
 // "Clear history": the words go, the token and cost numbers stay (LIM-6).

@@ -87,6 +87,30 @@ export function fakeAssistant(): AssistantModel {
     const search = question.match(/^(?:search(?: the web)? for|搜索)\s*(.+?)[.。?？]?$/i);
     if (search) return round === 1 ? [{ name: "web_search", args: { query: search[1] } }] : bark;
 
+    // "Add dentist for Jayden on 2026-12-03 at 18:00" (intent 0008).
+    const add = question.match(
+      /^add (.+?) for (.+?) on (?:(\w+day) )?(\d{4}-\d{2}-\d{2})(?: at (\d{1,2}:\d{2}))?[.?]?$/i,
+    );
+    if (add) {
+      if (round === 1)
+        return [
+          {
+            name: "calendar_add",
+            args: {
+              title: add[1],
+              people: add[2].split(/ and |, /),
+              ...(add[3] ? { weekday: add[3] } : {}),
+              date: add[4],
+              ...(add[5] ? { start: add[5].padStart(5, "0") } : { allDay: true }),
+            },
+          },
+        ];
+      const adding = result?.adding as { title: string; day: string; time: string } | undefined;
+      return adding
+        ? say(`Adding: ${adding.title}, ${adding.day}, ${adding.time}.`, ["hub"])
+        : say(String(result?.error ?? "I couldn't add that."), ["self"]);
+    }
+
     const remember = question.match(/^(?:remember(?: that)?|记住)\s*(.+?)[.。]?$/i);
     if (remember) {
       if (round === 1) return [{ name: "memory_save", args: { text: remember[1], keywords: words } }];

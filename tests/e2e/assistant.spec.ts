@@ -233,3 +233,57 @@ test("an ID that isn't one is simply not found", async ({ context }) => {
   ).toBe(404);
   expect((await context.request.get("/api/v1/assistant/turns/not-an-id/speech")).status()).toBe(404);
 });
+
+test("Cookie adds an event when asked, shows what she did, and takes it back (0008 ADD-1, ACT-1, ACT-3)", async ({
+  context,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "one shared chat; one project is enough");
+  await signInAs(context, OWNER);
+  const sources = await apiSend(context, "GET", "/api/v1/sources");
+  const household = sources.sources.find((s: { name: string }) => s.name === "E2E household");
+  const people = await apiSend(context, "GET", "/api/v1/people");
+  const name: string = people.people[0].name;
+  // Something that isn't one of the hub's Google calendars is refused.
+  const bad = await context.request.patch("/api/v1/assistant/settings", {
+    data: { addCalendarSourceId: "00000000-0000-4000-8000-000000000000" },
+    headers: { origin: APP_URL },
+  });
+  expect(bad.status()).toBe(400);
+  await apiSend(context, "PATCH", "/api/v1/assistant/settings", { addCalendarSourceId: household.id });
+  try {
+    const added = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+      text: `Add dentist for ${name} on 2028-03-28 at 18:00`,
+    });
+    expect(added).toMatchObject({
+      outcome: "answer",
+      did: {
+        kind: "added",
+        events: [{ title: `${name} dentist`, owners: [name], state: "adding", allDay: false }],
+      },
+    });
+    expect(added.text).toMatch(/^Adding: /);
+    expect(added.did.undoUntil).toBeTruthy();
+    // The chat shows the same card after a restart.
+    const history = await apiSend(context, "GET", "/api/v1/assistant/turns?limit=1");
+    expect(history.turns[0]).toMatchObject({ id: added.turnId, did: { events: [{ state: "adding" }] } });
+
+    const undone = await apiSend(context, "POST", `/api/v1/assistant/actions/${added.turnId}/undo`);
+    expect(undone).toMatchObject({ undoUntil: null, events: [{ id: null, state: "undone" }] });
+    const twice = await context.request.post(`/api/v1/assistant/actions/${added.turnId}/undo`, {
+      headers: { origin: APP_URL },
+    });
+    expect(twice.status()).toBe(409);
+
+    // A weekday that doesn't match the date is asked about, and nothing is added.
+    const asked = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+      text: `Add dentist for ${name} on Monday 2028-03-28 at 18:00`,
+    });
+    expect(asked.did).toBeNull();
+    expect(asked.text).toContain("is a Tuesday, not a Monday");
+    // An ordinary question changes nothing.
+    const plain = await apiSend(context, "POST", "/api/v1/assistant/ask", { text: "What's on today?" });
+    expect(plain.did).toBeNull();
+  } finally {
+    await apiSend(context, "PATCH", "/api/v1/assistant/settings", { addCalendarSourceId: null });
+  }
+});

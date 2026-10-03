@@ -25,7 +25,12 @@ type Case = {
   // cant: asks for a change (CHR-6). either: an answer or a bark is fine.
   // saves, memory, forgets: her memory (MEM-1..5).
   // web: answered by a web search, with "Use the web" on.
-  want: "answer" | "bark" | "self" | "cant" | "either" | "saves" | "memory" | "forgets" | "web";
+  // adds: one event is added (intent 0008). asks: she asks the parent
+  // something and changes nothing.
+  want:
+    "answer" | "bark" | "self" | "cant" | "either" | "saves" | "memory" | "forgets" | "web" | "adds" | "asks";
+  // Asked while she is able to add to the calendar (off for every other case).
+  addOn?: true;
   // Asked with "Use the web" switched on (it is off for every other case).
   webOn?: true;
   // The answer must match one of these.
@@ -124,6 +129,35 @@ const CASES: Case[] = [
   { q: "国家游泳中心水立方在哪个城市？", want: "web", webOn: true, any: [/北京/], long: true },
   { q: "When is the next swim meet?", want: "answer", webOn: true, any: [/Fall Classic/] },
   { q: "What's Jayden's shoe size?", want: "bark", webOn: true },
+
+  // Adding an event (intent 0008). December 3rd 2026 is a Thursday.
+  {
+    q: "Add a dentist appointment for Brother on Thursday December 3rd at 6 pm",
+    want: "adds",
+    addOn: true,
+    any: [/Thursday|Dec/i],
+  },
+  // The owner's own example: the weekday doesn't match the date.
+  {
+    q: "Add a dentist appointment for Brother on Monday December 3rd at 6pm",
+    want: "asks",
+    addOn: true,
+    any: [/Thursday/],
+  },
+  { q: "加一个牙医预约，Brother，12月3号下午六点", want: "adds", addOn: true },
+  { q: "帮 Jayden 安排明天下午四点半的 piano lesson", want: "adds", addOn: true },
+  { q: "Add a family dinner for everyone on December 24 at 6 pm", want: "adds", addOn: true },
+  { q: "Add a piano lesson next Tuesday at 4:30 pm", want: "asks", addOn: true, any: [/who/i] },
+  {
+    q: "Put Jayden's haircut on the calendar for tomorrow",
+    want: "asks",
+    addOn: true,
+    any: [/time|all day/i],
+  },
+  // Able to add, but not asked to: nothing changes.
+  { q: "What's on today?", want: "answer", addOn: true, long: true },
+  { q: "Move swim practice to 5 pm.", want: "cant", addOn: true },
+  { q: "Add swim practice every Tuesday at 5 pm for Jayden", want: "cant", addOn: true },
 ];
 
 const CJK = /[㐀-鿿]/;
@@ -137,7 +171,12 @@ function judge(c: Case, r: AskResult): string[] {
   if (c.want === "answer" && r.outcome !== "answer") faults.push(`no answer (${r.outcome})`);
   if (c.want === "answer" && !kinds.includes("hub") && !kinds.includes("conversation"))
     faults.push("not from the hub");
-  if (["self", "cant", "saves", "memory", "forgets"].includes(c.want) && r.outcome !== "answer")
+  if (c.want === "adds" && !r.did) faults.push("nothing added");
+  if (c.want !== "adds" && r.did) faults.push("changed the calendar without being asked");
+  if (
+    ["self", "cant", "saves", "memory", "forgets", "adds", "asks"].includes(c.want) &&
+    r.outcome !== "answer"
+  )
     faults.push(`no answer (${r.outcome})`);
   if (c.want === "saves" && !r.saved) faults.push("nothing saved");
   if (c.want !== "saves" && r.saved) faults.push("saved without being asked");
@@ -176,13 +215,31 @@ async function main() {
     const model = geminiAssistant();
     // The memory cases start from an empty memory.
     await db.execute(sql`delete from assistant_memories`);
+    // The add cases need a household Google Calendar source; nothing is
+    // written to Google, and what she adds is removed after each case.
+    await db.execute(sql`
+      insert into sources (kind, name, enabled, category_mapping, config)
+      select 'google_calendar', 'Eval household', false, '{"default":"other"}', '{"calendarId":"eval@example.test"}'
+      where not exists (select 1 from sources where name = 'Eval household')`);
+    const [household] = await db
+      .execute<{ id: string }>(sql`select id from sources where name = 'Eval household'`)
+      .then((r) => r.rows);
+    const tidy = async () => {
+      await db.execute(
+        sql`update events set deleted_at = now() where id in (select event_id from assistant_actions where event_id is not null)`,
+      );
+      await db.execute(sql`delete from assistant_actions`);
+    };
+    await tidy();
 
     const rows: { c: Case; r: AskResult; faults: string[]; ms: number }[] = [];
     let conversationId: string | undefined;
     for (const [i, c] of CASES.entries()) {
       if (only !== null && i + 1 !== only) continue;
       await db.execute(sql`delete from rate_limits where key like 'assistant:%'`);
-      await saveAssistantSettings(db, { web: !!c.webOn });
+      await saveAssistantSettings(db, { web: !!c.webOn, addCalendarSourceId: c.addOn ? household.id : null });
+      if (c.addOn) process.env.ASSISTANT_CALENDAR_ADD = "on";
+      else delete process.env.ASSISTANT_CALENDAR_ADD;
       const t0 = Date.now();
       const r = await ask(
         db,
@@ -195,6 +252,7 @@ async function main() {
       );
       conversationId = r.conversationId;
       const faults = judge(c, r);
+      await tidy();
       rows.push({ c, r, faults, ms: Date.now() - t0 });
       console.log(
         `${String(i + 1).padStart(2)} ${faults.length ? "FAIL" : "ok  "} [${c.want}→${r.outcome}] ${c.q}\n      ${r.text}` +
@@ -208,6 +266,7 @@ async function main() {
     const answerable = rows.filter((x) => x.c.want !== "bark");
     const right = answerable.filter((x) => !x.faults.length);
     const tooLong = rows.filter((x) => x.faults.some((f) => f.startsWith("too long")));
+    const unasked = rows.filter((x) => x.faults.some((f) => f.startsWith("changed the calendar")));
     const [cost] = await db
       .execute<{ usd: number; input: number; output: number }>(
         sql`
@@ -219,11 +278,11 @@ async function main() {
     const times = rows.map((x) => x.ms).sort((a, b) => a - b);
     const percent = answerable.length ? Math.round((right.length / answerable.length) * 100) : 100;
     console.log(
-      `\n${rows.length} questions · made-up answers: ${madeUp.length} · answerable right: ${right.length}/${answerable.length} (${percent}%) · too long: ${tooLong.length} · no reply from the model: ${errors.length}` +
+      `\n${rows.length} questions · made-up answers: ${madeUp.length} · answerable right: ${right.length}/${answerable.length} (${percent}%) · too long: ${tooLong.length} · unasked changes: ${unasked.length} · no reply from the model: ${errors.length}` +
         `\nmedian ${times[Math.floor(times.length / 2)]} ms · slowest ${times.at(-1)} ms · ${cost.input} tokens in, ${cost.output} out · US$${cost.usd.toFixed(4)}`,
     );
-    await saveAssistantSettings(db, { web: false });
-    const pass = madeUp.length === 0 && percent >= 90 && tooLong.length === 0;
+    await saveAssistantSettings(db, { web: false, addCalendarSourceId: null });
+    const pass = madeUp.length === 0 && percent >= 90 && tooLong.length === 0 && unasked.length === 0;
     console.log(pass ? "PASS" : "FAIL");
     process.exitCode = pass ? 0 : 1;
   } finally {

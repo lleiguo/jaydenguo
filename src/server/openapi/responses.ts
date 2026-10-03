@@ -8,6 +8,7 @@
 import type { CalendarPayload, ClashView, EventView, Undo } from "@/lib/calendar-types";
 import type { Person } from "@/domain/people";
 import type { AskResult } from "../assistant/ask";
+import type { Did } from "../assistant/actions";
 import type { MemoryView } from "../assistant/memory";
 import type { AssistantSettings } from "../assistant/settings";
 import type { TurnView } from "../assistant/turns";
@@ -128,6 +129,8 @@ export type ReviewOutput = Review;
 // Cookie, the family assistant (intent 0007)
 export type AssistantAnswer = AskResult;
 export type AssistantTurnsResponse = { turns: TurnView[]; more: boolean };
+// What an answer changed, with each event's state (intent 0008, ACT-1).
+export type AssistantDid = Did;
 // `monthSpendUsd` is estimated from tokens and list prices (LIM-6).
 export type AssistantSettingsResponse = AssistantSettings & { monthSpendUsd: number };
 export type { MemoryView };

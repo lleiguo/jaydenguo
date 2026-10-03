@@ -1,13 +1,23 @@
 import { readFileSync } from "node:fs";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { assistantTurns, credentials, emailMessages, sources, users } from "@db/schema";
+import {
+  assistantActions,
+  assistantTurns,
+  credentials,
+  emailMessages,
+  eventRevisions,
+  events,
+  sources,
+  users,
+} from "@db/schema";
 import { fitResult, LIMITS, type Language } from "@/domain/assistant";
+import { undoTurn } from "@/server/assistant/actions";
 import { ask, clipOf, type AskDeps } from "@/server/assistant/ask";
 import { scriptedAssistant, type AssistantScript, type ModelCall } from "@/server/assistant/model";
 import { getAssistantSettings, saveAssistantSettings } from "@/server/assistant/settings";
 import { fakeSpeech, speakTurn, type SpeechRequest } from "@/server/assistant/speech";
-import { HUB_TOOLS, newTurn, type ToolContext } from "@/server/assistant/tools";
+import { CHANGE_TOOLS, HUB_TOOLS, MEMORY_TOOLS, newTurn, type ToolContext } from "@/server/assistant/tools";
 import { scriptedTranscriber } from "@/server/assistant/transcribe";
 import {
   addMemory,
@@ -1041,6 +1051,321 @@ describe("Cookie", () => {
       });
       const [row] = await db.select().from(assistantTurns).where(eq(assistantTurns.id, turnId));
       expect(row.speechChars).toBe(0);
+    });
+  });
+
+  describe("adding an event (intent 0008, plan E1)", () => {
+    let householdId: string;
+    let primary: string;
+    // The day after the tests' "now", and its weekday in words.
+    const date = "2033-03-10";
+    const dayName = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
+      weekday: "long",
+      timeZone: "UTC",
+    });
+    const tools = [...HUB_TOOLS, ...CHANGE_TOOLS, ...MEMORY_TOOLS];
+    const addDeps = (script: AssistantScript) => ({ ...deps(script), tools });
+    const addCall = (args: Record<string, unknown>): ModelCall => ({
+      name: "calendar_add",
+      args: { title: "dentist appointment", date, start: "18:00", ...args },
+    });
+    const added = () =>
+      db
+        .select({ action: assistantActions, event: events })
+        .from(assistantActions)
+        .leftJoin(events, sql`${events.id} = ${assistantActions.eventId}`)
+        .orderBy(assistantActions.createdAt);
+    const lastToolResult = (d: ReturnType<typeof addDeps>, request = 1) =>
+      JSON.stringify(d.model.requests[request].contents.at(-1));
+
+    beforeAll(async () => {
+      primary = (await listPeople(db))[0].name;
+      await db.delete(sources).where(sql`${sources.name} = 'Cookie test household'`);
+      [{ id: householdId }] = await db
+        .insert(sources)
+        .values({
+          kind: "google_calendar",
+          name: "Cookie test household",
+          categoryMapping: { default: "other", rules: [{ match: "swim", category: "swimming" }] },
+          config: { calendarId: "household@example.test" },
+        })
+        .returning({ id: sources.id });
+      await saveAssistantSettings(db, { addCalendarSourceId: householdId });
+    });
+
+    afterAll(async () => {
+      await saveAssistantSettings(db, { addCalendarSourceId: null });
+      await db.delete(assistantActions);
+      await db.delete(sources).where(sql`${sources.id} = ${householdId}`);
+    });
+
+    beforeEach(async () => {
+      await db.delete(assistantActions);
+    });
+
+    it("adds one event for the person named, and says what she did (ADD-1, ADD-7, ACT-1, ACT-2)", async () => {
+      const d = addDeps((_req, round) =>
+        round === 1
+          ? [addCall({ weekday: dayName, people: [primary] })]
+          : [answer(`Adding: dentist, ${dayName} at 6 pm, for ${primary}.`, ["hub"])],
+      );
+      const result = await ask(db, d, {
+        userId,
+        text: `Add a dentist appointment for ${primary} on ${dayName} at 6 pm`,
+      });
+      expect(result.outcome).toBe("answer");
+      expect(result.sources).toEqual([{ kind: "hub", label: "Calendar" }]);
+      expect(result.did).toMatchObject({
+        kind: "added",
+        events: [
+          { title: `${primary} dentist appointment`, allDay: false, owners: [primary], state: "adding" },
+        ],
+      });
+      // Undo is offered for ten minutes.
+      expect(Date.parse(result.did!.undoUntil!) - d.now!.getTime()).toBe(10 * 60_000);
+
+      const [row] = await added();
+      expect(row.action).toMatchObject({
+        turnId: result.turnId,
+        userId,
+        kind: "add_event",
+        state: "pending",
+        sourceId: householdId,
+        googleEventId: null,
+      });
+      // An hour long, in the hub now, with no source yet (the worker gives it one: plan E2).
+      expect(row.event).toMatchObject({ sourceId: null, category: "other", deletedAt: null });
+      expect(row.event!.endUtc.getTime() - row.event!.startUtc.getTime()).toBe(60 * 60_000);
+      const tz = await getHomeTimeZone(db);
+      expect(
+        row.event!.startUtc.toLocaleString("en-CA", { timeZone: tz, hour12: false }).replace(",", ""),
+      ).toContain(`${date} 18:00`);
+      // The event's history names the parent and Cookie.
+      const [revision] = await db
+        .select()
+        .from(eventRevisions)
+        .where(sql`${eventRevisions.eventId} = ${row.event!.id}`);
+      expect(revision.changedBy).toBe("cookie-test@example.test (Cookie)");
+      // The model was told what was added, to read back; and the prompt grew its paragraph.
+      expect(lastToolResult(d)).toContain(`${primary} dentist appointment`);
+      expect(d.model.requests[0].system).toContain("Adding to the calendar");
+      // The logs still hold no words (0007 CSEC-7).
+      expect(JSON.stringify(lines)).not.toContain("dentist");
+      // History shows the card too.
+      const turns = await listTurns(db, userId, { limit: 1 });
+      expect(turns.turns[0].did).toMatchObject({ events: [{ state: "adding" }] });
+      await db
+        .update(events)
+        .set({ deletedAt: new Date() })
+        .where(sql`${events.id} = ${row.event!.id}`);
+    });
+
+    it("takes the category from the household calendar's rules, and names a clash (ADD-6, ADD-7)", async () => {
+      // 22:30 UTC on the tests' day is when "Swim practice" is.
+      const tz = await getHomeTimeZone(db);
+      const at = new Date("2033-03-09T22:30:00Z").toLocaleTimeString("en-GB", {
+        timeZone: tz,
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const d = addDeps((_req, round) =>
+        round === 1
+          ? [addCall({ title: "extra swim lesson", date: "2033-03-09", start: at, people: [primary] })]
+          : [answer("Adding: swim lesson. It clashes with Swim practice.", ["hub"])],
+      );
+      const result = await ask(db, d, {
+        userId,
+        text: `Add an extra swim lesson for ${primary} today at ${at}`,
+      });
+      expect(result.did?.events).toHaveLength(1);
+      const [row] = await added();
+      expect(row.event).toMatchObject({ category: "swimming", title: `${primary} extra swim lesson` });
+      expect(lastToolResult(d)).toContain("clashesWith");
+      expect(lastToolResult(d)).toContain("Swim practice");
+      await db
+        .update(events)
+        .set({ deletedAt: new Date() })
+        .where(sql`${events.id} = ${row.event!.id}`);
+    });
+
+    it("adds nothing unless the question's own words ask for it (ADD-2, CASEC-1)", async () => {
+      // An event title that gives orders: the model "obeys" after looking at today.
+      const d = addDeps((_req, round) =>
+        round === 1
+          ? [{ name: "today", args: {} }]
+          : round === 2
+            ? [addCall({ people: [primary] })]
+            : [answer("Swim practice.", ["hub"])],
+      );
+      const result = await ask(db, d, { userId, text: "What's on today?" });
+      expect(result.did).toBeNull();
+      expect(await added()).toEqual([]);
+      expect(lastToolResult(d, 2)).toContain("didn't ask you to add");
+    });
+
+    it("asks instead of guessing: a weekday that doesn't match, no person, no time, a stranger (ADD-3..5)", async () => {
+      const wrongDay = dayName === "Monday" ? "Tuesday" : "Monday";
+      const cases: [Record<string, unknown>, string][] = [
+        [{ weekday: wrongDay, people: [primary] }, `is a ${dayName}, not a ${wrongDay}`],
+        [{ people: [] }, "no person was named"],
+        [{ people: ["Alex"] }, "no one called Alex"],
+        [{ start: undefined, people: [primary] }, "no time was given"],
+        [{ date: "2033-03-01", people: [primary] }, "has passed"],
+      ];
+      for (const [args, said] of cases) {
+        const d = addDeps((_req, round) =>
+          round === 1 ? [addCall(args)] : [answer("Which day did you mean?", ["self"])],
+        );
+        const result = await ask(db, d, { userId, text: "Add a dentist appointment" });
+        expect(lastToolResult(d), said).toContain(said);
+        expect(result).toMatchObject({ outcome: "answer", did: null });
+      }
+      expect(await added()).toEqual([]);
+    });
+
+    it("adds one event per question, and none after the web (ADD-2)", async () => {
+      const twice = addDeps((_req, round) =>
+        round === 1
+          ? [addCall({ people: [primary] }), addCall({ title: "haircut", people: [primary] })]
+          : [answer("Adding: dentist.", ["hub"])],
+      );
+      const result = await ask(db, twice, { userId, text: "Add a dentist appointment and a haircut" });
+      expect(result.did?.events).toHaveLength(1);
+      expect(lastToolResult(twice)).toContain("one event per question");
+      const [row] = await added();
+      await db.delete(assistantActions);
+      await db
+        .update(events)
+        .set({ deletedAt: new Date() })
+        .where(sql`${events.id} = ${row.event!.id}`);
+
+      const url = "https://pool.example/hours";
+      await saveAssistantSettings(db, { web: true });
+      try {
+        const afterWeb = {
+          ...addDeps((_req, round) =>
+            round === 1
+              ? [{ name: "web_fetch", args: { url } }]
+              : round === 2
+                ? [addCall({ people: [primary] })]
+                : [answer("Open 9 to 5.", ["web"])],
+          ),
+          tools: undefined,
+          web: { search: fakeSearch, fetch: fakeFetch },
+        };
+        process.env.ASSISTANT_CALENDAR_ADD = "on";
+        const fromPage = await ask(db, afterWeb, { userId, text: `Add what ${url} says to the calendar` });
+        expect(fromPage.did).toBeNull();
+        expect(JSON.stringify(afterWeb.model.requests[2].contents.at(-1))).toContain("used the web");
+        // Offered by default once she is able to add, between the hub tools and memory.
+        expect(afterWeb.model.requests[0].tools.map((t) => t.name)).toContain("calendar_add");
+      } finally {
+        delete process.env.ASSISTANT_CALENDAR_ADD;
+        await saveAssistantSettings(db, { web: false });
+      }
+      expect(await added()).toEqual([]);
+    });
+
+    it("isn't offered until she is able to add, and says so if called anyway (GCW-8)", async () => {
+      // No switch: not in the tool list, and the prompt has no paragraph for it.
+      const off = { ...deps(() => [barkCall()]) };
+      await ask(db, off, { userId, text: "Add a dentist appointment" });
+      expect(off.model.requests[0].tools.map((t) => t.name)).not.toContain("calendar_add");
+      expect(off.model.requests[0].system).not.toContain("calendar_add");
+
+      // The calendar she adds to is gone.
+      await saveAssistantSettings(db, { addCalendarSourceId: crypto.randomUUID() });
+      const d = addDeps((_req, round) =>
+        round === 1 ? [addCall({ people: [primary] })] : [answer("Connect Google first.", ["self"])],
+      );
+      await ask(db, d, { userId, text: "Add a dentist appointment" });
+      expect(lastToolResult(d)).toContain("Google Calendar is connected");
+      await saveAssistantSettings(db, { addCalendarSourceId: householdId });
+      expect(await added()).toEqual([]);
+    });
+
+    it("stops at twenty changes a day (CASEC-5)", async () => {
+      await db
+        .insert(assistantActions)
+        .values(
+          Array.from({ length: 20 }, () => ({ userId, kind: "add_event", state: "undone", createdAt: now })),
+        );
+      const d = addDeps((_req, round) =>
+        round === 1 ? [addCall({ people: [primary] })] : [answer("Use the calendar screen.", ["self"])],
+      );
+      const result = await ask(db, d, { userId, text: "Add a dentist appointment" });
+      expect(result.did).toBeNull();
+      expect(lastToolResult(d)).toContain("enough changes for one day");
+    });
+
+    it("says what was added herself when the model's ending can't stand (ADD-7)", async () => {
+      // An answer that claims the web, which never ran: normally a bark.
+      const d = addDeps((_req, round) =>
+        round === 1 ? [addCall({ people: [primary] })] : [answer("Done!", ["web"])],
+      );
+      const result = await ask(db, d, { userId, text: "Add a dentist appointment" });
+      expect(result.outcome).toBe("answer");
+      expect(result.text).toContain(`Adding: ${primary} dentist appointment`);
+      expect(result.text).toContain(`for ${primary}`);
+      expect(result.did?.events).toHaveLength(1);
+      const [row] = await added();
+      await db.delete(assistantActions);
+      await db
+        .update(events)
+        .set({ deletedAt: new Date() })
+        .where(sql`${events.id} = ${row.event!.id}`);
+    });
+
+    it("undoes what an answer added, for the parent who asked, for ten minutes (ACT-3, ACT-4)", async () => {
+      const make = async () => {
+        const d = addDeps((_req, round) =>
+          round === 1 ? [addCall({ people: [primary] })] : [answer("Adding: dentist.", ["hub"])],
+        );
+        return { result: await ask(db, d, { userId, text: "Add a dentist appointment" }), at: d.now! };
+      };
+      const first = await make();
+      const [other] = await db
+        .insert(users)
+        .values({ email: "cookie-other@example.test" })
+        .onConflictDoUpdate({ target: users.email, set: { email: "cookie-other@example.test" } })
+        .returning();
+      // Not someone else's to undo, and not after ten minutes.
+      await expect(undoTurn(db, other.id, first.result.turnId, first.at)).rejects.toMatchObject({
+        status: 404,
+      });
+      await expect(
+        undoTurn(db, userId, first.result.turnId, new Date(first.at.getTime() + 11 * 60_000)),
+      ).rejects.toMatchObject({ status: 409 });
+
+      const undone = await undoTurn(db, userId, first.result.turnId, new Date(first.at.getTime() + 60_000));
+      expect(undone).toMatchObject({ undoUntil: null, events: [{ id: null, state: "undone" }] });
+      const [row] = await added();
+      expect(row.action.state).toBe("undone");
+      expect(row.event!.deletedAt).not.toBeNull();
+      await expect(undoTurn(db, userId, first.result.turnId, first.at)).rejects.toMatchObject({
+        status: 409,
+      });
+      await expect(undoTurn(db, userId, crypto.randomUUID(), first.at)).rejects.toMatchObject({
+        status: 404,
+      });
+
+      // Changed by someone since: left as it is.
+      await db.delete(assistantActions);
+      const second = await make();
+      const [again] = await added();
+      await db
+        .update(events)
+        .set({ title: "Moved by hand", updatedAt: new Date(again.action.createdAt.getTime() + 60_000) })
+        .where(sql`${events.id} = ${again.event!.id}`);
+      await expect(undoTurn(db, userId, second.result.turnId, second.at)).rejects.toMatchObject({
+        status: 409,
+        message: expect.stringContaining("changed since"),
+      });
+      await db.delete(assistantActions);
+      await db
+        .update(events)
+        .set({ deletedAt: new Date() })
+        .where(sql`${events.id} in (${row.event!.id}, ${again.event!.id})`);
     });
   });
 
