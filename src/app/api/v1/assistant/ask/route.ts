@@ -21,8 +21,10 @@ export const POST = quietApi(async ({ db, request, session }) => {
         model: defaultAssistant(),
         transcribe: defaultTranscriber(),
         web: defaultWeb(),
-        // Intent 0008: the worker writes an added event to Google.
-        launch: fakeAdding() ? undefined : (args) => defaultLauncher().start(args),
+        // Worker jobs: writing an added event to Google (intent 0008; not
+        // while adding is faked locally) and reading an email (intent 0009).
+        launch: (args) =>
+          fakeAdding() && args[0] === "assistant:actions" ? Promise.resolve() : defaultLauncher().start(args),
       },
       { userId: session.userId, ...input, audio: audio && clipOf(audio) },
     ),

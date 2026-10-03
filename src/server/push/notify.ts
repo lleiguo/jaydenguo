@@ -5,6 +5,7 @@ import {
   APNS_ENVIRONMENTS,
   DEFAULT_KINDS,
   NOTIFICATION_KINDS,
+  OPT_IN_KINDS,
   NOTIFICATION_LABEL,
   type NotificationKind,
 } from "../../domain/notifications";
@@ -29,7 +30,13 @@ export type NewNotification = {
   target: string;
 };
 
-export type NotifyDeps = { sender?: PushSender; log?: Logger; now?: Date };
+export type NotifyDeps = {
+  sender?: PushSender;
+  log?: Logger;
+  now?: Date;
+  // Only this account's phones (intent 0009, ERA-3: the parent who asked).
+  userId?: string;
+};
 
 // What Apple sees: nothing about the family (PUSH-2, AUTH-3).
 export const GENERIC_ALERT = { title: "Hub", body: "New update" };
@@ -55,7 +62,12 @@ export async function notify(db: DbOrTx, n: NewNotification, deps: NotifyDeps = 
       .from(devices)
       .innerJoin(sessions, eq(sessions.id, devices.sessionId))
       .where(
-        and(sql`${n.kind} = any(${devices.kinds})`, isNull(sessions.revokedAt), gt(sessions.expiresAt, now)),
+        and(
+          sql`${n.kind} = any(${devices.kinds})`,
+          isNull(sessions.revokedAt),
+          gt(sessions.expiresAt, now),
+          deps.userId ? eq(sessions.userId, deps.userId) : undefined,
+        ),
       );
     const sender = deps.sender ?? defaultSender(log);
     const payload = {
@@ -118,7 +130,10 @@ export async function deviceSettings(db: DbOrTx, session: SessionUser): Promise<
   return {
     registered: !!row,
     kinds: (row?.kinds as NotificationKind[] | undefined) ?? DEFAULT_KINDS,
-    available: NOTIFICATION_KINDS.map((kind) => ({ kind, label: NOTIFICATION_LABEL[kind] })),
+    available: NOTIFICATION_KINDS.filter((k) => !OPT_IN_KINDS.includes(k)).map((kind) => ({
+      kind,
+      label: NOTIFICATION_LABEL[kind],
+    })),
   };
 }
 

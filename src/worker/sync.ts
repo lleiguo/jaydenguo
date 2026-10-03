@@ -18,6 +18,7 @@ import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { syncRecords } from "../server/sync/apply";
 import { defaultEmailExtractor, syncEmails } from "../server/email/apply";
 import { assistantActionsJob } from "./assistant-actions";
+import { closeStaleReads } from "./assistant-email";
 import {
   COOKIE_READ_GAP_MS,
   FAILURE_ALERT_THRESHOLD,
@@ -288,6 +289,8 @@ export async function syncJob(args: string[], ctx: JobContext) {
   if (target === "all") ctx.log("series extended", { series: await extendAllSeries(db) });
   // Intent 0008: anything Cookie added that didn't reach Google yet.
   if (target === "all") await assistantActionsJob([], ctx);
+  // Intent 0009, ERA-5: email reads a job never finished.
+  if (target === "all") ctx.log("email reads closed", { closed: await closeStaleReads(db) });
   // GCO-1: the Google Calendar copy follows the daily sync.
   if (target === "all") await calendarCopyJob([], ctx);
   // Notifications are kept 90 days.

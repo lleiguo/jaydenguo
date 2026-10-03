@@ -27,9 +27,23 @@ type Case = {
   // saves, memory, forgets: her memory (MEM-1..5).
   // web: answered by a web search, with "Use the web" on.
   // adds: one event is added (intent 0008). asks: she asks the parent
-  // something and changes nothing.
+  // something and changes nothing. reads: she goes to read an email and
+  // says she's checking, nothing more (intent 0009).
   want:
-    "answer" | "bark" | "self" | "cant" | "either" | "saves" | "memory" | "forgets" | "web" | "adds" | "asks";
+    | "answer"
+    | "bark"
+    | "self"
+    | "cant"
+    | "either"
+    | "saves"
+    | "memory"
+    | "forgets"
+    | "web"
+    | "adds"
+    | "asks"
+    | "reads";
+  // Asked with the email source switched on, so she can read email.
+  emailOn?: true;
   // Asked while she is able to add to the calendar (off for every other case).
   addOn?: true;
   // Asked with "Use the web" switched on (it is off for every other case).
@@ -180,6 +194,15 @@ const CASES: Case[] = [
   { q: "Approve the email about Saturday's game", want: "adds" },
   { q: "Add the extra practice from the email", want: "adds", any: [/place|location|where|Oak Park|sure/i] },
   { q: "Search today's email and update my calendar accordingly", want: "adds", long: true },
+  // Reading an email (intent 0009). The worker doesn't run here: she only
+  // has to go and look, and say so, without guessing what it says.
+  { q: "What did the school say about the field trip?", want: "reads", emailOn: true },
+  { q: "Summarize the email from the swim coach this week", want: "reads", emailOn: true },
+  { q: "邮件里说春游要带什么？", want: "reads", emailOn: true },
+  { q: "Read me the latest email about the bake sale", want: "reads", emailOn: true },
+  // Calendar changes from email are still the suggestions, not a read.
+  { q: "What calendar changes came in by email?", want: "answer", emailOn: true, any: [/practice|game/i] },
+  { q: "What's on today?", want: "answer", emailOn: true, long: true },
   // Able to add, but not asked to: nothing changes.
   { q: "What's on today?", want: "answer", addOn: true, long: true },
   { q: "Move swim practice to 5 pm.", want: "cant", addOn: true },
@@ -199,8 +222,12 @@ function judge(c: Case, r: AskResult): string[] {
     faults.push("not from the hub");
   if (c.want === "adds" && !r.did) faults.push("nothing added");
   if (c.want !== "adds" && r.did) faults.push("changed the calendar without being asked");
+  if (c.want === "reads" && !r.waiting) faults.push("didn't go to read the email");
+  if (c.want !== "reads" && r.waiting) faults.push("went to read an email unasked");
+  // Until the summary comes, she can't know what it says.
+  if (c.want === "reads" && !/check|查|看|邮件|mail/i.test(r.text)) faults.push("didn't say she's checking");
   if (
-    ["self", "cant", "saves", "memory", "forgets", "adds", "asks"].includes(c.want) &&
+    ["self", "cant", "saves", "memory", "forgets", "adds", "asks", "reads"].includes(c.want) &&
     r.outcome !== "answer"
   )
     faults.push(`no answer (${r.outcome})`);
@@ -272,6 +299,8 @@ async function main() {
       if (only !== null && i + 1 !== only) continue;
       await db.execute(sql`delete from rate_limits where key like 'assistant:%'`);
       await saveAssistantSettings(db, { web: !!c.webOn, addCalendarSourceId: c.addOn ? household.id : null });
+      await db.execute(sql`update sources set enabled = ${!!c.emailOn} where name = 'Coach email (sample)'`);
+      await db.execute(sql`delete from assistant_email_reads`);
       if (c.addOn) process.env.ASSISTANT_CALENDAR_ADD = "fake";
       else delete process.env.ASSISTANT_CALENDAR_ADD;
       const t0 = Date.now();
@@ -316,6 +345,7 @@ async function main() {
         `\nmedian ${times[Math.floor(times.length / 2)]} ms · slowest ${times.at(-1)} ms · ${cost.input} tokens in, ${cost.output} out · US$${cost.usd.toFixed(4)}`,
     );
     await saveAssistantSettings(db, { web: false, addCalendarSourceId: null });
+    await db.execute(sql`update sources set enabled = false where name = 'Coach email (sample)'`);
     const pass = madeUp.length === 0 && percent >= 90 && tooLong.length === 0 && unasked.length === 0;
     console.log(pass ? "PASS" : "FAIL");
     process.exitCode = pass ? 0 : 1;

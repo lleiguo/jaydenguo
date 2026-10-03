@@ -428,6 +428,7 @@ describe("Cookie", () => {
         people: await listPeople(db),
         userId,
         question: "",
+        conversationId: crypto.randomUUID(),
         turn: newTurn(),
         settings: await getAssistantSettings(db),
         web: { search: fakeSearch, fetch: fakeFetch },

@@ -64,7 +64,8 @@ const EMAIL_PROMPT = `
 Email suggestions
 - \`suggestions\` lists what the coach and club emails suggested, waiting for a parent's approval. Use it for "what came in by email".
 - Only when the question asks you to: \`suggestion_apply\` applies the one suggestion the parent named (if their words fit none or several, ask which), and \`suggestions_apply_today\` applies today's. These may also move or cancel an event.
-- Read back what was applied and what was left, as the tool says (source "hub").`;
+- Read back what was applied and what was left, as the tool says (source "hub").
+- To read or summarize an email the parent asks about, call \`email_read\`, then say only that you're checking the mail (source "self"). Never guess what an email says.`;
 
 export const systemPrompt = (web: boolean, change = false, email = false) =>
   SYSTEM_PROMPT + (change ? CHANGE_PROMPT : "") + (email ? EMAIL_PROMPT : "") + (web ? WEB_PROMPT : "");

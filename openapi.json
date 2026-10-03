@@ -4323,7 +4323,8 @@
                         "entry_change",
                         "video",
                         "sync_failed",
-                        "suggestion"
+                        "suggestion",
+                        "cookie"
                       ]
                     }
                   }
@@ -5510,6 +5511,10 @@
           "did": {
             "$ref": "#/components/schemas/Did",
             "x-nullable": true
+          },
+          "waiting": {
+            "$ref": "#/components/schemas/Waiting",
+            "x-nullable": true
           }
         },
         "required": [
@@ -5595,6 +5600,9 @@
           },
           "url": {
             "type": "string"
+          },
+          "email": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -6566,7 +6574,8 @@
                 "entry_change",
                 "video",
                 "sync_failed",
-                "suggestion"
+                "suggestion",
+                "cookie"
               ]
             }
           },
@@ -6584,7 +6593,8 @@
                     "entry_change",
                     "video",
                     "sync_failed",
-                    "suggestion"
+                    "suggestion",
+                    "cookie"
                   ]
                 },
                 "label": {
@@ -7812,7 +7822,8 @@
               "entry_change",
               "video",
               "sync_failed",
-              "suggestion"
+              "suggestion",
+              "cookie"
             ]
           },
           "title": {
@@ -10562,6 +10573,9 @@
               "voice"
             ]
           },
+          "followup": {
+            "type": "boolean"
+          },
           "heard": {
             "type": [
               "string",
@@ -10603,6 +10617,10 @@
           },
           "did": {
             "$ref": "#/components/schemas/Did",
+            "x-nullable": true
+          },
+          "waiting": {
+            "$ref": "#/components/schemas/Waiting",
             "x-nullable": true
           },
           "createdAt": {
@@ -11059,6 +11077,22 @@
         },
         "required": [
           "reviews"
+        ]
+      },
+      "Waiting": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "email"
+          },
+          "until": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "until"
         ]
       },
       "WinLoss": {

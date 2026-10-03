@@ -22,6 +22,9 @@ final class CookieStore {
     private var conversationId: String?
     private var lastAskedAt: Date?
     private var settling = false
+    /// Called with each email summary as it arrives (intent 0009), so the
+    /// bubble can show it and read it out.
+    var onFollowup: ((CookieMessage) -> Void)?
 
     init(client: HubClient) {
         self.client = client
@@ -42,6 +45,8 @@ final class CookieStore {
             if lastAskedAt == nil { lastAskedAt = turns.last.flatMap { HomeTime.parse($0.createdAt) } }
             loaded = true
             loadError = nil
+            // An email summary still on its way when the app started.
+            if isSettling { Task { await settle() } }
         } catch {
             loadError = HubError.from(error)?.message ?? "Couldn't load the chat."
         }
@@ -74,6 +79,8 @@ final class CookieStore {
             conversationId = answer.conversationId
             lastAskedAt = .now
             messages.append(contentsOf: bubbles(answer))
+            // ERA-1: the summary of an email she went to read follows.
+            if answer.waiting != nil { Task { await settle() } }
             return answer
         } catch {
             let why = HubError.from(error)?.message ?? "Cookie couldn't be reached. Try again."
@@ -121,10 +128,11 @@ final class CookieStore {
         }
     }
 
-    /// Whether a card is still waiting on the worker.
-    var isSettling: Bool { messages.contains { $0.changes?.isSettling == true } }
+    /// Whether a card is still waiting on the worker, or an email summary
+    /// is on its way.
+    var isSettling: Bool { CookieChat.needsRefresh(messages) }
 
-    /// While a card says "Being added…" and the chat or the bubble shows it,
+    /// While a card says "Being added…" or an email summary is on its way,
     /// asks the server again every few seconds, for a few minutes at most.
     func settle() async {
         // One loop for every card on screen.
@@ -137,8 +145,12 @@ final class CookieStore {
             guard !Task.isCancelled else { return }
             guard let turns = try? await client.api.listAssistantTurns(query: .init(limit: 30)).ok.body.json.turns
             else { continue }
+            let known = Set(messages.map(\.id))
             messages = CookieChat.refreshed(messages, from: turns)
+            for message in messages where !known.contains(message.id) { onFollowup?(message) }
         }
+        // ERA-5: the wait is over, summary or not.
+        messages = messages.map { $0.waitingUntil != nil && !$0.isWaiting() ? $0.notWaiting() : $0 }
     }
 
     /// The changes of one answer, as they are now.

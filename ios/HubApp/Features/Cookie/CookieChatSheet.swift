@@ -26,6 +26,7 @@ struct CookieChatSheet: View {
                             CookieBubble(message: message)
                             if message.memory != nil { MemoryUndo(message: message) }
                             if message.changes != nil { CookieChangeCards(turnId: message.id).padding(.leading, 36) }
+                            if message.waitingUntil != nil { CookieWaiting().padding(.leading, 36) }
                         }
                         if store.isAsking {
                             HStack(spacing: 8) {
@@ -157,6 +158,19 @@ private struct MemoryUndo: View {
                 expired = true
             }
         }
+    }
+}
+
+/// "Checking the mail…" under an answer while the email summary is on its
+/// way (intent 0009, ERA-1).
+struct CookieWaiting: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.small)
+            Text("Checking the mail…").font(.caption).foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("cookieWaiting")
     }
 }
 

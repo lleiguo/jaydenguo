@@ -2,7 +2,9 @@
 // question may cost, and what she says when she can't answer. Pure, so
 // they're unit tested.
 
-export const ASSISTANT_MODES = ["voice", "text"] as const;
+// followup: an answer that came later, without a question of its own (a
+// summary of an email she went to read, intent 0009 ERA-1).
+export const ASSISTANT_MODES = ["voice", "text", "followup"] as const;
 export type AssistantMode = (typeof ASSISTANT_MODES)[number];
 
 export const ASSISTANT_OUTCOMES = ["answer", "bark", "limit", "error"] as const;

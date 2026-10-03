@@ -9,6 +9,7 @@ import { smokeJob, syncJob } from "./sync";
 import { tennisAcceptanceJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
 import { videoReviewJob } from "./video/review";
 import { assistantActionsJob } from "./assistant-actions";
+import { assistantEmailJob } from "./assistant-email";
 import { calendarCopyJob } from "./calendar-copy";
 import { costsSyncJob } from "./costs";
 
@@ -62,6 +63,11 @@ export const jobs: Record<string, Job> = {
   "assistant:actions": {
     description: "Write what Cookie added to the household Google Calendar, and take back what was undone",
     run: assistantActionsJob,
+  },
+  "assistant:email": {
+    description:
+      "Find the email a parent asked Cookie about and write her summary: assistant:email <read-id>",
+    run: assistantEmailJob,
   },
   "calendar:copy": {
     description: "Copy the calendar to the Jayden (hub) Google Calendar: calendar:copy [delete]",

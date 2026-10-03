@@ -38,6 +38,7 @@ import type { MemoryView } from "./memory";
 import { geminiTranscriber, spellingList, type Clip, type Transcriber } from "./transcribe";
 import { canAdd, claimActions, didFor, type Did } from "./actions";
 import { emailSource } from "./email";
+import { claimRead, type Waiting } from "./email-read";
 import {
   CHANGE_TOOLS,
   EMAIL_TOOLS,
@@ -99,6 +100,8 @@ export type AskResult = {
   forgot: MemoryView | null;
   // What this question changed, with its Undo (intent 0008, ACT-1).
   did: Did | null;
+  // An email she went to read: the summary follows (intent 0009, ERA-1).
+  waiting: Waiting | null;
 };
 
 export type AskDeps = {
@@ -185,6 +188,7 @@ export async function ask(
       })
       .returning({ id: assistantTurns.id });
     await claimActions(db, turn.actionIds, row.id);
+    if (turn.emailRead) await claimRead(db, turn.emailRead.id, row.id);
     const did = turn.actionIds.length ? ((await didFor(db, [row.id], people)).get(row.id) ?? null) : null;
     log({
       turnId: row.id,
@@ -206,6 +210,7 @@ export async function ask(
       saved: turn.saved,
       forgot: turn.forgot,
       did,
+      waiting: turn.emailRead ? { kind: "email", until: turn.emailRead.until } : null,
     };
   };
 
@@ -267,6 +272,7 @@ export async function ask(
     people,
     userId: input.userId,
     question: heard,
+    conversationId,
     spoken: !!clip,
     turn,
     settings,

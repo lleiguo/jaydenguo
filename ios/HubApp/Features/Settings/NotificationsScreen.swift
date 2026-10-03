@@ -45,6 +45,16 @@ struct NotificationsScreen: View {
                         ))
                         .accessibilityIdentifier("kind-\(item.kind.rawValue)")
                     }
+                    // Not in the server's list: builds before it couldn't read it (intent 0009).
+                    Toggle("Cookie's answer is ready", isOn: Binding(
+                        get: { settings.kinds.contains(where: { $0.rawValue == "cookie" }) },
+                        set: { on in
+                            var kinds = Set(settings.kinds.map(\.rawValue))
+                            if on { kinds.insert("cookie") } else { kinds.remove("cookie") }
+                            Task { await model.setNotificationKinds(Array(kinds)) }
+                        }
+                    ))
+                    .accessibilityIdentifier("kind-cookie")
                 }
             }
         }

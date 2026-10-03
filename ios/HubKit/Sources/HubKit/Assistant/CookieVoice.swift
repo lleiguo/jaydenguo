@@ -17,7 +17,10 @@ public enum CookieVoice {
     /// Longer when the answer added an event, so there is time to read the
     /// card and tap Undo (intent 0008, CASEC-4).
     public static func linger(_ answer: CookieMessage) -> TimeInterval {
-        answer.changes == nil ? bubbleLinger : 15
+        // While she checks the mail, long enough for the summary to arrive
+        // in the bubble most times (intent 0009, ERA-4).
+        if answer.waitingUntil != nil { return 45 }
+        return answer.changes == nil ? bubbleLinger : 15
     }
     /// What the recorder writes: AAC in an MPEG-4 file (plan SP-C5).
     public static let clipType = "audio/mp4"

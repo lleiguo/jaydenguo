@@ -18,6 +18,7 @@ import {
 } from "../../email/suggestions";
 import { changesSince } from "../actions";
 import { applySuggestion, emailSource, readIfStale, type SuggestionRow } from "../email";
+import { emailReadTool } from "./email-read";
 import { dayOf, problem, stamp, type Tool, type ToolContext } from "./types";
 
 // Email suggestions (intent 0008, EMS-2..5): what came in by email, and
@@ -192,4 +193,9 @@ export const suggestionsApplyTodayTool: Tool<Record<string, never>> = {
   },
 };
 
-export const EMAIL_TOOLS = [suggestionsTool, suggestionApplyTool, suggestionsApplyTodayTool] as Tool[];
+export const EMAIL_TOOLS = [
+  suggestionsTool,
+  suggestionApplyTool,
+  suggestionsApplyTodayTool,
+  emailReadTool,
+] as Tool[];

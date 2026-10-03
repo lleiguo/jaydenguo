@@ -151,6 +151,7 @@ struct CookieButton: View {
                 .accessibilityLabel((heard.isEmpty ? "" : "You asked: \(heard). ") + answer.spokenLabel)
                 .accessibilityHint("Opens the chat")
                 .accessibilityIdentifier("cookieBubble")
+                if answer.waitingUntil != nil { CookieWaiting() }
                 // CASEC-4: what she added, read back as a card, with Undo one tap away.
                 if answer.changes != nil { CookieChangeCards(turnId: answer.id).padding(.top, 4) }
             }

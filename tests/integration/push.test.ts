@@ -152,6 +152,42 @@ describe("push notifications", () => {
     expect(sent).toHaveLength(1);
   });
 
+  it("keeps Cookie's kind out of old apps' lists, and sends it only to the parent who asked (intent 0009, ERA-3)", async () => {
+    const mine = await phone();
+    const settings = await register(mine, TOKEN_A);
+    // Builds before it don't know the kind: not on by default, not listed.
+    expect(settings.kinds).not.toContain("cookie");
+    expect(settings.available.map((a) => a.kind)).not.toContain("cookie");
+    // An app that knows it turns it on itself.
+    await setDeviceKinds(db, mine, [...settings.kinds, "cookie"]);
+
+    process.env.ALLOWED_EMAILS = `${OWNER},other-parent@example.test`;
+    try {
+      const { token } = await createSession(db, "other-parent@example.test", "HubApp/1", {
+        kind: "device",
+        deviceName: "Other iPhone",
+      });
+      const theirs = (await findSession(db, token))!;
+      await register(theirs, TOKEN_B);
+      await setDeviceKinds(db, theirs, ["cookie"]);
+
+      await notify(
+        db,
+        {
+          kind: "cookie",
+          dedupKey: "cookie_read:1",
+          title: "Cookie's answer is ready",
+          body: "Open the chat to read it.",
+          target: "cookie",
+        },
+        { log, userId: mine.userId },
+      );
+      expect(sent.map((p) => p.path.slice(-64))).toEqual([TOKEN_A]);
+    } finally {
+      process.env.ALLOWED_EMAILS = OWNER;
+    }
+  });
+
   it("skips phones that don't want the kind or are signed out, and drops dead tokens", async () => {
     const wants = await phone();
     await register(wants, TOKEN_A);

@@ -194,6 +194,50 @@ import Testing
         #expect(Array(refreshed.dropLast()) == Array(messages.dropLast()))
     }
 
+    // MARK: Reading an email (intent 0009, plan R3.1)
+
+    private func turn(
+        _ id: String, heard: String, text: String, followup: Bool? = nil, waiting: String? = nil,
+        sources: [CookieSource] = [], at: String = "2026-10-03T15:00:00.000Z"
+    ) -> CookieTurn {
+        CookieTurn(
+            id: id, conversationId: "c1", mode: .text, followup: followup, heard: heard, text: text, outcome: .answer,
+            language: .en, sources: sources, did: nil,
+            waiting: waiting.map { .init(kind: .email, until: $0) }, createdAt: at
+        )
+    }
+
+    @Test func anAnswerWaitsForTheEmailSummary() {
+        let asked = turn("t1", heard: "What did the school say about the field trip?", text: "I'm checking the mail.",
+                         waiting: "2026-10-03T15:03:00.000Z")
+        let message = CookieChat.messages([asked])[1]
+        let until = HomeTime.parse("2026-10-03T15:03:00.000Z")!
+        #expect(message.isWaiting(now: until.addingTimeInterval(-10)))
+        #expect(!message.isWaiting(now: until))
+        #expect(message.conversationId == "c1")
+        #expect(CookieChat.needsRefresh([message], now: until.addingTimeInterval(-10)))
+        #expect(!CookieChat.needsRefresh([message], now: until))
+    }
+
+    @Test func theSummaryFollowsAndTheWaitEnds() {
+        let asked = turn("t1", heard: "What did the school say about the field trip?", text: "I'm checking the mail.",
+                         waiting: "2026-10-03T15:03:00.000Z")
+        let before = CookieChat.messages([asked])
+        let email = CookieSource(kind: .hub, label: "Field trip on Friday", url: "https://mail.google.com/mail/u/0/#all/m1", email: true)
+        let summary = turn("t2", heard: "", text: "The field trip is Friday; bring a lunch.", followup: true,
+                           sources: [email], at: "2026-10-03T15:00:30.000Z")
+        let after = CookieChat.refreshed(before, from: [turn("t1", heard: asked.heard!, text: asked.text!), summary])
+        #expect(after.count == 3)
+        #expect(after[1].waitingUntil == nil)
+        // A summary has no question of its own.
+        #expect(after[2].role == .cookie)
+        #expect(after[2].text == "The field trip is Friday; bring a lunch.")
+        #expect(after[2].sourceLine == "From an email")
+        #expect(after[2].links.map(\.label) == ["Field trip on Friday"])
+        // Asking again changes nothing: the summary is there once.
+        #expect(CookieChat.refreshed(after, from: [summary]).count == 3)
+    }
+
     /// CSEC-8: nothing from Cookie is kept on the phone, so offline there
     /// is no old chat to show.
     @Test func theChatIsNeverCached() async throws {
