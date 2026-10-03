@@ -85,10 +85,10 @@ Described events alone (E1 to E3): about 6.5.
 | SP-E1 | done 2026-10-03: `calendar.events.owned` is enough (below). |
 | SP-E2 | done 2026-10-03: the worker runs a small job in 11–15 s (below). |
 | E2.1–E2.4 | merged 2026-10-03 (#83). In production once the owner grants "Let Cookie add events". |
-| E3.1–E3.3 | built 2026-10-03 on `cookie/e3-app`; not merged. TestFlight build 7 after it merges (O-4). |
+| E3.1–E3.3 | merged and deployed 2026-10-03 (#84). Left: TestFlight build 7, then O-3 and O-4. |
 | SP-E3 | done 2026-10-03: Flash 8/8 on made-up emails (below). |
-| E4.1–E4.2 | built 2026-10-03 on `cookie/e3-app`, with E3; not merged. |
-| E5.1–E5.4 | built 2026-10-03 on `cookie/e3-app`, with E3 and E4, at the owner's word ("start E4 and E5, commit all three together"), before Gmail is connected. The tools are offered once there is an email source; until then nothing changes in production. A week of real suggestions (spec E-3) is still worth having before relying on "today's email". |
+| E4.1–E4.2 | merged and deployed 2026-10-03 (#84), with E3. |
+| E5.1–E5.4 | merged and deployed 2026-10-03 (#84), with E3 and E4; built at the owner's word ("start E4 and E5, commit all three together"), before Gmail is connected. The tools are offered once there is an email source; until then nothing changes in production. A week of real suggestions (spec E-3) is still worth having before relying on "today's email". |
 
 **E1 as built (2026-10-02):**
 - *Table (E1.1).* Migration `0028_assistant_actions`.
