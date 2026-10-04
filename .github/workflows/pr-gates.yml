@@ -1,0 +1,60 @@
+name: PR gates
+
+# The workflow's checks on every PR (intent 0010, CIG-1..6). A separate
+# workflow from CI so that editing the PR description re-runs only these.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-gates-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  intent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The description goes through env, never into the script itself.
+      - run: node scripts/check-intent.mjs
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: gitleaks on the PR's commits
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          VERSION: 8.30.1
+        run: |
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}"
+          tarball="gitleaks_${VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "${url}/${tarball}" -O "${url}/gitleaks_${VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "gitleaks_${VERSION}_checksums.txt"
+          tar -xzf "${tarball}" gitleaks
+          ./gitleaks git --log-opts="${BASE}..HEAD" --redact --no-banner --verbose
+      - name: No listed real names in added lines
+        run: node scripts/check-personal-data.mjs
+        env:
+          PERSONAL_DATA_DENYLIST: ${{ secrets.PERSONAL_DATA_DENYLIST }}
+          BASE: ${{ github.event.pull_request.base.sha }}

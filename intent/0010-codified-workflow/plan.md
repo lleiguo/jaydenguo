@@ -53,5 +53,19 @@ Approved 2026-10-03.
     `.claude/worktrees` are ignored there too, not just in Prettier.
   - CCH-3 also blocks `git commit -n`, and changing `core.hooksPath`
     from the shell.
+- **W1–W3:** PR #93.
+- **W4–W5 built** (PR 2). Departures from the spec:
+  - The intent and secrets gates are a separate workflow, "PR gates",
+    not jobs in CI. That way editing a PR description re-runs only the
+    gates (CI doesn't run on `edited`). Deploy still waits only for CI
+    on `main`; the gates guard the merge (Claude's merge hook needs every
+    check green).
+  - Intents from before 0010 have no `Status:` line in their spec and
+    plan, so the gate reads those from the README table.
+  - gitleaks is downloaded from its release (pinned, checksum checked),
+    not taken from the gitleaks GitHub Action.
+- **O-2 note:** the denylist should hold names that must never appear,
+  like teammates, coaches, schools and Jayden's brother. "Jayden" itself
+  is in the repo's name and in code, so listing it would fail every PR.
 - **SP-W2:** checked after PR 1 merges.
-- **Next:** W4–W5 (PR 2).
+- **Next:** W6 (memory to pointers) after both PRs merge.
