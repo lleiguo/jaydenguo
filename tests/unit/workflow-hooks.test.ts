@@ -7,13 +7,18 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const repo = path.resolve(__dirname, "../..");
+
+// Git sets GIT_DIR and friends when it runs a hook (these tests run in
+// pre-push); drop them so the scratch repo below is its own.
+const cleanEnv = { ...process.env };
+for (const k of Object.keys(cleanEnv)) if (k.startsWith("GIT_")) delete cleanEnv[k];
 const guard = path.join(repo, ".claude/hooks/guard.mjs");
 
 function runGuard(call: object, env: Record<string, string> = {}) {
   const r = spawnSync("node", [guard], {
     input: JSON.stringify(call),
     encoding: "utf8",
-    env: { ...process.env, CLAUDE_PROJECT_DIR: repo, ...env },
+    env: { ...cleanEnv, CLAUDE_PROJECT_DIR: repo, ...env },
   });
   return { blocked: r.status === 2, status: r.status, stderr: r.stderr };
 }
@@ -92,6 +97,7 @@ describe("git hooks", () => {
   it("pre-push refuses main (GH-3)", () => {
     const zero = "0".repeat(40);
     const r = spawnSync(path.join(repo, ".githooks/pre-push"), ["origin", "url"], {
+      env: cleanEnv,
       input: `refs/heads/x ${"a".repeat(40)} refs/heads/main ${zero}\n`,
       encoding: "utf8",
     });
@@ -102,6 +108,7 @@ describe("git hooks", () => {
   it("pre-push lets a branch deletion through without checks", () => {
     const zero = "0".repeat(40);
     const r = spawnSync(path.join(repo, ".githooks/pre-push"), ["origin", "url"], {
+      env: cleanEnv,
       input: `(delete) ${zero} refs/heads/old ${"b".repeat(40)}\n`,
       encoding: "utf8",
     });
@@ -110,7 +117,7 @@ describe("git hooks", () => {
 
   it("commit-msg refuses hand-edited migrations (GH-4)", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "hooks-repo-"));
-    const git = (...args: string[]) => spawnSync("git", args, { cwd: dir, encoding: "utf8" });
+    const git = (...args: string[]) => spawnSync("git", args, { cwd: dir, encoding: "utf8", env: cleanEnv });
     git("init", "-q");
     mkdirSync(path.join(dir, "db/migrations"), { recursive: true });
     mkdirSync(path.join(dir, "db/schema"), { recursive: true });
@@ -121,7 +128,7 @@ describe("git hooks", () => {
     const msg = path.join(dir, "MSG");
     const run = (text: string) => {
       writeFileSync(msg, text);
-      return spawnSync(hook, [msg], { cwd: dir, encoding: "utf8" }).status;
+      return spawnSync(hook, [msg], { cwd: dir, encoding: "utf8", env: cleanEnv }).status;
     };
 
     expect(run("Fix the migration")).toBe(1);
