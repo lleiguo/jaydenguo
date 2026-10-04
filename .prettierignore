@@ -11,3 +11,13 @@ tests/fixtures/veracross
 openapi.json
 # Recorded by scripts/record-api-fixtures.ts (intent 0004)
 ios/HubKit/Tests/HubKitTests/Fixtures
+
+# Local build output and agent worktrees (intent 0010, VER-3)
+.claude/worktrees
+ios/build
+ios/DerivedData
+ios/HubKit/.build
+ios/HubKit/.swiftpm
+ios/*.xcodeproj
+test-results
+playwright-report
