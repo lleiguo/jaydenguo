@@ -11,10 +11,12 @@ export type Filters = {
   hiddenSources: string[];
   // `people.id`s whose events are hidden.
   hiddenPeople: string[];
+  // Skipped events are hidden until shown (intent 0011, TID-3, TID-4).
+  showSkipped: boolean;
 };
 // v2: people chips replaced the School and Activities chips.
 const KEY = "hub.calendar.filters.v2";
-const DEFAULTS: Filters = { hiddenCategories: [], hiddenSources: [], hiddenPeople: [] };
+const DEFAULTS: Filters = { hiddenCategories: [], hiddenSources: [], hiddenPeople: [], showSkipped: false };
 
 export function usePersistentFilters(): [Filters, (f: Filters) => void] {
   const [filters, setFilters] = useState<Filters>(DEFAULTS);

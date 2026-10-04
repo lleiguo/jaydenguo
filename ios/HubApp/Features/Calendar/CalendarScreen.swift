@@ -60,6 +60,8 @@ private struct CalendarContent: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {
                     Button { showFilters = true } label: { Label("Filters", systemImage: "line.3.horizontal.decrease.circle") }
+                    Toggle(isOn: $store.showSkipped) { Label("Show skipped", systemImage: "forward.end") }
+                        .accessibilityIdentifier("calendar-show-skipped")
                     Button {
                         Task { await store.refreshAllSources() }
                     } label: {

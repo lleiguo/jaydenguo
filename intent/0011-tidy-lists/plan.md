@@ -23,4 +23,4 @@ None.
 - The agenda shows no skipped rows until the toggle is on.
 
 ## 5. Status
-Approved. T1 being built.
+Approved. T1 built: unit, integration (email suggestions) and e2e (calendar, suggestions) pass; iPhone simulator build passes.

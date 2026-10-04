@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { emailMessages, emailSuggestions, events, sources } from "@db/schema";
 import { CATEGORIES } from "../../domain/constants";
-import { zonedToUtc } from "../../domain/time";
+import { localDate, zonedToUtc } from "../../domain/time";
 import { createEvent, moveEvent, skipEvent } from "../calendar/mutations";
 import type { Undo } from "../../lib/calendar-types";
 import type { Db } from "../db/client";
@@ -32,6 +32,8 @@ export type SuggestionView = {
   id: string;
   sourceId: string;
   kind: "new" | "change" | "cancel";
+  // pending, approved, rejected, or expired: still pending in the table
+  // but about a day that's over (0011 TID-1).
   status: string;
   extracted: Extracted;
   confidence: Confidence;
@@ -46,10 +48,31 @@ export type SuggestionView = {
   decidedAt: string | null;
 };
 
+// The day a suggestion is about (0011 TID-1): its own date, else the
+// home-zone day of the event it changes or cancels.
+export function suggestionDay(
+  extracted: Pick<Extracted, "date">,
+  target: { startUtc: Date; allDay: boolean } | null,
+  tz: string,
+): string | null {
+  if (extracted.date) return extracted.date;
+  if (!target) return null;
+  // All-day events are stored as UTC midnights of their dates.
+  return target.allDay ? target.startUtc.toISOString().slice(0, 10) : localDate(target.startUtc, tz);
+}
+
+// Over once its day is before today; with no day, it waits.
+export function isPastSuggestion(day: string | null, today: string): boolean {
+  return day !== null && day < today;
+}
+
 export async function listSuggestions(
   db: Db,
   status: "pending" | "decided" = "pending",
+  now = new Date(),
 ): Promise<SuggestionView[]> {
+  const tz = await getHomeTimeZone(db);
+  const today = localDate(now, tz);
   const rows = await db
     .select({ s: emailSuggestions, m: emailMessages, sourceName: sources.name, t: events })
     .from(emailSuggestions)
@@ -60,12 +83,15 @@ export async function listSuggestions(
     .orderBy(desc(emailMessages.receivedAt), emailSuggestions.createdAt)
     .limit(status === "pending" ? 200 : 50);
   return rows
-    .filter((r) => status === "pending" || r.s.status !== "pending")
-    .map(({ s, m, sourceName, t }) => ({
+    .map(({ s, m, sourceName, t }): SuggestionView => ({
       id: s.id,
       sourceId: s.sourceId,
       kind: s.kind as SuggestionView["kind"],
-      status: s.status,
+      // TID-1, TID-2: a pending one about a past day is cleared.
+      status:
+        s.status === "pending" && isPastSuggestion(suggestionDay(s.extracted as Extracted, t, tz), today)
+          ? "expired"
+          : s.status,
       extracted: s.extracted as Extracted,
       confidence: s.confidence as Confidence,
       quote: s.quote,
@@ -85,7 +111,8 @@ export async function listSuggestions(
         : null,
       eventId: s.eventId,
       decidedAt: s.decidedAt?.toISOString() ?? null,
-    }));
+    }))
+    .filter((v) => (status === "pending") === (v.status === "pending"));
 }
 
 const time = z
@@ -123,6 +150,11 @@ async function pending(db: Db, id: string) {
   const [s] = await db.select().from(emailSuggestions).where(eq(emailSuggestions.id, id));
   if (!s) throw new HttpError(404, "not found");
   if (s.status !== "pending") throw new HttpError(409, "This suggestion was already decided.");
+  const [t] = s.targetEventId ? await db.select().from(events).where(eq(events.id, s.targetEventId)) : [];
+  const tz = await getHomeTimeZone(db);
+  // TID-2
+  if (isPastSuggestion(suggestionDay(s.extracted as Extracted, t ?? null, tz), localDate(new Date(), tz)))
+    throw new HttpError(409, "This is already over.");
   return s;
 }
 
@@ -199,10 +231,7 @@ export async function rejectSuggestion(db: Db, id: string) {
     .where(and(eq(emailSuggestions.id, id), eq(emailSuggestions.status, "pending")));
 }
 
+// Waiting ones, leaving out those already over (TID-1).
 export async function pendingCount(db: Db): Promise<number> {
-  const rows = await db
-    .select({ id: emailSuggestions.id })
-    .from(emailSuggestions)
-    .where(eq(emailSuggestions.status, "pending"));
-  return rows.length;
+  return (await listSuggestions(db, "pending")).length;
 }

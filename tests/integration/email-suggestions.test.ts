@@ -18,7 +18,12 @@ import { seal } from "@/server/crypto/envelope";
 import { defaultKeyWrapper } from "@/server/crypto/key-wrapper";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
-import { approveSuggestion, listSuggestions, rejectSuggestion } from "@/server/email/suggestions";
+import {
+  approveSuggestion,
+  listSuggestions,
+  pendingCount,
+  rejectSuggestion,
+} from "@/server/email/suggestions";
 import { createLogger } from "@/server/log";
 import { COOKIE_READ_GAP_MS } from "@/server/sync/policy";
 import { startSenderCheck, updateSource } from "@/server/sources";
@@ -255,6 +260,74 @@ describe("email suggestions", () => {
       .from(eventOverrides)
       .where(and(eq(eventOverrides.eventId, target.id), isNull(eventOverrides.clearedAt)));
     expect(override.skip).toBe(true);
+  });
+
+  it("a suggestion about a day that's over is cleared and shows as past (intent 0011, TID-1, TID-2)", async () => {
+    const [over] = await db
+      .insert(events)
+      .values({
+        title: "Old practice",
+        category: "soccer",
+        startUtc: new Date("2020-01-06T22:00:00Z"),
+        endUtc: new Date("2020-01-06T23:00:00Z"),
+      })
+      .returning();
+    const add = async (subject: string, date: string | null, targetEventId: string | null) => {
+      const [message] = await db
+        .insert(emailMessages)
+        .values({
+          sourceId,
+          gmailMessageId: `msg-${randomUUID()}`,
+          receivedAt: now(),
+          fromAddress: "coach@club.example",
+          subject,
+        })
+        .returning();
+      const [s] = await db
+        .insert(emailSuggestions)
+        .values({
+          sourceId,
+          messageId: message.id,
+          gmailMessageId: message.gmailMessageId,
+          messageUrl: "https://mail.google.com/mail/u/0/#all/x",
+          kind: targetEventId ? "cancel" : "new",
+          targetEventId,
+          extracted: {
+            title: subject,
+            date,
+            startTime: null,
+            endTime: null,
+            location: null,
+            category: "soccer",
+            notes: null,
+          },
+          confidence: { overall: "high", title: "high", date: "high", time: "low", location: "low" },
+          quote: "…",
+        })
+        .returning();
+      return s.id;
+    };
+    const before = await pendingCount(db);
+    const dated = await add("Past by date", "2020-01-10", null);
+    const targeted = await add("Past by its event", null, over.id);
+    const undated = await add("No day", null, null);
+
+    const pending = (await mine()).map((s) => s.subject);
+    expect(pending).toContain("No day");
+    expect(pending).not.toContain("Past by date");
+    expect(pending).not.toContain("Past by its event");
+    expect(await pendingCount(db)).toBe(before + 1);
+
+    const decided = (await listSuggestions(db, "decided")).filter((s) => s.sourceId === sourceId);
+    expect(decided.map((s) => [s.id, s.status])).toEqual(
+      expect.arrayContaining([
+        [dated, "expired"],
+        [targeted, "expired"],
+      ]),
+    );
+    expect(decided.map((s) => s.id)).not.toContain(undated);
+    await expect(approveSuggestion(db, "owner", dated, null)).rejects.toMatchObject({ status: 409 });
+    await expect(rejectSuggestion(db, targeted)).rejects.toMatchObject({ status: 409 });
   });
 
   it("a rejected suggestion leaves the calendar alone", async () => {

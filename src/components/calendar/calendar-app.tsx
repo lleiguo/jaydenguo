@@ -108,7 +108,10 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
   const shown = useMemo(
     () =>
       (data?.events ?? []).filter(
-        (e) => !(e.status === "cancelled" && e.source === null) && isVisible(e, filters),
+        (e) =>
+          !(e.status === "cancelled" && e.source === null) &&
+          (filters.showSkipped || !e.override?.skip) &&
+          isVisible(e, filters),
       ),
     [data, filters],
   );
@@ -218,6 +221,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
 
   const selectedEvent = selected ? byId.get(selected) : undefined;
   const openClashes = (data?.clashes ?? []).filter((c) => !c.acceptedId).length;
+  const skipped = (data?.events ?? []).filter((e) => e.override?.skip && !e.deletedAt).length;
   const narrow = typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
 
   return (
@@ -250,6 +254,15 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
           onClick={() => setShowFilters((v) => !v)}
         >
           Filters
+        </button>
+        {/* TID-4: skipped events are hidden until this is on. */}
+        <button
+          className={`rounded-full border px-3 py-1 text-sm ${filters.showSkipped ? "border-blue-700 bg-blue-700 text-white" : ""}`}
+          aria-pressed={filters.showSkipped}
+          title={filters.showSkipped ? "Hide skipped events" : "Show skipped events"}
+          onClick={() => setFilters({ ...filters, showSkipped: !filters.showSkipped })}
+        >
+          ⏭ Skipped{skipped > 0 && !filters.showSkipped ? ` (${skipped})` : ""}
         </button>
         {blocks.some((b) => expandedSchool.has(b.key)) && (
           <button

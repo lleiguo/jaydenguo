@@ -42,6 +42,13 @@ function Guess({ level }: { level: "high" | "medium" | "low" }) {
   );
 }
 
+// "Past": cleared because its day is over (intent 0011, TID-2).
+const DECIDED_LABEL: Record<string, string> = {
+  approved: "✓ Approved",
+  rejected: "✗ Rejected",
+  expired: "◷ Past",
+};
+
 export function SuggestionList() {
   const [items, setItems] = useState<SuggestionView[] | null>(null);
   const [decided, setDecided] = useState<SuggestionView[]>([]);
@@ -96,8 +103,8 @@ export function SuggestionList() {
           <ul className="mt-2 flex flex-col gap-1 text-sm">
             {decided.map((s) => (
               <li key={s.id}>
-                {s.status === "approved" ? "✓ Approved" : "✗ Rejected"}: {KIND_LABEL[s.kind]} “
-                {s.extracted.title}” from {s.from}
+                {DECIDED_LABEL[s.status] ?? s.status}: {KIND_LABEL[s.kind]} “{s.extracted.title}” from{" "}
+                {s.from}
               </li>
             ))}
           </ul>

@@ -377,6 +377,35 @@ test("clashes show a badge and a list, and can be accepted (CON-2, CON-4)", asyn
   await apiSend(context, "DELETE", `/api/v1/events/${b}`);
 });
 
+test("skipped events are hidden until the Skipped chip shows them (intent 0011, TID-3, TID-4)", async ({
+  page,
+  context,
+}, info) => {
+  const monday = isolatedWeek(0, info.project.name);
+  const title = `Skipped check ${RUN}`;
+  const id = await addEvent(context, {
+    title,
+    category: "soccer",
+    start: toronto(addDays(monday, 2), "17:00"),
+    end: toronto(addDays(monday, 2), "18:00"),
+  });
+  await apiSend(context, "POST", `/api/v1/events/${id}/skip`, { skip: true });
+  await openWeek(page, monday);
+  const chip = page.getByRole("button", { name: /^⏭ Skipped/ });
+  await expect(chip).toHaveAttribute("aria-pressed", "false");
+  await expect(chip).toHaveText("⏭ Skipped (1)");
+  await expect(calEvent(page, title)).toHaveCount(0);
+
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await expect(calEvent(page, title)).toBeVisible();
+  // Remembered on this device.
+  await page.reload();
+  await expect(calEvent(page, title)).toBeVisible();
+  await page.getByRole("button", { name: /^⏭ Skipped/ }).click();
+  await expect(calEvent(page, title)).toHaveCount(0);
+});
+
 test("the week view is usable at 375 px wide (CAL-2, NFR-5)", async ({ page, context }, info) => {
   const monday = isolatedWeek(0, info.project.name);
   const title = `Narrow ${RUN}`;
