@@ -1,5 +1,5 @@
 # Plan: Past suggestions clear, skipped events hide
-Status: draft (2026-10-03), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-03, in chat: "Approve, defaults"), with [spec.md](spec.md).
 
 Order: one small PR; no schema or infra change.
 
@@ -23,4 +23,4 @@ None.
 - The agenda shows no skipped rows until the toggle is on.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved. T1 being built.

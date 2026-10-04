@@ -1,5 +1,5 @@
 # Intent: Past suggestions clear, skipped events hide
-Status: draft (2026-10-03). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-03, in chat: "Approve, defaults"). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "for email suggestions, if it's in the past, clear it"

@@ -1,5 +1,5 @@
 # Spec: Past suggestions clear, skipped events hide
-Status: draft (2026-10-03). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-03, in chat: "Approve, defaults"). Written by Claude from [intent.md](intent.md).
 
 Read with 0001 (EML-2, EML-3, CAL-3, CON-4), 0004 (ICAL-1, ICAL-5,
 IEML-1) and 0008 (EMS-2). IDs here: TID (tidier lists).
