@@ -1,6 +1,7 @@
 # Spec: The workflow, written into the repo and enforced
-Status: draft (2026-10-03). Written by Claude from [intent.md](intent.md),
-using its defaults until the owner answers.
+Status: approved (owner, 2026-10-03, in chat: "approved"). Written by
+Claude from [intent.md](intent.md), with its defaults; W-1..W-4 accepted
+with the recommendations.
 
 IDs here: WF (the written workflow), VER (the check command), GH (git
 hooks), CCH (Claude Code hooks), CIG (CI gates), PRO (procedures), WSEC

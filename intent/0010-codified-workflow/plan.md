@@ -1,5 +1,5 @@
 # Plan: The workflow, written into the repo and enforced
-Status: draft (2026-10-03), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-03, in chat), with [spec.md](spec.md).
 
 Order: the written workflow and the check command first (useful on their
 own), then the local hooks, then the CI gates, which only make sense once
@@ -42,4 +42,4 @@ is W4–W5, opened with `Intent: 0010` once this spec is approved.
 - Claude can't `gh pr merge` a PR whose checks aren't green.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-03. W1–W3 in progress.

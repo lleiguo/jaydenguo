@@ -1,5 +1,6 @@
 # Intent: The workflow, written into the repo and enforced
-Status: draft (2026-10-03). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-03, in chat: "approved"), with the
+defaults for questions 1–4. Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "What would be the best way to codify the workflow and make sure Claude
