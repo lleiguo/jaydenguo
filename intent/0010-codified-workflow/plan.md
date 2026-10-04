@@ -42,30 +42,29 @@ is W4–W5, opened with `Intent: 0010` once this spec is approved.
 - Claude can't `gh pr merge` a PR whose checks aren't green.
 
 ## 5. Status
-Approved 2026-10-03.
+Approved 2026-10-03. **W1–W6 done**: docs #92, W1–W3 #93, W4–W5 #94
+(merged 2026-10-04); W6 is in Claude's local memory.
 
-- **SP-W1 done:** `pnpm verify` takes 37 s on the owner's Mac, so the
-  pre-push hook runs all of it (no changed-files mode).
-- **W1–W3 built** (PR 1). Departures from the spec:
-  - The migration rule (GH-4) runs in a `commit-msg` hook, not
-    `pre-commit`, because it reads the commit message.
-  - VER-3 also covers ESLint and `tsc`: local build output and
-    `.claude/worktrees` are ignored there too, not just in Prettier.
-  - CCH-3 also blocks `git commit -n`, and changing `core.hooksPath`
-    from the shell.
-- **W1–W3:** PR #93.
-- **W4–W5 built** (PR 2). Departures from the spec:
-  - The intent and secrets gates are a separate workflow, "PR gates",
-    not jobs in CI. That way editing a PR description re-runs only the
-    gates (CI doesn't run on `edited`). Deploy still waits only for CI
-    on `main`; the gates guard the merge (Claude's merge hook needs every
-    check green).
-  - Intents from before 0010 have no `Status:` line in their spec and
-    plan, so the gate reads those from the README table.
-  - gitleaks is downloaded from its release (pinned, checksum checked),
-    not taken from the gitleaks GitHub Action.
-- **O-2 note:** the denylist should hold names that must never appear,
-  like teammates, coaches, schools and Jayden's brother. "Jayden" itself
-  is in the repo's name and in code, so listing it would fail every PR.
-- **SP-W2:** checked after PR 1 merges.
-- **Next:** W6 (memory to pointers) after both PRs merge.
+- **SP-W1:** `pnpm verify` takes 37 s on the owner's Mac, so the
+  pre-push hook runs all of it.
+- **SP-W2:** a fresh Claude session in a worktree from `main` had its
+  `--no-verify` command blocked by the guard hook. Claude Code on the web
+  isn't checked yet; it loads the same `.claude/settings.json`.
+- **First live runs:** the pre-push hook refused two of Claude's own
+  pushes for #93 (a failing test, then a type error) before CI saw them.
+  The PR gates passed on #94.
+- **Incident while building:** a hook test that ran inside pre-push
+  inherited git's `GIT_DIR`. Its scratch `git init` marked the shared
+  repository bare for about two minutes, breaking git in every worktree
+  until it was reset. The tests now drop `GIT_*` variables (#93).
+- **Departures from the spec:**
+  - The migration rule (GH-4) is a `commit-msg` hook, since it reads the
+    message.
+  - VER-3 also covers ESLint and `tsc`.
+  - CCH-3 also blocks `git commit -n` and `core.hooksPath` changes.
+  - The PR gates are a separate workflow that also runs on `edited`.
+  - Older intents' status comes from the README table.
+  - gitleaks is a pinned release with its checksum checked, not the
+    gitleaks GitHub Action.
+- **Owner:** add the `PERSONAL_DATA_DENYLIST` secret (O-2). Leave out
+  "Jayden". `brew install gitleaks` (O-3) is optional.
