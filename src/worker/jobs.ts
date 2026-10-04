@@ -5,6 +5,7 @@ import { backupJob } from "./backup";
 import type { JobContext } from "./context";
 import { removeCredentialJob, rotateKeysJob, testCredentialJob } from "./credentials";
 import { seedJob } from "./seed";
+import { senderCheckJob } from "./sender-check";
 import { smokeJob, syncJob } from "./sync";
 import { tennisAcceptanceJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
 import { videoReviewJob } from "./video/review";
@@ -39,6 +40,10 @@ export const jobs: Record<string, Job> = {
   sync: {
     description: "Sync sources: sync <source-id | all> [manual | scheduled]",
     run: syncJob,
+  },
+  "gmail:check": {
+    description: "Which allowed email senders had no email lately: gmail:check <source-id>",
+    run: senderCheckJob,
   },
   smoke: {
     description: "Live check of one source without saving: smoke <source-id>",

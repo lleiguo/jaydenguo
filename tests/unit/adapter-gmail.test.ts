@@ -73,6 +73,34 @@ describe("gmail adapter", () => {
 });
 
 describe("email extraction", () => {
+  it("cuts text that runs past its limit instead of failing the email", () => {
+    const long = "word ".repeat(200);
+    const parsed = extractionSchema.parse({
+      suggestions: [
+        {
+          kind: "new",
+          target: null,
+          title: long,
+          date: null,
+          startTime: null,
+          endTime: null,
+          location: long,
+          category: "other",
+          notes: long,
+          quote: long,
+          confidence: { overall: "high", title: "high", date: "high", time: "high", location: "high" },
+        },
+      ],
+    });
+    const [s] = parsed.suggestions;
+    expect(s.title.length).toBeLessThanOrEqual(200);
+    expect(s.location!.length).toBeLessThanOrEqual(300);
+    expect(s.notes!.length).toBeLessThanOrEqual(500);
+    expect(s.quote.length).toBeLessThanOrEqual(400);
+    expect(s.quote.endsWith("…")).toBe(true);
+    expect(extractionSchema.safeParse({ suggestions: [{ ...s, quote: "" }] }).success).toBe(false);
+  });
+
   const email = normaliseGmail(raw, ctx({ senders: ["*@club.example"], labels: [] })).emails![0];
 
   it("sends the email, the time zone and labelled upcoming events", () => {

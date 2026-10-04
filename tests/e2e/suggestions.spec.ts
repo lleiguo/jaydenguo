@@ -30,6 +30,9 @@ test("allowed emails become suggestions, and an approved one lands on the calend
 
   const card = page.getByTestId("source").filter({ has: page.getByRole("heading", { name }) });
   await expect(card).toContainText("Reads only: *@*.club.example, label Jayden");
+  // Saving checks the senders: these have email, so no warning.
+  await expect(card).not.toContainText("Checking the senders", { timeout: 30_000 });
+  await expect(card.getByTestId("sender-check")).toHaveCount(0);
   await card.getByRole("button", { name: "Refresh" }).click();
   await expect(card).toContainText("2 added", { timeout: 30_000 });
 
@@ -53,6 +56,19 @@ test("allowed emails become suggestions, and an approved one lands on the calend
   await mine.getByRole("button", { name: "Reject" }).click();
   await expect(page.getByText("Rejected.")).toBeVisible();
   await expect(mine).toHaveCount(0);
+
+  // A misspelt sender added later is pointed out.
+  await page.goto("/settings/sources");
+  await card.getByRole("button", { name: "Senders" }).click();
+  const senders = card.getByRole("form", { name: "Senders" });
+  await expect(senders.getByLabel(/Senders to read/)).toHaveValue("*@*.club.example");
+  await senders.getByLabel(/Senders to read/).fill("*@*.club.example\n*@*.clubb.example");
+  await senders.getByRole("button", { name: "Save" }).click();
+  await expect(card).toContainText("Reads only: *@*.club.example, *@*.clubb.example, label Jayden");
+  await expect(card.getByTestId("sender-check")).toContainText(
+    "No email in the last 30 days from *@*.clubb.example. Check the spelling.",
+    { timeout: 30_000 },
+  );
 
   // It's on the calendar (June 2028, away from the calendar tests' weeks).
   const res = await page.request.get("/api/v1/events?from=2028-06-12T00:00:00Z&to=2028-06-19T00:00:00Z");

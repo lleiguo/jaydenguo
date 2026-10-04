@@ -25,6 +25,9 @@ describe("reading an email (ERD-2, ERD-3)", () => {
       true,
     );
     expect(summarySchema.safeParse({ pick: null, summary: "None fits.", others: [] }).success).toBe(true);
-    expect(summarySchema.safeParse({ pick: 1, summary: "x".repeat(1201), others: [] }).success).toBe(false);
+    // A summary that runs long is cut, not refused.
+    expect(summarySchema.parse({ pick: 1, summary: "x".repeat(1300), others: [] }).summary).toHaveLength(
+      1200,
+    );
   });
 });

@@ -107,6 +107,15 @@ export const updateSourceInput = z.object({
   categoryMapping: mappingSchema.optional(),
 });
 
+// The sender check on an email source (gmail:check): which allowed senders
+// and labels had no email in the last 30 days.
+export type SourceCheck = {
+  state: "checking" | "done" | "failed";
+  checkedAt: string | null;
+  unmatched: string[];
+  error?: string;
+};
+
 export type RunView = {
   id: string;
   trigger: string;
@@ -169,6 +178,7 @@ export async function listSources(db: Db) {
       categoryMapping: parseMapping(s.categoryMapping),
       lastSuccessAt: s.lastSuccessAt?.toISOString() ?? null,
       consecutiveFailures: s.consecutiveFailures,
+      senderCheck: (s.senderCheck as SourceCheck | null) ?? null,
       lastRun: last ? runView(last) : null,
       running: !!last && last.status === "running" && Date.now() - last.startedAt.getTime() < STALE_RUN_MS,
       nextRefreshAt:
@@ -226,15 +236,41 @@ export async function updateSource(db: Db, id: string, input: z.infer<typeof upd
   if (input.config?.portalUrl !== undefined && !portalFrom(input.config.portalUrl))
     throw new HttpError(400, "paste the parent portal link (https://portals.veracross.com/…/parent)");
   // Config is merged, so saving one setting keeps the others.
-  const [current] = await db.select({ config: sources.config }).from(sources).where(eq(sources.id, id));
+  const [current] = await db
+    .select({ kind: sources.kind, config: sources.config })
+    .from(sources)
+    .where(eq(sources.id, id));
   if (!current) throw new HttpError(404, "not found");
   const config = input.config
     ? { ...((current.config ?? {}) as Record<string, unknown>), ...input.config }
     : undefined;
+  if (current.kind === "gmail" && config) {
+    const c = config as { senders?: string[]; labels?: string[] };
+    if (!c.senders?.length && !c.labels?.length)
+      throw new HttpError(400, "add at least one sender or Gmail label to read");
+  }
   await db
     .update(sources)
     .set({ ...input, ...(config && { config }) })
     .where(eq(sources.id, id));
+  // A changed allow-list is checked again.
+  return {
+    sendersChanged:
+      current.kind === "gmail" && (input.config?.senders !== undefined || input.config?.labels !== undefined),
+  };
+}
+
+// Starts the sender check after an email source's allow-list is saved; the
+// page shows "Checking…" until the worker writes the result.
+export async function startSenderCheck(db: Db, id: string, launcher: JobLauncher) {
+  const checking: SourceCheck = { state: "checking", checkedAt: null, unmatched: [] };
+  await db.update(sources).set({ senderCheck: checking }).where(eq(sources.id, id));
+  try {
+    await launcher.start(["gmail:check", id]);
+  } catch {
+    const failed: SourceCheck = { ...checking, state: "failed", error: "Couldn't start the sender check." };
+    await db.update(sources).set({ senderCheck: failed }).where(eq(sources.id, id));
+  }
 }
 
 export async function sourceRuns(db: Db, id: string): Promise<RunView[]> {

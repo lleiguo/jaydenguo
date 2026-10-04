@@ -26,13 +26,15 @@ type Source = {
   name: string;
   enabled: boolean;
   credentialLabel: string | null;
-  config: { entry?: EntrySettings } | null;
+  config: { entry?: EntrySettings; senders?: string[]; labels?: string[] } | null;
   categoryMapping: Mapping;
   lastSuccessAt: string | null;
   lastRun: Run | null;
   running: boolean;
   nextRefreshAt: string | null;
+  senderCheck: SenderCheck | null;
 };
+type SenderCheck = { state: "checking" | "done" | "failed"; unmatched: string[]; error?: string };
 type Mapping = {
   default: string;
   owners?: string[];
@@ -118,7 +120,7 @@ export function SourcesPanel() {
   }, [load]);
 
   // Live progress while anything runs (SYNC-2).
-  const anyRunning = sources?.some((s) => s.running) ?? false;
+  const anyRunning = sources?.some((s) => s.running || s.senderCheck?.state === "checking") ?? false;
   const [watchUntil, setWatchUntil] = useState(0);
   useEffect(() => {
     if (!anyRunning && Date.now() > watchUntil) return;
@@ -197,6 +199,7 @@ function SourceCard({
   const [message, setMessage] = useState<string | null>(null);
   const [entryOpen, setEntryOpen] = useState(false);
   const [mappingOpen, setMappingOpen] = useState(false);
+  const [sendersOpen, setSendersOpen] = useState(false);
   const failed = s.lastRun?.status === "failed";
   const status = s.running ? "Syncing…" : failed ? "Failed" : s.lastRun ? "OK" : "Not synced yet";
   const tooSoon = !!s.nextRefreshAt && new Date(s.nextRefreshAt) > new Date();
@@ -237,16 +240,13 @@ function SourceCard({
       {s.kind === "gmail" && (
         <div className="text-neutral-600 dark:text-neutral-400">
           Reads only:{" "}
-          {[
-            ...((s.config as { senders?: string[] }).senders ?? []),
-            ...((s.config as { labels?: string[] }).labels ?? []).map((l) => `label ${l}`),
-          ].join(", ")}{" "}
-          ·{" "}
+          {[...(s.config?.senders ?? []), ...(s.config?.labels ?? []).map((l) => `label ${l}`)].join(", ")} ·{" "}
           <a href="/settings/suggestions" className="underline">
             suggestions
           </a>
         </div>
       )}
+      {s.kind === "gmail" && s.senderCheck && <SenderCheckNote check={s.senderCheck} />}
       {failed && s.lastRun?.errorMessage && (
         <p className="text-red-700 dark:text-red-400" data-testid="source-error">
           {s.lastRun.errorMessage}
@@ -279,6 +279,15 @@ function SourceCard({
         >
           Categories and owners
         </button>
+        {s.kind === "gmail" && (
+          <button
+            className="rounded border px-2 py-1"
+            aria-expanded={sendersOpen}
+            onClick={() => setSendersOpen(!sendersOpen)}
+          >
+            Senders
+          </button>
+        )}
         {s.kind === "tennis_tc" && (
           <button
             className="rounded border px-2 py-1"
@@ -307,6 +316,15 @@ function SourceCard({
         </p>
       )}
       {entryOpen && <EntryForm s={s} onSaved={() => setEntryOpen(false)} />}
+      {sendersOpen && (
+        <SendersForm
+          s={s}
+          onSaved={() => {
+            setSendersOpen(false);
+            onSaved();
+          }}
+        />
+      )}
       {mappingOpen && (
         <MappingForm
           s={s}
@@ -434,6 +452,76 @@ function MappingForm({ s, people, onSaved }: { s: Source; people: Person[]; onSa
       <p className="text-neutral-600 dark:text-neutral-400">
         Changes reach the calendar at this source&apos;s next sync. Events you changed by hand keep your
         choice.
+      </p>
+      {error && <p className="text-red-700 dark:text-red-400">{error}</p>}
+      <button className="self-start rounded border px-2 py-1">Save</button>
+    </form>
+  );
+}
+
+// After an email source's allow-list is saved: senders and labels with no
+// email in the last 30 days, which is usually a typo.
+function SenderCheckNote({ check }: { check: SenderCheck }) {
+  if (check.state === "checking")
+    return <p className="text-neutral-600 dark:text-neutral-400">Checking the senders…</p>;
+  if (check.state === "failed")
+    return (
+      <p className="text-amber-700 dark:text-amber-400" data-testid="sender-check">
+        Couldn&apos;t check the senders{check.error ? `: ${check.error}` : "."}
+      </p>
+    );
+  if (!check.unmatched.length) return null;
+  return (
+    <p className="text-amber-700 dark:text-amber-400" data-testid="sender-check">
+      ⚠ No email in the last 30 days from {check.unmatched.join(", ")}. Check the spelling.
+    </p>
+  );
+}
+
+const SENDERS_HELP =
+  "Senders to read (one per line; *@club.ca for a whole club, *@*.club.ca to include its subdomains)";
+
+// Changing an email source's senders and labels; saving checks them again.
+function SendersForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      aria-label="Senders"
+      className="mt-2 flex flex-col gap-2 rounded border border-dashed p-2"
+      onSubmit={async (ev) => {
+        ev.preventDefault();
+        const f = new FormData(ev.currentTarget);
+        const res = await fetch(`/api/v1/sources/${s.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            config: { senders: splitList(f.get("senders")), labels: splitList(f.get("labels")) },
+          }),
+        });
+        if (!res.ok) return setError((await res.json().catch(() => ({}))).error ?? "Couldn't save.");
+        setError(null);
+        onSaved();
+      }}
+    >
+      <label className="flex flex-col">
+        {SENDERS_HELP}
+        <textarea
+          name="senders"
+          rows={3}
+          className="rounded border px-2 py-1 font-mono text-xs"
+          defaultValue={(s.config?.senders ?? []).join("\n")}
+        />
+      </label>
+      <label className="flex flex-col">
+        Gmail labels to read (comma-separated)
+        <input
+          name="labels"
+          className="rounded border px-2 py-1"
+          defaultValue={(s.config?.labels ?? []).join(", ")}
+        />
+      </label>
+      <p className="text-neutral-600 dark:text-neutral-400">
+        The next sync reads with the new list. Suggestions already made stay.
       </p>
       {error && <p className="text-red-700 dark:text-red-400">{error}</p>}
       <button className="self-start rounded border px-2 py-1">Save</button>
@@ -675,7 +763,7 @@ function AddSource({
       {kind === "gmail" && (
         <>
           <label className="flex flex-col">
-            Senders to read (one per line; *@club.ca for a whole club, *@*.club.ca to include its subdomains)
+            {SENDERS_HELP}
             <textarea
               name="senders"
               rows={3}
