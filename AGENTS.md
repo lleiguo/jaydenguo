@@ -27,18 +27,19 @@ catch it for you.
 ## The lifecycle
 
 1. **Intent, spec, plan.** Write them with `Status: draft`, in one docs
-   PR. The owner approves them in chat or on the PR; set each `Status:` to
-   `approved (owner, <date>, …)` and update the README table. _Judgement;
-   from intent 0010 W4, CI checks the status._
+   PR: follow [new-intent](.claude/skills/new-intent/SKILL.md). The owner
+   approves them in chat or on the PR; set each `Status:` to
+   `approved (owner, <date>, …)` and update the README table. _CI (PR
+   gates / intent): code for an intent whose docs aren't approved fails._
 2. **Build** only what the approved docs say. When the build departs from
    the spec or plan, update that file in the same commit. _Judgement; CI
-   warns when code changes and the plan doesn't (W4)._
+   warns when code changes and the plan doesn't._
 3. **New scope** after approval gets a new intent folder, not an edit to
    an approved one. _Judgement._
 4. **What needs an intent:** any change to behaviour, the database schema
    or `infra/`. Fixes and chores (a message, an icon, a build number) can
    skip one: the PR says `Intent: none — <reason>`, and must not touch
-   `db/schema/`, `db/migrations/` or `infra/`. _CI, from W4._
+   `db/schema/`, `db/migrations/` or `infra/`. _CI (PR gates / intent)._
 
 ## Rules for code
 
@@ -52,9 +53,9 @@ catch it for you.
   `pnpm db:generate --name <what>`. Never edit generated SQL in
   `db/migrations/` by hand. _Claude hook; commit-msg hook._
 - **No secrets or real personal data** about Jayden, his brother or other
-  players, coaches and schools. Fixtures are scrubbed. _gitleaks in the
-  pre-commit hook when installed, and in CI from W4; a name denylist in
-  CI from W4._
+  players, coaches and schools. Fixtures are scrubbed. _gitleaks in CI
+  (PR gates / secrets) and in the pre-commit hook when installed; CI
+  also fails on names from the owner's private denylist._
 - **Work in a worktree from `origin/main`** (`git worktree add`), not by
   switching the branch of a shared checkout: other sessions use it.
   _Judgement._
@@ -62,7 +63,8 @@ catch it for you.
 ## Shipping
 
 The owner's standing decision (2026-10-03, intent 0010 question 3): once
-the docs are approved, any agent ships without asking at each step.
+the docs are approved, any agent ships without asking at each step. The
+full procedure is [ship](.claude/skills/ship/SKILL.md); in short:
 
 1. Build in a worktree; `pnpm verify` (and `verify:full` if the change
    touches the database) passes.
