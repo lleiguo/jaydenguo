@@ -34,6 +34,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "dist/**",
+    // Local build output and agent worktrees (intent 0010, VER-3).
+    ".claude/worktrees/**",
+    "ios/build/**",
+    "ios/DerivedData/**",
   ]),
 ]);
 

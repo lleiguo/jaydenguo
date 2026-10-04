@@ -1,0 +1,11 @@
+#!/bin/sh
+# Runs before every commit (intent 0010, GH-4): looks for secrets in the
+# staged changes when gitleaks is installed. CI always runs gitleaks.
+PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --pre-commit --staged --redact --no-banner || {
+    echo "pre-commit: gitleaks found a possible secret in the staged changes." >&2
+    exit 1
+  }
+fi

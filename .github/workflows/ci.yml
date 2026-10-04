@@ -71,12 +71,10 @@ jobs:
       # limit; fail fast instead, so a re-run can pick another mirror.
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg
         timeout-minutes: 5
-      - run: pnpm format:check
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - name: openapi.json matches the API (intent 0004, API-4)
-        run: pnpm openapi --check
-      - run: pnpm test
+      # format, lint, typecheck, openapi.json matches the API (intent 0004,
+      # API-4), unit tests: the same command agents run before pushing
+      # (intent 0010, VER-2).
+      - run: pnpm verify
       # Integration tests drive Chromium too (the Commit Swimming adapter).
       # The browser is cached per lockfile; its system packages install each run.
       - uses: actions/cache@v4

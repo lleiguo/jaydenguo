@@ -1,0 +1,12 @@
+#!/bin/sh
+# Generated SQL is never edited by hand (intent 0010, GH-4). A commit that
+# changes db/migrations/*.sql must also change db/schema/, or say in its
+# message that the SQL came from `pnpm db:generate`.
+staged=$(git diff --cached --name-only)
+if printf '%s\n' "$staged" | grep -q '^db/migrations/.*\.sql$' &&
+  ! printf '%s\n' "$staged" | grep -q '^db/schema/' &&
+  ! grep -q 'db:generate' "$1"; then
+  echo "commit-msg: db/migrations/*.sql changed without db/schema/." >&2
+  echo "Edit db/schema/ and run pnpm db:generate --name <what>, or say 'db:generate' in the message if the SQL came from it." >&2
+  exit 1
+fi

@@ -1,13 +1,11 @@
 @AGENTS.md
 
-# Project notes
+# Claude only
 
-- Requirements and decisions live in `intent/` (intent → spec → plan). Read
-  `intent/0001-jayden-hub/spec.md` and `plan.md` before changing behaviour.
-  When the build departs from the plan, update `plan.md` in the same commit.
-- Commands: `pnpm lint`, `pnpm typecheck`, `pnpm test` (unit),
-  `pnpm test:int` (needs `DATABASE_URL`), `pnpm build`, `pnpm test:e2e`.
-- Schema changes: edit `db/schema/`, then `pnpm db:generate --name <what>`.
-  Never edit generated SQL in `db/migrations/` by hand.
-- Never commit secrets or real personal data about Jayden or other players
-  (fixtures must be scrubbed).
+- The workflow, commands and rules are in `AGENTS.md` above; they apply to
+  Claude like any agent. `.claude/settings.json` hooks enforce some of
+  them: Prettier on each edited file, no edits to `db/migrations/`, no
+  skipping git hooks or pushing to `main`, and `gh pr merge` only when
+  every check has passed.
+- Claude's memory holds notes about the owner's Mac, not the workflow. If
+  memory and `AGENTS.md` disagree, `AGENTS.md` wins.

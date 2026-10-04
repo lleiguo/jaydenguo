@@ -42,4 +42,16 @@ is W4–W5, opened with `Intent: 0010` once this spec is approved.
 - Claude can't `gh pr merge` a PR whose checks aren't green.
 
 ## 5. Status
-Approved 2026-10-03. W1–W3 in progress.
+Approved 2026-10-03.
+
+- **SP-W1 done:** `pnpm verify` takes 37 s on the owner's Mac, so the
+  pre-push hook runs all of it (no changed-files mode).
+- **W1–W3 built** (PR 1). Departures from the spec:
+  - The migration rule (GH-4) runs in a `commit-msg` hook, not
+    `pre-commit`, because it reads the commit message.
+  - VER-3 also covers ESLint and `tsc`: local build output and
+    `.claude/worktrees` are ignored there too, not just in Prettier.
+  - CCH-3 also blocks `git commit -n`, and changing `core.hooksPath`
+    from the shell.
+- **SP-W2:** checked after PR 1 merges.
+- **Next:** W4–W5 (PR 2).
