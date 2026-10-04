@@ -27,6 +27,9 @@ export const sources = pgTable("sources", {
   lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
   // Three in a row sends the owner an email (SYNC-4).
   consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+  // Email sources: which allowed senders and labels had no email lately,
+  // checked when the list is saved (SourceCheck in src/server/sources.ts).
+  senderCheck: jsonb("sender_check"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

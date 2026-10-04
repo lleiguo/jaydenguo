@@ -3,7 +3,9 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 // A sliver of the Gmail API (plan M5.8) with made-up messages, served by the
 // fake Google (fake-oidc.ts) and integration tests. It ignores the search
 // query and lists every message, so the adapter's own allow-list check is
-// tested too: the newsletter isn't from an allowed sender or label.
+// tested too: the newsletter isn't from an allowed sender or label. The
+// sender check (one result per search) does read the from: and label:
+// terms, so a misspelt sender finds nothing.
 
 const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64url");
 const headers = (from: string, subject: string) => [
@@ -63,6 +65,17 @@ export const GMAIL_LABELS = [
   { id: "Label_7", name: "Jayden" },
 ];
 
+// The messages a sender check's search finds: `{from:x label:y} newer_than:30d`.
+function checked(q: string) {
+  const from = [...q.matchAll(/from:"?([^\s"}]+)/g)].map((m) => m[1].toLowerCase());
+  const labels = [...q.matchAll(/label:"?([^\s"}]+)/g)].map((m) => m[1].toLowerCase());
+  const labelIds = GMAIL_LABELS.filter((l) => labels.includes(l.name.toLowerCase())).map((l) => l.id);
+  return GMAIL_MESSAGES.filter((m) => {
+    const sender = m.payload.headers.find((h) => h.name === "From")?.value.toLowerCase() ?? "";
+    return from.some((f) => sender.includes(f)) || m.labelIds.some((id) => labelIds.includes(id));
+  }).map((m) => ({ id: m.id, threadId: m.threadId }));
+}
+
 export function createGmailFake(isToken: (token: string) => boolean) {
   const requests: string[] = [];
   return {
@@ -81,6 +94,8 @@ export function createGmailFake(isToken: (token: string) => boolean) {
       }
       const rest = url.pathname.slice("/gmail/v1/users/me/".length);
       if (rest === "labels") send(200, { labels: GMAIL_LABELS });
+      else if (rest === "messages" && url.searchParams.get("maxResults") === "1")
+        send(200, { messages: checked(url.searchParams.get("q") ?? "").slice(0, 1) });
       else if (rest === "messages")
         send(200, { messages: GMAIL_MESSAGES.map((m) => ({ id: m.id, threadId: m.threadId })) });
       else {

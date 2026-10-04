@@ -37,7 +37,10 @@ const WIDE_CHARS = 1500;
 export const summarySchema = z.object({
   // The email the question means, by its number in the list; null if none fits.
   pick: z.number().int().nullable(),
-  summary: z.string().max(1200).describe("The summary, or one line saying none fits"),
+  summary: z
+    .string()
+    .describe("The summary, or one line saying none fits")
+    .overwrite((s) => (s.length > 1200 ? `${s.slice(0, 1199).trimEnd()}…` : s)),
   // Other emails that also fit, by number.
   others: z.array(z.number().int()).max(4),
 });

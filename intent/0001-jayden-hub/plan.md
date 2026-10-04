@@ -609,6 +609,19 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   written. `EMAIL_LLM=fake` stands in for Claude locally and in tests.
   The next migration is 0014.
 
+  Added 2026-10-03, after a typo (`verocross` for `veracross`) left the
+  owner's source finding nothing for days: the senders and labels can be
+  changed later ("Senders" on the source card, PATCH `config`; at least
+  one must stay), and saving them, or adding the source, starts the
+  worker job `gmail:check`, which asks Gmail once per sender or label
+  whether anything came in the last 30 days (message IDs only, nothing
+  opened; at most 20) and stores the misses in `sources.sender_check`
+  (migration 0031). The card shows "Checking the senders…", then "No email
+  in the last 30 days from …. Check the spelling." The model's title,
+  place, notes and quote are now cut to their limits instead of failing
+  the whole email when Gemini runs long (it ignores the schema's length
+  limits); Cookie's email summary (0009) likewise.
+
 - M5.9 Google Calendar copy: Settings → General "Copy to Google Calendar".
   It uses its own Google grant with only `calendar.app.created` (feature
   `calendar_copy`), so Google itself only lets the site write to calendars

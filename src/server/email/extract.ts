@@ -13,12 +13,20 @@ export const EMAIL_PROMPT_VERSION = "email-1";
 
 const confidence = z.enum(["high", "medium", "low"]);
 
+// Gemini doesn't keep to a length limit in the schema, so text that runs long
+// is cut to fit instead of failing the whole email.
+const clipped = (max: number) =>
+  z
+    .string()
+    .describe(`at most ${max} characters`)
+    .overwrite((s) => (s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s));
+
 export const suggestionSchema = z.object({
   kind: z.enum(["new", "change", "cancel"]),
   // For a change or cancellation: the upcoming event it's about, by its
   // label in the list the model was given (e.g. "E3"), or null.
   target: z.string().nullable(),
-  title: z.string().min(1).max(200),
+  title: clipped(200).pipe(z.string().min(1)),
   date: z.iso.date().nullable().describe("YYYY-MM-DD; for a change, the new date"),
   startTime: z
     .string()
@@ -29,10 +37,12 @@ export const suggestionSchema = z.object({
     .string()
     .regex(/^\d{2}:\d{2}$/)
     .nullable(),
-  location: z.string().max(300).nullable(),
+  location: clipped(300).nullable(),
   category: z.enum(CATEGORIES),
-  notes: z.string().max(500).nullable(),
-  quote: z.string().min(1).max(400).describe("The sentence(s) from the email this comes from, word for word"),
+  notes: clipped(500).nullable(),
+  quote: clipped(400)
+    .pipe(z.string().min(1))
+    .describe("The sentence(s) from the email this comes from, word for word, at most 400 characters"),
   confidence: z.object({
     overall: confidence,
     title: confidence,

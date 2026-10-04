@@ -175,6 +175,35 @@ export async function searchGmail(token: string, q: string, max: number): Promis
   return { messages, labelIds };
 }
 
+// How far back the sender check looks, and how many senders and labels it
+// tries (each is one Gmail search).
+export const CHECK_DAYS = 30;
+const CHECK_MAX = 20;
+
+// The allowed senders and labels with no email in the last CHECK_DAYS:
+// usually a typo. Only message IDs are listed, never read.
+export async function unmatchedSenders(token: string, c: GmailConfig): Promise<string[]> {
+  const terms = [
+    ...c.senders.map((s) => ({
+      shown: s,
+      q: gmailQuery({ senders: [s], labels: [], lookbackDays: CHECK_DAYS }),
+    })),
+    ...c.labels.map((l) => ({
+      shown: `label ${l}`,
+      q: gmailQuery({ senders: [], labels: [l], lookbackDays: CHECK_DAYS }),
+    })),
+  ].slice(0, CHECK_MAX);
+  const none: string[] = [];
+  for (const t of terms) {
+    const list = await gmail<{ messages?: { id: string }[] }>(
+      token,
+      `messages?maxResults=1&q=${encodeURIComponent(t.q)}`,
+    );
+    if (!list.messages?.length) none.push(t.shown);
+  }
+  return none;
+}
+
 async function gmail<T>(token: string, path: string): Promise<T> {
   let res: Response;
   try {

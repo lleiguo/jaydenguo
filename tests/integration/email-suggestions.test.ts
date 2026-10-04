@@ -21,6 +21,8 @@ import { runMigrations } from "@/server/db/migrate";
 import { approveSuggestion, listSuggestions, rejectSuggestion } from "@/server/email/suggestions";
 import { createLogger } from "@/server/log";
 import { COOKIE_READ_GAP_MS } from "@/server/sync/policy";
+import { startSenderCheck, updateSource } from "@/server/sources";
+import { checkSenders } from "@/worker/sender-check";
 import { syncSource } from "@/worker/sync";
 import { createGmailFake } from "../e2e/support/fake-gmail";
 
@@ -286,5 +288,45 @@ describe("email suggestions", () => {
       status: "succeeded",
       added: 2,
     });
+  });
+
+  it("finds the allowed senders and labels with no email lately, and checks again when they change", async () => {
+    await db
+      .update(sources)
+      .set({ config: { senders: ["*@*.club.example", "*@*.clubb.example"], labels: ["Jayden", "Ethan"] } })
+      .where(eq(sources.id, sourceId));
+    const started: string[][] = [];
+    await startSenderCheck(db, sourceId, { start: async (args) => void started.push(args) });
+    expect(started).toEqual([["gmail:check", sourceId]]);
+    const [checking] = await db.select().from(sources).where(eq(sources.id, sourceId));
+    expect(checking.senderCheck).toMatchObject({ state: "checking" });
+
+    gmail.requests.length = 0;
+    const check = await checkSenders(db, sourceId, log, undefined, now);
+    expect(check).toMatchObject({ state: "done", unmatched: ["*@*.clubb.example", "label Ethan"] });
+    // Only "is there one" searches: no email was opened.
+    expect(gmail.requests.filter((r) => r.includes("maxResults=1")).length).toBeGreaterThanOrEqual(4);
+    expect(gmail.requests.some((r) => r.includes("/messages/"))).toBe(false);
+
+    // Fixing the typo: the allow-list changed, so the route checks again.
+    const { sendersChanged } = await updateSource(db, sourceId, {
+      config: { senders: ["*@*.club.example"] },
+    });
+    expect(sendersChanged).toBe(true);
+    expect(await checkSenders(db, sourceId, log, undefined, now)).toMatchObject({
+      unmatched: ["label Ethan"],
+    });
+    // Other settings don't start a check, and an empty list isn't allowed.
+    expect((await updateSource(db, sourceId, { name: "Coach emails 2" })).sendersChanged).toBe(false);
+    await expect(updateSource(db, sourceId, { config: { senders: [], labels: [] } })).rejects.toThrow(
+      /at least one sender/,
+    );
+  });
+
+  it("records a check it couldn't run in plain words", async () => {
+    const check = await checkSenders(db, sourceId, log, async () => {
+      throw new Error("boom");
+    });
+    expect(check).toMatchObject({ state: "failed", error: "Couldn't check the senders." });
   });
 });

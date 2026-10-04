@@ -8792,6 +8792,39 @@
           "count"
         ]
       },
+      "SourceCheck": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "done",
+              "failed",
+              "checking"
+            ]
+          },
+          "checkedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unmatched": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "checkedAt",
+          "unmatched"
+        ]
+      },
       "SourceCreated": {
         "type": "object",
         "properties": {
@@ -8847,6 +8880,10 @@
                 },
                 "consecutiveFailures": {
                   "type": "number"
+                },
+                "senderCheck": {
+                  "$ref": "#/components/schemas/SourceCheck",
+                  "x-nullable": true
                 },
                 "lastRun": {
                   "$ref": "#/components/schemas/RunView",
