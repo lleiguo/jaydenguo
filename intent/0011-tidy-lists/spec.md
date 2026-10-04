@@ -17,7 +17,7 @@ IEML-1) and 0008 (EMS-2). IDs here: TID (tidier lists).
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | TID-1 | A pending suggestion about a past day is cleared. | Its day: `extracted.date`, else the home-zone date of the event it targets. Past = before today in the home time zone. Cleared suggestions aren't in `GET /api/v1/suggestions`, aren't in `pending` or Today's count, and Cookie's suggestion tools don't see them. A suggestion with no day stays pending. |
-| TID-2 | Cleared suggestions show as "Past". | `?status=decided` includes them with `status: "expired"`, newest email first. The web and iPhone lists show "Past" and no actions. Approving or rejecting one answers 409 "This is already over." |
+| TID-2 | Cleared suggestions show as "Past". | `?status=decided` includes them with `status: "expired"`, newest email first. The web list shows "Past" and no actions (the iPhone list shows only waiting ones, so they just leave it). Approving or rejecting one answers 409 "This is already over." |
 
 ### 2.2 Calendar (TID)
 | ID | Requirement | Acceptance criteria |

@@ -29,6 +29,11 @@ final class CalendarStore {
     var expandedSchool: String?
     /// The agenda hides what's already over unless asked, for this visit.
     var showPast = false
+    /// Skipped events are hidden in every view until shown (intent 0011,
+    /// TID-3, TID-4); remembered on this device.
+    var showSkipped: Bool = UserDefaults.standard.bool(forKey: CalendarStore.showSkippedKey) {
+        didSet { UserDefaults.standard.set(showSkipped, forKey: Self.showSkippedKey) }
+    }
 
     private let model: AppModel
     private var loaded: (from: String, to: String)?
@@ -42,7 +47,10 @@ final class CalendarStore {
     var homeTime: HomeTime { model.homeTime }
     var isRefreshingSources: Bool { model.refreshing.contains("all") }
     var today: String { homeTime.localDate(.now) }
-    var shown: [CalendarEvent] { index?.shown(filters) ?? [] }
+    var shown: [CalendarEvent] {
+        let all = index?.shown(filters) ?? []
+        return showSkipped ? all : all.filter { !$0.isSkipped }
+    }
     var people: [Person] { index?.payload.people ?? [] }
     var closures: Set<String> { Set(index?.payload.closures ?? []) }
 
@@ -223,6 +231,7 @@ final class CalendarStore {
     // MARK: Saved filters
 
     private static let filtersKey = "calendarFilters.v1"
+    private static let showSkippedKey = "calendarShowSkipped.v1"
 
     static func loadFilters() -> CalendarFilters {
         guard let data = UserDefaults.standard.data(forKey: filtersKey),
