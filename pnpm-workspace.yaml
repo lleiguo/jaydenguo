@@ -5,3 +5,8 @@ ignoredBuiltDependencies:
 
 onlyBuiltDependencies:
   - esbuild
+
+# Patched versions of next's dependencies (pnpm audit, Oct 2026).
+overrides:
+  sharp: ">=0.35.5"
+  source-map-js: ">=1.2.2"
