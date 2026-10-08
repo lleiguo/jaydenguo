@@ -143,6 +143,10 @@ describe("tennis registrar", () => {
       expect(a).toMatchObject({ tournamentExternalId: ENTRY_FIXTURE.a, status: "entered" });
       expect(a.note).toContain("Entered in BU9 - Orange");
 
+      // His account answers whether he's entered (for a hidden entry list).
+      expect(await registrar.entryOn!(ENTRY_FIXTURE.a)).toBe("entered");
+      expect(await registrar.entryOn!(ENTRY_FIXTURE.b)).toBe("not_entered");
+
       // Switched off on the source: the job leaves entries to the owner.
       const off = await tennisRegistrar(db, { config: { entry: { autoEnter: false } } }, log);
       expect(
@@ -150,6 +154,8 @@ describe("tennis registrar", () => {
       ).toEqual({
         result: "unavailable",
       });
+      // Reading still works with automatic entry off.
+      expect(await off.entryOn!(ENTRY_FIXTURE.a)).toBe("entered");
     } finally {
       process.env.TENNIS_TC_BASE_URL = base;
       await new Promise((r) => fresh.close(r));

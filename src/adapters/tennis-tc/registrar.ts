@@ -13,6 +13,9 @@ import { USER_AGENT } from "../http";
 
 export class TcLoginError extends Error {}
 
+// What the signed-in account's entry page says about one tournament.
+export type AccountEntry = "entered" | "payment_needed" | "not_entered" | "unknown";
+
 export type EntryOutcome =
   | { result: "entered"; note?: string }
   | { result: "payment_needed"; note: string }
@@ -210,6 +213,15 @@ export function tcRegistrarClient(base: string, username: string, password: stri
   }
 
   return {
+    // Is he entered? Read from the account's entry page, for when the
+    // public entry list is hidden (once the draws are made). Never submits.
+    async entryOn(tournamentId: string): Promise<AccountEntry> {
+      const page = await entryPage(tournamentId);
+      if (parseEntryForm(page.html)) return "not_entered";
+      const status = classifyEntryPage(page.html, page.url);
+      return status.kind === "entered" ? "entered" : status.kind === "payment" ? "payment_needed" : "unknown";
+    },
+
     async enter(e: { tournamentId: string; eventName: string }): Promise<EntryOutcome> {
       const page = await entryPage(e.tournamentId);
       const form = parseEntryForm(page.html);

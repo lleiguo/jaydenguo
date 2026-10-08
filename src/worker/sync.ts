@@ -15,6 +15,7 @@ import { routesDriveTimer } from "../server/tennis/drive";
 import { tennisTestNow } from "../adapters/tennis-tc";
 import { localDate } from "../domain/time";
 import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
+import { tennisRegistrar } from "./tennis-registrar";
 import { syncRecords } from "../server/sync/apply";
 import { defaultEmailExtractor, syncEmails } from "../server/email/apply";
 import { assistantActionsJob } from "./assistant-actions";
@@ -218,7 +219,7 @@ async function runLocked(
         await runRefresh(
           { db, log, now: tennisTestNow() ?? now(), timeZone: homeTimeZone },
           { id: source.id, name: source.name, config: source.config },
-          { drive: routesDriveTimer() },
+          { drive: routesDriveTimer(), registrar: await tennisRegistrar(db, source, log) },
         );
       } catch (err) {
         log("tennis entries refresh failed", { error: err }, "WARNING");

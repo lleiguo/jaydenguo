@@ -5,10 +5,12 @@ import {
   parseEventList,
   parseEventPage,
   parseSearchResults,
+  type TcEvent,
   type TcEventPage,
   type TcSearchResult,
 } from "../../adapters/tennis-tc/entry-parse";
 import { parseBracket, parseDrawMatches, parseTournament } from "../../adapters/tennis-tc/parse";
+import type { AccountEntry } from "../../adapters/tennis-tc/registrar";
 import type { EntryStatus } from "../../domain/tennis-constants";
 import {
   ACTIVE_ENTRY,
@@ -16,8 +18,10 @@ import {
   entryPrefsOf,
   fallbackRadiusKm,
   findSelfRow,
+  nameTokens,
   pickEvent,
   searchRadiusKm,
+  statusFromAccount,
   statusFromList,
   type EntryPrefs,
 } from "../../domain/tennis-entry";
@@ -66,13 +70,40 @@ const REFRESH_REQUESTS = 150;
 
 // Enters him in one event on the site. "unavailable": the app can't do it
 // (not built yet, or no Tennis Canada login), so the owner uses the link.
+// entryOn, with a login: whether his account shows him entered, for when
+// the public entry list is hidden.
 export type Registrar = {
   enter(e: {
     tournamentId: string;
     eventNo: string;
     eventName: string;
   }): Promise<{ result: "entered" | "payment_needed" | "unavailable"; note?: string }>;
+  entryOn?(tournamentId: string): Promise<AccountEntry>;
 };
+
+const accountNote = (status: EntryStatus) =>
+  status === "payment_needed"
+    ? "Entry started on the site; payment still needed (the entry list is hidden now the draws are made)."
+    : "Entered on the site (the entry list is hidden now the draws are made).";
+
+// His account's answer per tournament, asked at most once a run.
+function accountChecker(registrar: Registrar | undefined, log: Logger) {
+  const seen = new Map<string, AccountEntry>();
+  return async (tournamentId: string): Promise<AccountEntry | null> => {
+    if (!registrar?.entryOn) return null;
+    if (!seen.has(tournamentId)) {
+      let answer: AccountEntry = "unknown";
+      try {
+        answer = await registrar.entryOn(tournamentId);
+      } catch (err) {
+        log("tennis account entry check failed", { tournament: tournamentId, error: err }, "WARNING");
+      }
+      seen.set(tournamentId, answer);
+    }
+    return seen.get(tournamentId)!;
+  };
+}
+type AccountCheck = ReturnType<typeof accountChecker>;
 
 // Leaves every entry to the owner (automatic entry switched off). The
 // worker's registrar uses the site's entry form (src/worker/tennis-registrar.ts).
@@ -121,7 +152,25 @@ async function readEvent(client: TcClient, e: Pick<EntryRow, "tournamentExternal
   return page ? parseEventPage(page.html) : null;
 }
 
-function listUpdate(e: EntryRow, page: TcEventPage, name: string, now: Date) {
+function listUpdate(
+  e: EntryRow,
+  page: TcEventPage,
+  name: string,
+  now: Date,
+  account: AccountEntry | null = null,
+) {
+  if (!page.entriesShown) {
+    // No list to read: he stays as he was, unless his account says more.
+    const status = statusFromAccount(e.status as EntryStatus, account);
+    return {
+      status,
+      reservePosition: e.reservePosition,
+      tournamentPlayerId: e.tournamentPlayerId,
+      listCheckedAt: now,
+      updatedAt: now,
+      note: status === e.status ? e.note : accountNote(status),
+    };
+  }
   const row = findSelfRow(page.entries, { name, tournamentPlayerId: e.tournamentPlayerId });
   const next = statusFromList(e.status as EntryStatus, row);
   return {
@@ -134,6 +183,15 @@ function listUpdate(e: EntryRow, page: TcEventPage, name: string, now: Date) {
       next.status === "withdrawn" ? "No longer on the entry list." : e.status === next.status ? e.note : null,
   };
 }
+
+type ListedValues = {
+  status: EntryStatus;
+  reservePosition: number | null;
+  tournamentPlayerId: string | null;
+  listCheckedAt: Date;
+  note: string;
+  updatedAt: Date;
+};
 
 // One search of the site, page by page (20 results a page).
 async function search(client: TcClient, form: Record<string, string>): Promise<TcSearchResult[]> {
@@ -168,6 +226,7 @@ async function findListed(
   client: TcClient,
   name: string,
   settings: EntrySettings,
+  account: AccountCheck,
 ): Promise<number> {
   if (!settings.postalCode) return 0;
   const today = localDate(ctx.now, ctx.timeZone);
@@ -184,6 +243,18 @@ async function findListed(
         )
     ).map((r) => r.id),
   );
+  // The event already picked for a tournament (not open yet, or skipped),
+  // so an entry seen only through his account lands on the same row.
+  const picked = new Map(
+    (
+      await ctx.db
+        .select({ id: tennisEntries.tournamentExternalId, eventNo: tennisEntries.eventNo })
+        .from(tennisEntries)
+        .where(eq(tennisEntries.sourceId, source.id))
+    )
+      .filter((r) => r.eventNo)
+      .map((r) => [r.id, r.eventNo]),
+  );
   let recorded = 0;
   try {
     const results = await search(client, {
@@ -194,23 +265,53 @@ async function findListed(
     for (const t of results) {
       if (followed.has(t.id) || (t.endDate ?? t.startDate ?? today) < today) continue;
       const list = await client.get(`/sport/events.aspx?id=${t.id}`);
-      for (const event of list ? parseEventList(list.html) : []) {
+      const events = list ? parseEventList(list.html) : [];
+      const found: { event: TcEvent; values: ListedValues }[] = [];
+      const hidden: TcEvent[] = [];
+      for (const event of events) {
         const page = await readEvent(client, { tournamentExternalId: t.id, eventNo: event.eventNo });
+        if (page && !page.entriesShown) hidden.push(event);
         const self = page && findSelfRow(page.entries, { name });
         if (!self) continue;
+        const s = statusFromList("entered", self);
+        found.push({
+          event,
+          values: {
+            status: s.status,
+            reservePosition: s.reservePosition,
+            tournamentPlayerId: self.tournamentPlayerIds[0] ?? null,
+            listCheckedAt: ctx.now,
+            note: "Already on the entry list.",
+            updatedAt: ctx.now,
+          },
+        });
+      }
+      // The site hides the list once the draws are made: ask his account.
+      if (!found.length && hidden.length) {
+        const answer = await account(t.id);
+        const status = statusFromAccount("found", answer);
+        const event =
+          hidden.find((e) => e.eventNo === picked.get(t.id)) ??
+          pickEvent(hidden, settings.prefs) ??
+          hidden[0];
+        if (status !== "found")
+          found.push({
+            event,
+            values: {
+              status,
+              reservePosition: null,
+              tournamentPlayerId: null,
+              listCheckedAt: ctx.now,
+              note: accountNote(status),
+              updatedAt: ctx.now,
+            },
+          });
+      }
+      for (const { event, values } of found) {
         const overview = await client.get(`/tournament/${t.id}`);
         const d = overview ? parseTournament(overview.html, t.id) : null;
         const startDate = d?.startDate ?? t.startDate ?? today;
         const endDate = d?.endDate ?? t.endDate ?? startDate;
-        const s = statusFromList("entered", self);
-        const values = {
-          status: s.status,
-          reservePosition: s.reservePosition,
-          tournamentPlayerId: self.tournamentPlayerIds[0] ?? null,
-          listCheckedAt: ctx.now,
-          note: "Already on the entry list.",
-          updatedAt: ctx.now,
-        };
         await ctx.db
           .insert(tennisEntries)
           .values({
@@ -265,7 +366,14 @@ export async function runEnter(
   const today = localDate(ctx.now, ctx.timeZone);
   const client = newClient(ctx, ENTER_REQUESTS);
   const base = client.base;
-  const alreadyListed = await findListed(ctx, source, client, name, settings);
+  const alreadyListed = await findListed(
+    ctx,
+    source,
+    client,
+    name,
+    settings,
+    accountChecker(deps.registrar, log),
+  );
   const known = await db.select().from(tennisEntries).where(eq(tennisEntries.sourceId, source.id));
   // Ones found before entry opened are looked at again now.
   const knownTournaments = new Set(
@@ -447,7 +555,13 @@ export async function runEnter(
 }
 
 // Where does he stand on each entry list still to come?
-async function checkLists(ctx: EntryContext, source: TcSource, client: TcClient, name: string) {
+async function checkLists(
+  ctx: EntryContext,
+  source: TcSource,
+  client: TcClient,
+  name: string,
+  account: AccountCheck,
+) {
   const { db, log } = ctx;
   const today = localDate(ctx.now, ctx.timeZone);
   const rows = await db
@@ -465,7 +579,13 @@ async function checkLists(ctx: EntryContext, source: TcSource, client: TcClient,
     for (const e of rows) {
       const page = await readEvent(client, e);
       if (!page) continue;
-      const update = listUpdate(e, page, name, ctx.now);
+      const update = listUpdate(
+        e,
+        page,
+        name,
+        ctx.now,
+        page.entriesShown ? null : await account(e.tournamentExternalId),
+      );
       await db.update(tennisEntries).set(update).where(eq(tennisEntries.id, e.id));
       await notifyEntryChange(db, e, update.status, { log, now: ctx.now });
       counts[update.status] = (counts[update.status] ?? 0) + 1;
@@ -476,13 +596,19 @@ async function checkLists(ctx: EntryContext, source: TcSource, client: TcClient,
   return { entries: rows.length, ...counts };
 }
 
-// Friday: where does he stand on each entry list?
-export async function runAcceptance(ctx: EntryContext, source: TcSource) {
+// Friday: where does he stand on each entry list? With a registrar, his
+// account answers where the list is hidden.
+export async function runAcceptance(
+  ctx: EntryContext,
+  source: TcSource,
+  deps: { registrar?: Registrar } = {},
+) {
   const name = await selfName(ctx.db, source.id);
   if (!name) return { skipped: "no tennis sync yet (his name isn't known)" };
   const client = newClient(ctx, LIST_REQUESTS);
-  const counts = await checkLists(ctx, source, client, name);
-  const listed = await findListed(ctx, source, client, name, entrySettingsOf(source.config));
+  const account = accountChecker(deps.registrar, ctx.log);
+  const counts = await checkLists(ctx, source, client, name, account);
+  const listed = await findListed(ctx, source, client, name, entrySettingsOf(source.config), account);
   ctx.log("tennis acceptance lists read", { source: source.name, listed, ...counts });
   return { ...counts, listed };
 }
@@ -604,23 +730,32 @@ export type RefreshResult = Record<string, number>;
 export async function runRefresh(
   ctx: EntryContext,
   source: TcSource,
-  deps: { drive: DriveTimer | null },
+  deps: { drive: DriveTimer | null; registrar?: Registrar },
 ): Promise<RefreshResult | { skipped: string }> {
   const name = await selfName(ctx.db, source.id);
   if (!name) return { skipped: "no tennis sync yet (his name isn't known)" };
   const settings = entrySettingsOf(source.config);
   const client = newClient(ctx, REFRESH_REQUESTS);
-  const lists = await checkLists(ctx, source, client, name);
-  const listed = await findListed(ctx, source, client, name, settings);
+  const account = accountChecker(deps.registrar, ctx.log);
+  const lists = await checkLists(ctx, source, client, name, account);
+  const listed = await findListed(ctx, source, client, name, settings, account);
   const found = await discover(ctx, source, client, settings, deps.drive);
   const result = { ...lists, listed, ...found };
   ctx.log("tennis entries refreshed", { source: source.name, ...result, requests: client.requests });
   return result;
 }
 
-// Is he in one of these draws? Knockout draws come as a bracket, round
-// robin and the like as a match list.
-async function inDraw(client: TcClient, tournamentId: string, drawNos: string[], tp: string) {
+// His tournament player number in one of these draws, or null when he
+// isn't in them: by number when known, else by name (no entry list to
+// learn the number from). Knockout draws come as a bracket, round robin
+// and the like as a match list.
+async function inDraw(
+  client: TcClient,
+  tournamentId: string,
+  drawNos: string[],
+  self: { tp: string | null; name: string },
+): Promise<string | null> {
+  const key = nameTokens(self.name);
   for (const drawNo of drawNos) {
     const bracket = await client.get(`/tournament/${tournamentId}/Draw/${drawNo}/GetDrawContent`, {
       xhr: true,
@@ -632,10 +767,14 @@ async function inDraw(client: TcClient, tournamentId: string, drawNos: string[],
       });
       matches = list ? parseDrawMatches(list.html, tournamentId, drawNo) : [];
     }
-    if (matches.some((m) => m.sides.some((s) => s.players.some((p) => p.tournamentPlayerId === tp))))
-      return true;
+    for (const side of matches.flatMap((m) => m.sides)) {
+      if (self.tp && side.players.some((p) => p.tournamentPlayerId === self.tp)) return self.tp;
+      const [p] = side.players;
+      if (!self.tp && side.players.length === 1 && p.tournamentPlayerId && nameTokens(p.name) === key)
+        return p.tournamentPlayerId;
+    }
   }
-  return false;
+  return null;
 }
 
 export type WatchResult = {
@@ -678,18 +817,19 @@ export async function runDrawWatch(
       const update = listUpdate(e, page, name, ctx.now);
       const tp = update.tournamentPlayerId;
       const set: Partial<EntryRow> = { ...update };
-      if (page.draws.length && tp) {
-        if (
-          await inDraw(
-            client,
-            e.tournamentExternalId,
-            page.draws.map((d) => d.drawNo),
-            tp,
-          )
-        ) {
+      // Without an entry list, an empty draw (made, not filled) says nothing.
+      if (page.draws.length && (tp || !page.entriesShown)) {
+        const found = await inDraw(
+          client,
+          e.tournamentExternalId,
+          page.draws.map((d) => d.drawNo),
+          { tp, name },
+        );
+        if (found) {
           set.drawSeenAt = ctx.now;
+          set.tournamentPlayerId = found;
           pending.push(e.id);
-        } else if (update.status !== "main_draw") {
+        } else if (tp && page.entriesShown && update.status !== "main_draw") {
           // The draw is out and he isn't in it (still a reserve): stop watching.
           set.drawSyncedAt = ctx.now;
           set.note = "The draw is out and he isn't in it.";

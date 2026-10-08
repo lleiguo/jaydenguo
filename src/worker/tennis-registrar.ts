@@ -7,14 +7,14 @@ import type { Logger } from "../server/log";
 import { manualRegistrar, type Registrar } from "../server/tennis/entries";
 import { openCredential } from "./credentials";
 
-// The registrar the Thursday job uses (plan M3b.6): the site's entry form
+// The registrar the entry jobs use (plan M3b.6): the site's entry form
 // with the stored Tennis Canada login, unless the owner switched automatic
-// entry off on the Tennis source or no login is stored.
+// entry off on the Tennis source or no login is stored. With a login it
+// also reads whether he's entered, for when the entry list is hidden.
 
 type EntryConfig = { entry?: { autoEnter?: boolean } };
 
 export async function tennisRegistrar(db: Db, source: { config: unknown }, log: Logger): Promise<Registrar> {
-  if ((source.config as EntryConfig | null)?.entry?.autoEnter === false) return manualRegistrar;
   const [cred] = await db
     .select({ id: credentials.id })
     .from(credentials)
@@ -36,19 +36,39 @@ export async function tennisRegistrar(db: Db, source: { config: unknown }, log: 
     };
   let client: ReturnType<typeof tcRegistrarClient> | null = null;
   let loginProblem: string | null = null;
+  // The signed-in client, or null (with loginProblem set) when it can't be had.
+  async function signedIn() {
+    if (loginProblem) return null;
+    if (!client) {
+      const opened = await openCredential(db, cred.id, "tennis entry");
+      if (!opened.username) {
+        loginProblem = "Add the Tennis Canada username on the Accounts page.";
+        return null;
+      }
+      client = tcRegistrarClient(tennisBaseUrl(), opened.username, opened.secret);
+    }
+    return client;
+  }
+  // Reading whether he's entered is fine with automatic entry off.
+  async function entryOn(tournamentId: string) {
+    try {
+      const c = await signedIn();
+      return c ? await c.entryOn(tournamentId) : "unknown";
+    } catch (err) {
+      if (!(err instanceof TcLoginError)) throw err;
+      loginProblem = err.message;
+      return "unknown";
+    }
+  }
+  if ((source.config as EntryConfig | null)?.entry?.autoEnter === false)
+    return { ...manualRegistrar, entryOn };
   return {
+    entryOn,
     async enter(e) {
-      if (loginProblem) return { result: "unavailable", note: loginProblem };
       try {
-        if (!client) {
-          const opened = await openCredential(db, cred.id, "tennis entry");
-          if (!opened.username) {
-            loginProblem = "Add the Tennis Canada username on the Accounts page.";
-            return { result: "unavailable", note: loginProblem };
-          }
-          client = tcRegistrarClient(tennisBaseUrl(), opened.username, opened.secret);
-        }
-        const outcome = await client.enter({ tournamentId: e.tournamentId, eventName: e.eventName });
+        const c = await signedIn();
+        if (!c) return { result: "unavailable", note: loginProblem! };
+        const outcome = await c.enter({ tournamentId: e.tournamentId, eventName: e.eventName });
         log("tennis entry submitted", { tournament: e.tournamentId, result: outcome.result });
         return outcome;
       } catch (err) {

@@ -15,6 +15,7 @@ import {
   nameTokens,
   pickEvent,
   searchRadiusKm,
+  statusFromAccount,
   statusFromList,
 } from "@/domain/tennis-entry";
 import { minutesOf, routesDriveTimer } from "@/server/tennis/drive";
@@ -55,6 +56,7 @@ describe("entry page parsers", () => {
       tournamentPlayerIds: ["1021"],
       names: ["Fixture, Sam"],
     });
+    expect(p.entriesShown).toBe(true);
     const a = parseEventPage(page("event-a6.html"));
     expect(a.draws).toEqual([]);
     expect(a.entries.map((e) => e.status)).toEqual([
@@ -62,6 +64,15 @@ describe("entry page parsers", () => {
       { kind: "main_draw" },
       { kind: "reserve", position: 1 },
     ]);
+  });
+
+  it("tells a hidden entry list (draws made) from an empty one", () => {
+    const p = parseEventPage(page("event-draws-only.html"));
+    expect(p).toEqual({
+      entriesShown: false,
+      entries: [],
+      draws: [{ drawNo: "9", name: "Fixture Draw", size: 8 }],
+    });
   });
 
   it("understands the site's status labels", () => {
@@ -136,6 +147,19 @@ describe("entry rules", () => {
     expect(statusFromList("main_draw", null).status).toBe("withdrawn");
     expect(statusFromList("entered", null).status).toBe("entered");
     expect(statusFromList("found", null).status).toBe("found");
+  });
+
+  it("works out the status from his account when the list is hidden", () => {
+    expect(statusFromAccount("found", "entered")).toBe("entered");
+    expect(statusFromAccount("not_open", "entered")).toBe("entered");
+    expect(statusFromAccount("payment_needed", "entered")).toBe("entered");
+    expect(statusFromAccount("found", "payment_needed")).toBe("payment_needed");
+    // A hidden list never withdraws him or undoes the acceptance list.
+    expect(statusFromAccount("main_draw", "not_entered")).toBe("main_draw");
+    expect(statusFromAccount("reserve", "unknown")).toBe("reserve");
+    expect(statusFromAccount("main_draw", "entered")).toBe("main_draw");
+    expect(statusFromAccount("found", null)).toBe("found");
+    expect(statusFromAccount("found", "not_entered")).toBe("found");
   });
 
   it("enters one tournament per weekend, closest first, never over one he's in", () => {
