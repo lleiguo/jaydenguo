@@ -30,6 +30,9 @@ export type TcEntryRow = {
 };
 
 export type TcEventPage = {
+  // False when the page has no entry list: the site hides it once the
+  // organiser makes the draws, even before they're filled.
+  entriesShown: boolean;
   entries: TcEntryRow[];
   draws: { drawNo: string; name: string | null; size: number | null }[];
 };
@@ -102,13 +105,15 @@ export function entryStatusOf(label: string | null): TcEntryStatus | null {
 }
 
 // /sport/event.aspx?id=<tournament>&event=<n>: the entry list and, once
-// published, the event's draws.
+// published, the event's draws. Once the draws are made the site shows only
+// them (spikes.md SP-7 saw both together; Oct 2026 the list was gone).
 export function parseEventPage(html: string): TcEventPage {
-  const page: TcEventPage = { entries: [], draws: [] };
+  const page: TcEventPage = { entriesShown: false, entries: [], draws: [] };
   for (const table of parse(html).querySelectorAll("table.ruler")) {
     const caption = text(table.querySelector("caption")) ?? "";
     const rows = table.querySelectorAll("tbody tr");
     if (/^entries/i.test(caption)) {
+      page.entriesShown = true;
       for (const row of rows) {
         const cells = row.querySelectorAll("td");
         const links = row.querySelectorAll('a[href*="player.aspx"], a[href*="/player/"]');

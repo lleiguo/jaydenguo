@@ -139,6 +139,20 @@ export function statusFromList(
   return { status: current, reservePosition: null };
 }
 
+// Where an entry stands when the site hides the entry list (once the draws
+// are made) and his account's entry page is all there is: entered or owing
+// payment moves a not-yet-entered one on; anything else leaves it as it
+// was. Never withdrawn: a hidden list says nothing about him.
+export function statusFromAccount(
+  current: EntryStatus,
+  account: "entered" | "payment_needed" | "not_entered" | "unknown" | null,
+): EntryStatus {
+  const waiting = current === "found" || current === "skipped" || current === "not_open";
+  if (account === "entered" && (waiting || current === "payment_needed")) return "entered";
+  if (account === "payment_needed" && waiting) return "payment_needed";
+  return current;
+}
+
 const overlaps = (a: { startDate: string; endDate: string }, b: { startDate: string; endDate: string }) =>
   a.startDate <= b.endDate && b.startDate <= a.endDate;
 

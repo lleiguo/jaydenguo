@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { and, eq } from "drizzle-orm";
@@ -33,6 +34,8 @@ describe("tennis tournament entries", () => {
   let opensA = "";
   // And whether the search still shows no "Online Entry" button for A.
   let closedA = false;
+  // And whether A's event page shows only its draws (list hidden).
+  let hiddenA = false;
   const log = createLogger((l) => process.env.DEBUG_LOG && console.log(l));
   const ctx = (): EntryContext => ({ db, log, now: TC_NOW, timeZone: "America/Toronto" });
   const drive = async (_from: string, to: string) => (to.includes("Faraway") ? 100 : 30);
@@ -70,7 +73,9 @@ describe("tennis tournament entries", () => {
       requests,
       edit: (file, html) =>
         file === "entries/event-a6.html"
-          ? html.replace("<!--SELF-->", selfRow)
+          ? hiddenA
+            ? readFileSync("tests/fixtures/tennis-tc/entries/event-draws-only.html", "utf8")
+            : html.replace("<!--SELF-->", selfRow)
           : file === "entries/search.html" && closedA
             ? html.replace(
                 /<a role="button" href="\/onlineentry\/onlineentry\.aspx\?id=a0000000[^]*?<\/a>/,
@@ -233,6 +238,75 @@ describe("tennis tournament entries", () => {
     // Once it's followed, the list check owns it: no second row.
     await runAcceptance(ctx(), s);
     expect(await entriesOf(s.id)).toHaveLength(1);
+  });
+
+  describe("once the draws are made the site hides the entry list", () => {
+    const account = (answer: "entered" | "payment_needed" | "not_entered" | "unknown") => {
+      const asked: string[] = [];
+      const registrar: Registrar = {
+        ...manualRegistrar,
+        entryOn: async (t) => (asked.push(t), answer),
+      };
+      return { registrar, asked };
+    };
+
+    it("a tournament found for him shows as entered once his account says so", async () => {
+      selfRow = "";
+      const s = await newSource();
+      await runEnter(ctx(), s, { drive, registrar: manualRegistrar });
+      hiddenA = true;
+      try {
+        // No login: nothing to go on, so it stays found.
+        await runRefresh(ctx(), s, { drive });
+        const a = () =>
+          entriesOf(s.id).then((rows) => rows.find((r) => r.tournamentExternalId === ENTRY_FIXTURE.a)!);
+        expect((await a()).status).toBe("found");
+
+        const { registrar, asked } = account("entered");
+        await runAcceptance(ctx(), s, { registrar });
+        expect(await a()).toMatchObject({ status: "entered" });
+        expect((await a()).note).toMatch(/entry list is hidden/);
+        expect(asked).toEqual([ENTRY_FIXTURE.a]);
+      } finally {
+        hiddenA = false;
+      }
+    });
+
+    it("never turns a main-draw entry into withdrawn", async () => {
+      selfRow = `<tr><td class="green elt1">Maindraw</td><td><a href="player.aspx?id=${ENTRY_FIXTURE.a}&amp;player=77">Sam Fixture</a></td><td></td></tr>`;
+      const s = await newSource();
+      await runEnter(ctx(), s, { drive, registrar: manualRegistrar });
+      hiddenA = true;
+      try {
+        await runAcceptance(ctx(), s, account("unknown"));
+        const [a] = (await entriesOf(s.id)).filter((r) => r.tournamentExternalId === ENTRY_FIXTURE.a);
+        expect(a).toMatchObject({ status: "main_draw", tournamentPlayerId: "77" });
+      } finally {
+        hiddenA = false;
+      }
+    });
+
+    it("finds a tournament he was entered in by hand through his account", async () => {
+      selfRow = "";
+      const s = await newSource();
+      hiddenA = true;
+      try {
+        expect(await runAcceptance(ctx(), s, account("not_entered"))).toMatchObject({ listed: 0 });
+        expect(await entriesOf(s.id)).toHaveLength(0);
+        expect(await runAcceptance(ctx(), s, account("entered"))).toMatchObject({ listed: 1 });
+        const rows = await entriesOf(s.id);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({
+          tournamentExternalId: ENTRY_FIXTURE.a,
+          eventNo: "6",
+          eventName: "U9 Orange Boys",
+          status: "entered",
+          tournamentPlayerId: null,
+        });
+      } finally {
+        hiddenA = false;
+      }
+    });
   });
 
   it("the sync reads tournaments he's entered before his profile shows them", async () => {

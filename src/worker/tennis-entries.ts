@@ -35,7 +35,8 @@ export async function tennisEnterJob(_args: string[], ctx: JobContext) {
 // `tennis:acceptance`, Friday 10:00.
 export async function tennisAcceptanceJob(_args: string[], ctx: JobContext) {
   const ectx = await entryContext(ctx);
-  for (const source of await tennisSources(ectx.db)) await runAcceptance(ectx, source);
+  for (const source of await tennisSources(ectx.db))
+    await runAcceptance(ectx, source, { registrar: await tennisRegistrar(ectx.db, source, ctx.log) });
 }
 
 // `tennis:draw-watch`, hourly on draw days.
