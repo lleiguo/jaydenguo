@@ -20,7 +20,9 @@ refresh draw if it's out"
 
 ## Proposed outcome
 - **Pull down on the Tennis screen** checks Tennis Canada, then reloads.
-  There's no Refresh button on the iPhone Tennis screen any more.
+- **The Refresh button stays** on the Tennis screen, on the iPhone and
+  the web, and still runs the full sync (owner, 2026-10-09: "keep the
+  refresh button for full sync on both mobile and web").
 - **A quick check, not a full sync.** It reads his account's "My
   entries", reads the entry list of each upcoming tournament he's in
   (main draw, or reserve list and place), and looks for each draw due
@@ -43,7 +45,7 @@ refresh draw if it's out"
    the full sync, as the draw watch does today, so opponents and the
    prediction come in. Once it's in, a pull re-reads only that draw (new
    results, next match) for tournaments under way.]
-3. The web Tennis page's Refresh button? [Runs the same quick check, so
-   both apps behave alike. The full sync stays on the Sources page.]
+3. The Refresh button? Answered (owner, 2026-10-09): it stays on the
+   iPhone and web Tennis screens and runs the full sync.
 4. Does the quick check also look for new tournaments to enter? [No: the
    Thursday job and the 5 a.m. sync do that.]

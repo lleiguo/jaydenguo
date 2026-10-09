@@ -5,21 +5,21 @@ Read with 0001 (SYNC-2, SYNC-5, TEN-9..11) and 0004 (APP-7, ITEN-1).
 IDs here: TPR (tennis pull refresh).
 
 ## 1. What changes in earlier specs
-- **0004 APP-7** The iPhone Tennis screen has no Refresh button; pulling
-  down runs the quick check (TPR-1).
-- **0001 SYNC-2** The web Tennis page's Refresh runs the quick check
-  (TPR-5). Refresh on the Sources page still runs the full sync.
+- **0004 APP-7** Pulling down on the iPhone Tennis screen runs the quick
+  check (TPR-1). Its Refresh button stays and runs the full sync (TPR-5).
+- **0001 SYNC-2** Unchanged: Refresh on the web Tennis page and on the
+  Sources page runs the full sync.
 - **0001 SYNC-5** The quick check has its own limit (TPR-4); it doesn't
   count as a sync run, so it doesn't hold back the full sync.
 
 ## 2. Requirements
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| TPR-1 | Pull down on the iPhone Tennis screen checks Tennis Canada. | The pull starts the quick check, keeps the spinner until it finishes (up to 2 minutes), then reloads the screen. No Refresh button in the Tennis toolbar. Other screens are unchanged. |
+| TPR-1 | Pull down on the iPhone Tennis screen checks Tennis Canada. | The pull starts the quick check, keeps the spinner until it finishes (up to 2 minutes), then reloads the screen. Other screens are unchanged. |
 | TPR-2 | The quick check reads his entries and entry lists. | One run: his account's "My entries" (as #101), then each upcoming entry's event page (status, reserve place, withdrawn). No tournament search, no profile, no opponents' histories. A typical run (4 entries) makes under 15 requests. |
 | TPR-3 | The quick check looks for draws. | For entries starting within 7 days: a draw seen for the first time starts the full sync (as the draw watch). For tournaments under way whose draw is already in: only that draw and his matches are re-read (results, next match, next opponent's level). |
 | TPR-4 | The site is asked at most once every 5 minutes. | A pull within 5 minutes of the last quick check's start only reloads, and the screen says "Checked N min ago". A failed check can be retried at once. While one runs, a second pull waits for it instead of starting another. |
-| TPR-5 | The web Tennis page's Refresh runs the quick check. | The button reads "Check entries"; the page reloads when the check finishes. |
+| TPR-5 | The Refresh buttons keep the full sync. | The Refresh button stays on the iPhone and web Tennis screens and starts the full sync as now (SYNC-2, SYNC-5). Owner, 2026-10-09: "keep the refresh button for full sync on both mobile and web". |
 | TPR-6 | Problems are said plainly. | A login problem shows "Tennis Canada sign-in failed: check the login on the Accounts page." on the screen; a site error shows "Couldn't reach Tennis Canada. Try again later." What's shown isn't cleared. |
 
 ## 3. Design
@@ -37,8 +37,8 @@ IDs here: TPR (tennis pull refresh).
   check when it's under 5 minutes old; `GET /api/v1/tennis/check/{id}` →
   status. `GET /api/v1/tennis` adds `lastCheckedAt`. OpenAPI updated.
 - **iPhone.** `TennisScreen`'s `refreshable` calls the check and follows
-  it, then reloads; `RefreshSourcesButton` leaves the Tennis toolbar.
-- **Web.** The Tennis page's button calls the same endpoint.
+  it, then reloads; `RefreshSourcesButton` stays in the toolbar.
+- **Web.** No change.
 
 ## 4. Testing
 - Unit: the 5-minute rule; which entries get a draw read.
