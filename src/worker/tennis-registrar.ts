@@ -10,7 +10,7 @@ import { openCredential } from "./credentials";
 // The registrar the entry jobs use (plan M3b.6): the site's entry form
 // with the stored Tennis Canada login, unless the owner switched automatic
 // entry off on the Tennis source or no login is stored. With a login it
-// also reads whether he's entered, for when the entry list is hidden.
+// also reads his account's "My entries" list.
 
 type EntryConfig = { entry?: { autoEnter?: boolean } };
 
@@ -49,21 +49,22 @@ export async function tennisRegistrar(db: Db, source: { config: unknown }, log: 
     }
     return client;
   }
-  // Reading whether he's entered is fine with automatic entry off.
-  async function entryOn(tournamentId: string) {
+  // Reading what he's entered is fine with automatic entry off. Null when
+  // it can't be read.
+  async function myEntries() {
     try {
       const c = await signedIn();
-      return c ? await c.entryOn(tournamentId) : "unknown";
+      return c ? await c.myEntries() : null;
     } catch (err) {
       if (!(err instanceof TcLoginError)) throw err;
       loginProblem = err.message;
-      return "unknown";
+      return null;
     }
   }
   if ((source.config as EntryConfig | null)?.entry?.autoEnter === false)
-    return { ...manualRegistrar, entryOn };
+    return { ...manualRegistrar, myEntries };
   return {
-    entryOn,
+    myEntries,
     async enter(e) {
       try {
         const c = await signedIn();

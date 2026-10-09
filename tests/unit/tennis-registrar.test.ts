@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   classifyEntryPage,
   feeOf,
+  laterEntryYears,
   parseEntryForm,
+  parseMyEntries,
   pickEventOption,
   type EventOption,
 } from "@/adapters/tennis-tc/registrar";
@@ -125,5 +127,40 @@ describe("classifyEntryPage", () => {
 
   it("doesn't claim success on a page it doesn't know", () => {
     expect(classifyEntryPage("<main><h2>Thanks</h2></main>", url)).toEqual({ kind: "unknown" });
+  });
+});
+
+describe("parseMyEntries", () => {
+  const html = page("user-entries.html", { CARDS: "" });
+
+  it("reads each tournament, its events and whether he's entered", () => {
+    expect(parseMyEntries(html)).toEqual([
+      {
+        tournamentId: "d0000000-0000-4000-8000-00000000000d",
+        name: "Fixture Withdrawn Open",
+        venue: "Other Club",
+        city: "Elsewhere",
+        date: "2024-10-12",
+        events: [{ eventNo: "3", name: "U9 Mixed - Orange" }],
+        status: "not_entered",
+      },
+      {
+        tournamentId: "e0000000-0000-4000-8000-00000000000e",
+        name: "Fixture Summer Open",
+        venue: "Fixture Tennis Club",
+        city: "Nearby",
+        date: "2024-08-10",
+        events: [{ eventNo: "18", name: "U10 (Orange Ball)" }],
+        status: "entered",
+      },
+    ]);
+  });
+
+  it("finds the year tabs after the one shown", () => {
+    expect(laterEntryYears(html)).toEqual([]);
+    const december = html
+      .replace('aria-selected="true" data-tabid="2024"', 'data-tabid="2024"')
+      .replace('data-tabid="2023"', 'aria-selected="true" data-tabid="2023"');
+    expect(laterEntryYears(december)).toEqual(["2024"]);
   });
 });

@@ -84,13 +84,24 @@ export const ENTRY_FIXTURE = {
 // events each tournament's form offers, and which tournaments ask for
 // payment after Submit.
 export const TC_LOGIN = { username: "fake-tc-user", password: "fake-tc-pass" };
-export const ENTRY_OPTIONS: Record<string, { value: string; label: string }[]> = {
+// eventNo/event: the same event on the event list (for "My entries").
+export const ENTRY_OPTIONS: Record<
+  string,
+  { value: string; label: string; eventNo: string; event: string }[]
+> = {
   [ENTRY_FIXTURE.a]: [
-    { value: "9006", label: "BU9 - Orange $30.00" },
-    { value: "9005", label: "BU10 - Orange $30.00" },
+    { value: "9006", label: "BU9 - Orange $30.00", eventNo: "6", event: "U9 Orange Boys" },
+    { value: "9005", label: "BU10 - Orange $30.00", eventNo: "5", event: "U10 (Orange Ball)" },
   ],
-  [ENTRY_FIXTURE.b]: [{ value: "9105", label: "BS10 - Orange $45.00" }],
+  [ENTRY_FIXTURE.b]: [{ value: "9105", label: "BS10 - Orange $45.00", eventNo: "3", event: "U10 Orange" }],
 };
+const ENTRY_NAMES: Record<string, string> = {
+  [ENTRY_FIXTURE.a]: "Fixture Rookie Open",
+  [ENTRY_FIXTURE.b]: "Fixture Fall Classic",
+};
+
+// An entry on the account's "My entries" page.
+export type AccountEntryFake = { eventNo: string; event: string; label?: string };
 
 export type EntrySubmission = { tournament: string; eventId: string; agreed: boolean };
 
@@ -102,6 +113,15 @@ type Options = {
   // Entry forms submitted, and tournaments whose entry asks for payment.
   submissions?: EntrySubmission[];
   paid?: Set<string>;
+  // Tournaments entered on the site, not by the app: "My entries" lists
+  // them, and their entry page shows the blank form again, as the real
+  // site does.
+  handEntered?: Map<string, AccountEntryFake>;
+};
+
+const myEntryCard = (t: string, e: AccountEntryFake) => {
+  const id = t.toUpperCase();
+  return `<div class="module-container"> <div class="media"> <div class="media__wrapper"> <div class="media__content"> <h4 class="media__title media__title--medium"> <a href="/sport/tournament?id=${id}" title="${ENTRY_NAMES[t] ?? "Fixture Tournament"}" class="media__link"> <span class="nav-link__value">${ENTRY_NAMES[t] ?? "Fixture Tournament"}</span> </a> </h4> <small class="media__subheading"> <span class="nav-link"> <span class="nav-link__value"> Fixture Tennis Club | Nearby </span> </span> </small> <small class="media__subheading media__subheading--muted"> <span class="nav-link"> <span class="nav-link__value"> <time datetime="2024-10-05 00:00">2024-10-05</time> </span> </span> </small> </div> <div class="media__aside"> <ul class="list list--inline list--spacing"> <li class="list__item"> <a role="button" href="/individual-entry-view/${id}/F0000000-0000-4000-8000-000000000001" title="Entered" class="btn btn--small btn--round btn--success"> <span class="nav-link__value">Entered</span> </a> </li> </ul> </div> </div> </div> <div class="module-divider"> <div class="module-divider__body"> <ul class="list list--naked"> <li class="list__item"> <a href="/sport/event.aspx?id=${id}&amp;event=${e.eventNo}" class="nav-link"><span class="nav-link__value">${e.event}</span> </a> </li> </ul> </div> </div> </div>`;
 };
 
 const readBody = async (req: import("node:http").IncomingMessage) => {
@@ -120,7 +140,7 @@ export function createFakeTc(opts: Options = {}): Server {
     ]),
   );
   // Entered tournaments (the fake's "My entry" state).
-  const entered = new Map<string, string>();
+  const entered = new Map<string, AccountEntryFake>();
   return createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     if (await entryFlow(req, res, url, entered, opts)) return;
@@ -150,7 +170,7 @@ async function entryFlow(
   req: import("node:http").IncomingMessage,
   res: import("node:http").ServerResponse,
   url: URL,
-  entered: Map<string, string>,
+  entered: Map<string, AccountEntryFake>,
   opts: Options,
 ): Promise<boolean> {
   const html = (body: string, status = 200, cookie?: string) => {
@@ -181,6 +201,20 @@ async function entryFlow(
     else redirect(form.get("ReturnUrl") || "/", "tc_auth=ok; path=/; HttpOnly");
     return true;
   }
+  if (path === "/user/entries" && req.method === "GET") {
+    if (!signedIn) {
+      redirect(`/user/login?ReturnUrl=${encodeURIComponent(url.pathname)}`);
+      return true;
+    }
+    const all = [...(opts.handEntered ?? []), ...entered];
+    html(
+      fixture("entries/user-entries.html").replace(
+        "{{CARDS}}",
+        all.map(([t, e]) => myEntryCard(t, e)).join("\n"),
+      ),
+    );
+    return true;
+  }
   const entry = /^\/individual-entry\/([0-9a-f-]+)$/.exec(path);
   if (entry && req.method === "GET") {
     if (!signedIn) {
@@ -190,7 +224,7 @@ async function entryFlow(
     const t = entry[1];
     const done = entered.get(t);
     if (done) {
-      html(fixture("entries/my-entry.html").replace("{{EVENT}}", done));
+      html(fixture("entries/my-entry.html").replace("{{EVENT}}", done.label!));
       return true;
     }
     const options = (ENTRY_OPTIONS[t] ?? [])
@@ -228,7 +262,11 @@ async function entryFlow(
       redirect(`/online-entry/payment/${t}`);
       return true;
     }
-    entered.set(t, option.label.replace(/\s*\$.*$/, ""));
+    entered.set(t, {
+      eventNo: option.eventNo,
+      event: option.event,
+      label: option.label.replace(/\s*\$.*$/, ""),
+    });
     redirect(`/individual-entry/${t}`);
     return true;
   }

@@ -71,6 +71,37 @@ describe("tennis registrar", () => {
     expect(submissions).toHaveLength(1);
   });
 
+  it("doesn't enter again when he was entered by hand (the entry page shows the form again)", async () => {
+    const handEntered = new Map([[ENTRY_FIXTURE.b, { eventNo: "3", event: "U10 Orange" }]]);
+    const own: EntrySubmission[] = [];
+    const site = createFakeTc({ submissions: own, handEntered });
+    await new Promise<void>((r) => site.listen(0, "127.0.0.1", r));
+    try {
+      const at = `http://127.0.0.1:${(site.address() as AddressInfo).port}`;
+      const c = tcRegistrarClient(at, TC_LOGIN.username, TC_LOGIN.password);
+      expect(await c.enter({ tournamentId: ENTRY_FIXTURE.b, eventName: "U10 Orange" })).toEqual({
+        result: "entered",
+        note: "Already entered on the site.",
+      });
+      expect(own).toEqual([]);
+      expect(await c.myEntries()).toEqual([
+        {
+          tournamentId: ENTRY_FIXTURE.b,
+          name: "Fixture Fall Classic",
+          venue: "Fixture Tennis Club",
+          city: "Nearby",
+          date: "2024-10-05",
+          events: [{ eventNo: "3", name: "U10 Orange" }],
+          status: "entered",
+        },
+        expect.objectContaining({ name: "Fixture Withdrawn Open", status: "not_entered" }),
+        expect.objectContaining({ name: "Fixture Summer Open", status: "entered" }),
+      ]);
+    } finally {
+      await new Promise((r) => site.close(r));
+    }
+  });
+
   it("flags an entry the site asks payment for", async () => {
     paid.add(ENTRY_FIXTURE.b);
     try {
@@ -143,9 +174,11 @@ describe("tennis registrar", () => {
       expect(a).toMatchObject({ tournamentExternalId: ENTRY_FIXTURE.a, status: "entered" });
       expect(a.note).toContain("Entered in BU9 - Orange");
 
-      // His account answers whether he's entered (for a hidden entry list).
-      expect(await registrar.entryOn!(ENTRY_FIXTURE.a)).toBe("entered");
-      expect(await registrar.entryOn!(ENTRY_FIXTURE.b)).toBe("not_entered");
+      // His account's "My entries" has it.
+      const statusOf = async (r: typeof registrar, t: string) =>
+        (await r.myEntries!())?.find((m) => m.tournamentId === t)?.status ?? "not_entered";
+      expect(await statusOf(registrar, ENTRY_FIXTURE.a)).toBe("entered");
+      expect(await statusOf(registrar, ENTRY_FIXTURE.b)).toBe("not_entered");
 
       // Switched off on the source: the job leaves entries to the owner.
       const off = await tennisRegistrar(db, { config: { entry: { autoEnter: false } } }, log);
@@ -155,7 +188,7 @@ describe("tennis registrar", () => {
         result: "unavailable",
       });
       // Reading still works with automatic entry off.
-      expect(await off.entryOn!(ENTRY_FIXTURE.a)).toBe("entered");
+      expect(await statusOf(off, ENTRY_FIXTURE.a)).toBe("entered");
     } finally {
       process.env.TENNIS_TC_BASE_URL = base;
       await new Promise((r) => fresh.close(r));

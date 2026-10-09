@@ -10,7 +10,7 @@ import {
   type TcSearchResult,
 } from "../../adapters/tennis-tc/entry-parse";
 import { parseBracket, parseDrawMatches, parseTournament } from "../../adapters/tennis-tc/parse";
-import type { AccountEntry } from "../../adapters/tennis-tc/registrar";
+import type { AccountEntry, MyEntry } from "../../adapters/tennis-tc/registrar";
 import type { EntryStatus } from "../../domain/tennis-constants";
 import {
   ACTIVE_ENTRY,
@@ -70,37 +70,47 @@ const REFRESH_REQUESTS = 150;
 
 // Enters him in one event on the site. "unavailable": the app can't do it
 // (not built yet, or no Tennis Canada login), so the owner uses the link.
-// entryOn, with a login: whether his account shows him entered, for when
-// the public entry list is hidden.
+// myEntries, with a login: his account's "My entries" list (null when it
+// can't be read), the site's own record of what he's entered.
 export type Registrar = {
   enter(e: {
     tournamentId: string;
     eventNo: string;
     eventName: string;
   }): Promise<{ result: "entered" | "payment_needed" | "unavailable"; note?: string }>;
-  entryOn?(tournamentId: string): Promise<AccountEntry>;
+  myEntries?(): Promise<MyEntry[] | null>;
 };
 
 const accountNote = (status: EntryStatus) =>
   status === "payment_needed"
-    ? "Entry started on the site; payment still needed (the entry list is hidden now the draws are made)."
-    : "Entered on the site (the entry list is hidden now the draws are made).";
+    ? "Entry started on the site; payment still needed (from his account's entries)."
+    : "Entered on the site (from his account's entries).";
 
-// His account's answer per tournament, asked at most once a run.
+// His account's entries, read at most once a run. on(): what it says about
+// one tournament (and event, when it names his events); null when there's
+// no list to go on.
 function accountChecker(registrar: Registrar | undefined, log: Logger) {
-  const seen = new Map<string, AccountEntry>();
-  return async (tournamentId: string): Promise<AccountEntry | null> => {
-    if (!registrar?.entryOn) return null;
-    if (!seen.has(tournamentId)) {
-      let answer: AccountEntry = "unknown";
+  let read: Promise<MyEntry[] | null> | null = null;
+  const list = () =>
+    (read ??= (async () => {
+      if (!registrar?.myEntries) return null;
       try {
-        answer = await registrar.entryOn(tournamentId);
+        return await registrar.myEntries();
       } catch (err) {
-        log("tennis account entry check failed", { tournament: tournamentId, error: err }, "WARNING");
+        log("tennis account entries failed", { error: err }, "WARNING");
+        return null;
       }
-      seen.set(tournamentId, answer);
-    }
-    return seen.get(tournamentId)!;
+    })());
+  return {
+    list,
+    async on(tournamentId: string, eventNo?: string): Promise<AccountEntry | null> {
+      const mine = await list();
+      if (!mine) return null;
+      const m = mine.find((m) => m.tournamentId === tournamentId.toLowerCase());
+      if (!m) return "not_entered";
+      if (eventNo && m.events.length && !m.events.some((e) => e.eventNo === eventNo)) return "not_entered";
+      return m.status;
+    },
   };
 }
 type AccountCheck = ReturnType<typeof accountChecker>;
@@ -160,7 +170,8 @@ function listUpdate(
   account: AccountEntry | null = null,
 ) {
   if (!page.entriesShown) {
-    // No list to read: he stays as he was, unless his account says more.
+    // No list to read (once the draws are made): he stays as he was,
+    // unless his account says more.
     const status = statusFromAccount(e.status as EntryStatus, account);
     return {
       status,
@@ -172,7 +183,9 @@ function listUpdate(
     };
   }
   const row = findSelfRow(page.entries, { name, tournamentPlayerId: e.tournamentPlayerId });
-  const next = statusFromList(e.status as EntryStatus, row);
+  const listed = statusFromList(e.status as EntryStatus, row);
+  // Not on the list yet (or not found on it), but his account has him.
+  const next = { ...listed, status: statusFromAccount(listed.status, account) };
   return {
     status: next.status,
     reservePosition: next.reservePosition,
@@ -180,7 +193,13 @@ function listUpdate(
     listCheckedAt: now,
     updatedAt: now,
     note:
-      next.status === "withdrawn" ? "No longer on the entry list." : e.status === next.status ? e.note : null,
+      next.status === "withdrawn"
+        ? "No longer on the entry list."
+        : e.status === next.status
+          ? e.note
+          : next.status !== listed.status
+            ? accountNote(next.status)
+            : null,
   };
 }
 
@@ -215,11 +234,98 @@ const searchForm = (settings: EntrySettings, radiusKm: number) => ({
   "TournamentExtendedFilter.AgeGroupID": U10_AGE_GROUP,
 });
 
-// Tournaments in the coming weeks he's on an entry list for that the app
-// doesn't know about yet: every U10 tournament near home, entry open or
-// closed, and every event's list. Records each with where he stands.
-// Tournaments already being followed (found or entered) are left to the
-// list checks.
+// His account's "My entries" list, for tournaments still to come: each
+// event he's entered gets a row (a new one, or one found, skipped or not
+// open yet moves on), and the tournament's other not-entered rows are
+// marked skipped. Rows already entered, or on a list, are left to the list
+// checks. Returns how many rows it wrote.
+async function fromAccount(
+  ctx: EntryContext,
+  source: TcSource,
+  client: TcClient,
+  account: AccountCheck,
+  today: string,
+): Promise<number> {
+  const mine = (await account.list()) ?? [];
+  const live = mine.filter(
+    (m) =>
+      (m.status === "entered" || m.status === "payment_needed") &&
+      m.events.length &&
+      m.date &&
+      m.date >= today,
+  );
+  if (!live.length) return 0;
+  const rows = await ctx.db.select().from(tennisEntries).where(eq(tennisEntries.sourceId, source.id));
+  let written = 0;
+  for (const m of live) {
+    const status: EntryStatus = m.status === "entered" ? "entered" : "payment_needed";
+    const here = rows.filter((r) => r.tournamentExternalId === m.tournamentId);
+    const entered = new Set(m.events.map((e) => e.eventNo));
+    for (const event of m.events) {
+      const row = here.find((r) => r.eventNo === event.eventNo);
+      if (row) {
+        const next = statusFromAccount(row.status as EntryStatus, status);
+        if (next === row.status) continue;
+        await ctx.db
+          .update(tennisEntries)
+          .set({ status: next, note: accountNote(next), listCheckedAt: ctx.now, updatedAt: ctx.now })
+          .where(eq(tennisEntries.id, row.id));
+        await notifyEntryChange(ctx.db, row, next, { log: ctx.log, now: ctx.now });
+        written++;
+        continue;
+      }
+      const overview = await client.get(`/tournament/${m.tournamentId}`);
+      const d = overview ? parseTournament(overview.html, m.tournamentId) : null;
+      const startDate = d?.startDate ?? m.date!;
+      const endDate = d?.endDate ?? startDate;
+      await ctx.db
+        .insert(tennisEntries)
+        .values({
+          sourceId: source.id,
+          tournamentExternalId: m.tournamentId,
+          tournamentName: d?.name ?? m.name,
+          startDate,
+          endDate: endDate < startDate ? startDate : endDate,
+          venue: d?.venue ?? m.venue,
+          city: d?.city ?? m.city,
+          region: d?.region ?? null,
+          entryDeadline: d?.entryDeadline ?? null,
+          eventNo: event.eventNo,
+          eventName: event.name,
+          driveMinutes: null,
+          driveEstimated: true,
+          status,
+          listCheckedAt: ctx.now,
+          note: accountNote(status),
+          tournamentUrl: `${client.base}/tournament/${m.tournamentId}`,
+          entryUrl: `${client.base}/individual-entry/${m.tournamentId}`,
+        })
+        .onConflictDoNothing();
+      written++;
+    }
+    // The event the app picked isn't the one he was entered in.
+    for (const r of here)
+      if (!entered.has(r.eventNo) && ["found", "not_open"].includes(r.status)) {
+        await ctx.db
+          .update(tennisEntries)
+          .set({
+            status: "skipped",
+            note: `He's entered in ${m.events.map((e) => e.name).join(", ")} instead.`,
+            updatedAt: ctx.now,
+          })
+          .where(eq(tennisEntries.id, r.id));
+        written++;
+      }
+  }
+  return written;
+}
+
+// Tournaments he's entered (by hand, or before these jobs ran) that the app
+// doesn't have as entered yet. First his account's "My entries" list, when
+// the login is stored: every tournament, wherever it is. Then every U10
+// tournament near home in the coming weeks, entry open or closed, and
+// every event's list. Records each with where he stands. Tournaments
+// already being followed (found or entered) are left to the list checks.
 async function findListed(
   ctx: EntryContext,
   source: TcSource,
@@ -228,8 +334,20 @@ async function findListed(
   settings: EntrySettings,
   account: AccountCheck,
 ): Promise<number> {
-  if (!settings.postalCode) return 0;
   const today = localDate(ctx.now, ctx.timeZone);
+  let recorded = 0;
+  try {
+    recorded += await fromAccount(ctx, source, client, account, today);
+  } catch (err) {
+    if (!(err instanceof Budget)) throw err;
+    ctx.log(
+      "tennis entries: reached the page limit reading his account's entries",
+      { source: source.name },
+      "WARNING",
+    );
+    return recorded;
+  }
+  if (!settings.postalCode) return recorded;
   const followed = new Set(
     (
       await ctx.db
@@ -255,7 +373,6 @@ async function findListed(
       .filter((r) => r.eventNo)
       .map((r) => [r.id, r.eventNo]),
   );
-  let recorded = 0;
   try {
     const results = await search(client, {
       ...searchForm(settings, searchRadiusKm(settings.prefs.maxDriveMinutes)),
@@ -288,7 +405,7 @@ async function findListed(
       }
       // The site hides the list once the draws are made: ask his account.
       if (!found.length && hidden.length) {
-        const answer = await account(t.id);
+        const answer = await account.on(t.id);
         const status = statusFromAccount("found", answer);
         const event =
           hidden.find((e) => e.eventNo === picked.get(t.id)) ??
@@ -579,13 +696,7 @@ async function checkLists(
     for (const e of rows) {
       const page = await readEvent(client, e);
       if (!page) continue;
-      const update = listUpdate(
-        e,
-        page,
-        name,
-        ctx.now,
-        page.entriesShown ? null : await account(e.tournamentExternalId),
-      );
+      const update = listUpdate(e, page, name, ctx.now, await account.on(e.tournamentExternalId, e.eventNo));
       await db.update(tennisEntries).set(update).where(eq(tennisEntries.id, e.id));
       await notifyEntryChange(db, e, update.status, { log, now: ctx.now });
       counts[update.status] = (counts[update.status] ?? 0) + 1;
