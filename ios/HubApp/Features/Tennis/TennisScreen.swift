@@ -11,12 +11,20 @@ struct TennisScreen: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        RemoteContent(fetch: { try await model.client.api.getTennisOverview().ok.body.json }) { o in
+        RemoteContent(
+            fetch: { try await model.client.api.getTennisOverview().ok.body.json },
+            pull: { await model.checkTennis() }
+        ) { o in
             List {
                 Section {
                     Text("Last updated: \(updated(o.lastUpdated))")
                         .font(.subheadline).foregroundStyle(.secondary)
                         .accessibilityIdentifier("tennisLastUpdated")
+                    if let checked = o.lastCheckedAt.flatMap(HomeTime.parse) {
+                        Text("Entries checked \(Self.ago(checked, now: .now))")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                            .accessibilityIdentifier("tennisLastChecked")
+                    }
                     NavigationLink(value: Route.tennisResults) { Label("Results and W–L", systemImage: "list.number") }
                     NavigationLink(value: Route.tennisAccuracy) { Label("How accurate are the predictions?", systemImage: "target") }
                 }
@@ -176,6 +184,15 @@ struct TennisScreen: View {
     static func firstName(_ name: String) -> String? {
         let given = name.contains(",") ? name.split(separator: ",").dropFirst().first.map(String.init) ?? "" : name
         return given.split(separator: " ").first.map(String.init)
+    }
+
+    /// "just now", "2 min ago", "3 h ago" (TPR-4).
+    static func ago(_ date: Date, now: Date) -> String {
+        let minutes = Int(now.timeIntervalSince(date) / 60)
+        if minutes < 1 { return "just now" }
+        if minutes < 60 { return "\(minutes) min ago" }
+        let hours = minutes / 60
+        return hours < 24 ? "\(hours) h ago" : "over a day ago"
     }
 
     private func updated(_ iso: String?) -> String {

@@ -27,7 +27,7 @@ match times there) and writes no sync run.
 | # | What | Spec | PR |
 |---|---|---|---|
 | P1 | `tennis:check` job, `tennis_checks` table (migration 0032), API, 5-minute limit, draw step. | TPR-2..4, TPR-6 | (this PR) |
-| P2 | iPhone: pull to refresh runs the check (Refresh button kept for the full sync); TestFlight bump. | TPR-1, TPR-5, TPR-6 | |
+| P2 | iPhone: pull to refresh runs the check (Refresh button kept for the full sync); TestFlight bump. | TPR-1, TPR-5, TPR-6 | (this PR); bump separate |
 
 ## 4. Done when
 - Pulling down on the iPhone Tennis screen shows new entries and list
@@ -36,4 +36,4 @@ match times there) and writes no sync run.
   his 4 entries.
 
 ## 5. Status
-Approved 2026-10-09 with the defaults. P1 built (unit + integration green); P2 next.
+Approved 2026-10-09 with the defaults. P1 built (unit + integration green); P2 built (simulator build green).
