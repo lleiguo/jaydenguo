@@ -685,6 +685,24 @@ export const operations: Operation[] = [
     response: "TennisOverview",
   },
   {
+    method: "POST",
+    path: "/api/v1/tennis/check",
+    operationId: "startTennisCheck",
+    summary:
+      "Check his entries, lists and draws now (pull to refresh); 200 with the last check when it's under 5 minutes old or running.",
+    spec: "TPR-1..4",
+    status: 202,
+    response: "TennisCheckView",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/tennis/check/{id}",
+    operationId: "getTennisCheck",
+    summary: "How a quick check is going.",
+    spec: "TPR-1",
+    response: "TennisCheckView",
+  },
+  {
     method: "GET",
     path: "/api/v1/tennis/tournaments/{id}",
     operationId: "getTournament",

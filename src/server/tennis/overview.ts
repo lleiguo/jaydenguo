@@ -3,6 +3,7 @@ import { sources } from "@db/schema";
 import type { EntryStatus } from "../../domain/tennis-constants";
 import type { DbOrTx } from "../db/client";
 import { listEntries, type EntryView } from "./entries";
+import { lastCheckedAt } from "./check";
 import { explanationsFor } from "./explain";
 import {
   listTournaments,
@@ -61,6 +62,8 @@ export type TennisOverview = {
   upcomingRows: (UpcomingRow & { drawPredictions: DrawPrediction[] })[];
   // When the Tennis source last synced (entries are refreshed with it).
   lastUpdated: string | null;
+  // When the last quick check finished (pull to refresh, TPR-4).
+  lastCheckedAt: string | null;
   // "Found for him": open for entry, or dropped off a list; he isn't
   // registered.
   found: EntryView[];
@@ -95,10 +98,11 @@ export async function tennisOverview(db: DbOrTx): Promise<TennisOverview> {
   const predictions = nextMatches.map((n) =>
     n.draw.opponentKey ? predictAgainst(data, n.draw.opponentKey) : null,
   );
-  const [explanations, entries, lastUpdated] = await Promise.all([
+  const [explanations, entries, lastUpdated, checkedAt] = await Promise.all([
     explanationsFor(db, predictions),
     listEntries(db, today),
     tennisLastUpdated(db),
+    lastCheckedAt(db),
   ]);
   return {
     today,
@@ -118,6 +122,7 @@ export async function tennisOverview(db: DbOrTx): Promise<TennisOverview> {
       })),
     ),
     lastUpdated,
+    lastCheckedAt: checkedAt,
     ...entrySections(entries, today),
   };
 }

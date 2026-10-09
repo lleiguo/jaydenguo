@@ -62,10 +62,12 @@ export async function tennisRegistrar(db: Db, source: { config: unknown }, log: 
       return null;
     }
   }
+  const problem = () => loginProblem;
   if ((source.config as EntryConfig | null)?.entry?.autoEnter === false)
-    return { ...manualRegistrar, myEntries };
+    return { ...manualRegistrar, myEntries, problem };
   return {
     myEntries,
+    problem,
     async enter(e) {
       try {
         const c = await signedIn();

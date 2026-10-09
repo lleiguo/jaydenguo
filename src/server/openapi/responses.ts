@@ -28,6 +28,7 @@ import type {
   loadTournament,
   PredictionView,
 } from "../tennis/load";
+import type { TennisCheckView } from "../tennis/check";
 import type { DrawPrediction, TennisOverview } from "../tennis/overview";
 import type { TodayView } from "../today";
 import type { Detected, Review } from "../video/prompts";
@@ -91,7 +92,7 @@ export type SwimResultsResponse = { results: ResultView[] };
 // Tennis (TEN)
 type LoadedTournament = NonNullable<Awaited<ReturnType<typeof loadTournament>>>;
 type LoadedPlayer = NonNullable<Awaited<ReturnType<typeof loadPlayer>>>;
-export type { TennisOverview };
+export type { TennisOverview, TennisCheckView };
 export type TennisTournamentResponse = {
   tournament: LoadedTournament["tournament"];
   matches: LoadedTournament["matches"];

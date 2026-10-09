@@ -186,6 +186,7 @@ export async function syncTennis(
       })),
       batch.tournaments,
       batch.window,
+      batch.scope,
     );
     for (const item of tournamentPlan) {
       if (item.op === "cancel") {
@@ -397,6 +398,7 @@ export async function syncTennis(
     const plan = planMatches(stored, batch.matches, {
       selfKey: batch.selfMemberId,
       window: batch.window,
+      scope: batch.scope,
       sameOpponent,
     });
 

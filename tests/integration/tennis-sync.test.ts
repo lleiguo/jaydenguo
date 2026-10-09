@@ -14,7 +14,7 @@ import {
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import { createLogger } from "@/server/log";
-import { syncSource } from "@/worker/sync";
+import { syncSource, syncTennisDraws } from "@/worker/sync";
 import { createFakeTc, PLANTED_PRIVATE, TC_FIXTURE, TC_NOW, TC_PROFILE_URL } from "../e2e/support/fake-tc";
 
 // Plan M3.3: the tennis_tc adapter end to end, against a fake of the site,
@@ -26,6 +26,7 @@ describe("Tennis Canada sync", () => {
   let server: Server;
   let base: string;
   const lines: string[] = [];
+  const requests: string[] = [];
   const log = createLogger((l) => lines.push(l));
   const now = () => TC_NOW;
 
@@ -48,7 +49,7 @@ describe("Tennis Canada sync", () => {
     db = createDb(handle.pool);
     process.env.SYNC_MIN_GAP_MINUTES = "0";
     process.env.FETCH_MIN_GAP_MS = "0";
-    server = createFakeTc();
+    server = createFakeTc({ requests });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     process.env.TENNIS_TC_BASE_URL = base;
@@ -229,4 +230,36 @@ describe("Tennis Canada sync", () => {
     const second = await newSource();
     expect(await syncSource(db, second, "manual", log, now)).toMatchObject({ status: "succeeded" });
   });
+
+  it("the quick check's draw update reads one tournament and cancels nothing else (intent 0012)", async () => {
+    const id = await newSource();
+    expect((await syncSource(db, id, "manual", log, now)).status).toBe("succeeded");
+    const active = async () =>
+      (await db.select().from(tennisTournaments).where(eq(tennisTournaments.sourceId, id))).filter(
+        (t) => t.status === "active",
+      ).length;
+    const before = await active();
+    const matchesBefore = (
+      await db.select().from(tennisMatches).where(eq(tennisMatches.sourceId, id))
+    ).filter((m) => m.status === "active").length;
+    requests.length = 0;
+    await syncTennisDraws(db, id, [TC_FIXTURE.currentTournament], log, now);
+    // His profile, this year, the tournament and its draw, his next opponents.
+    expect(requests.length).toBeLessThan(20);
+    expect(requests.filter((r) => r.endsWith("/tournaments"))).toEqual([]);
+    expect(await active()).toBe(before);
+    const matches = await db.select().from(tennisMatches).where(eq(tennisMatches.sourceId, id));
+    expect(matches.filter((m) => m.status === "active")).toHaveLength(matchesBefore);
+    const [current] = await db
+      .select()
+      .from(tennisTournaments)
+      .where(
+        and(
+          eq(tennisTournaments.sourceId, id),
+          eq(tennisTournaments.externalId, TC_FIXTURE.currentTournament),
+        ),
+      );
+    const [draw] = await db.select().from(tennisDraws).where(eq(tennisDraws.tournamentId, current.id));
+    expect(draw.nextMatch).toMatchObject({ status: "next", round: "Semi final" });
+  }, 60_000);
 });
