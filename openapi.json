@@ -3778,7 +3778,7 @@
     "/api/v1/tennis/check": {
       "post": {
         "operationId": "startTennisCheck",
-        "summary": "Check his entries, lists and draws now (pull to refresh); 200 with the last check when it's under 5 minutes old or running.",
+        "summary": "Check his entries, lists and draws now (pull to refresh), or the last check (recent: true) while it runs or is under 5 minutes old.",
         "description": "Spec: TPR-1..4",
         "responses": {
           "202": {

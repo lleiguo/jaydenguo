@@ -33,9 +33,10 @@ IDs here: TPR (tennis pull refresh).
   status, counts, error). The 5-minute limit, "Checked N min ago" and the
   app's follow-along read it. `sync_runs` and the hourly limit don't see
   it.
-- **API.** `POST /api/v1/tennis/check` → 202 `{ id }`, or 200 with the last
-  check when it's under 5 minutes old; `GET /api/v1/tennis/check/{id}` →
-  status. `GET /api/v1/tennis` adds `lastCheckedAt`. OpenAPI updated.
+- **API.** `POST /api/v1/tennis/check` → 202 with the check: a new one,
+  or the last (`recent: true`) while it runs or is under 5 minutes old
+  (one status, for the generated iPhone client);
+  `GET /api/v1/tennis/check/{id}` → status. `GET /api/v1/tennis` adds `lastCheckedAt`. OpenAPI updated.
 - **iPhone.** `TennisScreen`'s `refreshable` calls the check and follows
   it, then reloads; `RefreshSourcesButton` stays in the toolbar.
 - **Web.** No change.

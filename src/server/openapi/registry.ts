@@ -689,7 +689,7 @@ export const operations: Operation[] = [
     path: "/api/v1/tennis/check",
     operationId: "startTennisCheck",
     summary:
-      "Check his entries, lists and draws now (pull to refresh); 200 with the last check when it's under 5 minutes old or running.",
+      "Check his entries, lists and draws now (pull to refresh), or the last check (recent: true) while it runs or is under 5 minutes old.",
     spec: "TPR-1..4",
     status: 202,
     response: "TennisCheckView",
