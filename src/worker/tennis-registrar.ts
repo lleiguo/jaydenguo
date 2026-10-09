@@ -58,6 +58,7 @@ export async function tennisRegistrar(db: Db, source: { config: unknown }, log: 
     } catch (err) {
       if (!(err instanceof TcLoginError)) throw err;
       loginProblem = err.message;
+      log("tennis account entries unreadable", { problem: err.message }, "WARNING");
       return null;
     }
   }

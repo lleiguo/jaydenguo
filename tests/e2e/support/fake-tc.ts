@@ -197,7 +197,16 @@ async function entryFlow(
       form.get("__RequestVerificationToken") === "fake-login-token" &&
       form.get("Login") === TC_LOGIN.username &&
       form.get("Password") === TC_LOGIN.password;
-    if (!ok) redirect(`/user/login?ReturnUrl=${encodeURIComponent(form.get("ReturnUrl") ?? "/")}&error=1`);
+    // A wrong login: the form again, at /user, with the site's message.
+    if (!ok)
+      html(
+        fixture("entries/login.html")
+          .replace("{{RETURN_URL}}", form.get("ReturnUrl") ?? "/")
+          .replace(
+            "<fieldset>",
+            '<div class="validation-summary-errors"><ul><li>Invalid login or password</li></ul></div><fieldset>',
+          ),
+      );
     else redirect(form.get("ReturnUrl") || "/", "tc_auth=ok; path=/; HttpOnly");
     return true;
   }

@@ -4,6 +4,8 @@ import { auditLog, credentialSessions, credentials, sources } from "@db/schema";
 import { CLASSROOM_SCOPES, probeClassroom } from "../adapters/classroom/api";
 import { testCommitLogin } from "../adapters/commit-swim";
 import { googleAccessToken } from "../adapters/google-calendar";
+import { tennisBaseUrl } from "../adapters/tennis-tc";
+import { TcLoginError, tcRegistrarClient } from "../adapters/tennis-tc/registrar";
 import { testVeracrossLogin } from "../adapters/veracross";
 import { normaliseFeedUrl, politeFetch, FetchError } from "../adapters/http";
 import { SyncError, type BrowserSession } from "../adapters/types";
@@ -81,9 +83,16 @@ export async function checkCredential(
       await testVeracrossLogin(veracross?.portalUrl, cred.username, cred.secret, veracross?.session);
       return null;
     }
+    if (cred.kind === "password" && cred.provider === "tennis_tc") {
+      if (!cred.username) return "Add the Tennis Canada username.";
+      // Signs in and reads his "My entries" page, as the entry jobs do.
+      await tcRegistrarClient(tennisBaseUrl(), cred.username, cred.secret).myEntries();
+      return null;
+    }
     return `There's no automatic test for ${cred.provider} logins yet. It will be checked on the next sync.`;
   } catch (err) {
-    if (err instanceof FetchError || err instanceof SyncError) return err.message;
+    if (err instanceof FetchError || err instanceof SyncError || err instanceof TcLoginError)
+      return err.message;
     if (err instanceof client.ResponseBodyError && err.error === "invalid_grant") {
       return "Google access was revoked or expired. Reconnect the Google account.";
     }
