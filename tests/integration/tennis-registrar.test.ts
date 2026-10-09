@@ -13,6 +13,7 @@ import { runMigrations } from "@/server/db/migrate";
 import { createLogger } from "@/server/log";
 import { runEnter } from "@/server/tennis/entries";
 import { syncSource } from "@/worker/sync";
+import { checkCredential } from "@/worker/credentials";
 import { tennisRegistrar } from "@/worker/tennis-registrar";
 import {
   createFakeTc,
@@ -127,7 +128,25 @@ describe("tennis registrar", () => {
         tournamentId: ENTRY_FIXTURE.a,
         eventName: "U9 Orange Boys",
       }),
-    ).rejects.toBeInstanceOf(TcLoginError);
+    ).rejects.toThrow(
+      new TcLoginError(
+        'Tennis Canada sign-in failed ("Invalid login or password"): check the login on the Accounts page.',
+      ),
+    );
+  });
+
+  it("Test connection signs in and reads his entries", async () => {
+    const cred = (password: string) => ({
+      id: "t",
+      kind: "password",
+      provider: "tennis_tc",
+      username: TC_LOGIN.username,
+      secret: password,
+    });
+    expect(await checkCredential(cred(TC_LOGIN.password))).toBeNull();
+    expect(await checkCredential(cred("wrong"))).toBe(
+      'Tennis Canada sign-in failed ("Invalid login or password"): check the login on the Accounts page.',
+    );
   });
 
   it("Thursday: with a stored login, the job enters him and records it", async () => {

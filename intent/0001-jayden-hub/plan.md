@@ -434,6 +434,13 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   needed. The list checks use it too when the entry list doesn't (yet)
   have him, and the registrar checks it before submitting, so a hand-made
   entry is never submitted again.
+  First production run (2026-10-09): the stored login didn't sign in.
+  The app took any answer to the sign-in that wasn't `/user/login` as
+  signed in (the site likely shows the form again at `/user`), and later
+  said "signed the app out". Now a returned sign-in form fails with the
+  site's message, the problem is logged, and "Test connection" on the
+  Accounts page works for the Tennis Canada login (signs in and reads
+  "My entries").
 
 ### M4 (slice S4): School (≈ 6 days)
 | Task | Description | Spec | Done when |

@@ -196,6 +196,19 @@ export function laterEntryYears(html: string): string[] {
   return tabs.map((t) => t.getAttribute("data-tabid") ?? "").filter((y) => /^\d{4}$/.test(y) && y > shown);
 }
 
+// The site's sign-in form, and the message it shows with it.
+const isLoginForm = (html: string) => !!parse(html).querySelector("form#form_login");
+function loginError(html: string): string | null {
+  const root = parse(html);
+  const said = root
+    .querySelectorAll(
+      ".validation-summary-errors li, .field-validation-error, .alert--danger, .alert-danger, .form__message.error",
+    )
+    .map((e) => clean(e.text))
+    .filter(Boolean);
+  return said.length ? [...new Set(said)].join(" ") : null;
+}
+
 // --- The signed-in client ---------------------------------------------------
 
 const minGap = () => Number(process.env.FETCH_MIN_GAP_MS ?? 2000);
@@ -260,8 +273,14 @@ export function tcRegistrarClient(base: string, username: string, password: stri
       method: "POST",
       body,
     });
-    if (onLogin(after.url))
-      throw new TcLoginError("Tennis Canada sign-in failed: check the login on the Accounts page.");
+    // A wrong login comes back as the sign-in form again (at /user/login or
+    // at /user itself), with the site's message.
+    if (onLogin(after.url) || isLoginForm(after.html)) {
+      const said = loginError(after.html);
+      throw new TcLoginError(
+        `Tennis Canada sign-in failed${said ? ` ("${said}")` : ""}: check the login on the Accounts page.`,
+      );
+    }
     signedIn = true;
     return after;
   }
@@ -274,6 +293,10 @@ export function tcRegistrarClient(base: string, username: string, password: stri
       if (signedIn) throw new TcLoginError("Tennis Canada signed the app out.");
       page = await signIn(page);
       if (new URL(page.url).pathname.toLowerCase() !== url.pathname.toLowerCase()) page = await request(url);
+      if (onLogin(page.url) || isLoginForm(page.html))
+        throw new TcLoginError(
+          "Tennis Canada took the login but didn't keep the app signed in; check the login on the Accounts page.",
+        );
     }
     return page;
   }
