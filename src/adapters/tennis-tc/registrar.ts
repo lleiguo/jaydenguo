@@ -130,6 +130,72 @@ export function classifyEntryPage(html: string, url: string): AfterSubmit {
   return { kind: "unknown" };
 }
 
+// One tournament on the account's "My entries" page (/user/entries): the
+// site's own list of everything he's entered, by hand or by the app. The
+// tournament's /individual-entry page can't tell: it shows the blank form
+// again after he's entered (seen Oct 2026).
+export type MyEntry = {
+  tournamentId: string;
+  name: string;
+  venue: string | null;
+  city: string | null;
+  date: string | null;
+  events: { eventNo: string; name: string }[];
+  // "Entered" badge; no badge once withdrawn.
+  status: AccountEntry;
+};
+
+const GUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+export function parseMyEntries(html: string): MyEntry[] {
+  const out: MyEntry[] = [];
+  for (const card of parse(html).querySelectorAll(".module-container")) {
+    const link = card.querySelector(".media__title a");
+    const id = GUID.exec(link?.getAttribute("href") ?? "")?.[0].toLowerCase();
+    if (!link || !id) continue;
+    const [where] = card.querySelectorAll(".media__subheading:not(.media__subheading--muted)");
+    const [venue, city] = (where ? clean(where.text) : "").split("|").map((s) => clean(s) || null);
+    const date = /^\d{4}-\d{2}-\d{2}/.exec(card.querySelector("time")?.getAttribute("datetime") ?? "")?.[0];
+    const events = card
+      .querySelectorAll(".module-divider a")
+      .map((a) => ({
+        eventNo: /[?&]event=(\d+)/.exec(a.getAttribute("href") ?? "")?.[1],
+        name: clean(a.text),
+      }))
+      .filter((e): e is { eventNo: string; name: string } => !!e.eventNo);
+    const badges = card
+      .querySelectorAll(".media__aside a, .media__aside .tag")
+      .map((b) => clean(b.getAttribute("title") || b.text))
+      .filter(Boolean);
+    const status: AccountEntry = !badges.length
+      ? "not_entered"
+      : badges.some((b) => /^entered$/i.test(b))
+        ? "entered"
+        : badges.some((b) => /pay/i.test(b))
+          ? "payment_needed"
+          : "unknown";
+    out.push({
+      tournamentId: id,
+      name: clean(link.text),
+      venue: venue ?? null,
+      city: city ?? null,
+      date: date ?? null,
+      events,
+      status,
+    });
+  }
+  return out;
+}
+
+// The year tabs on "My entries" after the one shown (in December, next
+// year's tournaments are on their own tab).
+export function laterEntryYears(html: string): string[] {
+  const tabs = parse(html).querySelectorAll("a[data-tabid]");
+  const shown = tabs.find((t) => t.getAttribute("aria-selected") === "true")?.getAttribute("data-tabid");
+  if (!shown) return [];
+  return tabs.map((t) => t.getAttribute("data-tabid") ?? "").filter((y) => /^\d{4}$/.test(y) && y > shown);
+}
+
 // --- The signed-in client ---------------------------------------------------
 
 const minGap = () => Number(process.env.FETCH_MIN_GAP_MS ?? 2000);
@@ -200,33 +266,46 @@ export function tcRegistrarClient(base: string, username: string, password: stri
     return after;
   }
 
-  async function entryPage(tournamentId: string) {
-    const url = new URL(`/individual-entry/${encodeURIComponent(tournamentId)}`, base);
+  // A signed-in page: signs in first when the site sends it to the login.
+  async function signedInPage(path: string) {
+    const url = new URL(path, base);
     let page = await request(url);
     if (onLogin(page.url)) {
       if (signedIn) throw new TcLoginError("Tennis Canada signed the app out.");
       page = await signIn(page);
-      if (!new URL(page.url).pathname.toLowerCase().startsWith("/individual-entry"))
-        page = await request(url);
+      if (new URL(page.url).pathname.toLowerCase() !== url.pathname.toLowerCase()) page = await request(url);
     }
     return page;
   }
 
+  let mine: Promise<MyEntry[]> | null = null;
+  // Everything he's entered, read once per client. Never submits.
+  function myEntries(): Promise<MyEntry[]> {
+    mine ??= (async () => {
+      const page = await signedInPage("/user/entries");
+      const out = parseMyEntries(page.html);
+      for (const year of laterEntryYears(page.html))
+        out.push(...parseMyEntries((await signedInPage(`/user/entries/Index/${year}`)).html));
+      return out;
+    })();
+    mine.catch(() => (mine = null));
+    return mine;
+  }
+
   return {
-    // Is he entered? Read from the account's entry page, for when the
-    // public entry list is hidden (once the draws are made). Never submits.
-    async entryOn(tournamentId: string): Promise<AccountEntry> {
-      const page = await entryPage(tournamentId);
-      if (parseEntryForm(page.html)) return "not_entered";
-      const status = classifyEntryPage(page.html, page.url);
-      return status.kind === "entered" ? "entered" : status.kind === "payment" ? "payment_needed" : "unknown";
-    },
+    myEntries,
 
     async enter(e: { tournamentId: string; eventName: string }): Promise<EntryOutcome> {
-      const page = await entryPage(e.tournamentId);
+      // Already entered (by the owner, or an earlier run): the entry page
+      // would show the form again, so the account's list says.
+      const known = (await myEntries()).find((m) => m.tournamentId === e.tournamentId.toLowerCase());
+      if (known?.status === "entered") return { result: "entered", note: "Already entered on the site." };
+      if (known?.status === "payment_needed")
+        return { result: "payment_needed", note: "Entry started on the site; payment still needed." };
+      const page = await signedInPage(`/individual-entry/${encodeURIComponent(e.tournamentId)}`);
       const form = parseEntryForm(page.html);
       if (!form) {
-        // Already entered (by the owner, or an earlier run): read the status.
+        // No form: read what the site shows instead.
         const already = classifyEntryPage(page.html, page.url);
         if (already.kind === "entered") return { result: "entered", note: "Already entered on the site." };
         if (already.kind === "payment") return { result: "payment_needed", note: already.what };
@@ -258,6 +337,7 @@ export function tcRegistrarClient(base: string, username: string, password: stri
       const after = await request(new URL(form.action, page.url), { method: "POST", body });
       const fee = option.fee ? ` Fee ${option.fee}.` : "";
       const outcome = classifyEntryPage(after.html, after.url);
+      if (outcome.kind !== "rejected") mine = null;
       switch (outcome.kind) {
         case "entered":
           return { result: "entered", note: `Entered in ${option.label.replace(/\s*\$.*$/, "")}.${fee}` };

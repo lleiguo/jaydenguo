@@ -422,6 +422,18 @@ The owner asked for three scheduled jobs on top of M3 (spec TEN-9..11).
   site automatically" on the Tennis source's entry settings (on by
   default) switches it off. Without a stored login, entries stay "found"
   with a note saying to add it.
+- His entries from his account (2026-10-08, owner: "go to Jayden's
+  profile, click Entries, it lists all the tournaments he entered"): the
+  tournament's `/individual-entry/<t>` page shows the blank form again
+  after he's entered, so it can't tell. With the stored login, every entry
+  job reads the account's "My entries" page (`/user/entries`, plus any
+  later year tab) once a run: each upcoming tournament with an "Entered"
+  badge gets a row for each event listed (new, or a found/skipped/not-open
+  one moves to entered), and the tournament's other not-entered rows turn
+  skipped ("He's entered in … instead."). No postal code or search radius
+  needed. The list checks use it too when the entry list doesn't (yet)
+  have him, and the registrar checks it before submitting, so a hand-made
+  entry is never submitted again.
 
 ### M4 (slice S4): School (≈ 6 days)
 | Task | Description | Spec | Done when |

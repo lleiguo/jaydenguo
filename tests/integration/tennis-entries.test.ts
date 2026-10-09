@@ -16,6 +16,7 @@ import {
   type EntryContext,
   type Registrar,
 } from "@/server/tennis/entries";
+import type { MyEntry } from "@/adapters/tennis-tc/registrar";
 import { syncSource } from "@/worker/sync";
 import { createFakeTc, ENTRY_FIXTURE, TC_FIXTURE, TC_NOW, TC_PROFILE_URL } from "../e2e/support/fake-tc";
 
@@ -39,6 +40,16 @@ describe("tennis tournament entries", () => {
   const log = createLogger((l) => process.env.DEBUG_LOG && console.log(l));
   const ctx = (): EntryContext => ({ db, log, now: TC_NOW, timeZone: "America/Toronto" });
   const drive = async (_from: string, to: string) => (to.includes("Faraway") ? 100 : 30);
+  const myEntryA = (over: Partial<MyEntry> = {}): MyEntry => ({
+    tournamentId: ENTRY_FIXTURE.a,
+    name: "Fixture Rookie Open",
+    venue: "Fixture Tennis Club",
+    city: "Nearby",
+    date: "2024-10-05",
+    events: [{ eventNo: "6", name: "U9 Orange Boys" }],
+    status: "entered",
+    ...over,
+  });
 
   async function newSource() {
     const [s] = await db
@@ -241,11 +252,18 @@ describe("tennis tournament entries", () => {
   });
 
   describe("once the draws are made the site hides the entry list", () => {
+    // His account's "My entries": tournament A's U9 Orange Boys with this
+    // badge, nothing entered, or no list to read ("unknown").
     const account = (answer: "entered" | "payment_needed" | "not_entered" | "unknown") => {
       const asked: string[] = [];
       const registrar: Registrar = {
         ...manualRegistrar,
-        entryOn: async (t) => (asked.push(t), answer),
+        myEntries: async () => {
+          asked.push("read");
+          if (answer === "unknown") return null;
+          if (answer === "not_entered") return [];
+          return [myEntryA({ status: answer })];
+        },
       };
       return { registrar, asked };
     };
@@ -265,8 +283,9 @@ describe("tennis tournament entries", () => {
         const { registrar, asked } = account("entered");
         await runAcceptance(ctx(), s, { registrar });
         expect(await a()).toMatchObject({ status: "entered" });
-        expect((await a()).note).toMatch(/entry list is hidden/);
-        expect(asked).toEqual([ENTRY_FIXTURE.a]);
+        expect((await a()).note).toMatch(/his account's entries/);
+        // One read of his account's list for the whole run.
+        expect(asked).toEqual(["read"]);
       } finally {
         hiddenA = false;
       }
@@ -306,6 +325,71 @@ describe("tennis tournament entries", () => {
       } finally {
         hiddenA = false;
       }
+    });
+  });
+
+  describe("his account's entries", () => {
+    const withEntries = (mine: MyEntry[]): Registrar => ({ ...manualRegistrar, myEntries: async () => mine });
+
+    it("an entry made by hand shows as entered before the entry list has him", async () => {
+      selfRow = "";
+      const s = await newSource();
+      await runEnter(ctx(), s, { drive, registrar: manualRegistrar });
+      const a = () =>
+        entriesOf(s.id).then((rows) => rows.find((r) => r.tournamentExternalId === ENTRY_FIXTURE.a)!);
+      expect((await a()).status).toBe("found");
+      // The list is shown but doesn't have him yet; his account does.
+      await runRefresh(ctx(), s, { drive, registrar: withEntries([myEntryA()]) });
+      expect(await a()).toMatchObject({
+        status: "entered",
+        note: "Entered on the site (from his account's entries).",
+      });
+    });
+
+    it("an entry in another event than the one picked replaces it", async () => {
+      selfRow = "";
+      const s = await newSource();
+      await runEnter(ctx(), s, { drive, registrar: manualRegistrar });
+      const other = myEntryA({ events: [{ eventNo: "5", name: "U10 (Orange Ball)" }] });
+      await runAcceptance(ctx(), s, { registrar: withEntries([other]) });
+      const rows = (await entriesOf(s.id)).filter((r) => r.tournamentExternalId === ENTRY_FIXTURE.a);
+      expect(rows.map((r) => [r.eventNo, r.status]).sort()).toEqual([
+        ["5", "entered"],
+        ["6", "skipped"],
+      ]);
+      expect(rows.find((r) => r.eventNo === "6")!.note).toBe("He's entered in U10 (Orange Ball) instead.");
+    });
+
+    it("records a tournament outside the search, and leaves past and withdrawn ones", async () => {
+      selfRow = "";
+      const s = await newSource();
+      const far = myEntryA({
+        tournamentId: ENTRY_FIXTURE.c,
+        name: "Fixture Far Away Open",
+        date: "2024-10-19",
+        events: [{ eventNo: "2", name: "U9 Mixed - Orange" }],
+      });
+      const past = myEntryA({ tournamentId: "e0000000-0000-4000-8000-00000000000e", date: "2024-09-01" });
+      const withdrawn = myEntryA({
+        tournamentId: "d0000000-0000-4000-8000-00000000000d",
+        status: "not_entered",
+      });
+      const result = await runAcceptance(ctx(), s, { registrar: withEntries([far, past, withdrawn]) });
+      expect(result).toMatchObject({ listed: 1 });
+      const [c] = (await entriesOf(s.id)).filter((r) => r.tournamentExternalId === ENTRY_FIXTURE.c);
+      expect(c).toMatchObject({
+        tournamentName: "Fixture Far Away Open",
+        startDate: "2024-10-19",
+        eventNo: "2",
+        eventName: "U9 Mixed - Orange",
+        status: "entered",
+      });
+      expect((await entriesOf(s.id)).map((r) => r.tournamentExternalId)).not.toContain(past.tournamentId);
+      expect((await entriesOf(s.id)).map((r) => r.tournamentExternalId)).not.toContain(
+        withdrawn.tournamentId,
+      );
+      // Read again: nothing new.
+      expect(await runAcceptance(ctx(), s, { registrar: withEntries([far]) })).toMatchObject({ listed: 0 });
     });
   });
 
