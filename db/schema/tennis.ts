@@ -268,3 +268,25 @@ export const tennisEntries = pgTable(
     check("tennis_entries_dates_chk", sql`${t.endDate} >= ${t.startDate}`),
   ],
 );
+
+// Quick checks of his entries, lists and draws (intent 0012, TPR-2..4):
+// pull to refresh on the iPhone Tennis screen. One row per check, covering
+// every enabled Tennis Canada source. Not a sync run: the hourly limit
+// (SYNC-5) doesn't see these.
+export const tennisChecks = pgTable(
+  "tennis_checks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    status: text("status").notNull().default("running"),
+    startedAt: ts("started_at").notNull().defaultNow(),
+    finishedAt: ts("finished_at"),
+    // What it found, e.g. { entries: 4, entered: 3, reserve: 1, draws: 1 }.
+    result: jsonb("result"),
+    // A plain-language problem, shown on the screen.
+    error: text("error"),
+  },
+  (t) => [
+    index("tennis_checks_started_idx").on(t.startedAt),
+    check("tennis_checks_status_chk", sql`${t.status} in ('running', 'succeeded', 'failed')`),
+  ],
+);

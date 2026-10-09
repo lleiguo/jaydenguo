@@ -30,6 +30,8 @@ const DEFAULT_BASE = "https://tc.tournamentsoftware.com";
 // Per run. At 2 s apart this stays well inside the 10-minute budget.
 const MAX_REQUESTS = () => Number(process.env.TENNIS_TC_MAX_REQUESTS ?? 150);
 const MAX_OPPONENTS = 30;
+// The quick check's draw update: his next opponents only.
+const MAX_SCOPED_OPPONENTS = 4;
 // Tournaments that started this recently are read in full (draws, dates).
 const CURRENT_DAYS = 10;
 const DETAIL_DAYS = 30;
@@ -181,7 +183,8 @@ export async function fetchTennis(ctx: AdapterContext): Promise<TcRaw> {
       "The Tennis Canada site's pages have changed, so this sync needs an update. Add matches by hand meanwhile.",
     );
   raw.self = { profileId, memberId: me.memberId, name: me.name, club: me.club };
-  const tab = await client.get(`/player-profile/${profileId}/tournaments`);
+  const scope = ctx.tennisScope ? new Set(ctx.tennisScope) : null;
+  const tab = scope ? null : await client.get(`/player-profile/${profileId}/tournaments`);
   const years = tab ? parseYears(tab.html) : [];
   for (const year of years.length ? years : [Number(today.slice(0, 4))]) {
     const page = await client.get(`/player-profile/${profileId}/tournaments/${year}/TournamentsForYear`, {
@@ -189,6 +192,7 @@ export async function fetchTennis(ctx: AdapterContext): Promise<TcRaw> {
     });
     if (page) raw.tournaments.push(...parseTournamentsForYear(page.html));
   }
+  if (scope) raw.tournaments = raw.tournaments.filter((t) => scope.has(t.id));
   const org = orgCode([profile.html, tab?.html ?? ""]);
 
   try {
@@ -196,6 +200,7 @@ export async function fetchTennis(ctx: AdapterContext): Promise<TcRaw> {
     //     match played there): their draws come from the event page.
     for (const e of ctx.tennisEntries ?? []) {
       if (e.endDate < addDays(today, -CURRENT_DAYS)) continue;
+      if (scope && !scope.has(e.tournamentId)) continue;
       if (e.tournamentPlayerId)
         raw.selfTournamentPlayers!.push({
           tournamentId: e.tournamentId,
@@ -248,7 +253,8 @@ export async function fetchTennis(ctx: AdapterContext): Promise<TcRaw> {
 
     // 3. One hop out: next opponents first, then recent opponents.
     const wanted = opponentQueue(raw, today);
-    for (const w of wanted.slice(0, MAX_OPPONENTS)) {
+    const nextOnly = scope ? wanted.filter((w) => w.tournamentId) : wanted;
+    for (const w of nextOnly.slice(0, scope ? MAX_SCOPED_OPPONENTS : MAX_OPPONENTS)) {
       if (raw.opponents.some((o) => o.memberId === w.memberId)) continue;
       let page: { html: string; url: string } | null = null;
       if (w.memberId && org) page = await client.get(`/player/${org}/${b64(`base64:${w.memberId}`)}`);

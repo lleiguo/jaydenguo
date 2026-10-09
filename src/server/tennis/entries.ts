@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { sources, tennisEntries, tennisPlayers } from "@db/schema";
 import { Budget, TcClient, tennisBaseUrl } from "../../adapters/tennis-tc";
 import {
@@ -67,6 +67,8 @@ const LISTED_DAYS = 28;
 // request cap for the whole refresh.
 const DISCOVER_DAYS = 120;
 const REFRESH_REQUESTS = 150;
+// The quick check (intent 0012): his entries' lists and "My entries".
+const CHECK_REQUESTS = 40;
 
 // Enters him in one event on the site. "unavailable": the app can't do it
 // (not built yet, or no Tennis Canada login), so the owner uses the link.
@@ -79,6 +81,8 @@ export type Registrar = {
     eventName: string;
   }): Promise<{ result: "entered" | "payment_needed" | "unavailable"; note?: string }>;
   myEntries?(): Promise<MyEntry[] | null>;
+  // Why the login couldn't be used this run, if it couldn't.
+  problem?(): string | null;
 };
 
 const accountNote = (status: EntryStatus) =>
@@ -1010,3 +1014,58 @@ export async function listEntries(db: DbOrTx, today: string) {
     .orderBy(tennisEntries.startDate, tennisEntries.tournamentName);
 }
 export type EntryView = Awaited<ReturnType<typeof listEntries>>[number];
+
+// The quick check (intent 0012, TPR-2, TPR-3), for pull to refresh: his
+// account's entries and each entry list, then his draws: one seen for the
+// first time runs the full sync (as the draw watch), one already in has
+// only its tournament re-read (`syncDraws`). No tournament search.
+export async function runCheck(
+  ctx: EntryContext,
+  source: TcSource,
+  deps: {
+    registrar?: Registrar;
+    sync: (sourceId: string) => Promise<"succeeded" | "failed" | "skipped">;
+    syncDraws: (sourceId: string, tournamentIds: string[]) => Promise<void>;
+  },
+): Promise<{ counts: Record<string, number>; problem: string | null } | { skipped: string }> {
+  const name = await selfName(ctx.db, source.id);
+  if (!name) return { skipped: "no tennis sync yet (his name isn't known)" };
+  const today = localDate(ctx.now, ctx.timeZone);
+  const client = newClient(ctx, CHECK_REQUESTS);
+  const account = accountChecker(deps.registrar, ctx.log);
+  let listed = 0;
+  try {
+    listed = await fromAccount(ctx, source, client, account, today);
+  } catch (err) {
+    if (!(err instanceof Budget)) throw err;
+  }
+  const lists = await checkLists(ctx, source, client, name, account);
+  const watch = await runDrawWatch(ctx, source, deps.sync);
+  // Tournaments under way (or about to be) whose draw is already in.
+  const synced = await ctx.db
+    .selectDistinct({ id: tennisEntries.tournamentExternalId })
+    .from(tennisEntries)
+    .where(
+      and(
+        eq(tennisEntries.sourceId, source.id),
+        inArray(tennisEntries.status, [...ACTIVE_ENTRY]),
+        lte(tennisEntries.startDate, addDays(today, WATCH_DAYS)),
+        gte(tennisEntries.endDate, today),
+        isNotNull(tennisEntries.drawSyncedAt),
+      ),
+    );
+  if (synced.length)
+    await deps.syncDraws(
+      source.id,
+      synced.map((r) => r.id),
+    );
+  const counts = {
+    ...lists,
+    listed,
+    drawsSeen: "seen" in watch ? watch.seen : 0,
+    drawsRead: synced.length,
+    requests: client.requests,
+  };
+  ctx.log("tennis check done", { source: source.name, ...counts });
+  return { counts, problem: deps.registrar?.problem?.() ?? null };
+}

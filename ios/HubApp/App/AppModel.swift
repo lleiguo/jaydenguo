@@ -458,6 +458,29 @@ final class AppModel {
         await refresh(ids: ids, key: kind, site: site)
     }
 
+    /// Pull to refresh on Tennis (intent 0012, TPR-1, TPR-4, TPR-6): the
+    /// quick check of his entries, lists and draws, followed until it's
+    /// done (up to 2 minutes). A check under 5 minutes old isn't repeated;
+    /// the screen's "Entries checked …" line says when it ran.
+    func checkTennis() async {
+        do {
+            var check = try await client.api.startTennisCheck().accepted.body.json
+            for _ in 0..<60 where check.status == .running {
+                try await Task.sleep(for: .seconds(2))
+                check = try await client.api.getTennisCheck(path: .init(id: check.id)).ok.body.json
+            }
+            switch check.status {
+            case .failed: show(check.error ?? "Couldn't reach Tennis Canada. Try again later.")
+            case .running: show("Still checking Tennis Canada; changes will show when it's done.")
+            case .succeeded: break
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            show(HubError.from(error)?.message ?? "Couldn't reach Tennis Canada. Try again later.")
+        }
+    }
+
     /// Syncs one source (Settings → Sources) and follows it.
     func refreshSource(id: String, name: String) async {
         await refresh(ids: [id], key: id, site: name)

@@ -19,17 +19,22 @@ struct SportDestination: View {
 }
 
 /// Loads a screen's data, reloads when the server's data changes (CAL-8)
-/// and on pull to refresh, and keeps what's shown if a reload fails.
+/// and on pull to refresh, and keeps what's shown if a reload fails. With
+/// `pull`, pulling down runs it first (Tennis: the quick check, TPR-1).
 struct RemoteContent<Value, Content: View>: View {
     @Environment(AppModel.self) private var model
     let fetch: @MainActor () async throws -> Value
+    var pull: (@MainActor () async -> Void)? = nil
     @ViewBuilder let content: (Value) -> Content
     @State private var state: Loadable<Value> = .loading
 
     var body: some View {
         LoadableView(state: state, content: content)
             .task(id: model.changes) { await refresh() }
-            .refreshable { await refresh() }
+            .refreshable {
+                await pull?()
+                await refresh()
+            }
     }
 
     private func refresh() async {

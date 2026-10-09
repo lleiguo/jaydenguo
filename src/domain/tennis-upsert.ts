@@ -73,6 +73,9 @@ export type TennisBatch = {
   draws: TennisDrawRecord[];
   matches: TennisMatchRecord[];
   window: SyncWindow;
+  // Set when this batch read only these tournaments (intent 0012, TPR-3):
+  // nothing outside them is cancelled.
+  scope?: string[];
 };
 
 const hash = (v: unknown) => createHash("sha256").update(JSON.stringify(v)).digest("hex").slice(0, 32);
@@ -132,6 +135,7 @@ export function planTournaments(
   stored: StoredTournament[],
   incoming: TennisTournamentRecord[],
   window: SyncWindow,
+  scope?: string[],
 ): TournamentPlanItem[] {
   const byId = new Map(incoming.map((t) => [t.externalId, t]));
   const storedById = new Map(stored.map((s) => [s.externalId, s]));
@@ -150,6 +154,7 @@ export function planTournaments(
   if (incoming.some((t) => t.entered)) {
     const from = window.from?.toISOString().slice(0, 10);
     for (const s of stored) {
+      if (scope && !scope.includes(s.externalId)) continue;
       if (s.status === "active" && s.entered && !byId.has(s.externalId) && (!from || s.startDate >= from))
         items.push({ op: "cancel", id: s.id });
     }
@@ -246,6 +251,8 @@ export function planMatches(
   opts: {
     selfKey: string;
     window: SyncWindow;
+    // Only these tournaments were read: matches elsewhere aren't cancelled.
+    scope?: string[];
     sameOpponent?: (manualKey: string, sourceKey: string) => boolean;
   },
 ): MatchPlan {
@@ -322,6 +329,7 @@ export function planMatches(
     for (const s of stored) {
       if (!s.externalId || byId.has(s.externalId) || s.status !== "active") continue;
       if (!involves(s.values, opts.selfKey) || (from && s.values.matchDate < from)) continue;
+      if (opts.scope && !opts.scope.includes(s.values.tournamentExternalId ?? "")) continue;
       if (s.corrected || s.origin === "manual") {
         if (s.sourceHash !== null || !s.sourceDisagrees)
           items.push({

@@ -58,6 +58,56 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   ]).finally(() => clearTimeout(timer));
 }
 
+// The quick check's draw update (intent 0012, TPR-3): re-reads only these
+// tournaments (his profile, this year's tournaments, their draws and his
+// next opponents) and applies the tennis part, cancelling nothing outside
+// them. Not a sync run: no run row, no hourly limit; the calendar waits for
+// the next full sync. Best effort: problems are logged, never thrown.
+export async function syncTennisDraws(
+  db: Db,
+  sourceId: string,
+  tournamentIds: string[],
+  log: Logger,
+  now: () => Date = () => tennisTestNow() ?? new Date(),
+): Promise<void> {
+  try {
+    const [source] = await db.select().from(sources).where(eq(sources.id, sourceId));
+    if (!source || source.kind !== "tennis_tc" || !tournamentIds.length) return;
+    const adapter = adapterFor(source.kind);
+    const homeTimeZone = await getHomeTimeZone(db);
+    const ctx: AdapterContext = {
+      source: {
+        id: source.id,
+        name: source.name,
+        config: (source.config ?? {}) as Record<string, unknown>,
+        mapping: parseMapping(source.categoryMapping),
+      },
+      credential: null,
+      now: now(),
+      homeTimeZone,
+      tennisEntries: await syncEntries(db, source.id, localDate(now(), homeTimeZone)),
+      tennisScope: tournamentIds,
+    };
+    const raw = await withTimeout(adapter.fetchRaw(ctx), SOURCE_TIMEOUT_MS);
+    const batch = adapter.normalise(raw, ctx);
+    if (!batch.tennis) return;
+    const counts = await syncTennis(
+      db,
+      sourceId,
+      { ...batch.tennis, scope: tournamentIds },
+      { actor: "sync" },
+    );
+    log("tennis draws read", { source: source.name, tournaments: tournamentIds.length, ...counts });
+    await notifyNextMatches(db, { log, now: now() }).catch((err) =>
+      log("match notifications failed", { error: err }, "WARNING"),
+    );
+    const explained = await explainNextMatches(db, claudeExplainer(), log);
+    log("tennis explanations", explained);
+  } catch (err) {
+    log("tennis draws read failed", { sourceId, error: err }, "WARNING");
+  }
+}
+
 export async function syncSource(
   db: Db,
   sourceId: string,

@@ -48,6 +48,10 @@ export type AdapterContext = {
   now: Date;
   homeTimeZone: string;
   tennisEntries?: TennisEntryHint[];
+  // Only these tournaments (external ids): the quick check's draw update
+  // (intent 0012, TPR-3) reads his profile, this year's tournaments and
+  // these draws, not every year or every opponent.
+  tennisScope?: string[];
   browserSession?: BrowserSession;
 };
 

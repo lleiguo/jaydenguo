@@ -14,11 +14,20 @@ Order: the server check first, then the iPhone app.
 |---|---|---|---|
 | SP-P1 | Can a draw already in be re-read alone (bracket or match list, his next match) without the profile walk? | Read the adapter's draw parsers against the fixture pages. | P1's draw step |
 
+**SP-P1 (2026-10-09): yes.** The sync already reads each draw on its own
+(`GetDrawContent`, else `GetMatchesContent`) and replaces stored draws per
+tournament. The catch: a run cancels his stored tournaments and matches it
+didn't return. So the draw-only read (`syncTennisDraws`) reads his profile,
+this year's tournaments and only the scoped ones (and up to 4 next
+opponents), and the batch carries a `scope` so nothing outside those
+tournaments is cancelled. It skips the calendar (the next full sync updates
+match times there) and writes no sync run.
+
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| P1 | `tennis:check` job, `tennis_checks` table, API, 5-minute limit, draw step. | TPR-2..4, TPR-6 | |
-| P2 | iPhone: pull to refresh runs the check (Refresh button kept for the full sync); TestFlight bump. | TPR-1, TPR-5, TPR-6 | |
+| P1 | `tennis:check` job, `tennis_checks` table (migration 0032), API, 5-minute limit, draw step. | TPR-2..4, TPR-6 | (this PR) |
+| P2 | iPhone: pull to refresh runs the check (Refresh button kept for the full sync); TestFlight bump. | TPR-1, TPR-5, TPR-6 | (this PR); bump separate |
 
 ## 4. Done when
 - Pulling down on the iPhone Tennis screen shows new entries and list
@@ -27,4 +36,4 @@ Order: the server check first, then the iPhone app.
   his 4 entries.
 
 ## 5. Status
-Approved 2026-10-09 with the defaults. P1 next.
+Approved 2026-10-09 with the defaults. P1 built (unit + integration green); P2 built (simulator build green).

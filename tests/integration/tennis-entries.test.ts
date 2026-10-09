@@ -10,6 +10,7 @@ import { createLogger } from "@/server/log";
 import {
   manualRegistrar,
   runAcceptance,
+  runCheck,
   runDrawWatch,
   runEnter,
   runRefresh,
@@ -390,6 +391,53 @@ describe("tennis tournament entries", () => {
       );
       // Read again: nothing new.
       expect(await runAcceptance(ctx(), s, { registrar: withEntries([far]) })).toMatchObject({ listed: 0 });
+    });
+  });
+
+  describe("the quick check (intent 0012)", () => {
+    const withEntries = (mine: MyEntry[]): Registrar => ({ ...manualRegistrar, myEntries: async () => mine });
+    const noSync = async () => "skipped" as const;
+
+    it("reads his account and the entry lists, and never searches", async () => {
+      selfRow = "";
+      const s = await newSource();
+      requests.length = 0;
+      const out = await runCheck(ctx(), s, {
+        registrar: withEntries([myEntryA()]),
+        sync: noSync,
+        syncDraws: async () => {},
+      });
+      expect(out).toMatchObject({ counts: { listed: 1, drawsRead: 0 }, problem: null });
+      const [a] = (await entriesOf(s.id)).filter((r) => r.tournamentExternalId === ENTRY_FIXTURE.a);
+      expect(a).toMatchObject({ eventNo: "6", status: "entered" });
+      expect(requests.some((r) => r.includes("DoSearch"))).toBe(false);
+      expect(requests.length).toBeLessThan(15);
+    });
+
+    it("re-reads only the draws already in, and says when the login failed", async () => {
+      selfRow = "";
+      const s = await newSource();
+      await db.insert(tennisEntries).values({
+        sourceId: s.id,
+        tournamentExternalId: TC_FIXTURE.currentTournament,
+        tournamentName: "Current",
+        startDate: "2024-09-26",
+        endDate: "2024-09-29",
+        eventNo: "13",
+        eventName: "Fixture Event 13",
+        status: "main_draw",
+        drawSeenAt: TC_NOW,
+        drawSyncedAt: TC_NOW,
+        tournamentUrl: `${base}/tournament/${TC_FIXTURE.currentTournament}`,
+      });
+      const read: string[][] = [];
+      const out = await runCheck(ctx(), s, {
+        registrar: { ...withEntries([]), problem: () => "Tennis Canada sign-in failed." },
+        sync: noSync,
+        syncDraws: async (_id, ids) => void read.push(ids),
+      });
+      expect(read).toEqual([[TC_FIXTURE.currentTournament]]);
+      expect(out).toMatchObject({ counts: { drawsRead: 1 }, problem: "Tennis Canada sign-in failed." });
     });
   });
 

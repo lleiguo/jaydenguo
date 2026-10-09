@@ -7,7 +7,7 @@ import { removeCredentialJob, rotateKeysJob, testCredentialJob } from "./credent
 import { seedJob } from "./seed";
 import { senderCheckJob } from "./sender-check";
 import { smokeJob, syncJob } from "./sync";
-import { tennisAcceptanceJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
+import { tennisAcceptanceJob, tennisCheckJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
 import { videoReviewJob } from "./video/review";
 import { assistantActionsJob } from "./assistant-actions";
 import { assistantEmailJob } from "./assistant-email";
@@ -56,6 +56,10 @@ export const jobs: Record<string, Job> = {
   "tennis:acceptance": {
     description: "Read acceptance lists: main draw or reserve (Friday)",
     run: tennisAcceptanceJob,
+  },
+  "tennis:check": {
+    description: "Quick check of his entries, lists and draws (pull to refresh): tennis:check <check id>",
+    run: tennisCheckJob,
   },
   "tennis:draw-watch": {
     description: "Look for his draws this week; sync once out (hourly on draw days)",

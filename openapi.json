@@ -3775,6 +3775,74 @@
         }
       }
     },
+    "/api/v1/tennis/check": {
+      "post": {
+        "operationId": "startTennisCheck",
+        "summary": "Check his entries, lists and draws now (pull to refresh), or the last check (recent: true) while it runs or is under 5 minutes old.",
+        "description": "Spec: TPR-1..4",
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TennisCheckView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tennis/check/{id}": {
+      "get": {
+        "operationId": "getTennisCheck",
+        "summary": "How a quick check is going.",
+        "description": "Spec: TPR-1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TennisCheckView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tennis/tournaments/{id}": {
       "get": {
         "operationId": "getTournament",
@@ -5485,10 +5553,10 @@
           "outcome": {
             "type": "string",
             "enum": [
+              "error",
               "answer",
               "bark",
-              "limit",
-              "error"
+              "limit"
             ]
           },
           "text": {
@@ -9231,6 +9299,56 @@
           "ms"
         ]
       },
+      "TennisCheckView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "failed",
+              "succeeded"
+            ]
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "result": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {
+              "type": "number"
+            },
+            "x-nullable": true
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "startedAt",
+          "finishedAt",
+          "error",
+          "recent"
+        ]
+      },
       "TennisNextMatch": {
         "type": "object",
         "properties": {
@@ -9385,6 +9503,12 @@
             }
           },
           "lastUpdated": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastCheckedAt": {
             "type": [
               "string",
               "null"
@@ -9898,6 +10022,7 @@
           "past",
           "upcomingRows",
           "lastUpdated",
+          "lastCheckedAt",
           "found",
           "notOpen",
           "skipped"
@@ -10628,10 +10753,10 @@
           "outcome": {
             "type": "string",
             "enum": [
+              "error",
               "answer",
               "bark",
-              "limit",
-              "error"
+              "limit"
             ]
           },
           "language": {

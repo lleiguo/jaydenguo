@@ -122,6 +122,20 @@ describe("planMatches", () => {
     expect(plan.items).toEqual([{ op: "cancel", id: `id-${mine.externalId}`, before: stored(mine).values }]);
   });
 
+  it("with a scope, cancels only matches in the tournaments read (intent 0012)", () => {
+    const inScope = match({ tournamentExternalId: "t-read", side2: ["4"] });
+    const elsewhere = match({ tournamentExternalId: "t-other", side2: ["5"] });
+    const still = match({ tournamentExternalId: "t-read", side2: ["6"] });
+    const plan = planMatches([stored(inScope), stored(elsewhere), stored(still)], [still], {
+      selfKey: SELF,
+      window,
+      scope: ["t-read"],
+    });
+    expect(plan.items).toEqual([
+      { op: "cancel", id: `id-${inScope.externalId}`, before: stored(inScope).values },
+    ]);
+  });
+
   it("restores a cancelled match that comes back", () => {
     const r = match();
     const plan = planMatches([stored(r, { status: "cancelled" })], [r], { selfKey: SELF, window });
@@ -237,5 +251,9 @@ describe("planTournaments", () => {
     expect(planTournaments(storedList, [], window)).toEqual([]);
     const plan = planTournaments(storedList, [tournament({ externalId: "d" })], window);
     expect(plan.filter((i) => i.op === "cancel")).toEqual([{ op: "cancel", id: "mine" }]);
+    // Reading only tournament "d" (intent 0012): nothing else is cancelled.
+    expect(planTournaments(storedList, [tournament({ externalId: "d" })], window, ["d"])).toEqual(
+      planTournaments(storedList, [tournament({ externalId: "d" })], window).filter((i) => i.op !== "cancel"),
+    );
   });
 });
