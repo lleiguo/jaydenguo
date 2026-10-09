@@ -1,5 +1,5 @@
 # Intent: Pull down to refresh his tennis entries
-Status: draft (2026-10-09). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-09, in chat: "approve, defaults"; question 3: "keep the refresh button for full sync on both mobile and web"). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "on mobile app, I don't want to tap refresh, just want to pull down to

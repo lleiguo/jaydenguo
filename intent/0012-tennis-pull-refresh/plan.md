@@ -1,5 +1,5 @@
 # Plan: Pull down to refresh his tennis entries
-Status: draft (2026-10-09), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-09, in chat: "approve, defaults"; question 3: "keep the refresh button for full sync on both mobile and web"), with [spec.md](spec.md).
 
 Order: the server check first, then the iPhone app.
 
@@ -27,4 +27,4 @@ Order: the server check first, then the iPhone app.
   his 4 entries.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-09 with the defaults. P1 next.

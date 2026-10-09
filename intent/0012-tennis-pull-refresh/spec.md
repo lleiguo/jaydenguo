@@ -1,5 +1,5 @@
 # Spec: Pull down to refresh his tennis entries
-Status: draft (2026-10-09). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-09, in chat: "approve, defaults"; question 3: "keep the refresh button for full sync on both mobile and web"). Written by Claude from [intent.md](intent.md).
 
 Read with 0001 (SYNC-2, SYNC-5, TEN-9..11) and 0004 (APP-7, ITEN-1).
 IDs here: TPR (tennis pull refresh).

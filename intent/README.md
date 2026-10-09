@@ -28,4 +28,4 @@ Rules:
 | 0009 | [Cookie reads an email when asked](0009-cookie-reads-email/) | approved 2026-10-03 (chat); fetched when asked, nothing kept; defaults kept | approved 2026-10-03 (chat); R-1..R-3 accepted | approved 2026-10-03; R1–R4 built, not merged; SP-R2 after deploy |
 | 0010 | [The workflow, written into the repo and enforced](0010-codified-workflow/) | approved 2026-10-03 (chat); defaults kept | approved 2026-10-03 (chat); W-1..W-4 accepted | approved 2026-10-03; W1–W6 done (#92–#94); O-2 denylist secret left |
 | 0011 | [Past suggestions clear, skipped events hide](0011-tidy-lists/) | approved 2026-10-03 (chat); defaults kept | approved 2026-10-03 (chat) | approved 2026-10-03; T1 merged and deployed (#97), build 10 (#98) awaits upload |
-| 0012 | [Pull down to refresh his tennis entries](0012-tennis-pull-refresh/) | draft 2026-10-09 | draft 2026-10-09 | draft 2026-10-09 |
+| 0012 | [Pull down to refresh his tennis entries](0012-tennis-pull-refresh/) | approved 2026-10-09 (chat); defaults kept, Refresh button stays | approved 2026-10-09 (chat); P-1, P-2 accepted | approved 2026-10-09; P1 next |
