@@ -33,7 +33,7 @@ region script failed on macOS for an unrelated reason (no `timeout`
 command) and has been fixed; its output only adds Cloud Scheduler, which
 is created in M1.5.
 
-## SP-4: calendar feeds for TeamSnap, Spordle and Veracross (M1.7, 2026-09-27, provisional)
+## SP-4: calendar feeds for TeamSnap, Spordle and Veracross (M1.7, 2026-09-27; Spordle settled 2026-10-09)
 
 **Owner mapping (O-6):** soccer uses TeamSnap, hockey uses Spordle. The
 owner hasn't looked for the subscription links yet.
@@ -42,8 +42,17 @@ owner hasn't looked for the subscription links yet.
 | Source | Feed? | Decision |
 |---|---|---|
 | TeamSnap | Yes: every team schedule has a calendar subscription (iCal) link. | ICS, generic `ical` adapter. |
-| Spordle | Likely: the Spordle app has calendar synchronisation on teams with a Premium subscription (app 1.5.1+), and the Spordle account site has a calendar. Whether a plain iCal link is exposed isn't confirmed. | ICS if a link exists; otherwise a `spordle` login adapter (Playwright), decided when the owner checks. |
+| Spordle | **Yes (2026-10-09).** Each team has a calendar link of the form `api.mobile.spordle.com/teams/<team id>/calendar`: a plain ICS feed, no login (`PRODID:-//SPORDLE//APP MOBILE//en`, `REFRESH-INTERVAL` 1 hour). It has games (`UID:game-<n>`, "HOME VS AWAY", the rink's full address, a link to the game page), practices (`UID:practice-<uuid>`) and team activities. The app's "sync to calendar" isn't offered on Jayden's team, and the account site's calendar (`myaccount.spordle.com/calendar`) only holds clinics, payments and volunteer shifts. | ICS, generic `ical` adapter. No `spordle` login adapter. |
 | Veracross | Parent portals usually offer a calendar subscription link for the school calendar. The daily timetable needs scraping either way. | **M4.2 (2026-09-27): no feed yet.** The school's full calendar sits behind a page passkey on its website; the owner chose to read the public "Key Dates at a Glance" list instead (`school_dates` adapter). Timetable: scrape (below). |
+
+**Spordle, other routes looked at (2026-10-09, signed in by the owner in
+the browser pane):** Spordle has no public developer API. The association's
+public page (`page.spordle.com/<association>/teams/<team id>?tab=schedule`)
+shows the same games and practices from Spordle Play's public data service,
+but that service refuses requests without a key the page picks up while
+loading, and the page is behind a bot check, so it was not used. Team
+messages are the app's in-app chat only (no web view, no export): not read;
+if Spordle emails new messages, the email allow-list covers them.
 
 **Veracross, M4.2 (2026-09-27):**
 - The school's website has a public calendar page with a "YYYY-YYYY Key
@@ -85,8 +94,9 @@ after load (`component/MyChildrenParent/…/load_data`); each child has an
 `h4.vx-child-name` next to its links.
 
 **How the owner checks:** TeamSnap → the team → Schedule → Sync/Export
-calendar → copy the link. Spordle → the team → Schedule → the calendar sync
-icon (or My Account → Calendar) → copy the subscription link. Paste each
+calendar → copy the link. Spordle → the team's calendar link
+(`api.mobile.spordle.com/teams/<team id>/calendar`; the owner found it
+2026-10-09, one link per team). Paste each
 link only into the site's Accounts page (TeamSnap/Spordle → "Add private
 calendar link"), never into chat or the repo.
 
