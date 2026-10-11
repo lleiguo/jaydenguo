@@ -200,8 +200,9 @@ Claude Code. They are rough and will be revised after each milestone.
 - M1.6: the Google account's calendar list is saved (names and IDs only)
   when Google is connected, so the Sources page can offer it without the
   web app ever using the refresh token.
-- M1.7: SP-4 is provisional (see spikes.md): TeamSnap is ICS; Spordle is
-  ICS if the owner finds a link, else a login adapter is added then.
+- M1.7: SP-4 (see spikes.md): TeamSnap is ICS; Spordle is ICS too (the
+  owner found the team's calendar link, 2026-10-09), so no `spordle`
+  login adapter is built and `src/adapters/spordle/` isn't needed.
 - M1.8: FullCalendar is v7 (current at build time). It ships plain CSS files
   instead of injecting styles, so it runs under the nonce-only CSP with no
   exceptions (an e2e test checks for violations). The calendar area keeps
@@ -740,7 +741,7 @@ or his opponents.
 | Milestone | Status |
 |---|---|
 | M0 Skeleton and infrastructure | **done 2026-09-27.** Infrastructure applied in Toronto; first deploy green (images, `migrate`, web, smoke test). DNS points at Firebase Hosting. SP-1 done. |
-| M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). M1.13 restore test done by the owner (2026-09-28). Still open: M1.6 live smoke test and M1.7 Spordle decision (need the owner's feed links, O-6). |
+| M1 Foundation (S1) | **deployed 2026-09-27** (PRs #3, #8–#11). M1.13 restore test done by the owner (2026-09-28). M1.7 decided 2026-10-09: Spordle is ICS (spikes.md SP-4). Still open: M1.6 live smoke test; the owner adds the Spordle link on the Accounts page. |
 | M2 Swimming (S2) | **done 2026-09-27** (M2.1–M2.7, PRs #14–#16). The owner's live check passed. SP-3 page map in spikes.md. |
 | M3 Tennis (S3) | **done 2026-09-28** (M3.1–M3.7, PRs #17, #18). M3.3 live check passed: the tennis source syncs in production and the owner confirmed it (2026-09-28). Still open: M3.6 recorded Claude response (waiting on the Vertex quota); O-5 signed-in look done (spikes.md SP-7). |
 | M3b Tournament entries | **merged 2026-09-27** (PR #21). Finding, acceptance lists, draw watch, opponent level done. M3b.6 automatic entry merged 2026-09-28 (PR #39); needs the Tennis Canada login on the Accounts page, then the first Thursday run is the live check. |

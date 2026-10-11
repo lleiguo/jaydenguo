@@ -149,7 +149,16 @@ export async function deletePickerSession(token: string, id: string) {
   }).catch(() => undefined);
 }
 
-export type PickedVideo = { id: string; baseUrl: string; mimeType: string; filename: string };
+// "processing": Google Photos is still encoding a video it has just
+// received (an iPhone video picked soon after it was backed up); its
+// bytes aren't downloadable yet.
+export type PickedVideo = {
+  id: string;
+  baseUrl: string;
+  mimeType: string;
+  filename: string;
+  processing: boolean;
+};
 
 export async function pickedVideo(token: string, sessionId: string): Promise<PickedVideo> {
   const url = new URL("/v1/mediaItems", photosPickerBase());
@@ -159,22 +168,40 @@ export async function pickedVideo(token: string, sessionId: string): Promise<Pic
   const items = (body.mediaItems ?? []) as {
     id: string;
     type?: string;
-    mediaFile?: { baseUrl: string; mimeType?: string; filename?: string };
+    mediaFile?: {
+      baseUrl: string;
+      mimeType?: string;
+      filename?: string;
+      mediaFileMetadata?: { videoMetadata?: { processingStatus?: string } };
+    };
   }[];
   const video = items.find((i) => i.type === "VIDEO" && i.mediaFile?.baseUrl);
   if (!video) throw new VideoFetchError("No video was picked. Pick a video, not a photo.");
+  const status = video.mediaFile!.mediaFileMetadata?.videoMetadata?.processingStatus;
+  if (status === "FAILED")
+    throw new VideoFetchError("Google Photos couldn't process this video. Pick another copy of it.");
   return {
     id: video.id,
     baseUrl: video.mediaFile!.baseUrl,
     mimeType: video.mediaFile!.mimeType ?? "video/mp4",
     filename: video.mediaFile!.filename ?? "video",
+    processing: status === "PROCESSING",
   };
 }
 
 // "=dv" asks for the video bytes (not a still). The base URL needs the
-// same access token.
+// same access token. A 404 is what Google answers while it is still
+// processing the video, so it is told apart for the caller to wait.
+export class VideoNotReadyError extends VideoFetchError {
+  constructor() {
+    super("Google Photos is still processing this video. Try again in a few minutes.");
+    this.name = "VideoNotReadyError";
+  }
+}
+
 export async function downloadPickedVideo(token: string, video: PickedVideo, dest: string) {
   const res = await google(new URL(`${video.baseUrl}=dv`), token);
+  if (res.status === 404) throw new VideoNotReadyError();
   if (!res.ok) throw new VideoFetchError(`Couldn't download the video from Google Photos (${res.status}).`);
   await download(res, dest);
 }
