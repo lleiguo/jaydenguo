@@ -33,5 +33,5 @@ email, the stale 10:00 one left for the owner (O-1). `similar` is in
 calendar" line awaits the next coach email. `scripts/email-extract-check.ts`
 on gemini-3.8-flash: 10/10, including the payment reminder (no
 suggestion) and the reschedule (a change of the listed lesson).
-TestFlight build 11 (#111) archived; the upload needs the owner to sign in
-again in Xcode → Settings → Accounts.
+TestFlight build 11 (#111) uploaded 2026-10-11 after the owner signed in
+again in Xcode; the owner installs it (O-2).
