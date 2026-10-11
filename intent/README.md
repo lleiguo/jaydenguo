@@ -29,4 +29,4 @@ Rules:
 | 0010 | [The workflow, written into the repo and enforced](0010-codified-workflow/) | approved 2026-10-03 (chat); defaults kept | approved 2026-10-03 (chat); W-1..W-4 accepted | approved 2026-10-03; W1–W6 done (#92–#94); O-2 denylist secret left |
 | 0011 | [Past suggestions clear, skipped events hide](0011-tidy-lists/) | approved 2026-10-03 (chat); defaults kept | approved 2026-10-03 (chat) | approved 2026-10-03; T1 merged and deployed (#97), build 10 (#98) awaits upload |
 | 0012 | [Pull down to refresh his tennis entries](0012-tennis-pull-refresh/) | approved 2026-10-09 (chat); defaults kept, Refresh button stays | approved 2026-10-09 (chat); P-1, P-2 accepted | approved 2026-10-09; P1 next |
-| 0013 | [One event per lesson, however many emails](0013-email-duplicates/) | approved 2026-10-11 (chat); defaults kept | approved 2026-10-11 (chat) | approved 2026-10-11; D1 next |
+| 0013 | [One event per lesson, however many emails](0013-email-duplicates/) | approved 2026-10-11 (chat); defaults kept | approved 2026-10-11 (chat) | approved 2026-10-11; D1, D2 merged and deployed (#109, #110); build 11 upload waits on the owner |
