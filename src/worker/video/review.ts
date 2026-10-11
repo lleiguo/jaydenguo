@@ -176,10 +176,15 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       await set({ mediaName: file.name });
     } else if (row.provider === "photos") {
       const access = await token(db, PHOTOS_SCOPE);
-      let session = row.pickerSessionId ? await getPickerSession(access, row.pickerSessionId) : null;
+      // A retried review reuses its pick; a picker session expires after a
+      // while, and then the owner picks again (intent 0014, WVR-6).
+      let session = row.pickerSessionId
+        ? await getPickerSession(access, row.pickerSessionId).catch(() => null)
+        : null;
       if (!session) {
         session = await createPickerSession(access);
         await set({
+          status: "picking",
           pickerSessionId: session.id,
           pickerUri: `${session.pickerUri}/autoclose`,
           progress: "Waiting for you to pick the video in Google Photos",
@@ -232,6 +237,7 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       src,
       dir,
       copy ? { start: null, end: null } : { start: row.segmentStart, end: row.segmentEnd },
+      { playback: !copy && !!store },
     );
     await set({ durationSec: media.durationSec, promptVersion: PROMPT_VERSION });
     const reviewer = model();
@@ -268,7 +274,8 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       },
     );
     // 5. The playback copy (PLAY-1). The review stands without it.
-    const playback = copy ?? (store ? await savePlayback(store, id, media.clip, ctx) : null);
+    const playback =
+      copy ?? (store && media.playback ? await savePlayback(store, id, media.playback, ctx) : null);
     await set({
       status: "done",
       progress: null,
@@ -276,7 +283,7 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       costUsd: await totalCost(),
       finishedAt: new Date(),
       playbackKey: playback,
-      playbackBytes: copy ? row.playbackBytes : playback ? media.clip.length : null,
+      playbackBytes: copy ? row.playbackBytes : playback ? media.playback!.length : null,
     });
     ctx.log("video review done", { id, costUsd: result.costUsd, playback: !!playback });
     await notifyReview("done", null);

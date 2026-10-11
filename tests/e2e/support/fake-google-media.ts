@@ -67,6 +67,7 @@ export function createGoogleMediaFake(isToken: (token: string) => boolean) {
       const s = /^\/v1\/sessions\/([\w-]+)$/.exec(url.pathname);
       if (s) {
         if (!authorised()) return (send(401, { error: { code: 401 } }), true);
+        if (s[1].startsWith("expired")) return (send(404, { error: { code: 404 } }), true);
         if (req.method === "DELETE") {
           deleted.add(s[1]);
           send(200, {});

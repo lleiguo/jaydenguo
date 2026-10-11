@@ -224,6 +224,27 @@ describe("video reviews", { timeout: 60_000 }, () => {
     }
   });
 
+  // Intent 0014, WVR-6: retrying after the picker session expired.
+  it("asks for a new pick when the old picker session has expired", async () => {
+    const id = await saved({
+      provider: "photos",
+      status: "queued",
+      url: null,
+      pickerSessionId: "expired-1",
+      mediaItemId: "item-old",
+    });
+    const job = videoReviewJob([id], ctx(), deps());
+    let pickerUri: string | null = null;
+    for (let i = 0; i < 100 && !pickerUri; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      pickerUri = (await getVideoReview(db, id))!.pickerUri;
+    }
+    expect(pickerUri).toMatch(/\/photos-picker\/session-.*\/autoclose$/);
+    await fetch(pickerUri!);
+    await job;
+    expect((await getVideoReview(db, id))!.status).toBe("done");
+  });
+
   it("gives up when nothing is picked in time", async () => {
     process.env.PHOTOS_PICK_TIMEOUT_MS = "300";
     try {

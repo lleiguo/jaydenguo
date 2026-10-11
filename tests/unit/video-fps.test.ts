@@ -6,8 +6,11 @@ describe("geminiFps", () => {
     expect(geminiFps("tennis", 20)).toBe(8);
     expect(geminiFps("swimming", 20)).toBe(4);
   });
+  // Intent 0014, WVR-4: up to 900 frames.
   it("lowers the rate on long clips", () => {
-    expect(geminiFps("tennis", 100)).toBe(4);
+    expect(geminiFps("tennis", 120)).toBe(7);
+    expect(geminiFps("swimming", 252)).toBe(3);
+    expect(geminiFps("tennis", 600)).toBe(1);
     expect(geminiFps("swimming", 1000)).toBe(1);
   });
 });
