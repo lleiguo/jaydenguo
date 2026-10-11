@@ -6,7 +6,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 // integration tests. Every video is the synthetic test-pattern clip.
 // Drive file IDs: "missing…" is not found, "notvideo…" is a text file.
 // A picker session is picked when its pickerUri is opened (as the owner
-// would in Google Photos).
+// would in Google Photos). Tests set `processing` (picks read as still
+// processing) and `notReady` (downloads answered 404) to count down.
 
 export const SAMPLE_VIDEO = "tests/fixtures/video/test-pattern-6s.mp4";
 
@@ -15,9 +16,11 @@ export function createGoogleMediaFake(isToken: (token: string) => boolean) {
   const deleted = new Set<string>();
   let n = 0;
 
-  return {
+  const fake = {
     picked,
     deleted,
+    processing: 0,
+    notReady: 0,
     // Answers the request if it's one of ours; false otherwise.
     handle(req: IncomingMessage, res: ServerResponse, origin: string): boolean {
       const url = new URL(req.url ?? "/", origin);
@@ -84,6 +87,9 @@ export function createGoogleMediaFake(isToken: (token: string) => boolean) {
                 baseUrl: `${origin}/photos-media/item-${id}`,
                 mimeType: "video/mp4",
                 filename: "serve.mp4",
+                mediaFileMetadata: {
+                  videoMetadata: { processingStatus: fake.processing-- > 0 ? "PROCESSING" : "READY" },
+                },
               },
             },
           ],
@@ -92,12 +98,14 @@ export function createGoogleMediaFake(isToken: (token: string) => boolean) {
       }
       if (/^\/photos-media\/[\w-]+=dv$/.test(url.pathname)) {
         if (!authorised()) return (send(401, { error: { code: 401 } }), true);
+        if (fake.notReady-- > 0) return (send(404, "Not Found", "text/plain"), true);
         send(200, video(), "video/mp4");
         return true;
       }
       return false;
     },
   };
+  return fake;
 }
 
 const session = (id: string, origin: string, set: boolean) => ({

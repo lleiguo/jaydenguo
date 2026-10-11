@@ -14,6 +14,7 @@ import {
   getPickerSession,
   pickedVideo,
   VideoFetchError,
+  VideoNotReadyError,
 } from "../../adapters/google-media";
 import { googleAccessToken } from "../../adapters/google-calendar";
 import { SyncError } from "../../adapters/types";
@@ -45,6 +46,9 @@ import { MediaError, prepareMedia } from "./media";
 
 // How long the owner has to pick in Google Photos.
 const PICK_TIMEOUT_MS = () => Number(process.env.PHOTOS_PICK_TIMEOUT_MS ?? 15 * 60_000);
+// How long to wait for Google Photos to finish processing a picked video.
+const PROCESSING_TIMEOUT_MS = () => Number(process.env.PHOTOS_PROCESSING_TIMEOUT_MS ?? 10 * 60_000);
+const PROCESSING_POLL_MS = 15_000;
 
 export type ReviewDeps = {
   model?: () => StructuredModel;
@@ -192,7 +196,7 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
         await sleep(session.pollIntervalMs);
         session = await getPickerSession(access, session.id);
       }
-      const video = await pickedVideo(access, session.id);
+      let video = await pickedVideo(access, session.id);
       await set({
         status: "analysing",
         startedAt: new Date(),
@@ -201,7 +205,22 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
         pickerUri: null,
         progress: "Fetching the video from Google Photos",
       });
-      await downloadPickedVideo(access, video, src);
+      // A video backed up moments ago is still being processed by Google
+      // Photos: wait for it, reading the pick again for a fresh base URL.
+      const ready = Date.now() + PROCESSING_TIMEOUT_MS();
+      for (;;) {
+        try {
+          if (video.processing) throw new VideoNotReadyError();
+          await downloadPickedVideo(access, video, src);
+          break;
+        } catch (e) {
+          if (!(e instanceof VideoNotReadyError) || Date.now() > ready) throw e;
+          await progress("Waiting for Google Photos to finish processing the video");
+          await sleep(PROCESSING_POLL_MS);
+          video = await pickedVideo(access, session.id);
+          if (!video.processing) await progress("Fetching the video from Google Photos");
+        }
+      }
       await deletePickerSession(access, session.id);
     } else {
       throw new VideoFetchError("This kind of link can't be reviewed.");

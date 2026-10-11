@@ -185,6 +185,45 @@ describe("video reviews", { timeout: 60_000 }, () => {
     expect(google.deleted.has(session)).toBe(true);
   });
 
+  it("waits while Google Photos is still processing the picked video", async () => {
+    google.processing = 2;
+    google.notReady = 1;
+    const id = await saved({ provider: "photos", status: "picking", url: null });
+    const job = videoReviewJob([id], ctx(), deps());
+    let pickerUri: string | null = null;
+    for (let i = 0; i < 100 && !pickerUri; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      pickerUri = (await getVideoReview(db, id))!.pickerUri;
+    }
+    await fetch(pickerUri!);
+    await job;
+    expect((await getVideoReview(db, id))!.status).toBe("done");
+    expect(google.processing).toBeLessThanOrEqual(0);
+    expect(google.notReady).toBeLessThanOrEqual(0);
+  });
+
+  it("says the video is still processing when Google Photos takes too long", async () => {
+    process.env.PHOTOS_PROCESSING_TIMEOUT_MS = "-1";
+    google.notReady = 5;
+    try {
+      const id = await saved({ provider: "photos", status: "picking", url: null });
+      const job = videoReviewJob([id], ctx(), deps());
+      let pickerUri: string | null = null;
+      for (let i = 0; i < 100 && !pickerUri; i++) {
+        await new Promise((r) => setTimeout(r, 50));
+        pickerUri = (await getVideoReview(db, id))!.pickerUri;
+      }
+      await fetch(pickerUri!);
+      await job;
+      const r = (await getVideoReview(db, id))!;
+      expect(r.status).toBe("failed");
+      expect(r.errorMessage).toMatch(/still processing this video/);
+    } finally {
+      delete process.env.PHOTOS_PROCESSING_TIMEOUT_MS;
+      google.notReady = 0;
+    }
+  });
+
   it("gives up when nothing is picked in time", async () => {
     process.env.PHOTOS_PICK_TIMEOUT_MS = "300";
     try {
