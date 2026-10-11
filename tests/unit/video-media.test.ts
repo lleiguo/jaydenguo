@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,8 +25,18 @@ describe("reviewRange", () => {
   it("clamps the end to the video", () => {
     expect(reviewRange(30, { start: 10, end: 99 })).toEqual({ start: 10, end: 30 });
   });
-  it("asks for a segment on a long video", () => {
-    expect(() => reviewRange(600, { start: null, end: null })).toThrow(/Mark a segment of 120 s or less/);
+  // Intent 0014, WVR-1: the whole video, up to ten minutes.
+  it("reviews a whole video up to ten minutes", () => {
+    expect(reviewRange(252, { start: null, end: null })).toEqual({ start: 0, end: 252 });
+    expect(reviewRange(600, { start: null, end: null })).toEqual({ start: 0, end: 600 });
+  });
+  it("asks for a part on a longer video", () => {
+    expect(() => reviewRange(660, { start: null, end: null })).toThrow(
+      "The video is 11 min long. Mark a part of 10 minutes or less to review.",
+    );
+    expect(() => reviewRange(900, { start: 30, end: 700 })).toThrow(
+      "The part you marked is 11.2 min long. Mark a part of 10 minutes or less.",
+    );
   });
   it("refuses a segment past the end", () => {
     expect(() => reviewRange(30, { start: 40, end: null })).toThrow(MediaError);
@@ -52,6 +63,46 @@ describe.runIf(hasFfmpeg)("prepareMedia", () => {
     expect(media.durationSec).toBeCloseTo(3, 0);
     expect(media.offsetSec).toBe(2);
     expect(media.clip.length).toBeGreaterThan(1000);
+    expect(media.playback!.length).toBeGreaterThan(1000);
+  });
+
+  // WVR-2, WVR-3: a 4-minute video goes to Gemini at 3 frames a second; the
+  // playback copy keeps the source's rate and the same length.
+  it("makes a low-rate clip for Gemini and a smooth playback copy", { timeout: 30_000 }, async () => {
+    const long = join(dir, "long.mp4");
+    execFileSync("ffmpeg", [
+      ...["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi"],
+      ...[
+        "-i",
+        "testsrc2=size=160x120:rate=30",
+        "-t",
+        "240",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        long,
+      ],
+    ]);
+    const media = await prepareMedia(long, dir, { start: null, end: null });
+    const fps = (file: Buffer) => {
+      const path = join(dir, `probe-${file.length}.mp4`);
+      writeFileSync(path, file);
+      const out = execFileSync("ffprobe", [
+        ...["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=avg_frame_rate"],
+        ...["-of", "csv=p=0", path],
+      ]).toString();
+      const [n, d] = out.trim().split("/").map(Number);
+      return n / d;
+    };
+    expect(media.durationSec).toBeCloseTo(240, 0);
+    expect(fps(media.clip)).toBeCloseTo(3, 1);
+    expect(fps(media.playback!)).toBeCloseTo(30, 0);
+  });
+
+  it("skips the playback copy when asked", async () => {
+    const media = await prepareMedia(SAMPLE, dir, { start: null, end: null }, { playback: false });
+    expect(media.playback).toBeNull();
   });
 
   it("refuses a file that isn't a video", async () => {

@@ -100,7 +100,9 @@ export function NewVideoForm({ today, connected }: { today: string; connected: b
         <input name="note" maxLength={500} placeholder="second serve, focus on toss" className={field} />
       </label>
       <fieldset className="flex flex-wrap items-end gap-3">
-        <legend className="mb-1">Part to review (optional, up to 2 minutes)</legend>
+        <legend className="mb-1">
+          Part to review (optional: the whole video if empty, up to 10 minutes)
+        </legend>
         <label className="flex flex-col gap-1">
           From
           <input name="start" inputMode="decimal" placeholder="0:00" className={`${field} w-24`} />

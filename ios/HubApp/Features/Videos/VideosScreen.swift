@@ -200,7 +200,7 @@ struct NewReviewSheet: View {
                         TextField("To (m:ss)", text: $end).keyboardType(.numbersAndPunctuation)
                     }
                 } header: {
-                    Text("Part to review (optional)")
+                    Text("Part to review (optional: the whole video if empty, up to 10 minutes)")
                 } footer: {
                     Text("Leave blank to review the whole video.")
                 }

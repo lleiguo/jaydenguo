@@ -2,19 +2,21 @@ import { execFile } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { clipFps } from "../../domain/video-fps";
 import { GEMINI_INLINE_LIMIT } from "../../server/llm/gemini";
 
 // Media prep for a review (spec §6.3, plan M5.3), with ffmpeg in the worker
-// image: trim to the owner's segment and shrink to a clip Gemini takes
-// inline. All files go into the job's temp folder, which the job deletes
-// (VID-2).
+// image: trim to the owner's segment, shrink to a clip Gemini takes inline,
+// and make the playback copy (intent 0014, WVR-2, WVR-3). All files go
+// into the job's temp folder, which the job deletes (VID-2).
 
 const run = promisify(execFile);
 const FFMPEG = () => process.env.FFMPEG_PATH ?? "ffmpeg";
 const FFPROBE = () => process.env.FFPROBE_PATH ?? "ffprobe";
 
-// A review looks at two minutes at most; longer videos need a segment.
-export const MAX_REVIEW_SECONDS = 120;
+// A review looks at ten minutes at most; longer videos need a part marked
+// (intent 0014, WVR-1).
+export const MAX_REVIEW_SECONDS = 600;
 
 export class MediaError extends Error {
   constructor(message: string) {
@@ -54,50 +56,71 @@ export function reviewRange(duration: number, segment: Segment): { start: number
   const end = Math.min(duration, segment.end ?? duration);
   if (start >= duration) throw new MediaError("The segment starts after the video ends.");
   if (end - start < 0.5) throw new MediaError("The segment is too short to review.");
-  if (end - start > MAX_REVIEW_SECONDS)
+  if (end - start > MAX_REVIEW_SECONDS) {
+    const mins = Math.round(((end - start) / 60) * 10) / 10;
     throw new MediaError(
-      `The part to review is ${Math.round(end - start)} s long. Mark a segment of ${MAX_REVIEW_SECONDS} s or less.`,
+      segment.start === null && segment.end === null
+        ? `The video is ${mins} min long. Mark a part of ${MAX_REVIEW_SECONDS / 60} minutes or less to review.`
+        : `The part you marked is ${mins} min long. Mark a part of ${MAX_REVIEW_SECONDS / 60} minutes or less.`,
     );
+  }
   return { start, end };
 }
 
-// Trims and re-encodes to H.264 without sound, at most 720p, then 480p if
-// that's still too large to send inline.
-export async function prepareClip(src: string, dir: string, range: { start: number; end: number }) {
+type Range = { start: number; end: number };
+
+const encode = (src: string, out: string, range: Range, height: number, crf: number, fps: string) =>
+  ffmpeg([
+    "-ss",
+    range.start.toFixed(3),
+    "-to",
+    range.end.toFixed(3),
+    "-i",
+    src,
+    "-an",
+    "-vf",
+    `scale=-2:'min(${height},ih)',fps=${fps}`,
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-crf",
+    String(crf),
+    "-pix_fmt",
+    "yuv420p",
+    "-movflags",
+    "+faststart",
+    out,
+  ]);
+
+// The clip for Gemini: H.264 without sound at the frame rate Gemini reads,
+// at most 720p, then 480p and 360p if that's still too large to send inline.
+export async function prepareClip(src: string, dir: string, range: Range) {
+  const fps = String(clipFps(range.end - range.start));
   for (const [height, crf] of [
     [720, 28],
     [480, 33],
+    [360, 36],
   ] as const) {
     const out = join(dir, `clip-${height}.mp4`);
-    await ffmpeg([
-      "-ss",
-      range.start.toFixed(3),
-      "-to",
-      range.end.toFixed(3),
-      "-i",
-      src,
-      "-an",
-      "-vf",
-      `scale=-2:'min(${height},ih)',fps='min(30,source_fps)'`,
-      "-c:v",
-      "libx264",
-      "-preset",
-      "veryfast",
-      "-crf",
-      String(crf),
-      "-pix_fmt",
-      "yuv420p",
-      "-movflags",
-      "+faststart",
-      out,
-    ]);
+    await encode(src, out, range, height, crf, fps);
     if ((await stat(out)).size <= GEMINI_INLINE_LIMIT) return out;
   }
-  throw new MediaError("The video is too large to review even when shrunk. Mark a shorter segment.");
+  throw new MediaError("The video is too large to review even when shrunk. Mark a shorter part.");
+}
+
+// The playback copy (0003 PLAY-1, WVR-3): the reviewed part at 720p and up
+// to 30 frames a second, so the player is smooth whatever Gemini read.
+async function preparePlayback(src: string, dir: string, range: Range) {
+  const out = join(dir, "playback.mp4");
+  await encode(src, out, range, 720, 28, "'min(30,source_fps)'");
+  return out;
 }
 
 export type PreparedMedia = {
   clip: Buffer;
+  // Null when not asked for (the review starts from its playback copy).
+  playback: Buffer | null;
   durationSec: number;
   // Where the clip starts in the original video, in seconds.
   offsetSec: number;
@@ -105,12 +128,23 @@ export type PreparedMedia = {
 
 // The clip to review. Its clock starts at zero, like the times Gemini cites
 // and the playback copy (intent 0003, PLAY-6).
-export async function prepareMedia(src: string, dir: string, segment: Segment): Promise<PreparedMedia> {
+export async function prepareMedia(
+  src: string,
+  dir: string,
+  segment: Segment,
+  { playback = true }: { playback?: boolean } = {},
+): Promise<PreparedMedia> {
   const duration = await probeDuration(src);
   const range = reviewRange(duration, segment);
   const clipFile = await prepareClip(src, dir, range);
   const clipDuration = await probeDuration(clipFile);
-  return { clip: await readFile(clipFile), durationSec: clipDuration, offsetSec: range.start };
+  const playbackFile = playback ? await preparePlayback(src, dir, range) : null;
+  return {
+    clip: await readFile(clipFile),
+    playback: playbackFile ? await readFile(playbackFile) : null,
+    durationSec: clipDuration,
+    offsetSec: range.start,
+  };
 }
 
 async function ffmpeg(args: string[]) {
