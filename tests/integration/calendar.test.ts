@@ -275,6 +275,41 @@ describe("calendar service", () => {
     await syncRecords(db, { sourceId: householdId }, [], window, { actor: "sync" });
   });
 
+  it("shows a lesson from several coach emails once, the latest (0013 DUP-6)", async () => {
+    const [{ id: emailId }] = await db
+      .insert(sources)
+      .values({ kind: "gmail", name: "Coach emails" })
+      .returning();
+    const lesson = (title: string, n: number) =>
+      createEvent(
+        db,
+        actor,
+        {
+          title,
+          category: "tennis",
+          attendance: "required",
+          start: day(8, 18),
+          end: day(8, 19),
+          allDay: false,
+          notes: null,
+          locationName: null,
+        },
+        { sourceId: emailId, externalId: `email:${n}`, sourceUrl: null },
+      );
+    const reminder = await lesson("Private Tennis Lesson with the coach", 1);
+    const reschedule = await lesson("Private Tennis Lesson", 2);
+    await db
+      .update(events)
+      .set({ createdAt: sql`now() - interval '1 day'` })
+      .where(eq(events.id, reminder));
+    const got = await cal();
+    const ids = got.events.map((e) => e.id);
+    expect(ids).toContain(reschedule);
+    expect(ids).not.toContain(reminder);
+    expect(got.clashes.filter((c) => [c.a, c.b].includes(reschedule))).toHaveLength(0);
+    await db.update(events).set({ deletedAt: new Date() }).where(eq(events.sourceId, emailId));
+  });
+
   it("writes out repeating events (CAL-5)", async () => {
     const cursor = await currentCursor(db);
     await createSeries(db, actor, {
