@@ -26,4 +26,4 @@ None.
   calendar".
 
 ## 5. Status
-Approved 2026-10-11. D1 next.
+Approved 2026-10-11. D1 built (unit + integration green); D2 next.

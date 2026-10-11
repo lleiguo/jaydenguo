@@ -8,9 +8,15 @@ import { shareOwner } from "./people";
 //
 // It also repeats itself (owner, 2026-10-01): a repeating practice plus a
 // one-off entry for the same evening. Those show once.
+//
+// Coach emails repeat themselves too (intent 0013): a booking, a payment
+// reminder and a reschedule each became an event for one lesson. Email
+// events give way to a feed's, and of two the later one stays.
 
 // Source kinds whose events give way to any other source's.
 export const HOUSEHOLD_KINDS = ["google_calendar"];
+// Source kinds whose events are approved email suggestions (0001 EML-3).
+export const EMAIL_KINDS = ["gmail"];
 
 export type DedupEvent = {
   id: string;
@@ -28,6 +34,8 @@ export type DedupEvent = {
   allDay: boolean;
   // One occurrence of a repeating event.
   repeats: boolean;
+  // When it was added: the later of two email events stays (DUP-6).
+  createdAt: Date;
 };
 
 // Do the two happen at the same time, for the same person?
@@ -42,9 +50,10 @@ function sameSlot(a: DedupEvent, b: DedupEvent): boolean {
   return overlap > 0 && overlap * 2 >= shorter;
 }
 
-// Is `h` (household) the same event as `s` (source)?
-function sameEvent(h: DedupEvent, s: DedupEvent): boolean {
-  return h.category === s.category && h.category !== "other" && sameSlot(h, s);
+// Are `a` and `b` the same event, from what they are rather than their
+// titles?
+export function sameEvent(a: DedupEvent, b: DedupEvent): boolean {
+  return a.category === b.category && a.category !== "other" && sameSlot(a, b);
 }
 
 const titleKey = (t: string) => t.trim().replace(/\s+/g, " ").toLowerCase();
@@ -55,12 +64,24 @@ function twins(a: DedupEvent, b: DedupEvent): boolean {
   return titleKey(a.title) === titleKey(b.title) && sameSlot(a, b);
 }
 
-// IDs of household events that duplicate an event from another source, or
-// an earlier household event.
-export function householdDuplicates(events: DedupEvent[]): Set<string> {
-  const household = events.filter((e) => e.sourceKind && HOUSEHOLD_KINDS.includes(e.sourceKind));
+// IDs of events to hide: household events that repeat another source's
+// event or an earlier household event (PR #43, #64), and email events that
+// repeat a feed's event or a later email event (DUP-5, DUP-6).
+export function hiddenDuplicates(events: DedupEvent[]): Set<string> {
+  const of = (kinds: string[]) => events.filter((e) => e.sourceKind && kinds.includes(e.sourceKind));
+  const household = of(HOUSEHOLD_KINDS);
+  const email = of(EMAIL_KINDS);
   const sourced = events.filter((e) => e.sourceKind && !HOUSEHOLD_KINDS.includes(e.sourceKind));
+  const feeds = sourced.filter((e) => !EMAIL_KINDS.includes(e.sourceKind!));
   const out = new Set<string>();
+
+  // DUP-5, DUP-6: newest first, so a reschedule beats the booking.
+  const keptEmail: DedupEvent[] = [];
+  for (const m of [...email].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())) {
+    if (feeds.some((f) => sameEvent(m, f)) || keptEmail.some((k) => sameEvent(m, k))) out.add(m.id);
+    else keptEmail.push(m);
+  }
+
   for (const h of household) if (sourced.some((s) => sameEvent(h, s))) out.add(h.id);
   // Of two twins the one-off stays: it was written for that day, where the
   // repeat is the general rule. Otherwise the first one stays.

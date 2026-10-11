@@ -2,7 +2,7 @@ import { and, desc, eq, gt, isNotNull, isNull, lt, max, sql } from "drizzle-orm"
 import { assistantActions, changeLog, conflicts, eventOverrides, events, sources } from "@db/schema";
 import { closedFor, closuresByPerson, detectClashes, type ClashEvent } from "../../domain/clashes";
 import type { Attendance, Category } from "../../domain/constants";
-import { householdDuplicates } from "../../domain/duplicates";
+import { hiddenDuplicates } from "../../domain/duplicates";
 import { resolveOwners, type Person } from "../../domain/people";
 import { repeatKey } from "../../domain/repeats";
 import { localDate } from "../../domain/time";
@@ -111,8 +111,9 @@ export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<Ca
     .where(and(isNull(events.deletedAt), lt(effStart, hi), gt(effEnd, lo)))
     .orderBy(effStart, events.id);
   // A household event that repeats a source's event shows once, as the
-  // source's; one entered twice on the household calendar shows once.
-  const duplicates = householdDuplicates(
+  // source's; one entered twice on the household calendar shows once; so
+  // does an event from several coach emails (0013 DUP-5, DUP-6).
+  const duplicates = hiddenDuplicates(
     fetched.map((r) => ({
       id: r.event.id,
       sourceKind: r.source?.kind ?? null,
@@ -123,6 +124,7 @@ export async function loadCalendar(db: DbOrTx, from: Date, to: Date): Promise<Ca
       end: r.override?.newEndUtc ?? r.event.endUtc,
       allDay: r.event.allDay,
       repeats: !!repeatKey({ ...r.event, sourceKind: r.source?.kind ?? null }),
+      createdAt: r.event.createdAt,
     })),
   );
   const rows = fetched.filter((r) => !duplicates.has(r.event.id));
