@@ -45,6 +45,10 @@ function shaped(s: SuggestionView, ctx: ToolContext) {
     when: whenOf(s.extracted),
     place: s.extracted.location ?? undefined,
     about: s.target ? { title: s.target.title, when: stamp(s.target.start, ctx.timeZone) } : undefined,
+    // 0013 DUP-4: a new event that seems to be on the calendar already.
+    alreadyOnCalendar: s.similar
+      ? { title: s.similar.title, when: stamp(s.similar.start, ctx.timeZone) }
+      : undefined,
     from: s.from,
     receivedToday: isToday(s, ctx) || undefined,
     unsure: unsureFields(s.confidence).length ? unsureFields(s.confidence) : undefined,

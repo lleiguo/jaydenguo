@@ -96,6 +96,11 @@ struct SuggestionRow: View {
             if let target = s.target {
                 Caption("Changes \(target.title), \(homeTime.dayTitle(homeTime.localDate(HomeTime.parse(target.start) ?? .now)))")
             }
+            // Intent 0013 (DUP-4): a new event that seems to be there already.
+            if let similar = s.similar {
+                Label("Already on the calendar: \(similar.title), \(homeTime.dayTitle(homeTime.localDate(HomeTime.parse(similar.start) ?? .now)))", systemImage: "square.on.square")
+                    .font(.caption.weight(.medium)).foregroundStyle(.warning)
+            }
             Text("“\(s.quote)”").font(.callout).italic().foregroundStyle(.secondary).lineLimit(3)
             if !s.unsure.isEmpty {
                 Label("Check the \(s.unsure.joined(separator: ", "))", systemImage: "questionmark.circle")

@@ -26,4 +26,7 @@ None.
   calendar".
 
 ## 5. Status
-Approved 2026-10-11. D1 built (unit + integration green); D2 next.
+Approved 2026-10-11. D1 built (unit + integration green). D2 built: unit,
+integration, iPhone simulator build green; `scripts/email-extract-check.ts`
+on gemini-3.8-flash 10/10, including the payment reminder (no suggestion)
+and the reschedule (a change of the listed lesson).

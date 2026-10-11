@@ -132,6 +132,11 @@ function SuggestionCard({ s, onDone }: { s: SuggestionView; onDone: (message: st
         )}
         <Guess level={c.overall} />
       </div>
+      {s.similar && (
+        <p data-testid="similar" className="font-medium text-amber-700 dark:text-amber-400">
+          Already on the calendar: “{s.similar.title}”, {when(s.similar.start, s.similar.allDay)}
+        </p>
+      )}
       <blockquote className="border-l-4 border-neutral-300 pl-2 italic dark:border-neutral-700">
         {s.quote}
       </blockquote>

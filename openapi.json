@@ -7039,6 +7039,33 @@
           "today"
         ]
       },
+      "EventRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "allDay": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "start",
+          "end",
+          "allDay"
+        ]
+      },
       "EventView": {
         "type": "object",
         "properties": {
@@ -9063,31 +9090,11 @@
             "type": "string"
           },
           "target": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "title": {
-                "type": "string"
-              },
-              "start": {
-                "type": "string"
-              },
-              "end": {
-                "type": "string"
-              },
-              "allDay": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "id",
-              "title",
-              "start",
-              "end",
-              "allDay"
-            ],
+            "$ref": "#/components/schemas/EventRef",
+            "x-nullable": true
+          },
+          "similar": {
+            "$ref": "#/components/schemas/EventRef",
             "x-nullable": true
           },
           "eventId": {
