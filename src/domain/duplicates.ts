@@ -38,10 +38,11 @@ export type DedupEvent = {
   createdAt: Date;
 };
 
-// Do the two happen at the same time, for the same person?
-function sameSlot(a: DedupEvent, b: DedupEvent): boolean {
+type Slot = Pick<DedupEvent, "start" | "end" | "allDay">;
+
+// Do the two happen at the same time?
+function sameTime(a: Slot, b: Slot): boolean {
   if (a.allDay !== b.allDay) return false;
-  if (!shareOwner(a.owners, b.owners)) return false;
   const overlap = Math.min(a.end.getTime(), b.end.getTime()) - Math.max(a.start.getTime(), b.start.getTime());
   if (a.allDay) return overlap > 0;
   // Timed: they overlap by at least half the shorter one, so a household
@@ -50,10 +51,21 @@ function sameSlot(a: DedupEvent, b: DedupEvent): boolean {
   return overlap > 0 && overlap * 2 >= shorter;
 }
 
-// Are `a` and `b` the same event, from what they are rather than their
-// titles?
-export function sameEvent(a: DedupEvent, b: DedupEvent): boolean {
-  return a.category === b.category && a.category !== "other" && sameSlot(a, b);
+// Do the two happen at the same time, for the same person?
+function sameSlot(a: DedupEvent, b: DedupEvent): boolean {
+  return shareOwner(a.owners, b.owners) && sameTime(a, b);
+}
+
+// The same activity at the same time, whoever it's for: an email
+// suggestion has no owners until it's approved (0013 DUP-3).
+export function looksAlike(a: Slot & { category: string }, b: Slot & { category: string }): boolean {
+  return a.category === b.category && a.category !== "other" && sameTime(a, b);
+}
+
+// Are `a` and `b` the same event, for the same person, from what they are
+// rather than their titles?
+function sameEvent(a: DedupEvent, b: DedupEvent): boolean {
+  return looksAlike(a, b) && shareOwner(a.owners, b.owners);
 }
 
 const titleKey = (t: string) => t.trim().replace(/\s+/g, " ").toLowerCase();

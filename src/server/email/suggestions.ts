@@ -2,7 +2,9 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { emailMessages, emailSuggestions, events, sources } from "@db/schema";
 import { CATEGORIES } from "../../domain/constants";
+import { looksAlike } from "../../domain/duplicates";
 import { localDate, zonedToUtc } from "../../domain/time";
+import { loadCalendar } from "../calendar/load";
 import { createEvent, moveEvent, skipEvent } from "../calendar/mutations";
 import type { Undo } from "../../lib/calendar-types";
 import type { Db } from "../db/client";
@@ -28,6 +30,8 @@ export type Confidence = Record<
   "high" | "medium" | "low"
 >;
 
+type EventRef = { id: string; title: string; start: string; end: string; allDay: boolean };
+
 export type SuggestionView = {
   id: string;
   sourceId: string;
@@ -43,7 +47,9 @@ export type SuggestionView = {
   subject: string;
   receivedAt: string;
   sourceName: string;
-  target: { id: string; title: string; start: string; end: string; allDay: boolean } | null;
+  target: EventRef | null;
+  // A new event that seems to be on the calendar already (0013 DUP-3).
+  similar: EventRef | null;
   eventId: string | null;
   decidedAt: string | null;
 };
@@ -82,7 +88,7 @@ export async function listSuggestions(
     .where(status === "pending" ? eq(emailSuggestions.status, "pending") : undefined)
     .orderBy(desc(emailMessages.receivedAt), emailSuggestions.createdAt)
     .limit(status === "pending" ? 200 : 50);
-  return rows
+  const views = rows
     .map(({ s, m, sourceName, t }): SuggestionView => ({
       id: s.id,
       sourceId: s.sourceId,
@@ -109,10 +115,48 @@ export async function listSuggestions(
             allDay: t.allDay,
           }
         : null,
+      similar: null,
       eventId: s.eventId,
       decidedAt: s.decidedAt?.toISOString() ?? null,
     }))
     .filter((v) => (status === "pending") === (v.status === "pending"));
+  return status === "pending" ? withSimilar(db, views, tz) : views;
+}
+
+// DUP-3: for each waiting new event, the first event already on the
+// calendar for the same activity at the same time, if any.
+async function withSimilar(db: Db, views: SuggestionView[], tz: string): Promise<SuggestionView[]> {
+  const slots = new Map(
+    views
+      .filter((v) => v.kind === "new" && v.extracted.date)
+      .map((v) => [
+        v.id,
+        { ...times({ ...v.extracted, date: v.extracted.date! }, tz), category: v.extracted.category },
+      ]),
+  );
+  if (!slots.size) return views;
+  const all = [...slots.values()];
+  const from = new Date(Math.min(...all.map((t) => t.start.getTime())));
+  const to = new Date(Math.max(...all.map((t) => t.end.getTime())));
+  const existing = (await loadCalendar(db, from, to)).events
+    .filter((e) => e.status === "active" && !e.override?.skip)
+    .map((e) => ({ ...e, start: new Date(e.start), end: new Date(e.end) }));
+  return views.map((v) => {
+    const slot = slots.get(v.id);
+    const e = slot && existing.find((x) => looksAlike(slot, x));
+    return e
+      ? {
+          ...v,
+          similar: {
+            id: e.id,
+            title: e.title,
+            start: e.start.toISOString(),
+            end: e.end.toISOString(),
+            allDay: e.allDay,
+          },
+        }
+      : v;
+  });
 }
 
 const time = z
@@ -130,7 +174,7 @@ export const approveInput = z.object({
   category: z.enum(CATEGORIES),
 });
 
-function times(input: z.infer<typeof approveInput>, tz: string) {
+function times(input: Pick<z.infer<typeof approveInput>, "date" | "startTime" | "endTime">, tz: string) {
   const [y, mo, d] = input.date.split("-").map(Number);
   if (!input.startTime) {
     const start = new Date(`${input.date}T00:00:00Z`);

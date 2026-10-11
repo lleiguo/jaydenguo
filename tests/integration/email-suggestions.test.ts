@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, lt } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   credentials,
@@ -13,6 +13,7 @@ import {
   sources,
   syncRuns,
 } from "@db/schema";
+import { createEvent } from "@/server/calendar/mutations";
 import { aadFor } from "@/server/credentials/aad";
 import { seal } from "@/server/crypto/envelope";
 import { defaultKeyWrapper } from "@/server/crypto/key-wrapper";
@@ -201,6 +202,41 @@ describe("email suggestions", () => {
     await syncSource(db, sourceId, "manual", log, now);
     const [still] = await db.select().from(events).where(eq(events.id, e.id));
     expect(still.status).toBe("active");
+  });
+
+  it("a new event already on the calendar says so (intent 0013, DUP-3)", async () => {
+    // Earlier tests approved events on that evening.
+    await db
+      .update(events)
+      .set({ deletedAt: new Date() })
+      .where(and(gte(events.startUtc, new Date("2028-06-14")), lt(events.startUtc, new Date("2028-06-16"))));
+    await syncSource(db, sourceId, "manual", log, now);
+    const practice = (await mine()).find((s) => s.subject === "Extra practice")!;
+    expect(practice.similar).toBeNull();
+    await db
+      .update(emailSuggestions)
+      .set({ extracted: { ...practice.extracted, category: "soccer" } })
+      .where(eq(emailSuggestions.id, practice.id));
+    const soccer = (title: string, start: string, end: string) =>
+      createEvent(db, "owner", {
+        title,
+        category: "soccer",
+        attendance: "required",
+        start: new Date(start),
+        end: new Date(end),
+        allDay: false,
+        notes: null,
+        locationName: null,
+      });
+    // 18:30 in Toronto is 22:30 UTC; the fake reader gives no end, so an hour.
+    await soccer("Later game", "2028-06-14T23:30:00Z", "2028-06-15T01:00:00Z");
+    expect((await mine()).find((s) => s.id === practice.id)!.similar).toBeNull();
+    const same = await soccer("Practice (east field)", "2028-06-14T22:30:00Z", "2028-06-15T00:00:00Z");
+    expect((await mine()).find((s) => s.id === practice.id)!.similar).toMatchObject({
+      id: same,
+      title: "Practice (east field)",
+      start: "2028-06-14T22:30:00.000Z",
+    });
   });
 
   it("a date without a time becomes an all-day event", async () => {

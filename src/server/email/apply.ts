@@ -1,5 +1,5 @@
 import { and, asc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
-import { emailMessages, emailSuggestions, events } from "@db/schema";
+import { emailMessages, emailSuggestions, events, sources } from "@db/schema";
 import type { EmailMessage } from "../../adapters/gmail";
 import { SyncError } from "../../adapters/types";
 import { fromAddress } from "../../adapters/gmail";
@@ -69,8 +69,17 @@ export const fakeExtractor: Extractor = async (email) => {
 
 async function upcomingEvents(db: Db, now: Date): Promise<(UpcomingEvent & { id: string })[]> {
   const rows = await db
-    .select({ id: events.id, title: events.title, start: events.startUtc, category: events.category })
+    .select({
+      id: events.id,
+      title: events.title,
+      start: events.startUtc,
+      end: events.endUtc,
+      allDay: events.allDay,
+      category: events.category,
+      sourceKind: sources.kind,
+    })
     .from(events)
+    .leftJoin(sources, eq(sources.id, events.sourceId))
     .where(
       and(
         eq(events.status, "active"),
@@ -86,7 +95,10 @@ async function upcomingEvents(db: Db, now: Date): Promise<(UpcomingEvent & { id:
     label: `E${i + 1}`,
     title: r.title,
     start: r.start.toISOString(),
+    end: r.end.toISOString(),
+    allDay: r.allDay,
     category: r.category,
+    sourceKind: r.sourceKind,
   }));
 }
 

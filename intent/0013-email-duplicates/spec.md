@@ -18,7 +18,7 @@ and the household duplicate rule (`src/domain/duplicates.ts`, PR #43,
 ### 2.1 Reading emails (DUP)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
-| DUP-1 | Upcoming events are listed in local time. | Each line: label, title, category, where it came from (source kind), and local day and time with end, e.g. `E3: Tennis lesson with Jianyu Jia (tennis, from email), Sun 2026-10-18 10:00–11:00`; all-day events say "all day". |
+| DUP-1 | Upcoming events are listed in local time. | Each line: label, title, category, where it came from ("from email", "from household calendar", the source kind, or "added by hand"), and local day and time with end, e.g. `E3: Tennis lesson with Jianyu Jia (tennis, from email), Sun 2026-10-18 10:00–11:00`; all-day events say "all day". |
 | DUP-2 | Repeats and reschedules aren't new events. | The instructions say: an email about a listed event with nothing changed (reminder, payment request, receipt, confirmation) gives no suggestion; a new time or place for a listed event is a "change" of it. The prompt version becomes `email-2`. |
 
 ### 2.2 Suggestions (DUP)
@@ -35,7 +35,7 @@ and the household duplicate rule (`src/domain/duplicates.ts`, PR #43,
 
 ## 3. Design
 - `src/server/email/extract.ts`: `UpcomingEvent` gains `end`, `allDay`,
-  `from` (source kind or "added here"); `extractPrompt` formats local
+  `sourceKind`; `extractPrompt` formats local
   times with the home time zone; `EXTRACT_SYSTEM` gets the two rules;
   `EMAIL_PROMPT_VERSION = "email-2"`.
 - `src/server/email/apply.ts`: `upcomingEvents` selects end, all-day and

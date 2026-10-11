@@ -16,10 +16,29 @@ import { geminiModel, vertexGenerate } from "../src/server/llm/gemini";
 
 const TZ = "America/Toronto";
 
+const ev = (
+  label: string,
+  title: string,
+  start: string,
+  hours: number,
+  category: string,
+  sourceKind: string,
+) => ({
+  label,
+  title,
+  start,
+  end: new Date(Date.parse(start) + hours * 3_600_000).toISOString(),
+  allDay: false,
+  category,
+  sourceKind,
+});
+
 const upcoming: UpcomingEvent[] = [
-  { label: "E1", title: "Soccer practice", start: "2027-03-09T22:00:00.000Z", category: "soccer" },
-  { label: "E2", title: "Game vs Green Giants", start: "2027-03-13T15:00:00.000Z", category: "soccer" },
-  { label: "E3", title: "Swim squad", start: "2027-03-10T10:30:00.000Z", category: "swimming" },
+  ev("E1", "Soccer practice", "2027-03-09T22:00:00.000Z", 1.5, "soccer", "ical"),
+  ev("E2", "Game vs Green Giants", "2027-03-13T15:00:00.000Z", 1.5, "soccer", "ical"),
+  ev("E3", "Swim squad", "2027-03-10T10:30:00.000Z", 1.5, "swimming", "ical"),
+  // Intent 0013: a lesson approved from an earlier email (10:00 Toronto).
+  ev("E4", "Tennis lesson with the coach", "2027-03-14T14:00:00.000Z", 1, "tennis", "gmail"),
 ];
 
 type Want = {
@@ -116,6 +135,27 @@ const CASES: Case[] = [
       text: "Our car wash fundraiser is on Saturday March 27 at the community centre. Times to follow.",
     },
     want: { kinds: ["new"], dates: ["2027-03-27"], times: [null], unsure: "time" },
+  },
+  // Intent 0013 (DUP-2): the emails that made one lesson three events.
+  {
+    name: "a payment reminder for a listed lesson: nothing",
+    email: {
+      from: "Tennis club <hello@tennis.example>",
+      subject: "Reminder: a private lesson still needs paying",
+      receivedAt: sent,
+      text: "You have a private tennis lesson that still needs paying.\n\nPrivate Tennis Lesson (1 person) with Coach Pat, Sun, Mar 14 at 10:00 AM. Pay or add your receipt by Fri, Mar 12 or it is cancelled.",
+    },
+    want: { kinds: [] },
+  },
+  {
+    name: "a listed lesson rescheduled: a change",
+    email: {
+      from: "Tennis club <hello@tennis.example>",
+      subject: "Private Lesson Rescheduled to Sun, Mar 14 at 11:00 AM",
+      receivedAt: sent,
+      text: "Your lesson has been moved to Sun, Mar 14 at 11:00 AM.\n\nPrivate Tennis Lesson with Coach Pat, 1 hour.",
+    },
+    want: { kinds: ["change"], dates: ["2027-03-14"], times: ["11:00"], targets: ["E4"] },
   },
 ];
 

@@ -106,11 +106,35 @@ describe("email extraction", () => {
   it("sends the email, the time zone and labelled upcoming events", () => {
     const prompt = extractPrompt(
       email,
-      [{ label: "E1", title: "Soccer", start: "2027-12-20T23:00:00.000Z", category: "soccer" }],
+      [
+        {
+          label: "E1",
+          title: "Soccer",
+          start: "2027-12-20T23:00:00.000Z",
+          end: "2027-12-21T00:30:00.000Z",
+          allDay: false,
+          category: "soccer",
+          sourceKind: "gmail",
+        },
+        {
+          label: "E2",
+          title: "Tournament",
+          start: "2027-12-22T00:00:00.000Z",
+          end: "2027-12-23T00:00:00.000Z",
+          allDay: true,
+          category: "tennis",
+          sourceKind: null,
+        },
+      ],
       "America/Toronto",
     );
     expect(prompt).toContain("Time zone: America/Toronto");
-    expect(prompt).toContain("E1: Soccer (soccer), 2027-12-20T23:00:00.000Z");
+    // DUP-1: local time, with the end and where it came from.
+    expect(prompt).toContain("E1: Soccer (soccer, from email), Mon 2027-12-20 18:00–19:30");
+    expect(prompt).toContain("E2: Tournament (tennis, added by hand), Wed 2027-12-22, all day");
+    // DUP-2
+    expect(EXTRACT_SYSTEM).toMatch(/reminder.*gives no suggestion/);
+    expect(EXTRACT_SYSTEM).toMatch(/"change" of it, never a "new" event/);
     expect(prompt).toContain("Extra practice on 2028-06-14");
     expect(EXTRACT_SYSTEM).toContain("word for word");
   });
