@@ -31,3 +31,4 @@ Rules:
 | 0012 | [Pull down to refresh his tennis entries](0012-tennis-pull-refresh/) | approved 2026-10-09 (chat); defaults kept, Refresh button stays | approved 2026-10-09 (chat); P-1, P-2 accepted | approved 2026-10-09; P1 next |
 | 0013 | [One event per lesson, however many emails](0013-email-duplicates/) | approved 2026-10-11 (chat); defaults kept | approved 2026-10-11 (chat) | approved 2026-10-11; D1, D2 merged and deployed (#109, #110); TestFlight build 11 uploaded |
 | 0014 | [Review the whole video](0014-whole-video-review/) | approved 2026-10-11 (chat); defaults kept | approved 2026-10-11 (chat); W-1..W-3 accepted | approved 2026-10-11; V1 built |
+| 0015 | [His tests and homework from Google Classroom](0015-school-classwork/) | approved 2026-10-12 (chat); server sign-in, defaults kept | approved 2026-10-12 (chat) | approved 2026-10-12; CW1 next |
