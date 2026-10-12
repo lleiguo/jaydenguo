@@ -2,9 +2,10 @@ import HubAPI
 import HubKit
 import SwiftUI
 
-/// Identifies an event for sheets.
+/// Identifies an event for sheets; `move` opens straight at "Move to…".
 struct EventRef: Identifiable, Hashable {
     let id: String
+    var move = false
 }
 
 /// The calendar (intent 0004, ICAL-1..7): agenda by default, and day, week
@@ -23,6 +24,9 @@ private struct CalendarContent: View {
     @Bindable var store: CalendarStore
     @State private var selected: EventRef?
     @State private var editing: EventEditor.Target?
+    /// Edit waits for the event's sheet to be gone: a sheet can't open
+    /// while another is still closing.
+    @State private var editAfterSheet: EventEditor.Target?
     @State private var showFilters = false
 
     var body: some View {
@@ -88,10 +92,13 @@ private struct CalendarContent: View {
         .onChange(of: model.changes) { Task { await store.reload() } }
         .onChange(of: model.pendingRoute) { openRoute() }
         .onAppear { openRoute() }
-        .sheet(item: $selected) { ref in
-            EventSheet(store: store, eventId: ref.id, edit: { event in
+        .sheet(item: $selected, onDismiss: {
+            editing = editAfterSheet
+            editAfterSheet = nil
+        }) { ref in
+            EventSheet(store: store, eventId: ref.id, startMoving: ref.move, close: { selected = nil }, edit: { event in
+                editAfterSheet = .existing(event)
                 selected = nil
-                editing = .existing(event)
             })
         }
         .sheet(item: $editing) { target in
@@ -234,7 +241,7 @@ struct AgendaView: View {
             }
             .tint(.orange)
             if e.status == .active {
-                Button { selected = EventRef(id: e.id) } label: { Label("Move", systemImage: "calendar.badge.clock") }
+                Button { selected = EventRef(id: e.id, move: true) } label: { Label("Move", systemImage: "calendar.badge.clock") }
                     .tint(.blue)
             }
         }

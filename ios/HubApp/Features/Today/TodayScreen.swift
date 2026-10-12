@@ -11,6 +11,9 @@ struct TodayScreen: View {
     @Environment(\.openURL) private var openURL
     @State private var state: Loadable<Components.Schemas.TodayView> = .loading
     @State private var selected: EventRef?
+    @State private var editing: EventEditor.Target?
+    /// Edit opens once the event's sheet is gone (see CalendarScreen).
+    @State private var editAfterSheet: EventEditor.Target?
 
     private var homeTime: HomeTime { model.homeTime }
 
@@ -44,8 +47,17 @@ struct TodayScreen: View {
         .task { await refresh() }
         .refreshable { await refresh() }
         .onChange(of: model.changes) { Task { await refresh() } }
-        .sheet(item: $selected) { ref in
-            EventSheet(store: calendar, eventId: ref.id, edit: { _ in selected = nil })
+        .sheet(item: $selected, onDismiss: {
+            editing = editAfterSheet
+            editAfterSheet = nil
+        }) { ref in
+            EventSheet(store: calendar, eventId: ref.id, close: { selected = nil }, edit: { event in
+                editAfterSheet = .existing(event)
+                selected = nil
+            })
+        }
+        .sheet(item: $editing) { target in
+            EventEditor(target: target, store: calendar)
         }
     }
 

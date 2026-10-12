@@ -30,8 +30,8 @@ final class CalendarTests: XCTestCase {
         return try XCTUnwrap(token, "is the development server running at \(server)?")
     }
 
-    /// Deletes (softly, through the API) any event with this title in the
-    /// next month, so a failed test leaves nothing behind.
+    /// Deletes (softly, through the API) any event whose title starts with
+    /// this one in the next month, so a failed test leaves nothing behind.
     private func deleteEvents(titled title: String, token: String) {
         let from = ISO8601DateFormatter().string(from: .now.addingTimeInterval(-86_400 * 2))
         let to = ISO8601DateFormatter().string(from: .now.addingTimeInterval(86_400 * 30))
@@ -41,7 +41,7 @@ final class CalendarTests: XCTestCase {
         URLSession.shared.dataTask(with: list) { data, _, _ in
             let events = (data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["events"] as? [[String: Any]]) ?? []
             let group = DispatchGroup()
-            for e in events where e["title"] as? String == title && e["deletedAt"] is NSNull {
+            for e in events where (e["title"] as? String)?.hasPrefix(title) == true && e["deletedAt"] is NSNull {
                 var delete = URLRequest(url: URL(string: "\(self.server)/api/v1/events/\(e["id"] as! String)")!)
                 delete.httpMethod = "DELETE"
                 delete.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -193,6 +193,80 @@ final class CalendarTests: XCTestCase {
         app.sheets.buttons["Delete"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Deleted."].waitForExistence(timeout: 10))
         XCTAssertTrue(row.waitForNonExistence(timeout: 10))
+    }
+
+    /// Edit on the event's sheet opens the editor, and Save saves.
+    func testEditAnEventFromItsSheet() throws {
+        let app = try launch()
+        openCalendar(app)
+        app.buttons["Add event"].tap()
+        let title = "UI test edit \(Int.random(in: 1000...9999))"
+        cleanup = (title, try devToken())
+        let field = app.textFields["Title"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
+        field.typeText(title)
+        app.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["Added."].waitForExistence(timeout: 10))
+
+        let agenda = app.collectionViews["agenda"]
+        let row = agenda.buttons.matching(NSPredicate(format: "label CONTAINS %@", title)).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 15))
+        row.tap()
+        let edit = app.buttons["Edit"]
+        _ = edit.waitForExistence(timeout: 10)
+        reveal(edit, in: app)
+        edit.tap()
+        let editField = app.textFields["Title"]
+        XCTAssertTrue(editField.waitForExistence(timeout: 10), "the editor opens")
+        editField.tap()
+        editField.typeText(" edited")
+        app.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["Saved."].waitForExistence(timeout: 10))
+        let edited = agenda.buttons.matching(NSPredicate(format: "label CONTAINS %@", "\(title) edited")).firstMatch
+        XCTAssertTrue(edited.waitForExistence(timeout: 15))
+    }
+
+    /// "Move to…" on the sheet, the way to move without dragging (NFR-9).
+    func testMoveToFromTheSheetThenUndo() throws {
+        let app = try launch()
+        app.open(URL(string: "jaydenguohub://open/calendar?date=\(thisSunday())")!)
+        let game = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Hockey game'")).firstMatch
+        XCTAssertTrue(game.waitForExistence(timeout: 20))
+        let original = game.label
+        game.tap()
+        let moveTo = app.buttons["Move to…"]
+        XCTAssertTrue(moveTo.waitForExistence(timeout: 10))
+        moveTo.tap()
+        let move = app.buttons["Move"]
+        XCTAssertTrue(move.waitForExistence(timeout: 10))
+        move.tap()
+        XCTAssertTrue(app.staticTexts["Moved."].waitForExistence(timeout: 10))
+        app.buttons["undo"].tap()
+        XCTAssertTrue(app.staticTexts["Undone."].waitForExistence(timeout: 10))
+    }
+
+    /// From the agenda: the row opens its own event, and "Move to…" moves it.
+    func testMoveToFromTheAgendaThenUndo() throws {
+        let app = try launch()
+        openCalendar(app)
+        let agenda = app.collectionViews["agenda"]
+        XCTAssertTrue(agenda.waitForExistence(timeout: 20))
+        let row = agenda.buttons.matching(NSPredicate(format: "label CONTAINS 'Soccer practice'")).firstMatch
+        for _ in 0..<6 where !row.isHittable { agenda.swipeUp() }
+        row.tap()
+        XCTAssertTrue(app.navigationBars["Soccer practice"].waitForExistence(timeout: 10), "the sheet is for the tapped row")
+        let moveTo = app.buttons["Move to…"]
+        XCTAssertTrue(moveTo.waitForExistence(timeout: 10))
+        moveTo.tap()
+        let move = app.buttons["Move"]
+        XCTAssertTrue(move.waitForExistence(timeout: 10))
+        move.tap()
+        XCTAssertTrue(app.staticTexts["Moved."].waitForExistence(timeout: 10))
+        // Both sheets close, so the undo banner can be tapped.
+        XCTAssertTrue(app.navigationBars["Soccer practice"].waitForNonExistence(timeout: 5))
+        app.buttons["undo"].tap()
+        XCTAssertTrue(app.staticTexts["Undone."].waitForExistence(timeout: 10))
     }
 
     func testPeopleChipsAreRemembered() throws {

@@ -8,11 +8,20 @@ import SwiftUI
 struct EventSheet: View {
     @Bindable var store: CalendarStore
     let eventId: String
+    /// Closes this sheet and any sheet on top of it ("Move to…").
+    let close: () -> Void
     let edit: (CalendarEvent) -> Void
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
-    @State private var moving = false
+    @State private var moving: Bool
     @State private var confirmDelete = false
+
+    init(store: CalendarStore, eventId: String, startMoving: Bool = false, close: @escaping () -> Void, edit: @escaping (CalendarEvent) -> Void) {
+        self.store = store
+        self.eventId = eventId
+        self.close = close
+        self.edit = edit
+        _moving = State(initialValue: startMoving)
+    }
 
     var body: some View {
         NavigationStack {
@@ -23,7 +32,7 @@ struct EventSheet: View {
                     ContentUnavailableView("This event isn't in the loaded weeks", systemImage: "calendar.badge.exclamationmark")
                 }
             }
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { close() } } }
         }
         .presentationDetents([.medium, .large])
     }
@@ -140,7 +149,6 @@ struct EventSheet: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $moving) {
             MoveSheet(event: e, homeTime: store.homeTime) { span in
-                moving = false
                 run { await store.move(e, to: span) }
             }
         }
@@ -162,12 +170,12 @@ struct EventSheet: View {
         return "\(store.homeTime.dayTitle(store.homeTime.localDate(s))), \(store.homeTime.range(e.start, e.end))"
     }
 
-    /// Runs an action; most close the sheet so the undo banner is in view.
+    /// Runs an action; most close the sheet first, so the undo banner is
+    /// in view. Closing comes first: a sheet asked to close while the one
+    /// on top of it ("Move to…") is still closing stays open.
     private func run(dismissing: Bool = true, _ work: @escaping () async -> Void) {
-        Task {
-            await work()
-            if dismissing { dismiss() }
-        }
+        if dismissing { close() }
+        Task { await work() }
     }
 }
 
