@@ -44,5 +44,12 @@ Draft. Waiting on the owner's approval of intent, spec and plan.
   the app (O-2).
 - **SP-C2, guardian emails:** none in the owner's Gmail (searched
   2026-10-12), so the school doesn't send them to him today.
-- **SP-C2, Veracross:** not checked yet; needs a signed-in look at his
-  Upcoming Assignments.
+- **SP-C2, Veracross:** the owner looked, signed in (2026-10-12): his
+  Classroom work isn't there.
+- **SP-C2, class calendars:** his account has a Google Calendar per
+  class, but it offers no iCal address (2026-10-12), so the hub can't
+  subscribe to it.
+- **Left:** the school's IT trusts the app (then the plan stands as
+  written), or the school invites the owner as a Classroom guardian
+  (daily or weekly summary emails, read through Gmail). The owner
+  chooses.
