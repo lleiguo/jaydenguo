@@ -8,7 +8,7 @@ before building the rest; then reading, then what's shown, then Cookie.
 | # | Step | Needed for |
 |---|---|---|
 | O-1 | Tell him the hub will sign in to his Classroom to read it. | CW1 |
-| O-2 | After CW1 deploys: Accounts → "Google Classroom (school login)", enter his email and password, owner = him, then Test connection; type a code if Google asks. | SP-C3 |
+| O-2 | After CW1 deploys: Accounts → "Google Classroom (school login)", enter his email and password, owner = him, then Test connection; approve the sign-in on your phone when Google asks (or type a code). | SP-C3 |
 | O-3 | Optional: ask the school's IT to approve `jaydenguo.com` (then the API can replace the stored login). | — |
 | O-4 | Switch off clubs and house classes on the source. | CW2 |
 | O-5 | Install the TestFlight build with homework on Today. | CW2 on iPhone |
@@ -18,7 +18,7 @@ before building the rest; then reading, then what's shown, then Cookie.
 |---|---|---|---|
 | SP-C1 | Can his school account grant the Classroom API? | Connect button (0001 M4.1). | **Blocked**, see Status. |
 | SP-C2 | Other routes: Veracross, guardian emails, class calendar feeds? | Looked 2026-10-12. | **None**, see Status. |
-| SP-C3 | Does Google let the worker sign in as him with a plain browser, and does a saved session last? | CW1's Test connection on production (O-2); record what Google showed and, a day later, whether the session was reused. | CW2 |
+| SP-C3 | Does Google let the worker sign in as him with a plain browser, and does a saved session last? | CW1's Test connection on production (O-2); record what Google showed (expected: a phone approval) and, over the next days, whether scheduled runs reuse the session without asking again. | CW2 |
 
 ## 3. Milestones
 | # | What | Spec | PR |
