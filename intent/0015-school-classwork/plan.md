@@ -1,5 +1,5 @@
 # Plan: His tests and homework from Google Classroom
-Status: draft (2026-10-12), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-12, in chat: "approved"; server sign-in route, defaults kept), with [spec.md](spec.md).
 
 Order: find out whether Google lets the worker sign in at all (SP-C3)
 before building the rest; then reading, then what's shown, then Cookie.
@@ -38,7 +38,7 @@ morning read on his Mac (a new intent).
 - Cookie answers "When's his next physics test?" with the day and topic.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-12. CW1 next.
 
 - **SP-C1: blocked (2026-10-12).** Google showed "Access blocked: Your
   institution's admin needs to review jaydenguo.com".

@@ -1,5 +1,5 @@
 # Intent: His tests and homework from Google Classroom
-Status: draft (2026-10-12). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-12, in chat: "approved"; server sign-in route, defaults kept). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "use browser tool to examine https://classroom.google.com/u/5/h/st, and

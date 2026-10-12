@@ -1,5 +1,5 @@
 # Spec: His tests and homework from Google Classroom
-Status: draft (2026-10-12). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-12, in chat: "approved"; server sign-in route, defaults kept). Written by Claude from [intent.md](intent.md).
 
 Read with 0001 (SRC-8, SCH-1, SCH-3, SCH-4, SCH-5, SYNC-5, CRED-1..6,
 spikes.md SP-5), 0004 (the iPhone Today screen), 0007 (TOOL-5 school) and
