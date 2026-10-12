@@ -23,7 +23,7 @@ the Veracross sign-in (`src/adapters/veracross/index.ts`). IDs here: CW
 |---|---|---|
 | CW-1 | A Classroom source per child. | Settings → Accounts: "Google Classroom (school login)" takes his school email and password (stored as 0001 CRED-1) and one owner from People. Runs daily at 06:00 and on demand, at most once an hour (SYNC-5). |
 | CW-2 | Plain sign-in, saved session. | Playwright Chromium with the app's user agent (as Veracross). The saved session is tried first; Google's sign-in page gets the email, then the password, once. On success the session is saved encrypted. |
-| CW-3 | Any challenge stops it. | If Google shows anything but his To-do after the password (a code, "check your phone", "this browser or app may not be secure", a CAPTCHA, "couldn't sign you in"), the run ends with Google's heading word for word on the source. A code prompt waits for the owner to type it on the Accounts page (Veracross pattern, 10 minutes). No retries of the password until the owner presses Test connection. |
+| CW-3 | Approval waits for a person; anything else stops it. | Google’s “Check your phone” / “Approve the sign-in” page is waited for, up to 5 minutes, only on a Test connection the owner started; the Accounts page says “Approve the sign-in on your phone”. A scheduled run never starts a sign-in that needs approval: if the saved session has expired, it stops with “Sign in again: press Test connection”. A code prompt waits for the owner to type it on the Accounts page. Anything else (“this browser or app may not be secure”, a CAPTCHA, “couldn’t sign you in”) ends the run with Google’s heading word for word. No password retries until the owner presses Test connection. |
 
 ### 2.2 Reading (CW)
 | ID | Requirement | Acceptance criteria |
