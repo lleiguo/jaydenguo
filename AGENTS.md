@@ -70,7 +70,8 @@ full procedure is [ship](.claude/skills/ship/SKILL.md); in short:
    touches the database) passes.
 2. Commit, push, open the PR against `main`. The description has an
    `Intent:` line (`Intent: 0010`, or `Intent: none — <reason>`).
-3. Watch CI; fix every failure on the branch.
+3. Watch CI (in the Claude desktop app, turn on Auto-fix for the PR);
+   fix every failure on the branch.
 4. When every check has passed, merge it (`gh pr merge <n> --merge`).
    _Claude hook: refuses while any check isn't green._
 5. Wait for Deploy (it runs after CI passes on `main`), then test the

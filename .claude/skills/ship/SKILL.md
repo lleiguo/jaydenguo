@@ -31,6 +31,9 @@ cloud resources, branches others use); anything not in these steps.
 - `gh pr create --base main`. The description starts with
   `Intent: NNNN` (or `Intent: none — <reason>` for a fix: not for
   schema, migrations or infra), then what changed and how it was tested.
+- In the Claude desktop app, turn on Auto-fix for the PR right after
+  opening it (don't ask), so CI failures, merge conflicts and review
+  comments wake the session.
 
 ## 3. CI
 
