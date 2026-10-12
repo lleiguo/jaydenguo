@@ -36,5 +36,13 @@ updated in the same PR; CW2 and CW3 stay as they are.
 - Cookie answers "When's his next physics test?" with the day and topic.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan, and on
-O-1 (SP-C1).
+Draft. Waiting on the owner's approval of intent, spec and plan.
+
+- **SP-C1: blocked (2026-10-12).** The owner connected his school account;
+  Google showed "Access blocked: Your institution's admin needs to review
+  jaydenguo.com". The Classroom API route needs the school's IT to trust
+  the app (O-2).
+- **SP-C2, guardian emails:** none in the owner's Gmail (searched
+  2026-10-12), so the school doesn't send them to him today.
+- **SP-C2, Veracross:** not checked yet; needs a signed-in look at his
+  Upcoming Assignments.
