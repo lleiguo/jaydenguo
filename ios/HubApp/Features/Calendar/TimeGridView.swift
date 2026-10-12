@@ -4,7 +4,8 @@ import SwiftUI
 
 /// Day and week views (ICAL-1): a time grid in the home time zone. Long-press
 /// an event and drag it to move it, with a tick every 15 minutes (ICAL-4);
-/// in the week view it can go to another day too.
+/// in the week view it can go to another day too. Swipe sideways for the
+/// next or previous day (or week).
 struct TimeGridView: View {
     @Bindable var store: CalendarStore
     let days: [String]
@@ -13,6 +14,8 @@ struct TimeGridView: View {
     private let hourHeight: CGFloat = 56
     private let gutter: CGFloat = 44
     @State private var drag: DragState?
+    /// Which way the last swipe went, so the new day slides in from that side.
+    @State private var forward = true
 
     struct DragState: Equatable {
         let eventId: String
@@ -22,8 +25,12 @@ struct TimeGridView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-            allDayRow
+            Group {
+                header
+                allDayRow
+            }
+            .contentShape(Rectangle())
+            .gesture(swipe)
             Divider()
             ScrollViewReader { proxy in
                 ScrollView {
@@ -43,16 +50,30 @@ struct TimeGridView: View {
                         }
                     }
                     .frame(height: hourHeight * 24)
+                    .gesture(swipe)
                 }
                 .onAppear { proxy.scrollTo(focusHour(), anchor: .top) }
-                .onChange(of: days) { _, _ in withAnimation { proxy.scrollTo(focusHour(), anchor: .top) } }
                 .refreshable {
                     await store.reload()
                     Task { await store.refreshAllSources() }
                 }
             }
         }
+        .id(days.first)
+        .transition(.push(from: forward ? .trailing : .leading))
         .sensoryFeedback(.selection, trigger: drag.map { Int($0.minuteDelta) * 10 + $0.dayDelta })
+    }
+
+    /// Swiping sideways steps a day (a week in the week view).
+    private var swipe: DaySwipe {
+        DaySwipe { forward in
+            // Not while an event is being moved.
+            guard drag == nil else { return }
+            self.forward = forward
+            withAnimation(.snappy) {
+                store.anchor = CalendarDates.add(days: (forward ? 1 : -1) * days.count, to: store.anchor)
+            }
+        }
     }
 
     /// The hour to open at: on today, the event on now or next (else now);
@@ -79,7 +100,34 @@ struct TimeGridView: View {
 
     // MARK: Header and all-day row
 
-    private var header: some View {
+    @ViewBuilder private var header: some View {
+        if let date = days.first, days.count == 1 {
+            HStack(spacing: 6) {
+                Text(dayTitle(date))
+                    .font(.headline)
+                    .foregroundStyle(date == store.today ? Color.accentColor : .primary)
+                if store.closures.contains(date) {
+                    Image(systemName: "xmark.octagon.fill").foregroundStyle(.secondary).accessibilityLabel("School closed")
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("day-title")
+        } else {
+            weekHeader
+        }
+    }
+
+    private func dayTitle(_ date: String) -> String {
+        let title = store.homeTime.dayTitle(date)
+        if date == store.today { return "Today · \(title)" }
+        if date == CalendarDates.add(days: 1, to: store.today) { return "Tomorrow · \(title)" }
+        if date == CalendarDates.add(days: -1, to: store.today) { return "Yesterday · \(title)" }
+        return title
+    }
+
+    private var weekHeader: some View {
         HStack(spacing: 0) {
             Color.clear.frame(width: gutter, height: 1)
             ForEach(days, id: \.self) { date in
@@ -143,7 +191,7 @@ struct TimeGridView: View {
         ForEach(0..<24) { h in
             HStack(alignment: .top, spacing: 4) {
                 Text(hourLabel(h))
-                    .font(.caption2.monospacedDigit())
+                    .font((days.count == 1 ? Font.caption : .caption2).monospacedDigit())
                     .foregroundStyle(.secondary)
                     .frame(width: gutter - 4, alignment: .trailing)
                     .offset(y: -6)
@@ -177,8 +225,17 @@ struct TimeGridView: View {
             ForEach(DayLayout.place(items.school, on: date, homeTime: store.homeTime, start: { HomeTime.parse($0.start) }, end: { HomeTime.parse($0.end) }), id: \.item.id) { p in
                 let school = p.item
                 let slotWidth = width / CGFloat(p.columns)
+                let title = store.ownerNames(school).map { "School · \($0)" } ?? "School"
                 Button { store.expandedSchool = school.id } label: {
-                    block(tint: EventCategory.schoolClass.color, title: store.ownerNames(school).map { "School · \($0)" } ?? "School", subtitle: "\(school.classes.count) classes", mark: store.mark(school), compact: days.count > 1)
+                    if days.count == 1 {
+                        dayBlock(
+                            tint: EventCategory.schoolClass.color, symbol: EventCategory.schoolClass.symbol, title: title,
+                            details: ["\(store.homeTime.range(school.start, school.end)) · \(school.classes.count) classes"],
+                            mark: store.mark(school), height: height(p)
+                        )
+                    } else {
+                        block(tint: EventCategory.schoolClass.color, title: title, mark: store.mark(school))
+                    }
                 }
                 .buttonStyle(.plain)
                 .frame(width: slotWidth - 2, height: height(p))
@@ -198,16 +255,25 @@ struct TimeGridView: View {
         let dragging = drag?.eventId == e.id
         let dx = dragging ? CGFloat(drag!.dayDelta) * columnWidth : 0
         let dy = dragging ? CGFloat(drag!.minuteDelta / 60) * hourHeight : 0
-        return block(
-            tint: e.category.color,
-            title: e.title,
-            subtitle: days.count == 1 ? store.homeTime.range(e.start, e.end) : nil,
-            mark: store.mark(e),
-            compact: days.count > 1,
-            faded: e.isSkipped || e.isCancelled,
-            // Too narrow for words: just the category's symbol.
-            symbol: slotWidth < 40 ? e.category.symbol : nil
-        )
+        let struck = e.isSkipped || e.isCancelled
+        return Group {
+            if days.count == 1 && slotWidth >= 40 {
+                dayBlock(
+                    tint: e.category.color, symbol: e.category.symbol, title: e.title,
+                    details: [store.homeTime.range(e.start, e.end), e.locationName, store.ownerNames(e)].compactMap { $0 },
+                    mark: store.mark(e), struck: struck, height: height(p)
+                )
+            } else {
+                block(
+                    tint: e.category.color,
+                    title: e.title,
+                    mark: store.mark(e),
+                    faded: struck,
+                    // Too narrow for words: just the category's symbol.
+                    symbol: slotWidth < 40 ? e.category.symbol : nil
+                )
+            }
+        }
         .frame(width: slotWidth - 2, height: height(p))
         .scaleEffect(dragging ? 1.04 : 1)
         .shadow(radius: dragging ? 6 : 0)
@@ -249,21 +315,24 @@ struct TimeGridView: View {
 
     // MARK: Pieces
 
-    private func block(tint: Color, title: String, subtitle: String?, mark: ClashMark, compact: Bool, faded: Bool = false, symbol: String? = nil) -> some View {
+    /// An event in the week view's narrow columns.
+    private func block(tint: Color, title: String, mark: ClashMark, faded: Bool = false, symbol: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             if let symbol {
                 Image(systemName: symbol).font(.caption2).foregroundStyle(tint)
                 if mark != .none { ClashSymbol(mark: mark).font(.caption2) }
             } else {
                 HStack(spacing: 2) {
-                    Text(title).font(compact ? .caption2.weight(.semibold) : .caption.weight(.semibold)).lineLimit(compact ? 3 : 2)
+                    Text(title)
+                        .font(.caption2.weight(.semibold))
+                        .strikethrough(faded)
+                        .lineLimit(3)
                     if mark != .none { ClashSymbol(mark: mark).font(.caption2) }
                 }
-                if let subtitle, !compact { Text(subtitle).font(.caption2).foregroundStyle(.secondary) }
             }
             Spacer(minLength: 0)
         }
-        .padding(compact ? 2 : 4)
+        .padding(2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(tint.opacity(faded ? 0.08 : 0.2), in: RoundedRectangle(cornerRadius: 5))
         .overlay(
@@ -273,16 +342,63 @@ struct TimeGridView: View {
         .opacity(faded ? 0.6 : 1)
     }
 
+    /// An event in the day view, laid out like an agenda row: a category bar,
+    /// symbol and title, then time, place and whose. Short events keep to
+    /// one line.
+    private func dayBlock(tint: Color, symbol: String, title: String, details: [String], mark: ClashMark, struck: Bool = false, height: CGFloat) -> some View {
+        let roomy = height >= 44
+        return HStack(alignment: .top, spacing: 6) {
+            RoundedRectangle(cornerRadius: 2).fill(tint).frame(width: 4)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Image(systemName: symbol).foregroundStyle(tint).accessibilityHidden(true)
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .strikethrough(struck)
+                        .lineLimit(roomy ? 2 : 1)
+                        .layoutPriority(1)
+                    if !roomy, let first = details.first {
+                        Text(first).font(.footnote.monospacedDigit()).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    ClashSymbol(mark: mark)
+                }
+                .font(.subheadline)
+                if roomy, !details.isEmpty {
+                    Text(details.joined(separator: " · "))
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(height >= 80 ? 3 : 1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, roomy ? 4 : 2)
+        }
+        .padding(.trailing, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background {
+            // An opaque base, so the hour lines don't show through.
+            RoundedRectangle(cornerRadius: 6).fill(.background)
+            RoundedRectangle(cornerRadius: 6).fill(tint.opacity(struck ? 0.06 : 0.14))
+        }
+        .overlay {
+            if mark == .clash { RoundedRectangle(cornerRadius: 6).strokeBorder(Color.red, lineWidth: 2) }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .opacity(struck ? 0.6 : 1)
+    }
+
     private func chip(_ e: CalendarEvent, compact: Bool) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: e.category.symbol).font(.caption2)
-            if !compact { Text(e.title).font(.caption).lineLimit(1) }
+        let struck = e.isSkipped || e.isCancelled
+        return HStack(spacing: 4) {
+            Image(systemName: e.category.symbol).font(compact ? .caption2 : .footnote).foregroundStyle(e.category.color)
+            if !compact { Text(e.title).font(.subheadline.weight(.medium)).strikethrough(struck).lineLimit(1) }
             ClashSymbol(mark: store.mark(e)).font(.caption2)
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
-        .frame(maxWidth: .infinity)
-        .background(e.category.color.opacity(0.2), in: RoundedRectangle(cornerRadius: 4))
+        .padding(.horizontal, compact ? 4 : 8)
+        .padding(.vertical, compact ? 2 : 4)
+        .frame(maxWidth: .infinity, alignment: compact ? .center : .leading)
+        .background(e.category.color.opacity(struck ? 0.06 : 0.14), in: RoundedRectangle(cornerRadius: 6))
+        .opacity(struck ? 0.6 : 1)
         .accessibilityLabel(e.title)
     }
 
@@ -313,5 +429,51 @@ struct TimeGridView: View {
     private func weekdayLetter(_ date: String) -> String {
         guard let d = store.homeTime.startOfDay(date) else { return "" }
         return d.formatted(Date.FormatStyle(timeZone: store.homeTime.timeZone).weekday(.abbreviated))
+    }
+}
+
+/// A sideways swipe: left for forward, right for back. UIKit's swipe works
+/// alongside the grid's scrolling, which a SwiftUI drag doesn't.
+private struct DaySwipe: UIGestureRecognizerRepresentable {
+    let swiped: (_ forward: Bool) -> Void
+
+    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+        let pan = UIPanGestureRecognizer()
+        pan.delegate = context.coordinator
+        pan.cancelsTouchesInView = false
+        return pan
+    }
+
+    func handleUIGestureRecognizerAction(_ pan: UIPanGestureRecognizer, context: Context) {
+        guard pan.state == .ended, let view = pan.view else { return }
+        let t = pan.translation(in: view)
+        let v = pan.velocity(in: view)
+        guard abs(t.x) > abs(t.y) * 2, abs(t.x) > 60 || abs(v.x) > 500 else { return }
+        swiped(t.x < 0)
+    }
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        /// Only a mostly sideways pan starts, so scrolling up and down is untouched.
+        func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
+            guard let pan = g as? UIPanGestureRecognizer, let view = pan.view else { return false }
+            let v = pan.velocity(in: view)
+            return abs(v.x) > abs(v.y) * 1.5
+        }
+
+        func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
+
+        /// iOS 26's swipe-back from anywhere would take every rightward
+        /// swipe that starts near the left; it waits for this one instead.
+        func gestureRecognizer(_ g: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+            guard #available(iOS 26, *) else { return false }
+            var responder: UIResponder? = g.view
+            while let r = responder {
+                if let nav = r as? UINavigationController { return other === nav.interactiveContentPopGestureRecognizer }
+                responder = r.next
+            }
+            return false
+        }
     }
 }
