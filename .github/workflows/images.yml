@@ -1,0 +1,47 @@
+name: Images
+
+# Builds the deploy images on PRs that change them, without pushing, and
+# checks the worker can start Chromium and ffmpeg (intent 0016).
+on:
+  pull_request:
+    paths:
+      - docker/**
+      - .github/workflows/deploy.yml
+      - .github/workflows/images.yml
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: crazy-max/ghaction-github-runtime@v3
+
+      - name: Build images
+        run: |
+          for image in web worker; do
+            docker buildx build -f "docker/${image}.Dockerfile" -t "${image}:test" --load \
+              --provenance=false --cache-from "type=gha,scope=${image}" .
+          done
+          docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep ':test'
+
+      - name: Worker starts Chromium and ffmpeg
+        run: |
+          docker run --rm --entrypoint ffmpeg worker:test -version | head -1
+          docker run --rm --entrypoint node worker:test --input-type=module -e "
+            const { chromium } = await import('playwright-core');
+            const b = await chromium.launch({ args: ['--disable-dev-shm-usage'] });
+            const p = await b.newPage();
+            await p.setContent('<h1>ok</h1>');
+            console.log('chromium', b.version(), await p.textContent('h1'));
+            await b.close();"
+          docker run --rm worker:test help
