@@ -13,8 +13,8 @@ importers:
   .:
     dependencies:
       '@anthropic-ai/vertex-sdk':
-        specifier: ^0.19.11
-        version: 0.19.11(zod@4.6.5)
+        specifier: ^0.21.0
+        version: 0.21.0(zod@4.6.5)
       '@fullcalendar/react':
         specifier: ^7.1.0
         version: 7.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(temporal-polyfill@1.0.5)
@@ -140,8 +140,8 @@ packages:
       zod:
         optional: true
 
-  '@anthropic-ai/vertex-sdk@0.19.11':
-    resolution: {integrity: sha512-yrXCUBL4RiW1dK/So/jyMCutDX2KeiY7jyOIWkU1qiZbuhWoIzPk7s1BDL+QaTKnScX+Ygg+/HHLAcgp9jEsUg==}
+  '@anthropic-ai/vertex-sdk@0.21.0':
+    resolution: {integrity: sha512-+l+I2QGfkROJMsK8fU3C8b+cwBYebDYBMLytpHkkWo4a9XhF2uRbWHpz9nm9UpSU0UB6lIrXyvcTTsD/MH2dPQ==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -3646,9 +3646,10 @@ snapshots:
     optionalDependencies:
       zod: 4.6.5
 
-  '@anthropic-ai/vertex-sdk@0.19.11(zod@4.6.5)':
+  '@anthropic-ai/vertex-sdk@0.21.0(zod@4.6.5)':
     dependencies:
       '@anthropic-ai/sdk': 0.128.0(zod@4.6.5)
+      '@opentelemetry/api': 1.9.1
       google-auth-library: 10.5.0
     transitivePeerDependencies:
       - supports-color
