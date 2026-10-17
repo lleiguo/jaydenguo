@@ -118,7 +118,8 @@ test.describe("tennis", () => {
         pool.query(
           `insert into tennis_entries (source_id, tournament_external_id, tournament_name, start_date, end_date,
              event_no, event_name, drive_minutes, status, reserve_position, tournament_url, entry_url)
-           values ($1, $2, $3, '2024-10-05', '2024-10-06', '6', 'U9 Orange Boys', 40, $4, $5, $6, $7)`,
+           values ($1, $2, $3, '2024-10-05', '2024-10-06', '6', 'U9 Orange Boys', 40, $4, $5, $6, $7)
+           returning id`,
           [sourceId, id, name, status, reserve, `${base}/tournament/${id}`, `${base}/individual-entry/${id}`],
         );
       await row("e2e-found", "Entry Found Open", "found", null);
@@ -131,6 +132,24 @@ test.describe("tennis", () => {
          where tournament_external_id = 'e2e-not-open'`,
       );
       await row("e2e-skipped", "Entry Green Ball Open", "skipped", null);
+      // Intent 0017: accepted, with the list as the Friday job keeps it
+      // (invented names).
+      const { rows } = await row("e2e-accepted", "Entry Accepted Open", "main_draw", null);
+      await pool.query(
+        `update tennis_entries set tournament_player_id = '7', list_checked_at = now() where id = $1`,
+        [rows[0].id],
+      );
+      const listed: [string, string, string | null, number | null][] = [
+        ["Ada Fixture", "5", "main_draw", null],
+        ["Sam Fixture", "7", "main_draw", null],
+        ["Bo Fixture", "9", "reserve", 1],
+      ];
+      for (const [i, [name, tp, status, place]] of listed.entries())
+        await pool.query(
+          `insert into tennis_entry_list (entry_id, position, names, tournament_player_ids, status, reserve_position)
+           values ($1, $2, $3, $4, $5, $6)`,
+          [rows[0].id, i, [name], [tp], status, place],
+        );
       await pool.query(
         `update tennis_entries set note = 'No event for him: U10 Green Boys.' where tournament_external_id = 'e2e-skipped'`,
       );
@@ -163,16 +182,32 @@ test.describe("tennis", () => {
     const waiting = upcoming.filter({ hasText: "Entry Waiting Open" });
     await expect(waiting).toHaveAttribute("data-status", "registered");
     await expect(waiting).toContainText("Draw not out yet");
-    await expect(waiting.getByRole("link", { name: "Entry Waiting Open" })).toHaveAttribute(
-      "href",
-      `${base}/tournament/e2e-entered`,
-    );
+    // Intent 0017, ACC-5: the entry page, before the list is out.
+    await waiting.getByRole("link", { name: "Entry Waiting Open" }).click();
+    await expect(page.getByRole("heading", { name: "Entry Waiting Open" })).toBeVisible();
+    await expect(page.getByText("The acceptance list isn't out yet.")).toBeVisible();
+    await page.goBack();
     const reserve = upcoming.filter({ hasText: "Entry Reserve Cup" });
     await expect(reserve).toContainText("Reserve list (2)");
     await expect(reserve).toContainText("U9 Orange Boys");
     await expect(reserve).toContainText("40 min drive");
     await expect(reserve).toContainText("2024-10-05 – 2024-10-06");
     await expect(reserve.getByRole("link", { name: /on the site/ })).toHaveCount(0);
+
+    // Intent 0017, ACC-1 and ACC-5: "Accepted", and the list behind it.
+    const accepted = upcoming.filter({ hasText: "Entry Accepted Open" });
+    await expect(accepted).toHaveAttribute("data-status", "main_draw");
+    await expect(accepted).toContainText("Accepted");
+    await accepted.getByRole("link", { name: "Entry Accepted Open" }).click();
+    await expect(page.getByTestId("entry-status")).toHaveText("Accepted");
+    const main = page.getByRole("list", { name: "Main draw" });
+    await expect(page.getByRole("heading", { name: "Main draw (2)" })).toBeVisible();
+    await expect(main.getByTestId("entry-list-player")).toHaveText(["Ada Fixture", "Sam Fixture"]);
+    await expect(main.locator("[data-self]")).toHaveText("Sam Fixture");
+    // Reserves are there, folded away.
+    await expect(page.getByRole("list", { name: "Reserve list" })).toBeHidden();
+    await page.getByText("Reserve list (1)").click();
+    await expect(page.getByRole("list", { name: "Reserve list" })).toContainText("1. Bo Fixture");
   });
 
   test("the tennis page shows his next match with a prediction, and his tournaments (TEN-2, TEN-3, TEN-6)", async ({

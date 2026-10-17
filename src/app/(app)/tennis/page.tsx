@@ -196,6 +196,10 @@ function Upcoming({ rows, data, title }: { rows: UpcomingRow[]; data: TennisData
                         >
                           {r.name}
                         </Link>
+                      ) : r.entryId ? (
+                        <Link href={`/tennis/entries/${r.entryId}`} className="font-semibold underline">
+                          {r.name}
+                        </Link>
                       ) : r.url ? (
                         <a href={r.url} className="font-semibold underline" target="_blank" rel="noreferrer">
                           {r.name}

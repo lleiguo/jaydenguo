@@ -21,7 +21,7 @@ import Testing
         let overview = try await client.api.getTennisOverview().ok.body.json
         let row = try #require(overview.upcomingRows.first)
         #expect(row.status.kind == "main_draw")
-        #expect(row.status.label == "Main draw")
+        #expect(row.status.label == "Accepted")
         #expect(row.status.action == nil)
         #expect(overview.found.first?.status == "found")
     }

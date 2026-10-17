@@ -92,9 +92,9 @@ variable "tennis_enter_schedule" {
 }
 
 variable "tennis_acceptance_schedule" {
-  description = "Cron schedule for reading acceptance lists (TEN-10), in home_time_zone. Lists come out Friday mornings."
+  description = "Cron schedule for reading acceptance lists (TEN-10), in home_time_zone. Lists come out on Fridays, often after 10:00: read every 2 hours until he's settled (intent 0017, ACC-2)."
   type        = string
-  default     = "0 10 * * 5"
+  default     = "0 8-20/2 * * 5"
 }
 
 variable "tennis_draw_watch_schedule" {

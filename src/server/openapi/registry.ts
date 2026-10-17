@@ -712,6 +712,14 @@ export const operations: Operation[] = [
   },
   {
     method: "GET",
+    path: "/api/v1/tennis/entries/{id}",
+    operationId: "getTennisEntry",
+    summary: "One of his entries with its acceptance list: main draw, then reserves.",
+    spec: "ACC-5",
+    response: "TennisEntryResponse",
+  },
+  {
+    method: "GET",
     path: "/api/v1/tennis/players/{key}",
     operationId: "getTennisPlayer",
     summary: "An opponent: head-to-head, form, prediction.",

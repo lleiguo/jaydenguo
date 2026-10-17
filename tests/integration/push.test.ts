@@ -260,16 +260,22 @@ describe("push notifications", () => {
     await db.delete(events).where(eq(events.sourceId, src.id));
   });
 
-  it("tells about reserve to main draw, and off the list, not other moves (TEN-10)", async () => {
+  it("tells when he's accepted (once) and off the list, not other moves (TEN-10, ACC-6)", async () => {
     await register(await phone(), TOKEN_A);
     const entry = { id: crypto.randomUUID(), tournamentName: "Rookie Open", eventName: "U9 Orange" };
-    await notifyEntryChange(db, { ...entry, status: "entered" }, "main_draw", { log });
-    await notifyEntryChange(db, { ...entry, status: "reserve" }, "reserve", { log });
+    await notifyEntryChange(db, { ...entry, status: "entered" }, "reserve", { log });
+    await notifyEntryChange(db, { ...entry, status: "found" }, "entered", { log });
     expect(sent).toHaveLength(0);
+    await notifyEntryChange(db, { ...entry, status: "entered" }, "main_draw", { log });
+    // Once per entry: back from the reserve list says nothing new.
     await notifyEntryChange(db, { ...entry, status: "reserve" }, "main_draw", { log });
     await notifyEntryChange(db, { ...entry, status: "main_draw" }, "withdrawn", { log });
     const rows = await db.select().from(notifications);
-    expect(rows.map((r) => r.title).sort()).toEqual(["In the main draw", "Off the entry list"]);
+    expect(rows.map((r) => r.title).sort()).toEqual([
+      "Accepted: Rookie Open (U9 Orange)",
+      "Off the entry list",
+    ]);
+    expect(rows.find((r) => r.title.startsWith("Accepted"))?.body).toBe("He's in the main draw.");
     expect(tennisEntries).toBeDefined();
   });
 

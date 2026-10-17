@@ -79,6 +79,8 @@ describe("entry page parsers", () => {
     expect(entryStatusOf("Maindraw")).toEqual({ kind: "main_draw" });
     expect(entryStatusOf("Reserve list 12")).toEqual({ kind: "reserve", position: 12 });
     expect(entryStatusOf("Alternate")).toEqual({ kind: "reserve", position: null });
+    // Seen Oct 2026 (intent 0017, SP-A1).
+    expect(entryStatusOf("Exclude list")).toEqual({ kind: "excluded" });
     expect(entryStatusOf("")).toBeNull();
   });
 });
@@ -142,6 +144,10 @@ describe("entry rules", () => {
     };
     expect(statusFromList("entered", main)).toEqual({ status: "main_draw", reservePosition: null });
     expect(statusFromList("entered", res)).toEqual({ status: "reserve", reservePosition: 3 });
+    expect(statusFromList("entered", { ...res, status: { kind: "excluded" } })).toEqual({
+      status: "withdrawn",
+      reservePosition: null,
+    });
     // The owner entered him by hand: found → entered.
     expect(statusFromList("found", { ...main, status: null }).status).toBe("entered");
     expect(statusFromList("main_draw", null).status).toBe("withdrawn");

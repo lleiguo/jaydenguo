@@ -125,7 +125,8 @@ export async function notifyEntryActions(db: DbOrTx, sourceId: string, deps: Not
 
 type EntryBefore = Pick<typeof tennisEntries.$inferSelect, "id" | "status" | "tournamentName" | "eventName">;
 
-// TEN-10: from the reserve list into the main draw, or off the entry list.
+// TEN-10, intent 0017 ACC-6: accepted into the main draw (from entered,
+// payment needed or the reserve list), or off the entry list.
 export async function notifyEntryChange(
   db: DbOrTx,
   before: EntryBefore,
@@ -133,17 +134,19 @@ export async function notifyEntryChange(
   deps: NotifyDeps = {},
 ) {
   if (after === before.status) return;
-  const inDraw = before.status === "reserve" && after === "main_draw";
+  const accepted = ["entered", "payment_needed", "reserve"].includes(before.status) && after === "main_draw";
   const gone = after === "withdrawn";
-  if (!inDraw && !gone) return;
+  if (!accepted && !gone) return;
   await notify(
     db,
     {
       kind: "entry_change",
       dedupKey: `entry:${before.id}:${after}`,
-      title: inDraw ? "In the main draw" : "Off the entry list",
-      body: inDraw
-        ? `${before.tournamentName} (${before.eventName}): moved from the reserve list into the main draw.`
+      title: accepted ? `Accepted: ${before.tournamentName} (${before.eventName})` : "Off the entry list",
+      body: accepted
+        ? before.status === "reserve"
+          ? "Moved from the reserve list into the main draw."
+          : "He's in the main draw."
         : `${before.tournamentName} (${before.eventName}): he's no longer on the entry list.`,
       target: "tennis",
     },

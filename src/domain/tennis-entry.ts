@@ -101,7 +101,7 @@ export const nameTokens = (name: string) =>
     .join(" ");
 
 export type EntryRow = {
-  status: { kind: "main_draw" } | { kind: "reserve"; position: number | null } | null;
+  status: { kind: "main_draw" } | { kind: "reserve"; position: number | null } | { kind: "excluded" } | null;
   tournamentPlayerIds: string[];
   names: string[];
 };
@@ -130,6 +130,8 @@ export function statusFromList(
 ): { status: EntryStatus; reservePosition: number | null } {
   if (row?.status?.kind === "main_draw") return { status: "main_draw", reservePosition: null };
   if (row?.status?.kind === "reserve") return { status: "reserve", reservePosition: row.status.position };
+  // On the list, but left out by the organiser (intent 0017).
+  if (row?.status?.kind === "excluded") return { status: "withdrawn", reservePosition: null };
   if (row)
     return {
       status: current === "found" || current === "skipped" ? "entered" : current,

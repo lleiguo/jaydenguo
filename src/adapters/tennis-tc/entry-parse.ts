@@ -20,7 +20,11 @@ export type TcSearchResult = {
 
 export type TcEvent = { eventNo: string; name: string };
 
-export type TcEntryStatus = { kind: "main_draw" } | { kind: "reserve"; position: number | null };
+export type TcEntryStatus =
+  | { kind: "main_draw" }
+  | { kind: "reserve"; position: number | null }
+  // "Exclude list" (seen Oct 2026): entered, but the organiser left him out.
+  | { kind: "excluded" };
 
 export type TcEntryRow = {
   status: TcEntryStatus | null;
@@ -93,10 +97,12 @@ export function parseEventList(html: string): TcEvent[] {
   return out;
 }
 
-// "Maindraw", "Main draw", "Reserve list 3", "Reserve" → a status.
+// "Maindraw", "Main draw", "Reserve list 3", "Reserve", "Exclude list" →
+// a status.
 export function entryStatusOf(label: string | null): TcEntryStatus | null {
   const l = (label ?? "").toLowerCase();
   if (/^main\s*draw/.test(l)) return { kind: "main_draw" };
+  if (/^exclu/.test(l)) return { kind: "excluded" };
   if (/reserve|alternate/.test(l)) {
     const n = l.match(/(\d+)/);
     return { kind: "reserve", position: n ? Number(n[1]) : null };
