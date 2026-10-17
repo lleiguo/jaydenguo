@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Fenced, householdWriter } from "@/adapters/google-calendar/writer";
 import { ownersFor } from "@/domain/categories";
-import { householdTitle, planHousehold, type HouseholdLink, type PlanItem } from "@/domain/household-sync";
+import {
+  householdTitle,
+  planHousehold,
+  readBack,
+  titleFromGoogle,
+  type GoogleSeen,
+  type HouseholdLink,
+  type PlanItem,
+} from "@/domain/household-sync";
 import type { Person } from "@/domain/people";
 
 // Intent 0020: what goes to the household calendar (TWO), twins (DUP2-2),
@@ -242,5 +250,178 @@ describe("the household writer's fence (TWSEC-1)", () => {
     expect(sent).toEqual([
       { id: "g1", summary: "Jayden soccer", end: future, extendedProperties: { private: { other: "kept" } } },
     ]);
+  });
+});
+
+describe("household events changed in the hub (TWO-4)", () => {
+  const household = (over: Partial<PlanItem> = {}) =>
+    item({ sourceKind: "google_calendar", googleEventId: `g${++n}`, title: "Dinner", ...over });
+
+  it("patches a moved one, deletes a deleted one or one skipped of a series, and keeps a one-off skip here", () => {
+    const moved = household({
+      start: "2030-03-05T22:00:00.000Z",
+      end: "2030-03-05T23:00:00.000Z",
+      override: { id: "o1", moved: true, skip: false },
+    });
+    const deleted = household({ deleted: true, active: false });
+    const skippedOfSeries = household({
+      repeats: true,
+      active: false,
+      override: { id: "o2", moved: false, skip: true },
+    });
+    const skippedOnce = household({ active: false, override: { id: "o3", moved: false, skip: true } });
+    const past = household({
+      start: "2030-02-01T22:00:00.000Z",
+      end: "2030-02-01T23:00:00.000Z",
+      override: { id: "o4", moved: true, skip: false },
+    });
+    const p = plan([moved, deleted, skippedOfSeries, skippedOnce, past]);
+    expect(p.edits).toEqual([
+      {
+        kind: "patch",
+        eventId: moved.id,
+        googleEventId: moved.googleEventId,
+        overrideId: "o1",
+        body: {
+          start: { dateTime: moved.start, timeZone: tz },
+          end: { dateTime: moved.end, timeZone: tz },
+        },
+        start: moved.start,
+        end: moved.end,
+      },
+      { kind: "remove", eventId: deleted.id, googleEventId: deleted.googleEventId, overrideId: null },
+      {
+        kind: "remove",
+        eventId: skippedOfSeries.id,
+        googleEventId: skippedOfSeries.googleEventId,
+        overrideId: "o2",
+      },
+    ]);
+    expect(p.create).toEqual([]);
+  });
+
+  it("counts them against the brake (TWSEC-2)", () => {
+    const many = Array.from({ length: 11 }, () => household({ deleted: true, active: false }));
+    expect(plan(many).held).toMatch(/delete 11/);
+  });
+});
+
+describe("readBack (BACK-2..5)", () => {
+  const seenAt = new Date("2030-03-01T10:00:00Z");
+  const later = "2030-03-01T11:00:00.000Z";
+  // What the hub wrote, as Google gives it back.
+  const written = (i: PlanItem, link: HouseholdLink) => {
+    const p = planHousehold({ items: [{ ...i, active: true }], people, links: [], timeZone: tz, now });
+    // Past events aren't written at all.
+    if (!p.create[0]) return { start: {}, end: {} };
+    link.hash = p.create[0].hash;
+    return { ...p.create[0].body, updated: seenAt.toISOString() } as GoogleSeen;
+  };
+  const setup = (over: Partial<PlanItem> = {}) => {
+    const i = item({ changedAt: new Date("2030-02-01T00:00:00Z"), ...over });
+    const link: HouseholdLink = {
+      hubKey: i.id,
+      googleEventId: "g1",
+      origin: "hub",
+      hash: "",
+      googleUpdatedAt: seenAt,
+    };
+    return { i, link, g: written(i, link) };
+  };
+  const back = (i: PlanItem, link: HouseholdLink, g: GoogleSeen | "gone") =>
+    readBack({ items: [i], people, links: [link], google: new Map([["g1", g]]), timeZone: tz, now });
+  const at = (iso: string) => ({ dateTime: iso, timeZone: tz });
+
+  it("ignores what is unchanged, or only touched in Google", () => {
+    const { i, link, g } = setup();
+    expect(back(i, link, g).changes).toEqual([]);
+    const touched = back(i, link, { ...g, updated: later });
+    expect(touched.changes).toEqual([]);
+    expect(touched.seen).toEqual([{ hubKey: i.id, updated: later, stale: false }]);
+  });
+
+  it("turns a Google move of a feed's event into an override, and puts its title back (BACK-3)", () => {
+    const { i, link, g } = setup();
+    const moved = back(i, link, {
+      ...g,
+      summary: "Tennis, moved",
+      start: at("2030-03-04T20:00:00-05:00"),
+      end: at("2030-03-04T21:00:00-05:00"),
+      updated: later,
+    });
+    expect(moved.changes).toEqual([
+      { kind: "move", eventId: i.id, start: "2030-03-05T01:00:00.000Z", end: "2030-03-05T02:00:00.000Z" },
+    ]);
+    expect(moved.seen[0].stale).toBe(true);
+  });
+
+  it("skips a feed's event deleted in Google, and deletes one added here (BACK-3, BACK-4)", () => {
+    const feed = setup();
+    expect(back(feed.i, feed.link, "gone")).toMatchObject({
+      changes: [{ kind: "skip", eventId: feed.i.id }],
+      gone: [feed.i.id],
+    });
+    const mine = setup({ sourceKind: null, hubMade: true });
+    expect(back(mine.i, mine.link, "gone").changes).toEqual([{ kind: "delete", eventId: mine.i.id }]);
+  });
+
+  it("gives an event added here Google's title, time and place (BACK-4)", () => {
+    const { i, link, g } = setup({ sourceKind: null, hubMade: true });
+    const r = back(i, link, {
+      ...g,
+      summary: "Jayden – Tennis with Sam",
+      location: "Park",
+      updated: later,
+    });
+    expect(r.changes).toEqual([
+      {
+        kind: "edit",
+        eventId: i.id,
+        title: "Jayden – Tennis with Sam",
+        start: i.start,
+        end: i.end,
+        allDay: false,
+        locationName: "Park",
+      },
+    ]);
+  });
+
+  it("lets the later change win when both sides changed (BACK-5)", () => {
+    const { i, link, g } = setup({ sourceKind: null, hubMade: true });
+    link.hash = "an older version";
+    const edited = { ...g, location: "Park", updated: later };
+    i.changedAt = new Date("2030-03-01T12:00:00Z");
+    expect(back(i, link, edited)).toMatchObject({ changes: [], hubWon: [i.id] });
+    i.changedAt = new Date("2030-03-01T10:30:00Z");
+    expect(back(i, link, edited).changes).toMatchObject([{ kind: "edit", locationName: "Park" }]);
+  });
+
+  it("leaves past events, and those deleted here, alone (TWO-7)", () => {
+    const old = setup({ start: "2030-02-01T22:00:00.000Z", end: "2030-02-01T23:00:00.000Z" });
+    expect(back(old.i, old.link, "gone").changes).toEqual([]);
+    const skipped = setup({ active: false });
+    expect(back(skipped.i, skipped.link, "gone").changes).toEqual([]);
+  });
+
+  it("keeps a twin's own title (DUP2-2)", () => {
+    const { i, link, g } = setup();
+    link.origin = "twin";
+    const p = planHousehold({ items: [i], people, links: [link], timeZone: tz, now });
+    link.hash = p.update[0]?.hash ?? link.hash;
+    expect(back(i, link, { ...g, summary: "Jayden's tennis", updated: later }).changes).toEqual([]);
+  });
+});
+
+describe("titleFromGoogle (BACK-4, T-6)", () => {
+  it("takes off the names the hub put in front, and makes them the owners", () => {
+    expect(titleFromGoogle("Jayden – Dentist", people)).toEqual({ title: "Dentist", owners: [jayden.id] });
+    expect(titleFromGoogle("Jayden + Sam – Swim", people)).toEqual({
+      title: "Swim",
+      owners: [jayden.id, sam.id],
+    });
+    expect(titleFromGoogle("Dentist – check-up", people)).toEqual({
+      title: "Dentist – check-up",
+      owners: null,
+    });
   });
 });

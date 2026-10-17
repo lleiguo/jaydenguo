@@ -38,7 +38,15 @@ export type HouseholdSyncSettings = {
   dryRun: { at: string; plan: PlanSummary } | null;
   lastRunAt: string | null;
   lastError: string | null;
-  last: { created: number; updated: number; linked: number; deleted: number; unlinked: number } | null;
+  last: {
+    created: number;
+    updated: number;
+    linked: number;
+    deleted: number;
+    unlinked: number;
+    // Changes read back from Google (BACK); runs before H3 have none.
+    fromGoogle?: number;
+  } | null;
   // When the web app last started the job, and when a run last began: a
   // job that hasn't begun yet will see later changes too.
   requestedAt: string | null;

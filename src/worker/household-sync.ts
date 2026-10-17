@@ -9,17 +9,22 @@ import {
 } from "../adapters/google-calendar/writer";
 import { SyncError } from "../adapters/types";
 import { ADD_SCOPE } from "../domain/assistant-changes";
+import { parseMapping } from "../domain/categories";
 import type { Category } from "../domain/constants";
-import { HOUSEHOLD_KINDS, hiddenDuplicates } from "../domain/duplicates";
+import { EMAIL_KINDS, HOUSEHOLD_KINDS, hiddenDuplicates } from "../domain/duplicates";
 import {
+  BRAKE,
   planHousehold,
+  readBack,
   WINDOW_DAYS,
+  type GoogleSeen,
   type HouseholdLink,
   type HouseholdPlan,
   type PlanItem,
 } from "../domain/household-sync";
 import { resolveOwners } from "../domain/people";
 import { repeatKey } from "../domain/repeats";
+import { applyGoogleChange, householdEditWritten, noteHubWon } from "../server/calendar/mutations";
 import type { Db } from "../server/db/client";
 import {
   getHouseholdSync,
@@ -37,11 +42,12 @@ import { openCredential } from "./credentials";
 // `household:sync` (intent 0020, H2): writes the hub's events into the
 // household Google Calendar so it holds everything once (TWO), after a dry
 // run the owner checked (TWO-9) and past the brake (TWSEC-2). Started after
-// changes on the calendar, after every sync, and on "Apply". Reading
-// Google edits back is H3.
+// changes on the calendar, after every sync, and on "Apply". Before
+// writing, it reads back what was changed in Google since (BACK, H3).
 
 const PAST_DAYS = 30;
 const LINES = 50;
+const ACTOR = "household sync";
 
 export class HouseholdSyncError extends SyncError {}
 
@@ -119,6 +125,10 @@ async function loadItems(db: Db, links: HouseholdLink[], now: Date): Promise<Pla
       ),
     );
   const items: PlanItem[] = rows.map(({ event: e, override: o, kind }) => ({
+    hubMade: (!kind && !e.seriesId) || (!!kind && EMAIL_KINDS.includes(kind)),
+    changedAt: o && o.createdAt > e.updatedAt ? o.createdAt : e.updatedAt,
+    override: o ? { id: o.id, moved: !!o.newStartUtc, skip: o.skip } : null,
+    deleted: !!e.deletedAt && e.status === "active",
     id: e.id,
     sourceKind: kind ?? null,
     title: e.title,
@@ -155,17 +165,42 @@ function summarise(plan: HouseholdPlan, items: PlanItem[]): PlanSummary {
     return i ? { title: i.title, start: i.start } : { title: "(an event no longer in the hub)", start: "" };
   };
   const lines = (xs: { hubKey: string }[]) => xs.slice(0, LINES).map((x) => line(x.hubKey));
+  const edits = (kind: string) =>
+    plan.edits.filter((e) => e.kind === kind).map((e) => ({ hubKey: e.eventId }));
   return {
     create: lines(plan.create),
-    update: lines(plan.update),
+    update: lines([...plan.update, ...edits("patch")]),
     link: lines(plan.link),
-    remove: lines(plan.remove),
+    remove: lines([...plan.remove, ...edits("remove")]),
     unlink: lines(plan.unlink),
   };
 }
 
+const loadLinks = async (db: Db, sourceId: string): Promise<HouseholdLink[]> =>
+  (await db.select().from(householdLinks).where(eq(householdLinks.sourceId, sourceId))).map((l) => ({
+    ...l,
+    origin: l.origin as HouseholdLink["origin"],
+  }));
+
+// BACK-2: what Google holds now of each event the hub wrote that is still
+// coming up. One read of the window; an event missing from it (moved out of
+// the window, or deleted) is looked up by ID, so only a real delete counts.
+async function readGoogle(writer: HouseholdWriter, links: HouseholdLink[], items: PlanItem[], now: Date) {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const google = new Map<string, GoogleSeen | "gone">();
+  const horizon = new Date(now.getTime() + (WINDOW_DAYS + 1) * 86_400_000);
+  for (const e of await writer.listTagged(now, horizon)) google.set(e.id, e as GoogleSeen);
+  for (const l of links) {
+    const item = byId.get(l.hubKey);
+    if (!item?.active || Date.parse(item.end) <= now.getTime() || google.has(l.googleEventId)) continue;
+    const e = await writer.get(l.googleEventId);
+    google.set(l.googleEventId, e ? (e as GoogleSeen) : "gone");
+  }
+  return google;
+}
+
 async function write(db: Db, sourceId: string, writer: HouseholdWriter, plan: HouseholdPlan, log: Logger) {
-  const counts = { created: 0, updated: 0, linked: 0, deleted: 0, unlinked: 0 };
+  const counts = { created: 0, updated: 0, linked: 0, deleted: 0, unlinked: 0, fromGoogle: 0 };
   const upsert = (
     hubKey: string,
     googleEventId: string,
@@ -256,6 +291,25 @@ async function write(db: Db, sourceId: string, writer: HouseholdWriter, plan: Ho
     }
     await drop(r.hubKey);
   }
+  // TWO-4: household events changed in the hub. Until Google has the
+  // change the override stays, so nothing is lost if Google refuses it
+  // (SP-T1: an event another account made, say).
+  for (const e of plan.edits) {
+    try {
+      if (e.kind === "patch") await writer.patch(e.googleEventId, e.body);
+      else await writer.remove(e.googleEventId);
+    } catch (err) {
+      if (fenced(err, e.eventId)) continue;
+      if (err instanceof WriteFailed && !err.retry) {
+        log("household sync: Google refused a change", { eventId: e.eventId, status: err.status }, "WARNING");
+        continue;
+      }
+      throw err;
+    }
+    await householdEditWritten(db, ACTOR, e);
+    if (e.kind === "patch") counts.updated++;
+    else counts.deleted++;
+  }
   return counts;
 }
 
@@ -271,15 +325,77 @@ export async function runHouseholdSync(db: Db, deps: HouseholdDeps) {
   try {
     await lockClient.query("select pg_advisory_lock(hashtext($1))", [lockKey]);
     try {
-      const links = (
-        await db.select().from(householdLinks).where(eq(householdLinks.sourceId, source.id))
-      ).map((l) => ({ ...l, origin: l.origin as HouseholdLink["origin"] }));
-      const items = await loadItems(db, links, now);
+      const people = await listPeople(db);
+      const timeZone = await getHomeTimeZone(db);
+      let links = await loadLinks(db, source.id);
+      let items = await loadItems(db, links, now);
+      // Named untagged events the writer may change (TWSEC-1), filled in
+      // once the plan is known.
+      const untagged = new Set<string>();
+      let writer: HouseholdWriter | null = null;
+      let fromGoogle = 0;
+      if (settings.mode === "on") {
+        writer = await (deps.writerFor ?? googleWriter)(db, credentialId, calendarId, { now, untagged });
+        // BACK-2..5: changes made in Google since the last run come first.
+        const google = await readGoogle(writer, links, items, now);
+        const back = readBack({ items, people, links, google, timeZone, now });
+        const deletes = back.changes.filter((c) => c.kind === "delete" || c.kind === "skip");
+        if (deletes.length > BRAKE.deletes && !settings.applyOnce) {
+          const reason = `${deletes.length} events the hub wrote were deleted in the household calendar; applying takes them out of the hub too.`;
+          const byId = new Map(items.map((i) => [i.id, i]));
+          const lines = deletes.slice(0, LINES).map((c) => ({
+            title: byId.get(c.eventId)?.title ?? "",
+            start: byId.get(c.eventId)?.start ?? "",
+          }));
+          await saveHouseholdSync(db, {
+            held: {
+              reason,
+              at: now.toISOString(),
+              plan: { create: [], update: [], link: [], remove: lines, unlink: [] },
+            },
+          });
+          await notify(
+            db,
+            {
+              kind: "sync_failed",
+              dedupKey: `household_held:${now.toISOString().slice(0, 10)}`,
+              title: "Household calendar: a run is waiting",
+              body: `${reason} Check the list in Settings and press Apply.`,
+              target: "settings",
+            },
+            deps.notifyDeps,
+          );
+          return { held: reason };
+        }
+        const mapping = parseMapping(source.categoryMapping);
+        for (const c of back.changes) await applyGoogleChange(db, c, { people, mapping });
+        for (const k of back.hubWon) await noteHubWon(db, k);
+        const stale = new Set(back.seen.filter((x) => x.stale).map((x) => x.hubKey));
+        for (const x of back.seen)
+          await db
+            .update(householdLinks)
+            .set({
+              googleUpdatedAt: x.updated ? new Date(x.updated) : null,
+              ...(stale.has(x.hubKey) ? { hash: "" } : {}),
+              updatedAt: new Date(),
+            })
+            .where(and(eq(householdLinks.sourceId, source.id), eq(householdLinks.hubKey, x.hubKey)));
+        if (back.gone.length)
+          await db
+            .delete(householdLinks)
+            .where(and(eq(householdLinks.sourceId, source.id), inArray(householdLinks.hubKey, back.gone)));
+        fromGoogle = back.changes.length;
+        if (fromGoogle || stale.size || back.gone.length) {
+          links = await loadLinks(db, source.id);
+          items = await loadItems(db, links, now);
+        }
+        if (fromGoogle) deps.log("household sync: changes from Google", { count: fromGoogle });
+      }
       const plan = planHousehold({
         items,
-        people: await listPeople(db),
+        people,
         links,
-        timeZone: await getHomeTimeZone(db),
+        timeZone,
         now,
         overrideBrake: settings.applyOnce,
       });
@@ -297,7 +413,8 @@ export async function runHouseholdSync(db: Db, deps: HouseholdDeps) {
         !plan.update.length &&
         !plan.link.length &&
         !plan.remove.length &&
-        !plan.unlink.length;
+        !plan.unlink.length &&
+        !plan.edits.length;
       if (reason && !nothing) {
         await saveHouseholdSync(db, { held: { reason, at: now.toISOString(), plan: summary } });
         await notify(
@@ -313,9 +430,10 @@ export async function runHouseholdSync(db: Db, deps: HouseholdDeps) {
         );
         return { held: reason };
       }
-      const untagged = new Set(plan.link.map((l) => l.googleEventId));
-      const writer = await (deps.writerFor ?? googleWriter)(db, credentialId, calendarId, { now, untagged });
-      const counts = await write(db, source.id, writer, plan, deps.log);
+      for (const l of plan.link) untagged.add(l.googleEventId);
+      for (const e of plan.edits) untagged.add(e.googleEventId);
+      const counts = await write(db, source.id, writer!, plan, deps.log);
+      counts.fromGoogle = fromGoogle;
       await saveHouseholdSync(db, { held: null, holdNext: false, applyOnce: false, last: counts });
       return counts;
     } finally {

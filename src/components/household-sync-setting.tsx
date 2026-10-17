@@ -175,7 +175,7 @@ export function HouseholdSyncSetting() {
             <p data-testid="household-status">
               Last run {new Date(s.lastRunAt).toLocaleString()}
               {s.last &&
-                ` (${s.last.created} added, ${s.last.updated} changed, ${s.last.linked} matched, ${s.last.deleted} deleted)`}
+                ` (${s.last.created} added, ${s.last.updated} changed, ${s.last.linked} matched, ${s.last.deleted} deleted, ${s.last.fromGoogle ?? 0} from Google)`}
               .
             </p>
           )}
