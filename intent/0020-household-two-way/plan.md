@@ -42,4 +42,4 @@ About 8–10 days of work, in five PRs.
   production run log).
 
 ## 5. Status
-Approved 2026-10-17 with the defaults (all seven open questions; T-1..T-6 accepted). H1 next.
+Approved 2026-10-17 with the defaults (all seven open questions; T-1..T-6 accepted). H1 built: migration 0035 `household_links`, `src/domain/household-sync.ts`, `householdWriter` in `src/adapters/google-calendar/writer.ts`. As built: a linked twin that leaves the hub is untagged, never deleted; the brake counts changes to events already in Google, not new ones. H2 next.
