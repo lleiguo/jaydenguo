@@ -63,7 +63,7 @@ Google), DUP2 (no duplicates), TWSEC (security).
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | TWSEC-1 | Fenced writer. | The writer is bound to the one calendar of the household source. It deletes or patches only events that have a `hubEventId`, or household events the owner changed in the hub (TWO-4). It never touches events outside the window or in the past (TWO-7). |
-| TWSEC-2 | A brake. | A run that would delete more than 10 events, or change more than 50, stops without writing and sends the owner a notice with the list; "Apply anyway" on Sources runs it once. The first On run after Dry run is held the same way. |
+| TWSEC-2 | A brake. | A run that would delete more than 10 events, or change more than 50 events already in Google (new ones don't count; linking or untagging a twin does), stops without writing and sends the owner a notice with the list; "Apply anyway" on Sources runs it once. The first On run after Dry run is held the same way. |
 | TWSEC-3 | Same grant, same place. | `calendar.events.owned` on the existing `calendar_write` credential; decrypted only in the worker (0001 CRED-4). No new scope. |
 | TWSEC-4 | Nothing more leaves the hub. | Events go to the family's own Google calendar (as 0008, NFR-1). Notes go as written; no credentials, tokens or links with secrets (a feed's iCal URL is never written). |
 

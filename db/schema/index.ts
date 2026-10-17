@@ -7,6 +7,7 @@ export * from "./tennis";
 export * from "./video";
 export * from "./email";
 export * from "./calendar-copy";
+export * from "./household-links";
 export * from "./costs";
 export * from "./push";
 export * from "./assistant";
