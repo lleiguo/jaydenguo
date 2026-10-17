@@ -35,6 +35,7 @@ targets:
       - target: HubWidgets
       - target: HubNotify
       - target: HubShare
+      - target: HubAskShare
     info:
       path: HubApp/Info.plist
       properties:
@@ -166,6 +167,40 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub$(HUB_BUNDLE_SUFFIX).share
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SKIP_INSTALL: YES
+  # "Ask Cookie" from the share sheet: pictures or text (intent 0019, SHR-1).
+  HubAskShare:
+    type: app-extension
+    platform: iOS
+    sources: [HubAskShare]
+    dependencies:
+      - package: HubKit
+        product: HubKit
+      - package: HubKit
+        product: HubAPI
+    entitlements:
+      path: HubAskShare/HubAskShare.entitlements
+      properties:
+        com.apple.security.application-groups: [$(HUB_APP_GROUP)]
+    info:
+      path: HubAskShare/Info.plist
+      properties:
+        CFBundleDisplayName: Ask Cookie
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        HubAppGroup: $(HUB_APP_GROUP)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).AskShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsImageWithMaxCount: 3
+              NSExtensionActivationSupportsText: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jaydenguo.hub$(HUB_BUNDLE_SUFFIX).askcookie
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_STRICT_CONCURRENCY: complete
         SKIP_INSTALL: YES

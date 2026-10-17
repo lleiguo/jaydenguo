@@ -45,7 +45,8 @@ the share sheet and a TestFlight build.
 | S1 | merged 2026-10-17 (#148). |
 | S2 | built 2026-10-17 on `ios/0019-s2-chat` (below). |
 | SP-S2, SP-S3 | done 2026-10-17 (below). |
-| S3, S4 | next. |
+| S3 | built 2026-10-17 on `ios/0019-s3-share` (below). |
+| S4 | next. |
 
 **As built (S1, 2026-10-17):**
 - *API.* `POST /assistant/ask` takes `images` (1–3 JPEGs, 1 MB each,
@@ -100,3 +101,20 @@ the share sheet and a TestFlight build.
   `testAScreenshotIsSentWithTheQuestion` (with `-HubCookiePicture`, debug
   builds only: XCUITest can't drive the out-of-process Photos picker); all
   13 Cookie UI tests pass on the iPhone 18 Pro simulator, iOS 27.
+
+**As built (S3, 2026-10-17):**
+- *Extension.* A second share extension, `HubAskShare`, "Ask Cookie"
+  (`com.jaydenguo.hub.askcookie`), shown for 1–3 pictures or text. It
+  shrinks each picture as it reads it (`CookieImage.jpeg`), shows the
+  pictures or the text's first lines, then Add to calendar, Summarize and
+  "Ask something else" (SHR-2, SHR-3: the buttons send "Add this to the
+  calendar" or "Summarize this", "加到日历" / "总结一下" on a phone in
+  Chinese). Her answer, its source and any events added show in the sheet,
+  with Undo while it's offered (SHR-4); offline and errors as SHR-6.
+- *Found.* iOS 27's share sheet lists the app as "Hub", not each
+  extension's name: a picture opens "Ask Cookie" from there (Review in Hub
+  doesn't take pictures).
+- *Tests.* UI `AskCookieShareTests`: Photos → Share → Hub → Summarize →
+  her answer "From what you shared" (stand-in model), on the iPhone 18
+  Pro simulator, iOS 27. SP-S1 (what WhatsApp and WeChat hand the share
+  sheet) needs the owner's phone (O-3).

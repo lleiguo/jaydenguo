@@ -79,7 +79,9 @@ voice from `tests/fixtures/assistant/question.m4a`. Likewise `-HubCookiePicture
 `tests/fixtures/assistant/shared/` (intent 0019), since the system Photos
 picker runs in another process. The test server's address reaches the
 tests as `TEST_RUNNER_HUB_TEST_SERVER=http://localhost:<port>` on the
-`xcodebuild test` line (default 3200).
+`xcodebuild test` line (default 3200). `AskCookieShareTests` shares a picture from Photos
+to "Ask Cookie": add it first with `xcrun simctl addmedia booted
+tests/fixtures/assistant/shared/practice.jpg`.
 
 `pnpm seed` puts the sample email suggestions back, so the tests that use
 them up can run again; re-run it between full test runs.
