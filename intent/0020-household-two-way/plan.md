@@ -27,7 +27,7 @@ switches it on.
 | H1 | `household_links` migration; pure planner (wanted set, TWO-2 titles, TWO-5 school blocks, twin linking, brake); writer gains `patch`/list and the fence. Unit tests. No job yet. | TWO-1,2,5,6,7, DUP2-2, TWSEC-1,2 | #154 |
 | H2 | Job `household:sync`, write half: creates/patches/deletes hub events in Household; Off/Dry run/On switch and dry-run list in Settings; hub changes start the job; the household read skips events the hub wrote (from BACK-2); switching On turns the copy off (TWO-8, from H4). Cookie keeps her own write. Integration tests with fake Google. | TWO-1..9, DUP2-1,3,4, TWSEC-1..4 | #155 |
 | H3 | Read half: tagged events compared and applied (BACK-2..5); household events changed in the hub patched in Google and override cleared (TWO-4). | BACK-1..6, TWO-4 | #156 |
-| H4 | `infra/scheduler.tf` entry, every 15 min in the day, hourly at night. | BACK-1 | H4 PR |
+| H4 | `infra/scheduler.tf` entry, every 15 min in the day, hourly at night. | BACK-1 | #160 |
 | H5 | App: the switch and "changed in Google Calendar" note on the event screen; TestFlight build. | TWO-9, BACK-3,5 | #157 |
 
 About 8–10 days of work, in five PRs.
