@@ -43,10 +43,11 @@ the share sheet and a TestFlight build.
 |---|---|
 | O-1 | done 2026-10-17: approved, defaults kept. |
 | S1 | merged 2026-10-17 (#148). |
-| S2 | built 2026-10-17 on `ios/0019-s2-chat` (below). |
+| S2 | merged 2026-10-17 (#149). |
 | SP-S2, SP-S3 | done 2026-10-17 (below). |
-| S3 | built 2026-10-17 on `ios/0019-s3-share` (below). |
-| S4 | next. |
+| S3 | merged 2026-10-17 (#150). |
+| S4 | build 17 bump #151 open 2026-10-17. The archive fails: Xcode has no Apple account signed in, so it can't make the profile for the new `com.jaydenguo.hub.askcookie` (App Groups). Waits on the owner signing in (Xcode → Settings → Accounts). |
+| O-2, O-3, SP-S1 | wait on the owner: a real share from WhatsApp and WeChat, after build 17. |
 
 **As built (S1, 2026-10-17):**
 - *API.* `POST /assistant/ask` takes `images` (1–3 JPEGs, 1 MB each,
