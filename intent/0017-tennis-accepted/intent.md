@@ -11,9 +11,11 @@ Jayden is on the main draw, not the reserved list, his status should be
 The Friday job (0001 TEN-10, `tennis:acceptance`, 10:00) reads each
 event's entry list and records "main draw" or "reserve list (place)". On
 Friday 2026-10-16 the owner still saw "Registered" for a tournament after
-the list was out. The logs show the 05:05 sync found 2 entered and 1
-reserve, and the 10:00 job 1 entered and 2 reserve: one entry stayed
-"entered". Likely causes, not yet checked against the site:
+the list was out ("for TTC-langley U9 mixed Rising Starts, the status
+show "registered" but should be "Main Draw""). The logs show the 05:05
+sync found 2 entered and 1 reserve, and the 10:00 job 1 entered and 2
+reserve: one entry stayed "entered". The spike (plan SP-A1) found the
+first cause below. The causes it checked:
 - **Too early.** The list came out after 10:00, and nothing reads it
   again until Saturday's sync (or a pull on the iPhone, 0012).
 - **Hidden.** From Oct 2026 the site hides the entry list once the draws

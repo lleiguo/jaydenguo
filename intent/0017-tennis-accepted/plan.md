@@ -16,6 +16,19 @@ server, then the iPhone app.
 |---|---|---|---|
 | SP-A1 | Why did one entry stay "Registered" on 2026-10-16? List out late, hidden behind the draw, or a new label? | Read that entry's event page on the site (no sign-in) and its row in the database; save a scrubbed fixture. | A1 |
 
+**SP-A1 (2026-10-16, evening): the list came out after 10:00.** The owner
+named the entry: TTC-Langley U9 Mixed Rising Stars (Oct 25). Its event
+page shows "Entries (41)": 10 "Maindraw" (him among them, class
+`green elt1`), reserves 4–32, one "Exclude list" (`red elt9999`), and two
+draws already made, listed above the entries. The labels are the known
+ones, and the app's own parser and matcher read him as main draw
+(`parseEventPage` and `findSelfRow` on the saved page). The 10:00 job
+logged 1 entered and 2 reserve, and no job read the lists after that,
+so the entry stayed "entered". ACC-2 (read again through Friday) fixes
+it; ACC-3 still matters for the week the list goes away. Also: "Exclude
+list" is new; `entryStatusOf` returns null for it, which reads as
+"entered". A1 treats it as not in the draw ("Not accepted").
+
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|

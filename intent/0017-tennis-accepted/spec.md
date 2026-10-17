@@ -24,8 +24,8 @@ IDs here: ACC (accepted).
 | ACC-6 | A push when accepted. | Moving from entered, payment needed or reserve to main draw sends one push: "Accepted: <tournament> (<event>)". Once per entry. |
 
 ## 3. Design
-- **Parser.** `entryStatusOf` also takes "Accepted"/"Main draw (…)"
-  labels found in SP-A1. `parseEventPage` keeps only the fields in ACC-4
+- **Parser.** `entryStatusOf` also reads "Exclude list" (SP-A1), stored
+  as `withdrawn` with the note "On the exclude list." `parseEventPage` keeps only the fields in ACC-4
   (no seed, no club).
 - **Storage.** New table `tennis_entry_list` (entry_id → `tennis_entries`
   on delete cascade, position, names text[], tournament_player_ids
