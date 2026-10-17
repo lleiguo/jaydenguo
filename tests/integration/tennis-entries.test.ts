@@ -585,7 +585,16 @@ describe("tennis tournament entries", () => {
       expect(requests.some((r) => r.includes("event.aspx"))).toBe(true);
       expect(requests.some((r) => r.includes("DoSearch"))).toBe(false);
 
-      await db.update(tennisEntries).set({ status: "main_draw" }).where(eq(tennisEntries.sourceId, s.id));
+      // Accepted with no list kept (accepted before lists were kept): read once.
+      const [a] = (await entriesOf(s.id)).filter((r) => r.tournamentExternalId === ENTRY_FIXTURE.a);
+      await db.delete(tennisEntryList).where(eq(tennisEntryList.entryId, a.id));
+      await db
+        .update(tennisEntries)
+        .set({ status: "main_draw", listCheckedAt: null })
+        .where(eq(tennisEntries.id, a.id));
+      selfRow = reserveRow.replace(`class="orange elt9998">Reserve list 2`, `class="green elt1">Maindraw`);
+      await runAcceptance(ctx(), s, { later: true });
+      expect((await listOf(a.id)).length).toBeGreaterThan(0);
       requests.length = 0;
       expect(await runAcceptance(ctx(), s, { later: true })).toEqual({ entries: 0, listed: 0 });
       expect(requests).toEqual([]);

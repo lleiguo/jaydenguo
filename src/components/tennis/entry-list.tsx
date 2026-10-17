@@ -39,7 +39,11 @@ export function EntryList({ entry: e, timeZone }: { entry: EntryListView; timeZo
       </p>
       {e.note && <p className={muted}>{e.note}</p>}
       {!e.listOut ? (
-        <p className={muted}>The acceptance list isn&apos;t out yet.</p>
+        <p className={muted}>
+          {e.status.kind === "main_draw"
+            ? "The list shows here after the next read."
+            : "The acceptance list isn't out yet."}
+        </p>
       ) : (
         <>
           <h3 className="font-semibold">Main draw ({e.mainDraw.length})</h3>
