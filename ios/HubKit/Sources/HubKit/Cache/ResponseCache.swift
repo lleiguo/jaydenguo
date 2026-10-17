@@ -77,7 +77,7 @@ public final class ResponseCache: Sendable {
               files.count > limit
         else { return }
         let dated = files.map { ($0, (try? $0.resourceValues(forKeys: Set(keys)).contentModificationDate) ?? .distantPast) }
-        for (url, _) in dated.sorted(by: { $0.1 < $1.1 }).prefix(files.count - limit) where url.lastPathComponent != WidgetSnapshot.fileName {
+        for (url, _) in dated.sorted(by: { $0.1 < $1.1 }).prefix(files.count - limit) where ![WidgetSnapshot.fileName, SavedCalendar.fileName].contains(url.lastPathComponent) {
             try? FileManager.default.removeItem(at: url)
         }
     }

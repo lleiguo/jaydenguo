@@ -146,4 +146,48 @@ import Testing
         let none = WidgetSnapshot.build(from: index, filters: hidden, homeTime: home, now: first, days: 7)
         #expect(none.items.count < snapshot.items.count)
     }
+
+    // MARK: The saved calendar (intent 0018)
+
+    @Test func theSavedCalendarIsFoundWhateverRangeIsAsked() async throws {
+        let cache = temporaryCache()
+        let client = testClient(cache: cache)
+        let payload = try await client.api.listEvents(query: .init(from: .now, to: .now)).ok.body.json
+        let fetched = Date(timeIntervalSince1970: 1_800_000_000)
+        try SavedCalendar(from: "2026-10-05", to: "2026-12-21", payload: payload).save(to: cache, at: fetched)
+
+        // SAV-4: one name, so next week's request still finds it.
+        let saved = try #require(SavedCalendar.load(from: cache))
+        #expect(saved.calendar.from == "2026-10-05")
+        #expect(saved.calendar.to == "2026-12-21")
+        #expect(saved.calendar.payload.events.map(\.id) == payload.events.map(\.id))
+        #expect(saved.fetchedAt == fetched)
+    }
+
+    @Test func theCalendarRequestIsNeverReplayedFromThePerPathCopy() async throws {
+        let transport = FixtureTransport()
+        let events = EventLog()
+        let client = testClient(transport: transport, cache: temporaryCache(), events: events)
+        _ = try await client.api.listEvents(query: .init(from: .now, to: .now)).ok
+        transport.failure = URLError(.timedOut)
+        do {
+            _ = try await client.api.listEvents(query: .init(from: .now, to: .now)).ok
+            Issue.record("the store falls back to the saved calendar, not the middleware")
+        } catch {
+            #expect(HubError.from(error) == .offline)
+        }
+        #expect(!events.all.contains { if case .offline = $0 { true } else { false } })
+    }
+
+    @Test func theSavedCalendarSurvivesPruningAndGoesOnSignOut() async throws {
+        let cache = temporaryCache(limit: 2)
+        let client = testClient(cache: cache)
+        let payload = try await client.api.listEvents(query: .init(from: .now, to: .now)).ok.body.json
+        try SavedCalendar(from: "a", to: "b", payload: payload).save(to: cache, at: .distantPast)
+        for i in 0..<4 { cache.store(Data("\(i)".utf8), key: "k\(i)", at: .now.addingTimeInterval(Double(i))) }
+        #expect(SavedCalendar.load(from: cache) != nil)
+
+        client.forgetToken()
+        #expect(SavedCalendar.load(from: cache) == nil)
+    }
 }

@@ -44,9 +44,12 @@ IDs here: SAV (the saved calendar).
     (SAV-2, SAV-5). On failure: keep `index`, report offline.
   - `ensureLoaded()`'s "already loaded" check counts only fresh answers,
     so a saved copy never stops the refresh.
-- **`CacheMiddleware`** keeps its per-path copy for the other screens; the
-  calendar's request gets its fallback from `SavedCalendar` instead (the
-  middleware's copy is a fallback for the same range only).
+- **`CacheMiddleware`** keeps its per-path copy for the other screens, but
+  neither stores nor replays `listEvents` (`savedByTheApp`): a replayed
+  copy would look like a fresh answer and be saved with today's date
+  (SAV-5). Offline, the calendar's request fails and the store keeps the
+  saved copy and reports its age through `AppModel.showingSaved(since:)`.
+  The same happens on a slow or failed reload over this visit's answer.
 - No change to the server, the widgets (they keep `WidgetSnapshot`) or
   Shortcuts.
 
@@ -54,11 +57,11 @@ IDs here: SAV (the saved calendar).
 - **HubKit unit (`CacheTests`):** save/load round trip with range and
   date; a later week's request still finds the copy (SAV-4); `wipe()`
   removes it (SAVSEC-1); an error answer doesn't overwrite it (SAV-5).
-- **App UI (`OfflineTests`):** with a saved calendar and the stub server
-  set to hang, the agenda shows saved events within 1 s and the banner by
-  ~8 s; then the stub answers and new events replace them (SAV-1..3). With
-  the stub offline and the clock moved to the next Monday, the saved
-  events still show (SAV-4).
+- **App UI (`OfflineTests`):** after one online visit, against a local
+  port that accepts and never answers, the agenda shows within 3 s and the
+  banner by ~15 s (SAV-1..3). The existing offline test still shows the
+  calendar from the saved copy. A new week (SAV-4) is covered by the unit
+  test, since the UI test can't move the clock.
 - **On the phone (owner):** Airplane mode, open the app: calendar shows at
   once with the banner.
 

@@ -36,12 +36,21 @@ final class CalendarStore {
     }
 
     private let model: AppModel
+    /// The range of this visit's last answer from the server.
     private var loaded: (from: String, to: String)?
+    /// When what's on screen was fetched: the saved calendar's date until
+    /// the server answers (intent 0018, SAV-3).
+    private var fetchedAt: Date?
 
     init(model: AppModel) {
         self.model = model
         anchor = model.homeTime.localDate(.now)
         filters = Self.loadFilters()
+        // SAV-1: the saved calendar first; `ensureLoaded` refreshes it.
+        if let cache = model.client.cache, let saved = SavedCalendar.load(from: cache) {
+            index = CalendarIndex(saved.calendar.payload)
+            fetchedAt = saved.fetchedAt
+        }
     }
 
     var homeTime: HomeTime { model.homeTime }
@@ -63,7 +72,8 @@ final class CalendarStore {
     // MARK: Loading
 
     /// Loads a window around the anchor: from the Monday a week before, ten
-    /// weeks on. Reloads when the anchor leaves the window.
+    /// weeks on. Reloads when the anchor leaves the window, and once per
+    /// visit over the saved calendar.
     func ensureLoaded() async {
         let from = CalendarDates.add(days: -7, to: CalendarDates.weekStart(min(anchor, today)))
         let wanted = CalendarDates.add(days: 70, to: CalendarDates.weekStart(max(anchor, today)))
@@ -78,16 +88,31 @@ final class CalendarStore {
 
     private func load(from: String, to: String) async {
         guard let start = homeTime.startOfDay(from), let end = homeTime.startOfDay(to) else { return }
+        // SAV-3: a slow answer doesn't leave the screen unexplained; the
+        // request carries on, and a late answer still replaces it.
+        let slow = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(8))
+            if !Task.isCancelled { self?.ownUpToAge() }
+        }
+        defer { slow.cancel() }
         do {
             let payload = try await model.client.api.listEvents(query: .init(from: start, to: end)).ok.body.json
             let index = CalendarIndex(payload)
             self.index = index
             loaded = (from, to)
+            fetchedAt = .now
             error = nil
             model.saveWidgets(index, filters: filters)
+            // SAV-4, SAV-5: only a good answer is saved, under one name.
+            if let cache = model.client.cache { try? SavedCalendar(from: from, to: to, payload: payload).save(to: cache) }
         } catch {
-            if index == nil { self.error = "Couldn't load the calendar. Pull to try again." }
+            if index == nil { self.error = "Couldn't load the calendar. Pull to try again." } else { ownUpToAge() }
         }
+    }
+
+    /// "Offline, updated …" for the calendar on screen (OFF-1, SAV-3).
+    private func ownUpToAge() {
+        if index != nil, let fetchedAt { model.showingSaved(since: fetchedAt) }
     }
 
     // MARK: What a day shows
