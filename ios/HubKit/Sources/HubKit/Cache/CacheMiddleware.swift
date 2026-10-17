@@ -14,6 +14,9 @@ struct CacheMiddleware: ClientMiddleware {
     static let liveOnly: Set<String> = [
         "getChanges", "listAssistantTurns", "getAssistantSettings", "listAssistantMemories", "getAssistantSpeech",
     ]
+    /// Kept by the app itself: the calendar saves its last load under one
+    /// name (intent 0018, SAV-4), so an old copy is never replayed as new.
+    static let savedByTheApp: Set<String> = ["listEvents"]
     static let cachedAtField = HTTPField.Name("X-Hub-Cached-At")!
 
     func intercept(
@@ -23,7 +26,7 @@ struct CacheMiddleware: ClientMiddleware {
         operationID: String,
         next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
     ) async throws -> (HTTPResponse, HTTPBody?) {
-        let cacheable = request.method == .get && !Self.liveOnly.contains(operationID)
+        let cacheable = request.method == .get && !Self.liveOnly.contains(operationID) && !Self.savedByTheApp.contains(operationID)
         let key = ResponseCache.key(path: request.path ?? operationID)
         let response: HTTPResponse, responseBody: HTTPBody?
         do {

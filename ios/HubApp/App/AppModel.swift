@@ -190,6 +190,12 @@ final class AppModel {
         }
     }
 
+    /// A screen is showing what it saved earlier, because the server is slow
+    /// or out of reach (intent 0018, SAV-3).
+    func showingSaved(since: Date) {
+        handle(.offline(since: since))
+    }
+
     // MARK: Live updates (CAL-8, APP-4)
 
     /// Asks every 10 s whether anything changed, while the app is open.
