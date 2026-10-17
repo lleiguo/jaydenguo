@@ -1,0 +1,26 @@
+{
+  "mode": "dry_run",
+  "sourceId": null,
+  "holdNext": false,
+  "applyOnce": false,
+  "held": null,
+  "dryRun": {
+    "at": "2026-10-17T19:00:00.000Z",
+    "plan": {
+      "create": [
+        { "title": "Child: Tennis lesson", "start": "2026-10-19T21:00:00.000Z" },
+        { "title": "Child: Swim practice", "start": "2026-10-20T22:00:00.000Z" }
+      ],
+      "update": [],
+      "link": [{ "title": "Child: Soccer game", "start": "2026-10-24T14:00:00.000Z" }],
+      "remove": [],
+      "unlink": []
+    }
+  },
+  "lastRunAt": "2026-10-17T19:00:00.000Z",
+  "lastError": null,
+  "last": { "created": 0, "updated": 0, "linked": 0, "deleted": 0, "unlinked": 0 },
+  "requestedAt": "2026-10-17T18:59:00.000Z",
+  "runStartedAt": "2026-10-17T19:00:00.000Z",
+  "sources": [{ "id": "5eed0000-0000-4000-8000-000000000201", "name": "Household", "canWrite": true }]
+}

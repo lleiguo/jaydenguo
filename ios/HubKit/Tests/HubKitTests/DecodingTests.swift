@@ -39,6 +39,7 @@ import Testing
         "getChanges": { _ = try await $0.api.getChanges().ok.body.json },
         "listClashes": { _ = try await $0.api.listClashes().ok.body.json },
         "getCalendarCopy": { _ = try await $0.api.getCalendarCopy().ok.body.json },
+        "getHouseholdSync": { _ = try await $0.api.getHouseholdSync().ok.body.json },
         "listSources": { _ = try await $0.api.listSources().ok.body.json },
         "listCredentials": { _ = try await $0.api.listCredentials().ok.body.json },
         "getCosts": { _ = try await $0.api.getCosts().ok.body.json },
