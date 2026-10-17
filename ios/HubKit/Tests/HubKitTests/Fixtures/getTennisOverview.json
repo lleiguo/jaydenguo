@@ -287,7 +287,7 @@
       ],
       "status": {
         "kind": "main_draw",
-        "label": "Main draw",
+        "label": "Accepted",
         "action": null
       },
       "draws": [
@@ -367,7 +367,8 @@
           },
           "explanation": null
         }
-      ]
+      ],
+      "entryId": null
     }
   ],
   "lastUpdated": null,

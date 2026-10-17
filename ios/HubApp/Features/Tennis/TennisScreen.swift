@@ -108,6 +108,8 @@ struct TennisScreen: View {
         .accessibilityIdentifier("upcomingTournament")
         if let id = r.tournamentId {
             NavigationLink(value: Route.tournament(id: id)) { content }
+        } else if let id = r.entryId {
+            NavigationLink(value: Route.tennisEntry(id: id)) { content }
         } else {
             content
         }

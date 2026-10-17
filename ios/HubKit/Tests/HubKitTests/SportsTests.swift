@@ -21,9 +21,20 @@ import Testing
         let overview = try await client.api.getTennisOverview().ok.body.json
         let row = try #require(overview.upcomingRows.first)
         #expect(row.status.kind == "main_draw")
-        #expect(row.status.label == "Main draw")
+        #expect(row.status.label == "Accepted")
         #expect(row.status.action == nil)
         #expect(overview.found.first?.status == "found")
+    }
+
+    /// Intent 0017, ACC-5: an entry and its acceptance list.
+    @Test func entryAcceptanceList() async throws {
+        let e = try await client.api.getTennisEntry(path: .init(id: "e1")).ok.body.json
+        #expect(e.status.label == "Accepted")
+        #expect(e.listOut)
+        #expect(e.mainDraw.map(\.names) == [["Ada Fixture"], ["Sam Fixture"]])
+        #expect(e.mainDraw.filter(\.isSelf).count == 1)
+        #expect(e.reserve.first?.reservePosition == 1)
+        #expect(e.mainDraw.first?.playerKey == "m-5")
     }
 
     @Test func otherDrawStates() {

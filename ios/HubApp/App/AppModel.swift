@@ -266,7 +266,7 @@ final class AppModel {
         selectedTab = route.tab
         switch route {
         case .tennis: tennisPath = []
-        case .tournament, .player, .tennisResults, .tennisAccuracy: tennisPath = [route]
+        case .tournament, .tennisEntry, .player, .tennisResults, .tennisAccuracy: tennisPath = [route]
         case .swimming: swimmingPath = []
         case .meet, .swimEvent: swimmingPath = [route]
         case .school, .suggestions, .sources, .accounts, .settings, .videos, .notifications: morePath = [route]

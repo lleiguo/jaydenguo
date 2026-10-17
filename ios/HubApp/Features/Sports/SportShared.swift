@@ -8,6 +8,7 @@ struct SportDestination: View {
     var body: some View {
         switch route {
         case .tournament(let id): TournamentScreen(id: id)
+        case .tennisEntry(let id): TennisEntryScreen(id: id)
         case .player(let key): PlayerScreen(key: key)
         case .tennisResults: TennisResultsScreen()
         case .tennisAccuracy: AccuracyScreen()

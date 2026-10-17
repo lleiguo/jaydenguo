@@ -1,0 +1,19 @@
+{
+  "id": "e1",
+  "tournamentName": "Fixture Rookie Open",
+  "eventName": "U9 Orange Boys",
+  "startDate": "2024-10-05",
+  "endDate": "2024-10-06",
+  "venue": "Fixture Tennis Club, Nearby",
+  "status": { "kind": "main_draw", "label": "Accepted", "action": null },
+  "note": null,
+  "tournamentId": null,
+  "tournamentUrl": "https://tc.tournamentsoftware.com/tournament/a0000000-0000-4000-8000-00000000000a",
+  "listCheckedAt": "2024-10-04T17:00:41.418Z",
+  "listOut": true,
+  "mainDraw": [
+    { "names": ["Ada Fixture"], "isSelf": false, "playerKey": "m-5", "reservePosition": null },
+    { "names": ["Sam Fixture"], "isSelf": true, "playerKey": null, "reservePosition": null }
+  ],
+  "reserve": [{ "names": ["Bo Fixture"], "isSelf": false, "playerKey": null, "reservePosition": 1 }]
+}
