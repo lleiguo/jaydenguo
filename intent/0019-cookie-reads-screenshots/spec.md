@@ -1,6 +1,7 @@
 # Spec: Cookie reads a screenshot or pasted text
-Status: draft (2026-10-17). Written by Claude from [intent.md](intent.md),
-with the intent's defaults taken until the owner answers.
+Status: approved (owner, 2026-10-17, in chat: "Approved, defaults are
+fine."). Written by Claude from [intent.md](intent.md),
+with the intent's defaults, kept by the owner. S-1..S-4 accepted as written.
 
 Read with spec 0007 (Cookie), 0008 (she adds events) and 0004 (the iPhone
 app's share extension). IDs here: SHT (what she's handed), SHA (what she

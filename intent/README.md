@@ -35,4 +35,4 @@ Rules:
 | 0016 | [A smaller image registry bill](0016-registry-cleanup/) | approved 2026-10-12 (chat) | approved 2026-10-12 (chat) | approved 2026-10-12; R1 merged and deployed (#135), old versions deleted; Terraform apply waits on the owner |
 | 0017 | ["Accepted" once he's in the main draw](0017-tennis-accepted/) | approved 2026-10-16 (chat); defaults kept | approved 2026-10-16 (chat); A-1, A-2 accepted | approved 2026-10-16; A1, A2 merged and deployed (#138, #139, #141); TestFlight build 15 uploaded; Terraform apply waits on the owner |
 | 0018 | [The saved calendar first, on any connection](0018-calendar-cache-first/) | approved 2026-10-16 (chat); defaults kept | approved 2026-10-16 (chat); S-1, S-2 accepted | approved 2026-10-16; S1 next |
-| 0019 | [Cookie reads a screenshot or pasted text](0019-cookie-reads-screenshots/) | draft 2026-10-17 | draft 2026-10-17 | draft 2026-10-17 |
+| 0019 | [Cookie reads a screenshot or pasted text](0019-cookie-reads-screenshots/) | approved 2026-10-17 (chat); defaults kept | approved 2026-10-17 (chat); S-1..S-4 accepted | approved 2026-10-17; S1 next |

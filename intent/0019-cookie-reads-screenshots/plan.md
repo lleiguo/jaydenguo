@@ -1,5 +1,5 @@
 # Plan: Cookie reads a screenshot or pasted text
-Status: draft (2026-10-17), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-17, in chat), with [spec.md](spec.md).
 
 Order: the server first (the API, the model call, several adds), so the
 eval can try made-up screenshots before any app work; then her chat; then
@@ -39,4 +39,4 @@ the share sheet and a TestFlight build.
 - The owner has tried it on real messages (O-2).
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-17. S1 next.

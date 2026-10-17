@@ -1,5 +1,7 @@
 # Intent: Cookie reads a screenshot or pasted text
-Status: draft (2026-10-17). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-17, in chat: "Approved, defaults are fine.
+Start building."). Drafted by Claude from the owner's request; defaults
+kept for questions 1–4.
 Owner: Jayden's parent (lleiguo).
 
 "does cookie currently support pasting a screenshot or text to create a
