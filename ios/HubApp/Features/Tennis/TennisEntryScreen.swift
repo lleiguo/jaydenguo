@@ -40,7 +40,11 @@ struct EntryListSections: View {
                 Caption("List read \(read)")
             }
             if let note = entry.note { Caption(note) }
-            if !entry.listOut { Caption("The acceptance list isn't out yet.") }
+            if !entry.listOut {
+                Caption(entry.status.kind == "main_draw"
+                    ? "The list shows here after the next read."
+                    : "The acceptance list isn't out yet.")
+            }
         }
         if entry.listOut {
             Section("Main draw (\(entry.mainDraw.count))") {

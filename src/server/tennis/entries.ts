@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { sources, tennisEntries, tennisEntryList, tennisPlayers } from "@db/schema";
 import { Budget, TcClient, tennisBaseUrl } from "../../adapters/tennis-tc";
 import {
@@ -700,6 +700,21 @@ export async function runEnter(
 // Not settled yet (intent 0017, ACC-2): the later Friday runs read only
 // these. Reserve places can still move into the main draw.
 const UNSETTLED: readonly EntryStatus[] = ["found", "entered", "payment_needed", "reserve"];
+// Unsettled, or accepted with no list kept yet (accepted before the lists
+// were kept, or the list was already hidden) and not read in the last 12
+// hours: at most one read a run day keeps it, or settles that it's gone.
+const unsettled = (now: Date) =>
+  or(
+    inArray(tennisEntries.status, [...UNSETTLED]),
+    and(
+      eq(tennisEntries.status, "main_draw"),
+      sql`not exists (select 1 from ${tennisEntryList} where ${tennisEntryList.entryId} = ${tennisEntries.id})`,
+      or(
+        isNull(tennisEntries.listCheckedAt),
+        lt(tennisEntries.listCheckedAt, new Date(now.getTime() - 12 * 3600_000)),
+      ),
+    ),
+  );
 
 // Where does he stand on each entry list still to come? `unsettled`: only
 // the entries not in the main draw yet.
@@ -719,7 +734,7 @@ async function checkLists(
     .where(
       and(
         eq(tennisEntries.sourceId, source.id),
-        inArray(tennisEntries.status, opts.unsettled ? [...UNSETTLED] : ["found", ...ACTIVE_ENTRY]),
+        opts.unsettled ? unsettled(ctx.now) : inArray(tennisEntries.status, ["found", ...ACTIVE_ENTRY]),
         gte(tennisEntries.endDate, today),
       ),
     );
@@ -779,7 +794,7 @@ export async function runAcceptance(
       .where(
         and(
           eq(tennisEntries.sourceId, source.id),
-          inArray(tennisEntries.status, [...UNSETTLED]),
+          unsettled(ctx.now),
           gte(tennisEntries.endDate, localDate(ctx.now, ctx.timeZone)),
         ),
       )
