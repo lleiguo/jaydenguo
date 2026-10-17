@@ -190,6 +190,11 @@ export const saysAllDay = (question: string) => ALL_DAY.test(question);
 
 const EVERYONE = /^(everyone|everybody|all|family|the family|whole family|大家|全家|所有人)$/i;
 
+// Intent 0019, SHA-3: the parent's own words say it's for everyone.
+const SAYS_EVERYONE =
+  /\b(everyone|everybody|all of us|the (whole )?family|both (boys|kids))\b|大家|全家|所有人|两个孩子/i;
+export const saysEveryone = (question: string) => SAYS_EVERYONE.test(question);
+
 export type Who = { everyone: boolean; ids: string[]; names: string[] };
 
 // ADD-3: whose event it is. Every name must be one of People; "everyone"

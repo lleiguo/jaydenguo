@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { ToolKind } from "@/domain/assistant";
+import type { Shared, ToolKind } from "@/domain/assistant";
 import type { AppliedKind } from "@/domain/assistant-changes";
 import type { Person } from "@/domain/people";
 import { wallClock } from "@/domain/time";
@@ -26,6 +26,10 @@ export type ToolContext = {
   conversationId: string;
   // The question was spoken, not typed.
   spoken?: boolean;
+  // What the parent shared with the question (intent 0019), with a pasted
+  // text's words for the checks that may read it (SHA-2). Never an
+  // instruction: the question's own words are `question`.
+  shared?: (Shared & { text?: string }) | null;
   // What this question has done so far.
   turn: TurnState;
   settings: AssistantSettings;
@@ -43,10 +47,11 @@ export type TurnState = {
   webAnswer: { text: string; sources: AssistantSource[] } | null;
   // Pages read with web_fetch, for the answer's sources (CHR-4).
   webSources: AssistantSource[];
-  // An event this question added (intent 0008): the actions to tie to the
-  // turn, and what was added, for the line the server can say itself.
+  // Events this question added (intent 0008; up to 5 with something
+  // shared, intent 0019): the actions to tie to the turn, and what was
+  // added, for the line the server can say itself.
   actionIds: string[];
-  did: { title: string; date: string; start: string | null; names: string[]; everyone: boolean } | null;
+  added: { title: string; date: string; start: string | null; names: string[]; everyone: boolean }[];
   // An email this question asked her to read (intent 0009): the summary
   // follows as another turn.
   emailRead: { id: string; until: string } | null;
@@ -63,7 +68,7 @@ export const newTurn = (): TurnState => ({
   webAnswer: null,
   webSources: [],
   actionIds: [],
-  did: null,
+  added: [],
   emailRead: null,
   applied: [],
   webCost: { inputTokens: 0, outputTokens: 0, costUsd: 0, searches: 0 },

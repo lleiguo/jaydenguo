@@ -1,7 +1,14 @@
 import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { assistantTurns } from "@db/schema";
-import { LIMITS, type AssistantOutcome, type Language, type SourceKind } from "@/domain/assistant";
+import {
+  LIMITS,
+  sharedLabel,
+  type AssistantOutcome,
+  type Language,
+  type Shared,
+  type SourceKind,
+} from "@/domain/assistant";
 import { localDate, zonedToUtc } from "@/domain/time";
 import type { DbOrTx } from "../db/client";
 import { getHomeTimeZone } from "../settings";
@@ -12,7 +19,15 @@ import { waitingFor, type Waiting } from "./email-read";
 
 // `email`: the email a follow-up summarized, with its Gmail link (intent
 // 0009, ERA-6); its kind stays "hub" so app builds before it still read it.
-export type AssistantSource = { kind: SourceKind; label: string; url?: string; email?: boolean };
+// `shared`: the answer read what the parent shared (intent 0019); its kind
+// stays "self" for the same reason.
+export type AssistantSource = {
+  kind: SourceKind;
+  label: string;
+  url?: string;
+  email?: boolean;
+  shared?: boolean;
+};
 
 export type TurnView = {
   id: string;
@@ -31,6 +46,8 @@ export type TurnView = {
   did: Did | null;
   // An email read still on its way (intent 0009, ERA-1).
   waiting: Waiting | null;
+  // What was shared with the question, never its content (intent 0019).
+  shared?: Shared;
   createdAt: string;
 };
 
@@ -48,13 +65,21 @@ export const turnView = (r: Row, did: Did | null = null, waiting: Waiting | null
   sources: r.sources as AssistantSource[],
   did,
   waiting,
+  ...(r.sharedKind ? { shared: { kind: r.sharedKind, count: r.sharedCount ?? 0 } as Shared } : {}),
   createdAt: r.createdAt.toISOString(),
 });
 
 // MEM-8: the earlier turns of this conversation a follow-up may lean on.
 export async function recentTurns(db: DbOrTx, conversationId: string, now: Date) {
   const rows = await db
-    .select({ heard: assistantTurns.heard, answer: assistantTurns.answer, mode: assistantTurns.mode })
+    .select({
+      heard: assistantTurns.heard,
+      answer: assistantTurns.answer,
+      mode: assistantTurns.mode,
+      language: assistantTurns.language,
+      sharedKind: assistantTurns.sharedKind,
+      sharedCount: assistantTurns.sharedCount,
+    })
     .from(assistantTurns)
     .where(
       and(
@@ -67,12 +92,18 @@ export async function recentTurns(db: DbOrTx, conversationId: string, now: Date)
     .orderBy(desc(assistantTurns.createdAt))
     .limit(LIMITS.historyTurns);
   // Oldest first, dropping the oldest until the text fits.
-  // A follow-up (an email she read) has no question of its own.
-  const turns = rows.flatMap((r) =>
-    r.answer && (r.heard || r.mode === "followup")
-      ? [{ heard: r.heard || "(the email you were asked to read)", answer: r.answer }]
-      : [],
-  );
+  // A follow-up (an email she read) has no question of its own. What was
+  // shared with a question is named, never repeated (intent 0019, §3.2).
+  const turns = rows.flatMap((r) => {
+    const shared = r.sharedKind
+      ? `[shared: ${sharedLabel({ kind: r.sharedKind, count: r.sharedCount ?? 0 } as Shared, "en")}]`
+      : "";
+    const heard =
+      r.mode === "followup"
+        ? "(the email you were asked to read)"
+        : [r.heard, shared].filter(Boolean).join(" ");
+    return r.answer && heard ? [{ heard, answer: r.answer }] : [];
+  });
   let size = turns.reduce((n, t) => n + t.heard.length + t.answer.length, 0);
   while (turns.length && size > LIMITS.historyChars) {
     const dropped = turns.pop()!;

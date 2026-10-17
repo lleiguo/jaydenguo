@@ -1,4 +1,5 @@
 import { geminiAssistant, scriptedAssistant, type AssistantModel, type ModelCall } from "./model";
+import { SHARED_MARKER } from "./prompt";
 import { fakeSpeech, googleSpeech, type Speech } from "./speech";
 import { geminiTranscriber, scriptedTranscriber, type Transcriber } from "./transcribe";
 import { fakeFetch, fakeSearch, geminiSearch, guardedFetch, type PageFetch, type WebSearch } from "./web";
@@ -63,6 +64,33 @@ export function fakeAssistant(): AssistantModel {
     const result = (last?.response as { result?: Record<string, unknown> } | undefined)?.result;
     const words = question.toLowerCase().match(/[a-z]{3,}|[\u3400-\u9fff]{2,}/g) ?? [];
 
+    // Something shared (intent 0019): she says what it was, and adds
+    // "Practice" tomorrow at 9 when asked to add.
+    const sharedAt = request.contents.findLast((c) => c.parts?.some((p) => p.text === SHARED_MARKER));
+    if (sharedAt) {
+      const pictures = sharedAt.parts!.filter((p) => p.inlineData).length;
+      const pasted = sharedAt.parts!.find((p) => p.text?.startsWith("<<<PASTED"))?.text?.split("\n")[1];
+      if (/^add\b/i.test(question)) {
+        if (round === 1) {
+          const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+          return [
+            {
+              name: "calendar_add",
+              args: { title: "Practice", date: tomorrow, start: "09:00", people: ["everyone"] },
+            },
+          ];
+        }
+        return result?.error
+          ? say(String(result.error), ["self"])
+          : say("Adding: Practice, tomorrow, 9 am, for everyone.", ["hub"]);
+      }
+      return say(
+        pictures
+          ? `You shared ${pictures} picture${pictures === 1 ? "" : "s"}.`
+          : `You shared a text starting "${pasted ?? ""}".`,
+        ["shared"],
+      );
+    }
     // "Summarize the email about the field trip" (intent 0009, ERD-1).
     const read = question.match(/^(?:summarize|read) the email about (.+?)[.?]?$/i);
     if (read) {

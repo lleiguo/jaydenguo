@@ -19,6 +19,8 @@ export type RoundRequest = {
   // The only tools she may call this round: on her last round, the two
   // that end the question. The tool list itself stays the same.
   only?: string[];
+  // A round reading screenshots takes longer (intent 0019, SHA-6).
+  timeoutMs?: number;
 };
 
 export type RoundResult = {
@@ -74,7 +76,7 @@ export function geminiAssistant(generate?: Generate, model = ASSISTANT_MODEL()):
             // Someone is waiting: the SDK's default (5 attempts, backing
             // off for up to a minute) is far too patient (plan SP-C2).
             httpOptions: {
-              timeout: LIMITS.roundTimeoutMs,
+              timeout: req.timeoutMs ?? LIMITS.roundTimeoutMs,
               retryOptions: { attempts: 2, initialDelay: 0.3, maxDelay: 1 },
             },
           },

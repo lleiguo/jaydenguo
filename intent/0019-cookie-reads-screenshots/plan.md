@@ -39,4 +39,83 @@ the share sheet and a TestFlight build.
 - The owner has tried it on real messages (O-2).
 
 ## 5. Status
-Approved 2026-10-17. S1 next.
+| Task | Status |
+|---|---|
+| O-1 | done 2026-10-17: approved, defaults kept. |
+| S1 | merged 2026-10-17 (#148). |
+| S2 | merged 2026-10-17 (#149). |
+| SP-S2, SP-S3 | done 2026-10-17 (below). |
+| S3 | merged 2026-10-17 (#150). |
+| S4 | build 17 bump #151 open 2026-10-17. The archive fails: Xcode has no Apple account signed in, so it can't make the profile for the new `com.jaydenguo.hub.askcookie` (App Groups). Waits on the owner signing in (Xcode → Settings → Accounts). |
+| O-2, O-3, SP-S1 | wait on the owner: a real share from WhatsApp and WeChat, after build 17. |
+
+**As built (S1, 2026-10-17):**
+- *API.* `POST /assistant/ask` takes `images` (1–3 JPEGs, 1 MB each,
+  checked by their first bytes) or `pasted` (up to 8,000 characters), with
+  or without `text` or `audio`; the body limit is 6 MB. Turns carry
+  `shared` (`{ kind, count }`); migration `0034_assistant_turn_shared`.
+  An answer from the material has the source "What you shared", kind
+  `self` with `shared: true`, so older app builds read it.
+- *Rules.* Up to 5 `calendar_add` per question with something shared, 8
+  tool calls, 20 s a round, 40 s in all; web tools not offered. "All day"
+  is taken from a picture or a paste that says it. "Everyone" must be
+  the parent's own word. A model failure after an add now answers with
+  what was added (every question, not only shared ones).
+- *Prompt.* `cookie-4`: a paragraph sent only with something shared;
+  the budget is 15,000 characters (spec §1).
+- *Tests.* Unit (`assistant-shared.test.ts`: input, picture checks,
+  labels, grounding, limits, the fence), integration (12: one and five
+  adds, an owner missing, two hostile pastes, no web tools, pictures and
+  history, the claim without material, the failure after adds,
+  everyone), e2e (paste and pictures through the API, refusals, nothing
+  kept).
+- *SP-S2, SP-S3 (eval, `pnpm assistant:shared-eval`, 14 made-up cases).*
+  Of the cases Vertex AI answered, all passed: the WhatsApp-style
+  practice (added, Sat Nov 7 9:00–10:30), its summary and "what should he
+  bring?", the Chinese notice (added at 10:00, summary in Chinese), six
+  games (five added, the sixth named), the poster (she asks whose it is),
+  the hostile message (summarized, nothing added), no text (nothing
+  added), a full 1170×2532 screenshot at both 2,048 and 1,536 px (added at
+  8:15), a 614-character paste (three lessons added) and a Chinese paste.
+  Median 5 s, slowest 44 s with Vertex busy; US$0.004 per case. Vertex
+  AI was answering 429 and timing out for text-only questions too that
+  morning; the eval tries a case three times before counting it as "no
+  reply". The hostile picture sometimes gets no reply (Gemini stops at
+  `MAX_TOKENS` with nothing): she says she can't answer right now and
+  nothing changes. 1,536 px reads a full screenshot as well as 2,048; the
+  phone keeps 2,048 (SHT-2).
+
+**As built (S2, 2026-10-17):**
+- *Chat.* A + button left of the microphone: Choose Photos (the system
+  picker, 3 at most) or Paste (a picture, or text: over 500 characters it
+  becomes an attachment, otherwise it goes in the field). Typing past 500
+  characters moves the text out of the field too. Thumbnails, or the
+  paste's first line, show above the field with a remove button; the
+  field says "Add this, summarize… (optional)". A spoken question takes
+  the attachment with it (SHT-5).
+- *HubKit.* `CookieAttachment`, `CookieImage.jpeg` (ImageIO: decoded at
+  2,048 px straight from the file, quality lowered to fit 1 MB, smaller if
+  it still doesn't; shared with S3), `CookieChat.body`, and history that
+  shows "add this · 2 screenshots" and "From what you shared".
+- *Tests.* HubKit `CookieShareTests` (7: shrinking a 1290×2796 picture,
+  the body, the rules, history); UI `testALongPasteIsSharedNotAsked`,
+  `testAScreenshotIsSentWithTheQuestion` (with `-HubCookiePicture`, debug
+  builds only: XCUITest can't drive the out-of-process Photos picker); all
+  13 Cookie UI tests pass on the iPhone 18 Pro simulator, iOS 27.
+
+**As built (S3, 2026-10-17):**
+- *Extension.* A second share extension, `HubAskShare`, "Ask Cookie"
+  (`com.jaydenguo.hub.askcookie`), shown for 1–3 pictures or text. It
+  shrinks each picture as it reads it (`CookieImage.jpeg`), shows the
+  pictures or the text's first lines, then Add to calendar, Summarize and
+  "Ask something else" (SHR-2, SHR-3: the buttons send "Add this to the
+  calendar" or "Summarize this", "加到日历" / "总结一下" on a phone in
+  Chinese). Her answer, its source and any events added show in the sheet,
+  with Undo while it's offered (SHR-4); offline and errors as SHR-6.
+- *Found.* iOS 27's share sheet lists the app as "Hub", not each
+  extension's name: a picture opens "Ask Cookie" from there (Review in Hub
+  doesn't take pictures).
+- *Tests.* UI `AskCookieShareTests`: Photos → Share → Hub → Summarize →
+  her answer "From what you shared" (stand-in model), on the iPhone 18
+  Pro simulator, iOS 27. SP-S1 (what WhatsApp and WeChat hand the share
+  sheet) needs the owner's phone (O-3).

@@ -16,6 +16,12 @@ export const MEMORY_VIAS = ["voice", "chat", "settings"] as const;
 export const SOURCE_KINDS = ["hub", "memory", "web", "conversation", "self"] as const;
 export type SourceKind = (typeof SOURCE_KINDS)[number];
 
+// What the model may claim: the API's kinds, and "shared" for something the
+// parent shared with the question (intent 0019). Shown as kind "self" with
+// `shared: true`, so app builds before it still read it.
+export const CLAIM_KINDS = [...SOURCE_KINDS, "shared"] as const;
+export type ClaimKind = (typeof CLAIM_KINDS)[number];
+
 export const LANGUAGES = ["en", "zh", "mixed"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
@@ -35,8 +41,10 @@ export const LIMITS = {
   resultChars: 6000,
   // Raised from 10,000 when she learned to add an event, and from 12,000
   // for the email suggestion tools (intent 0008); each paragraph and its
-  // tools are sent only when they can be used.
-  promptChars: 14_000,
+  // tools are sent only when they can be used. Raised to 15,000 for the
+  // paragraph about something shared (intent 0019), sent only with it and
+  // never with the web tools.
+  promptChars: 15_000,
   // LIM-2, LIM-3
   outputTokens: 500,
   questionChars: 500,
@@ -65,6 +73,18 @@ export const VOICE_LIMITS = {
   perAccount: { limit: 30, windowMs: 5 * 60_000 },
 } as const;
 
+// Intent 0019: what a parent may share with a question (SHT-2, SHT-3), and
+// what such a question may do (SHA-2, SHA-6).
+export const SHARED_LIMITS = {
+  images: 3,
+  imageBytes: 1024 * 1024,
+  pastedChars: 8000,
+  toolCalls: 8,
+  adds: 5,
+  roundTimeoutMs: 20_000,
+  deadlineMs: 40_000,
+} as const;
+
 // MEM-1, MEM-3, MEM-4
 export const MEMORY_LIMITS = {
   textChars: 300,
@@ -78,16 +98,22 @@ export const MEMORY_LIMITS = {
 export type Grounding = { ok: true } | { ok: false; reason: string };
 
 // An answer may only claim a source whose tool ran in this question, or
-// earlier turns when there are some. `self` (greetings, who she is, sums,
-// word help) needs nothing.
+// earlier turns when there are some, or what the parent shared with this
+// question (intent 0019). `self` (greetings, who she is, sums, word help)
+// needs nothing.
 export function checkGrounding(
-  claimed: readonly SourceKind[],
+  claimed: readonly ClaimKind[],
   ran: readonly ToolKind[],
   hasHistory: boolean,
+  hasShared = false,
 ): Grounding {
   if (!claimed.length) return { ok: false, reason: "no source given" };
   for (const kind of new Set(claimed)) {
     if (kind === "self") continue;
+    if (kind === "shared") {
+      if (!hasShared) return { ok: false, reason: "nothing was shared" };
+      continue;
+    }
     if (kind === "conversation") {
       if (!hasHistory) return { ok: false, reason: "no earlier turns" };
       continue;
@@ -103,9 +129,10 @@ export type CallCounts = { total: number; webSearches: number; webFetches: numbe
 
 export const noCalls = (): CallCounts => ({ total: 0, webSearches: 0, webFetches: 0 });
 
-// Whether one more call of this tool fits; counts it when it does.
-export function allowCall(counts: CallCounts, name: string): boolean {
-  if (counts.total >= LIMITS.toolCalls) return false;
+// Whether one more call of this tool fits; counts it when it does. A
+// question with something shared may make more (intent 0019, SHA-6).
+export function allowCall(counts: CallCounts, name: string, max: number = LIMITS.toolCalls): boolean {
+  if (counts.total >= max) return false;
   if (name === "web_search" && counts.webSearches >= LIMITS.webSearches) return false;
   if (name === "web_fetch" && counts.webFetches >= LIMITS.webFetches) return false;
   counts.total++;
@@ -374,6 +401,33 @@ export function clipProblem(mimeType: string, bytes: Uint8Array): string | null 
   if (seconds > VOICE_LIMITS.clipSeconds + 1)
     return `recordings can be ${VOICE_LIMITS.clipSeconds} seconds at most`;
   return null;
+}
+
+// --- Shared images and text (intent 0019) ---------------------------------------
+
+// One object, not a union, so clients generated from openapi.json read it
+// simply.
+export type Shared = { kind: "images" | "pasted"; count: number };
+
+// SHT-2: the phone sends JPEG only, at most 1 MB.
+export function imageProblem(mimeType: string, bytes: Uint8Array): string | null {
+  const jpeg = bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mimeType.toLowerCase() !== "image/jpeg" || !jpeg) return "that isn't a picture Cookie can read";
+  if (bytes.length > SHARED_LIMITS.imageBytes) return "that picture is too big";
+  return null;
+}
+
+// SHSEC-1: what a turn says was shared, never what it said.
+export function sharedLabel(shared: Shared, language: Language | null | undefined): string {
+  if (shared.kind === "images")
+    return zh(language)
+      ? `${shared.count} 张截图`
+      : shared.count === 1
+        ? "a screenshot"
+        : `${shared.count} screenshots`;
+  return zh(language)
+    ? `粘贴的文字（${shared.count} 个字符）`
+    : `pasted text (${shared.count.toLocaleString("en-US")} characters)`;
 }
 
 // VOX-5, CHR-4: the answer as it is read aloud. Links aren't read, and a
