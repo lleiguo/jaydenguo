@@ -34,6 +34,7 @@ import { pruneNotifications } from "../server/push/notify";
 import type { JobContext } from "./context";
 import { workerBrowserSession } from "./browser-session";
 import { calendarCopyJob } from "./calendar-copy";
+import { householdSyncJob } from "./household-sync";
 import { openCredential } from "./credentials";
 
 // Runs one source's sync (spec §5.1, SYNC-1..5): lock, fetch, normalise,
@@ -344,6 +345,8 @@ export async function syncJob(args: string[], ctx: JobContext) {
   if (target === "all") ctx.log("email reads closed", { closed: await closeStaleReads(db) });
   // GCO-1: the Google Calendar copy follows the daily sync.
   if (target === "all") await calendarCopyJob([], ctx);
+  // Intent 0020, TWO-3: what a sync changed reaches the household calendar.
+  await householdSyncJob([], ctx);
   // Notifications are kept 90 days.
   if (target === "all") {
     ctx.log("notifications pruned", { removed: await pruneNotifications(db) });

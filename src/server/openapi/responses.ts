@@ -14,6 +14,7 @@ import type { AssistantSettings } from "../assistant/settings";
 import type { TurnView } from "../assistant/turns";
 import type { listSessions } from "../auth/session";
 import type { copyAccounts, CopySettings, setCopy } from "../calendar-copy";
+import type { HouseholdSyncSettings, householdSources } from "../household-sync";
 import type { getSeries } from "../calendar/mutations";
 import type { SchoolDay } from "../calendar/school-day";
 import type { CostsView } from "../costs";
@@ -64,6 +65,10 @@ export type SchoolTodayResponse = { schoolDay: SchoolDay | null; schoolDays: Sch
 // Google Calendar copy (GCO)
 export type CalendarCopyResponse = CopySettings & { accounts: Awaited<ReturnType<typeof copyAccounts>> };
 export type CalendarCopySaved = Awaited<ReturnType<typeof setCopy>>;
+export type HouseholdSyncResponse = HouseholdSyncSettings & {
+  sources: Awaited<ReturnType<typeof householdSources>>;
+};
+export type HouseholdSyncSaved = HouseholdSyncSettings;
 
 // Sources, accounts, sessions (SYNC, CRED, AUTH)
 export type SourcesResponse = { sources: Awaited<ReturnType<typeof listSources>> };

@@ -37,6 +37,25 @@ describe("Google Calendar adapter (SRC-1)", () => {
     expect(byId("jkl012")).toMatchObject({ category: "other", attendance: "required" });
   });
 
+  it("leaves out events the hub wrote there itself (intent 0020, BACK-2)", () => {
+    const tagged = {
+      ...raw,
+      items: [
+        ...raw.items,
+        {
+          id: "fromhub",
+          summary: "Jayden – Tennis lesson",
+          start: { dateTime: "2026-10-06T22:00:00Z" },
+          end: { dateTime: "2026-10-06T23:00:00Z" },
+          extendedProperties: { private: { hubEventId: "e1" } },
+        },
+      ],
+    };
+    const out = normaliseGoogle(tagged, ctx).records;
+    expect(out.find((r) => r.externalId === "fromhub")).toBeUndefined();
+    expect(out).toHaveLength(records.length);
+  });
+
   it("keeps all-day events as dates", () => {
     expect(byId("ghi789")).toMatchObject({
       allDay: true,

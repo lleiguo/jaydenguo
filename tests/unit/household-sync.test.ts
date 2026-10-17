@@ -220,4 +220,27 @@ describe("the household writer's fence (TWSEC-1)", () => {
     google(null);
     await expect(writer().remove("g1")).resolves.toBeUndefined();
   });
+
+  it("untags a twin with a full replace that keeps everything else (DUP2-2)", async () => {
+    const sent: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: URL, init?: RequestInit) => {
+        if (init?.method === "PUT") sent.push(JSON.parse(String(init.body)));
+        return new Response(
+          JSON.stringify({
+            id: "g1",
+            summary: "Jayden soccer",
+            end: future,
+            extendedProperties: { private: { hubEventId: "e1", other: "kept" } },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    await writer().untag("g1");
+    expect(sent).toEqual([
+      { id: "g1", summary: "Jayden soccer", end: future, extendedProperties: { private: { other: "kept" } } },
+    ]);
+  });
 });
