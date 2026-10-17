@@ -103,6 +103,18 @@ variable "tennis_draw_watch_schedule" {
   default     = "0 7-21 * * 1-3"
 }
 
+variable "household_sync_day_schedule" {
+  description = "Cron schedule for reading the household calendar in the day (intent 0020, BACK-1: every 15 minutes, 06:00 to 22:00), in home_time_zone. Runs while two-way sync is off read nothing."
+  type        = string
+  default     = "*/15 6-21 * * *"
+}
+
+variable "household_sync_night_schedule" {
+  description = "Cron schedule for reading the household calendar at night (intent 0020, BACK-1: hourly), in home_time_zone."
+  type        = string
+  default     = "0 22-23,0-5 * * *"
+}
+
 variable "daily_backup_schedule" {
   description = "Cron schedule for the nightly database export (NFR-3), in home_time_zone."
   type        = string

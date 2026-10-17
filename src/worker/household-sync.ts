@@ -97,6 +97,19 @@ async function householdSource(db: Db, sourceId: string | null) {
   return { source, calendarId, credentialId: source.credentialId };
 }
 
+// BACK-1, H4: the source the 15-minute schedule reads (`sync household`),
+// or null while the switch is off or no calendar is chosen.
+export async function scheduledHouseholdSource(db: Db): Promise<string | null> {
+  const settings = await getHouseholdSync(db);
+  if (settings.mode === "off") return null;
+  try {
+    return (await householdSource(db, settings.sourceId)).source.id;
+  } catch (err) {
+    if (err instanceof HouseholdSyncError) return null;
+    throw err;
+  }
+}
+
 // Every event the plan needs: the window, plus anything already linked.
 async function loadItems(db: Db, links: HouseholdLink[], now: Date): Promise<PlanItem[]> {
   const people = await listPeople(db);

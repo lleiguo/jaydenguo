@@ -29,8 +29,8 @@ import type { JobLauncher } from "@/server/jobs/launcher";
 import { createLogger } from "@/server/log";
 import { listPeople } from "@/server/people";
 import { syncRecords } from "@/server/sync/apply";
-import { runHouseholdSync } from "@/worker/household-sync";
-import { syncSource } from "@/worker/sync";
+import { runHouseholdSync, scheduledHouseholdSource } from "@/worker/household-sync";
+import { syncJob, syncSource } from "@/worker/sync";
 
 // Intent 0020, H2: the hub writes its events into the household calendar
 // (TWO), against a fake Google Calendar that records every request. The
@@ -38,7 +38,8 @@ import { syncSource } from "@/worker/sync";
 // copy (DUP2-1), a lost answer is found again (DUP2-3), the family's own
 // events are fenced (TWSEC-1) and big runs are held (TWSEC-2). H3: changes
 // made in Google come back (BACK-3..5), and household events changed in
-// the hub go to Google (TWO-4).
+// the hub go to Google (TWO-4). H4: the schedule reads it only while on
+// (BACK-1).
 
 type GEvent = Record<string, unknown> & {
   id: string;
@@ -247,6 +248,9 @@ describe("two-way sync with the household calendar", () => {
   it("does nothing while off", async () => {
     expect(await run()).toEqual({ skipped: "switched off" });
     expect(await nudgeHouseholdSync(db, launcher, now)).toBe(false);
+    // BACK-1: the 15-minute schedule reads nothing while off.
+    expect(await scheduledHouseholdSource(db)).toBeNull();
+    await syncJob(["household", "scheduled"], { log, db: async () => db });
     expect(requests).toEqual([]);
   });
 
@@ -260,6 +264,7 @@ describe("two-way sync with the household calendar", () => {
   it("dry run lists what would change and writes nothing (TWO-9)", async () => {
     await setHouseholdSync(db, { mode: "dry_run", sourceId }, launcher);
     expect(started.pop()).toEqual(["household:sync"]);
+    expect(await scheduledHouseholdSource(db)).toBe(sourceId);
     expect(await run()).toEqual({ dryRun: true });
     const { dryRun } = await getHouseholdSync(db);
     expect(dryRun!.plan.create.map((l) => l.title)).toEqual(["Swim practice"]);
