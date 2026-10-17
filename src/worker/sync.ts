@@ -34,7 +34,7 @@ import { pruneNotifications } from "../server/push/notify";
 import type { JobContext } from "./context";
 import { workerBrowserSession } from "./browser-session";
 import { calendarCopyJob } from "./calendar-copy";
-import { householdSyncJob } from "./household-sync";
+import { householdSyncJob, scheduledHouseholdSource } from "./household-sync";
 import { openCredential } from "./credentials";
 
 // Runs one source's sync (spec §5.1, SYNC-1..5): lock, fetch, normalise,
@@ -329,12 +329,19 @@ export async function syncJob(args: string[], ctx: JobContext) {
   const [target, triggerArg, by] = args;
   const gap = by === "cookie" && target !== "all" ? COOKIE_READ_GAP_MS : undefined;
   const trigger: Trigger = triggerArg === "manual" ? "manual" : "scheduled";
-  if (!target) throw new Error("usage: sync <source-id | all> [manual | scheduled]");
+  if (!target) throw new Error("usage: sync <source-id | all | household> [manual | scheduled]");
   const db = await ctx.db();
+  // Intent 0020, BACK-1: the 15-minute schedule names the household
+  // calendar, whose ID only the database knows; nothing to do while off.
+  const household = target === "household" ? await scheduledHouseholdSource(db) : null;
+  if (target === "household" && !household) {
+    ctx.log("sync job skipped", { target, reason: "two-way sync is off" });
+    return;
+  }
   const ids =
     target === "all"
       ? (await db.select({ id: sources.id }).from(sources).where(eq(sources.enabled, true))).map((s) => s.id)
-      : [target];
+      : [household ?? target];
   const results: Record<string, SyncOutcome["status"]> = {};
   for (const id of ids) results[id] = (await syncSource(db, id, trigger, ctx.log, undefined, gap)).status;
   // The daily run also keeps open-ended repeating events written out ahead.

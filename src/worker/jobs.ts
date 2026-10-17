@@ -39,7 +39,7 @@ export const jobs: Record<string, Job> = {
     run: removeCredentialJob,
   },
   sync: {
-    description: "Sync sources: sync <source-id | all> [manual | scheduled]",
+    description: "Sync sources: sync <source-id | all | household> [manual | scheduled]",
     run: syncJob,
   },
   "gmail:check": {
