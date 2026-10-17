@@ -24,7 +24,7 @@ switches it on.
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| H1 | `household_links` migration; pure planner (wanted set, TWO-2 titles, TWO-5 school blocks, twin linking, brake); writer gains `patch`/list and the fence. Unit tests. No job yet. | TWO-1,2,5,6,7, DUP2-2, TWSEC-1,2 | |
+| H1 | `household_links` migration; pure planner (wanted set, TWO-2 titles, TWO-5 school blocks, twin linking, brake); writer gains `patch`/list and the fence. Unit tests. No job yet. | TWO-1,2,5,6,7, DUP2-2, TWSEC-1,2 | #154 |
 | H2 | Job `household:sync`, write half: creates/patches/deletes hub events in Household; Off/Dry run/On switch and dry-run list in Settings; hub changes start the job; Cookie's add goes through it. Integration tests with fake Google. | TWO-1..9, DUP2-1,3,4, TWSEC-1..4 | |
 | H3 | Read half: tagged events compared and applied (BACK-2..5); household events changed in the hub patched in Google and override cleared (TWO-4). | BACK-1..6, TWO-4 | |
 | H4 | `infra/scheduler.tf` entry, every 15 min in the day, hourly at night; old copy switched off when two-way is On (TWO-8). | BACK-1, TWO-8 | |
@@ -42,4 +42,4 @@ About 8–10 days of work, in five PRs.
   production run log).
 
 ## 5. Status
-Approved 2026-10-17 with the defaults (all seven open questions; T-1..T-6 accepted). H1 built: migration 0035 `household_links`, `src/domain/household-sync.ts`, `householdWriter` in `src/adapters/google-calendar/writer.ts`. As built: a linked twin that leaves the hub is untagged, never deleted; the brake counts changes to events already in Google, not new ones. H2 next.
+Approved 2026-10-17 with the defaults (all seven open questions; T-1..T-6 accepted). H1 built (#154): migration 0035 `household_links`, `src/domain/household-sync.ts`, `householdWriter` in `src/adapters/google-calendar/writer.ts`. As built: a linked twin that leaves the hub is untagged, never deleted; the brake counts changes to events already in Google, not new ones. H2 next.
