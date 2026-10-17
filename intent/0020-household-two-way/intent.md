@@ -1,5 +1,5 @@
 # Intent: One family calendar, both ways
-Status: draft (2026-10-17). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-17, in chat: "approve intent 0020 with the defaults"). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "is there a way to have two way sync between my calendar "household" and

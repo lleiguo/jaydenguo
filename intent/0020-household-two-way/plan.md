@@ -1,5 +1,5 @@
 # Plan: One family calendar, both ways
-Status: draft (2026-10-17), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-17, in chat: "approve intent 0020 with the defaults"), with [spec.md](spec.md).
 
 Order: check Google allows what we need, then the safe half (writing,
 behind Dry run), then reading changes back, then the schedule and
@@ -42,4 +42,4 @@ About 8–10 days of work, in five PRs.
   production run log).
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-17 with the defaults (all seven open questions; T-1..T-6 accepted). H1 next.

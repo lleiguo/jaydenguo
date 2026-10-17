@@ -1,5 +1,5 @@
 # Spec: One family calendar, both ways
-Status: draft (2026-10-17). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-17, in chat: "approve intent 0020 with the defaults"). Written by Claude from [intent.md](intent.md).
 
 Read with [0001 spec](../0001-jayden-hub/spec.md) (SRC-1, SYNC, CAL-5,
 CON-3, CON-5, GCO) and [0008 spec](../0008-cookie-calendar-changes/spec.md)
