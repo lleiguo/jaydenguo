@@ -1,5 +1,5 @@
 # Plan: The saved calendar first, on any connection
-Status: draft (2026-10-16), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-16, in chat: "approve, defaults"), with [spec.md](spec.md).
 
 Order: one app change, then the TestFlight build. No server work.
 
@@ -24,4 +24,4 @@ None.
   appears within ~8 s; a late answer replaces it.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-16 with the defaults (8 s, one saved copy, no spinner; S-1, S-2 accepted). S1 next.

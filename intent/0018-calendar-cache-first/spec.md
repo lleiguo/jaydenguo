@@ -1,5 +1,5 @@
 # Spec: The saved calendar first, on any connection
-Status: draft (2026-10-16). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-16, in chat: "approve, defaults"). Written by Claude from [intent.md](intent.md).
 
 Read with [0004 spec](../0004-ios-app/spec.md) (ICAL, OFF, SEC, EXT).
 IDs here: SAV (the saved calendar).

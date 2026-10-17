@@ -1,5 +1,5 @@
 # Intent: The saved calendar first, on any connection
-Status: draft (2026-10-16). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-16, in chat: "approve, defaults"). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "for calendar, can the app keep a local cached version, so if the network
