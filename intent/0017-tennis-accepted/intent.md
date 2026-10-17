@@ -1,5 +1,5 @@
 # Intent: "Accepted" once he's in the main draw, and the list behind it
-Status: draft (2026-10-16). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-16, in chat: "approve, defaults"). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "when the acceptance list come out, typically Friday morning, and if

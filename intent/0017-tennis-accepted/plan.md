@@ -1,5 +1,5 @@
 # Plan: "Accepted" once he's in the main draw, and the list behind it
-Status: draft (2026-10-16), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-16, in chat: "approve, defaults"), with [spec.md](spec.md).
 
 Order: find out why today's entry stayed "Registered" first, then the
 server, then the iPhone app.
@@ -41,4 +41,4 @@ list" is new; `entryStatusOf` returns null for it, which reads as
   main draw as the site.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-16 with the defaults. A1 next.

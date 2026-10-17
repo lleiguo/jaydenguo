@@ -1,5 +1,5 @@
 # Spec: "Accepted" once he's in the main draw, and the list behind it
-Status: draft (2026-10-16). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-16, in chat: "approve, defaults"); A-1, A-2 accepted. Written by Claude from [intent.md](intent.md).
 
 Read with 0001 (TEN-2, TEN-10, TEN-11, SYNC-5), 0004 (ITEN-1) and 0012
 (TPR-2).
