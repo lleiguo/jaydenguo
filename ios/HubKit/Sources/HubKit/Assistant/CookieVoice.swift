@@ -59,11 +59,14 @@ public enum CookieVoice {
     }
 
     /// The ask call's body for a recording.
-    public static func body(clip: Data, conversationId: String?) -> Operations.AskAssistant.Input.Body {
-        .json(.init(
-            conversationId: conversationId,
-            audio: .init(data: clip.base64EncodedString(), mimeType: clipType)
-        ))
+    /// With whatever was attached to the question (intent 0019, SHT-5).
+    public static func body(
+        clip: Data, conversationId: String?, attachment: CookieAttachment? = nil
+    ) -> Operations.AskAssistant.Input.Body {
+        guard case .json(var payload) = CookieChat.body(text: nil, attachment: attachment, conversationId: conversationId)
+        else { fatalError("the ask body is always JSON") }
+        payload.audio = .init(data: clip.base64EncodedString(), mimeType: clipType)
+        return .json(payload)
     }
 
     /// Whether an answer is read aloud at all: spoken answers are on, and

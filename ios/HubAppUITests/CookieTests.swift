@@ -119,6 +119,75 @@ final class CookieTests: XCTestCase {
         XCTAssertEqual(question.label, "You asked: Hello Cookie")
     }
 
+    /// Intent 0019, SHT-3, SHSEC-1: text longer than a question becomes
+    /// something shared; the question shows what kind it was, and the
+    /// stand-in model says what she read.
+    func testALongPasteIsSharedNotAsked() throws {
+        let app = try launch()
+        app.buttons["cookieButton"].tap()
+        let field = app.textFields["cookieField"].firstMatch.exists ? app.textFields["cookieField"].firstMatch : app.textViews["cookieField"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
+        // One past the question limit: typed (not pasted), the 501st
+        // character moves it all out of the field.
+        let message = String(("Practice moved to Saturday at 9. " + String(repeating: "Bring water and shin pads. ", count: 18)).prefix(501))
+        field.typeText(message)
+        let attachment = app.descendants(matching: .any)["cookieAttachment"].firstMatch
+        XCTAssertTrue(attachment.waitForExistence(timeout: 10))
+        XCTAssertTrue(attachment.label.hasPrefix("Pasted text, "), attachment.label)
+
+        // Removing it and pasting again is fine; then it's sent with no words.
+        app.buttons["cookieRemoveAttachment"].tap()
+        XCTAssertFalse(attachment.exists)
+        field.typeText(message)
+        XCTAssertTrue(attachment.waitForExistence(timeout: 10))
+        app.buttons["cookieSend"].tap()
+        let answer = app.descendants(matching: .any)["cookieAnswer"].firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 20))
+        XCTAssertTrue(answer.label.contains("You shared a text starting"), answer.label)
+        XCTAssertTrue(answer.label.contains("From what you shared"), answer.label)
+        let question = app.descendants(matching: .any)["cookieQuestion"].firstMatch
+        XCTAssertTrue(question.label.contains("Pasted text, "), question.label)
+
+        // After a restart, history names it and holds none of it.
+        app.terminate()
+        let again = try launch()
+        again.buttons["cookieButton"].tap()
+        let asked = again.descendants(matching: .any)["cookieQuestion"].firstMatch
+        XCTAssertTrue(asked.waitForExistence(timeout: 20))
+        XCTAssertTrue(asked.label.hasPrefix("You asked: Pasted text, "), asked.label)
+        XCTAssertFalse(asked.label.contains("shin pads"), asked.label)
+    }
+
+    /// Intent 0019, SHT-1, SHT-2: a screenshot "from Photos", shrunk and
+    /// sent with words. The system picker runs in another process, so the
+    /// app is handed a made-up screenshot (`-HubCookiePicture`, debug only).
+    func testAScreenshotIsSentWithTheQuestion() throws {
+        let picture = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("tests/fixtures/assistant/shared/practice.jpg")
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-HubBaseURL", server, "-HubUITestToken", token, "-HubNoLock",
+            "-HubCookiePicture", try Data(contentsOf: picture).base64EncodedString(),
+        ]
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20))
+        app.buttons["cookieButton"].tap()
+        app.buttons["cookieAttach"].tap()
+        app.buttons["Choose Photos"].tap()
+        let attachment = app.descendants(matching: .any)["cookieAttachment"].firstMatch
+        XCTAssertTrue(attachment.waitForExistence(timeout: 20))
+        XCTAssertEqual(attachment.label, "1 screenshot")
+        ask(app, "what is this?")
+        let answer = app.descendants(matching: .any)["cookieAnswer"].firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 20))
+        XCTAssertTrue(answer.label.contains("You shared 1 picture."), answer.label)
+        let question = app.descendants(matching: .any)["cookieQuestion"].firstMatch
+        XCTAssertTrue(question.label.contains("what is this? · 1 screenshot"), question.label)
+        XCTAssertFalse(attachment.exists)
+    }
+
     /// Intent 0008, plan E3.2: an added event is a card under the answer;
     /// it opens the event, which says it is being added; Undo takes it
     /// back. Needs the server started with ASSISTANT_CALENDAR_ADD=fake

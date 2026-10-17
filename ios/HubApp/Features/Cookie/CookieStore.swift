@@ -14,6 +14,11 @@ final class CookieStore {
     /// Why history couldn't be loaded, in words to show.
     private(set) var loadError: String?
     var draft = ""
+    /// Screenshots or a long paste going with the next question (intent
+    /// 0019, SHT-1..3), and a note about it ("cut to 8,000 characters").
+    private(set) var attachment: CookieAttachment?
+    private(set) var attachmentNote: String?
+    private(set) var isAttaching = false
     /// Nil until Settings → Cookie or the first spoken answer fetches it.
     var spokenAnswers: Bool?
 
@@ -30,7 +35,47 @@ final class CookieStore {
         self.client = client
     }
 
-    var canSend: Bool { !isAsking && CookieChat.question(draft) != nil }
+    var canSend: Bool { !isAsking && !isAttaching && CookieChat.question(draft, with: attachment) != nil }
+
+    // MARK: Screenshots and pasted text (intent 0019)
+
+    /// Pictures from Photos or the clipboard, shrunk off the main thread
+    /// (SHT-2). Pictures replace a pasted text; three at most.
+    func attach(pictures: [Data]) async {
+        guard !pictures.isEmpty else { return }
+        isAttaching = true
+        defer { isAttaching = false }
+        let shrunk = await Task.detached(priority: .userInitiated) {
+            pictures.compactMap { CookieImage.jpeg(from: $0) }
+        }.value
+        let earlier: [Data] = if case .images(let images) = attachment { images } else { [] }
+        let all = earlier + shrunk
+        attachmentNote =
+            shrunk.count < pictures.count ? "A picture couldn't be read."
+            : all.count > CookieAttachment.imageLimit ? "Cookie takes \(CookieAttachment.imageLimit) pictures at most."
+            : nil
+        guard !all.isEmpty else { return }
+        attachment = .images(Array(all.prefix(CookieAttachment.imageLimit)))
+    }
+
+    /// A paste too long for a question becomes something shared (SHT-3).
+    func attach(pasted text: String) {
+        guard let (attachment, cut) = CookieAttachment.pasted(from: text) else { return }
+        self.attachment = attachment
+        attachmentNote = cut ? "Only the first \(CookieAttachment.pastedLimit.formatted()) characters are sent." : nil
+    }
+
+    /// SHT-3: typing or pasting past the question limit moves the text out of the field.
+    func draftChanged() {
+        guard CookieAttachment.isLongPaste(draft), attachment == nil else { return }
+        attach(pasted: draft)
+        draft = ""
+    }
+
+    func removeAttachment() {
+        attachment = nil
+        attachmentNote = nil
+    }
 
     /// The last turns, once per app start.
     func loadIfNeeded() async {
@@ -53,10 +98,16 @@ final class CookieStore {
     }
 
     func send() async {
-        guard !isAsking, let text = CookieChat.question(draft) else { return }
+        guard !isAsking, let words = CookieChat.question(draft, with: attachment) else { return }
+        let attached = attachment
         draft = ""
-        messages.append(CookieMessage(id: UUID().uuidString, role: .you, text: text))
-        _ = await ask { .json(.init(conversationId: $0, text: text)) } bubbles: { [CookieChat.message($0)] }
+        removeAttachment()
+        let shown = [words, attached?.label].compactMap { $0 }.joined(separator: " · ")
+        let pictures: [Data] = if case .images(let images) = attached { images } else { [] }
+        messages.append(CookieMessage(id: UUID().uuidString, role: .you, text: shown, pictures: pictures))
+        _ = await ask { CookieChat.body(text: words, attachment: attached, conversationId: $0) } bubbles: {
+            [CookieChat.message($0)]
+        }
     }
 
     /// A spoken question (CK-2, CK-5): the recording goes up, and what she
@@ -64,7 +115,12 @@ final class CookieStore {
     /// reached; the chat then says why.
     func ask(clip: Data) async -> CookieAnswer? {
         guard !isAsking else { return nil }
-        return await ask { CookieVoice.body(clip: clip, conversationId: $0) } bubbles: { CookieChat.messages(spoken: $0) }
+        // SHT-5: what's attached goes with the recording.
+        let attached = attachment
+        removeAttachment()
+        return await ask { CookieVoice.body(clip: clip, conversationId: $0, attachment: attached) } bubbles: {
+            CookieChat.messages(spoken: $0)
+        }
     }
 
     private func ask(
@@ -171,6 +227,7 @@ final class CookieStore {
         loaded = false
         loadError = nil
         draft = ""
+        removeAttachment()
         spokenAnswers = nil
     }
 }
