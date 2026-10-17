@@ -33,3 +33,4 @@ Rules:
 | 0014 | [Review the whole video](0014-whole-video-review/) | approved 2026-10-11 (chat); defaults kept | approved 2026-10-11 (chat); W-1..W-3 accepted | approved 2026-10-11; V1 built |
 | 0015 | [His tests and homework from Google Classroom](0015-school-classwork/) | approved 2026-10-12 (chat); server sign-in, defaults kept | approved 2026-10-12 (chat) | approved 2026-10-12; CW1 next |
 | 0016 | [A smaller image registry bill](0016-registry-cleanup/) | approved 2026-10-12 (chat) | approved 2026-10-12 (chat) | approved 2026-10-12; R1 merged and deployed (#135), old versions deleted; Terraform apply waits on the owner |
+| 0017 | ["Accepted" once he's in the main draw](0017-tennis-accepted/) | approved 2026-10-16 (chat); defaults kept | approved 2026-10-16 (chat); A-1, A-2 accepted | approved 2026-10-16; A1 next |
