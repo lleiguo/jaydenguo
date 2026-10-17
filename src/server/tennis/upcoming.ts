@@ -17,6 +17,8 @@ export type UpcomingRow = {
   name: string;
   // The tournament's page here once it's synced, else the site's page.
   tournamentId: string | null;
+  // His entry, for its acceptance list (intent 0017, ACC-5).
+  entryId: string | null;
   url: string | null;
   startDate: string;
   endDate: string;
@@ -31,10 +33,13 @@ export type UpcomingRow = {
 const entryKey = (sourceId: string | null, externalId: string | null) =>
   sourceId && externalId ? `${sourceId}|${externalId}` : null;
 
-function entryStatus(e: EntryView): UpcomingStatus {
+// Intent 0017, ACC-1: in the main draw is "Accepted".
+const ACCEPTED: UpcomingStatus = { kind: "main_draw", label: "Accepted", action: null };
+
+export function entryStatus(e: Pick<EntryView, "status" | "reservePosition" | "entryUrl">): UpcomingStatus {
   switch (e.status as EntryStatus) {
     case "main_draw":
-      return { kind: "main_draw", label: "Main draw", action: null };
+      return ACCEPTED;
     case "reserve":
       return {
         kind: "reserve",
@@ -76,7 +81,7 @@ export function upcomingRows(
     const draws = t.draws.filter((d) => d.status === "active");
     const withdrawn = t.draws.length > 0 && !draws.length;
     const status: UpcomingStatus = draws.length
-      ? { kind: "main_draw", label: "Main draw", action: null }
+      ? ACCEPTED
       : withdrawn
         ? { kind: "withdrawn", label: "Withdrawn", action: null }
         : mine.length
@@ -86,6 +91,7 @@ export function upcomingRows(
       key: t.id,
       name: t.name,
       tournamentId: t.id,
+      entryId: mine[0]?.id ?? null,
       url: t.sourceUrl,
       startDate: t.startDate,
       endDate: t.endDate,
@@ -106,6 +112,7 @@ export function upcomingRows(
       key: e.id,
       name: e.tournamentName,
       tournamentId: null,
+      entryId: e.id,
       url: e.tournamentUrl,
       startDate: e.startDate,
       endDate: e.endDate,

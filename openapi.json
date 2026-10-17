@@ -3882,6 +3882,45 @@
         }
       }
     },
+    "/api/v1/tennis/entries/{id}": {
+      "get": {
+        "operationId": "getTennisEntry",
+        "summary": "One of his entries with its acceptance list: main draw, then reserves.",
+        "description": "Spec: ACC-5",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryListView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tennis/players/{key}": {
       "get": {
         "operationId": "getTennisPlayer",
@@ -6971,6 +7010,119 @@
           "sourceUrl"
         ]
       },
+      "EntryListPlayer": {
+        "type": "object",
+        "properties": {
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isSelf": {
+            "type": "boolean"
+          },
+          "playerKey": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reservePosition": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "names",
+          "isSelf",
+          "playerKey",
+          "reservePosition"
+        ]
+      },
+      "EntryListView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tournamentName": {
+            "type": "string"
+          },
+          "eventName": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          },
+          "venue": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/UpcomingStatus"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tournamentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tournamentUrl": {
+            "type": "string"
+          },
+          "listCheckedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "listOut": {
+            "type": "boolean"
+          },
+          "mainDraw": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryListPlayer"
+            }
+          },
+          "reserve": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryListPlayer"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "tournamentName",
+          "eventName",
+          "startDate",
+          "endDate",
+          "venue",
+          "status",
+          "note",
+          "tournamentId",
+          "tournamentUrl",
+          "listCheckedAt",
+          "listOut",
+          "mainDraw",
+          "reserve"
+        ]
+      },
       "ErrorResponse": {
         "type": "object",
         "properties": {
@@ -9447,6 +9599,12 @@
                     "null"
                   ]
                 },
+                "entryId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "url": {
                   "type": [
                     "string",
@@ -9497,6 +9655,7 @@
                 "key",
                 "name",
                 "tournamentId",
+                "entryId",
                 "url",
                 "startDate",
                 "endDate",
@@ -10283,12 +10442,19 @@
             "items": {
               "$ref": "#/components/schemas/DrawPrediction"
             }
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryListView"
+            }
           }
         },
         "required": [
           "tournament",
           "matches",
-          "drawPredictions"
+          "drawPredictions",
+          "entries"
         ]
       },
       "TodayView": {

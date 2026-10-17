@@ -1,10 +1,11 @@
 import { and, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
-import { sources, tennisEntries, tennisPlayers } from "@db/schema";
+import { sources, tennisEntries, tennisEntryList, tennisPlayers } from "@db/schema";
 import { Budget, TcClient, tennisBaseUrl } from "../../adapters/tennis-tc";
 import {
   parseEventList,
   parseEventPage,
   parseSearchResults,
+  type TcEntryRow,
   type TcEvent,
   type TcEventPage,
   type TcSearchResult,
@@ -166,6 +167,22 @@ async function readEvent(client: TcClient, e: Pick<EntryRow, "tournamentExternal
   return page ? parseEventPage(page.html) : null;
 }
 
+// ACC-4 (intent 0017): keep the list as read, replacing the last one. A
+// hidden list (no rows) leaves the stored one.
+async function saveList(db: DbOrTx, entryId: string, page: TcEventPage | null) {
+  if (!page?.entriesShown || !page.entries.length) return;
+  const rows = page.entries.map((r: TcEntryRow, position) => ({
+    entryId,
+    position,
+    names: r.names,
+    tournamentPlayerIds: r.tournamentPlayerIds,
+    status: r.status?.kind ?? null,
+    reservePosition: r.status?.kind === "reserve" ? r.status.position : null,
+  }));
+  await db.delete(tennisEntryList).where(eq(tennisEntryList.entryId, entryId));
+  await db.insert(tennisEntryList).values(rows);
+}
+
 function listUpdate(
   e: EntryRow,
   page: TcEventPage,
@@ -198,7 +215,9 @@ function listUpdate(
     updatedAt: now,
     note:
       next.status === "withdrawn"
-        ? "No longer on the entry list."
+        ? row?.status?.kind === "excluded"
+          ? "On the exclude list."
+          : "No longer on the entry list."
         : e.status === next.status
           ? e.note
           : next.status !== listed.status
@@ -387,7 +406,7 @@ async function findListed(
       if (followed.has(t.id) || (t.endDate ?? t.startDate ?? today) < today) continue;
       const list = await client.get(`/sport/events.aspx?id=${t.id}`);
       const events = list ? parseEventList(list.html) : [];
-      const found: { event: TcEvent; values: ListedValues }[] = [];
+      const found: { event: TcEvent; values: ListedValues; page?: TcEventPage | null }[] = [];
       const hidden: TcEvent[] = [];
       for (const event of events) {
         const page = await readEvent(client, { tournamentExternalId: t.id, eventNo: event.eventNo });
@@ -397,6 +416,7 @@ async function findListed(
         const s = statusFromList("entered", self);
         found.push({
           event,
+          page,
           values: {
             status: s.status,
             reservePosition: s.reservePosition,
@@ -428,7 +448,7 @@ async function findListed(
             },
           });
       }
-      for (const { event, values } of found) {
+      for (const { event, values, page } of found) {
         const overview = await client.get(`/tournament/${t.id}`);
         const d = overview ? parseTournament(overview.html, t.id) : null;
         const startDate = d?.startDate ?? t.startDate ?? today;
@@ -456,7 +476,9 @@ async function findListed(
           .onConflictDoUpdate({
             target: [tennisEntries.sourceId, tennisEntries.tournamentExternalId, tennisEntries.eventNo],
             set: values,
-          });
+          })
+          .returning({ id: tennisEntries.id })
+          .then(async ([saved]) => saved && (await saveList(ctx.db, saved.id, page ?? null)));
         recorded++;
       }
     }
@@ -675,13 +697,19 @@ export async function runEnter(
   return result;
 }
 
-// Where does he stand on each entry list still to come?
+// Not settled yet (intent 0017, ACC-2): the later Friday runs read only
+// these. Reserve places can still move into the main draw.
+const UNSETTLED: readonly EntryStatus[] = ["found", "entered", "payment_needed", "reserve"];
+
+// Where does he stand on each entry list still to come? `unsettled`: only
+// the entries not in the main draw yet.
 async function checkLists(
   ctx: EntryContext,
   source: TcSource,
   client: TcClient,
   name: string,
   account: AccountCheck,
+  opts: { unsettled?: boolean } = {},
 ) {
   const { db, log } = ctx;
   const today = localDate(ctx.now, ctx.timeZone);
@@ -691,7 +719,7 @@ async function checkLists(
     .where(
       and(
         eq(tennisEntries.sourceId, source.id),
-        inArray(tennisEntries.status, ["found", ...ACTIVE_ENTRY]),
+        inArray(tennisEntries.status, opts.unsettled ? [...UNSETTLED] : ["found", ...ACTIVE_ENTRY]),
         gte(tennisEntries.endDate, today),
       ),
     );
@@ -701,7 +729,27 @@ async function checkLists(
       const page = await readEvent(client, e);
       if (!page) continue;
       const update = listUpdate(e, page, name, ctx.now, await account.on(e.tournamentExternalId, e.eventNo));
+      // ACC-3: the list is gone behind the draws; his name in one of them
+      // means he got in.
+      if (!page.entriesShown && page.draws.length && ACTIVE_ENTRY.includes(update.status)) {
+        if (update.status !== "main_draw") {
+          const tp = await inDraw(
+            client,
+            e.tournamentExternalId,
+            page.draws.map((d) => d.drawNo),
+            { tp: e.tournamentPlayerId, name },
+          );
+          if (tp)
+            Object.assign(update, {
+              status: "main_draw",
+              reservePosition: null,
+              tournamentPlayerId: tp,
+              note: null,
+            });
+        }
+      }
       await db.update(tennisEntries).set(update).where(eq(tennisEntries.id, e.id));
+      await saveList(db, e.id, page);
       await notifyEntryChange(db, e, update.status, { log, now: ctx.now });
       counts[update.status] = (counts[update.status] ?? 0) + 1;
     }
@@ -713,17 +761,37 @@ async function checkLists(
 
 // Friday: where does he stand on each entry list? With a registrar, his
 // account answers where the list is hidden.
+// Runs every 2 hours on Fridays (intent 0017, ACC-2): the first run reads
+// every list and searches for entries made by hand; later ones (`later`)
+// read only the entries not in the main draw yet, and make no requests
+// when there are none.
 export async function runAcceptance(
   ctx: EntryContext,
   source: TcSource,
-  deps: { registrar?: Registrar } = {},
+  deps: { registrar?: Registrar; later?: boolean } = {},
 ) {
   const name = await selfName(ctx.db, source.id);
   if (!name) return { skipped: "no tennis sync yet (his name isn't known)" };
+  if (deps.later) {
+    const [open] = await ctx.db
+      .select({ id: tennisEntries.id })
+      .from(tennisEntries)
+      .where(
+        and(
+          eq(tennisEntries.sourceId, source.id),
+          inArray(tennisEntries.status, [...UNSETTLED]),
+          gte(tennisEntries.endDate, localDate(ctx.now, ctx.timeZone)),
+        ),
+      )
+      .limit(1);
+    if (!open) return { entries: 0, listed: 0 };
+  }
   const client = newClient(ctx, LIST_REQUESTS);
   const account = accountChecker(deps.registrar, ctx.log);
-  const counts = await checkLists(ctx, source, client, name, account);
-  const listed = await findListed(ctx, source, client, name, entrySettingsOf(source.config), account);
+  const counts = await checkLists(ctx, source, client, name, account, { unsettled: deps.later });
+  const listed = deps.later
+    ? 0
+    : await findListed(ctx, source, client, name, entrySettingsOf(source.config), account);
   ctx.log("tennis acceptance lists read", { source: source.name, listed, ...counts });
   return { ...counts, listed };
 }
@@ -943,6 +1011,9 @@ export async function runDrawWatch(
         if (found) {
           set.drawSeenAt = ctx.now;
           set.tournamentPlayerId = found;
+          // ACC-3: in the draw means accepted, list or not.
+          if (set.status !== "main_draw")
+            Object.assign(set, { status: "main_draw", reservePosition: null, note: null });
           pending.push(e.id);
         } else if (tp && page.entriesShown && update.status !== "main_draw") {
           // The draw is out and he isn't in it (still a reserve): stop watching.
@@ -951,7 +1022,8 @@ export async function runDrawWatch(
         }
       }
       await db.update(tennisEntries).set(set).where(eq(tennisEntries.id, e.id));
-      await notifyEntryChange(db, e, update.status, { log, now: ctx.now });
+      await saveList(db, e.id, page);
+      await notifyEntryChange(db, e, set.status ?? update.status, { log, now: ctx.now });
     }
   } catch (err) {
     if (!(err instanceof Budget)) throw err;

@@ -119,8 +119,12 @@ describe("upcoming tournaments (TEN-2, TEN-10)", () => {
     ]);
     const inDraw = upcomingRows([tournament({ draws: [draw()], events: ["U9 Orange Boys"] })], [e], TODAY);
     expect(inDraw).toHaveLength(1);
-    expect(inDraw[0].status.kind).toBe("main_draw");
+    expect(inDraw[0].status).toMatchObject({ kind: "main_draw", label: "Accepted" });
     expect(inDraw[0].draws).toHaveLength(1);
+    // Intent 0017, ACC-1: the main draw from the list reads "Accepted" too,
+    // and the row knows its entry (ACC-5).
+    const accepted = upcomingRows([tournament({})], [{ ...e, status: "main_draw" }], TODAY);
+    expect(accepted[0]).toMatchObject({ entryId: e.id, status: { kind: "main_draw", label: "Accepted" } });
   });
 
   it("leaves in-progress tournaments (and their entries) to the In progress list", () => {

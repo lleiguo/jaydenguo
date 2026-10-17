@@ -2,6 +2,7 @@ import { z } from "zod";
 import { HttpError } from "@/server/errors";
 import { api } from "@/server/http";
 import type { TennisTournamentResponse } from "@/server/openapi/responses";
+import { entriesForTournament } from "@/server/tennis/entry-list";
 import { loadTournament } from "@/server/tennis/load";
 import { drawPredictions } from "@/server/tennis/overview";
 
@@ -19,5 +20,6 @@ export const GET = api<{ id: string }>(async ({ db, params }) => {
     tournament,
     matches,
     drawPredictions: await drawPredictions(db, data, draws),
+    entries: await entriesForTournament(db, tournament),
   } satisfies TennisTournamentResponse);
 });

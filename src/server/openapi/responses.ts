@@ -29,6 +29,7 @@ import type {
   PredictionView,
 } from "../tennis/load";
 import type { TennisCheckView } from "../tennis/check";
+import type { EntryListView } from "../tennis/entry-list";
 import type { DrawPrediction, TennisOverview } from "../tennis/overview";
 import type { TodayView } from "../today";
 import type { Detected, Review } from "../video/prompts";
@@ -98,7 +99,10 @@ export type TennisTournamentResponse = {
   matches: LoadedTournament["matches"];
   // One per draw: a prediction for his next match.
   drawPredictions: DrawPrediction[];
+  // His entries there, with their acceptance lists (intent 0017, ACC-5).
+  entries: EntryListView[];
 };
+export type TennisEntryResponse = EntryListView;
 export type TennisPlayerResponse = {
   player: LoadedPlayer["player"];
   h2h: LoadedPlayer["h2h"];

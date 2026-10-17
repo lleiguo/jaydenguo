@@ -1,4 +1,5 @@
 import { tennisTestNow } from "../adapters/tennis-tc";
+import { wallClock } from "../domain/time";
 import { getHomeTimeZone } from "../server/settings";
 import { routesDriveTimer } from "../server/tennis/drive";
 import { eq } from "drizzle-orm";
@@ -35,11 +36,13 @@ export async function tennisEnterJob(_args: string[], ctx: JobContext) {
   }
 }
 
-// `tennis:acceptance`, Friday 10:00.
+// `tennis:acceptance`, Fridays every 2 hours from 08:00 (intent 0017,
+// ACC-2). Runs after 09:00 read only what isn't settled yet.
 export async function tennisAcceptanceJob(_args: string[], ctx: JobContext) {
   const ectx = await entryContext(ctx);
+  const later = wallClock(ectx.now, ectx.timeZone).hour >= 9;
   for (const source of await tennisSources(ectx.db))
-    await runAcceptance(ectx, source, { registrar: await tennisRegistrar(ectx.db, source, ctx.log) });
+    await runAcceptance(ectx, source, { registrar: await tennisRegistrar(ectx.db, source, ctx.log), later });
 }
 
 // `tennis:draw-watch`, hourly on draw days.

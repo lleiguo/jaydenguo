@@ -3,7 +3,7 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { sources, tennisEntries, tennisTournaments } from "@db/schema";
+import { sources, tennisEntries, tennisEntryList, tennisTournaments } from "@db/schema";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import { createLogger } from "@/server/log";
@@ -17,6 +17,7 @@ import {
   type EntryContext,
   type Registrar,
 } from "@/server/tennis/entries";
+import { loadEntry } from "@/server/tennis/entry-list";
 import type { MyEntry } from "@/adapters/tennis-tc/registrar";
 import { syncSource } from "@/worker/sync";
 import { createFakeTc, ENTRY_FIXTURE, TC_FIXTURE, TC_NOW, TC_PROFILE_URL } from "../e2e/support/fake-tc";
@@ -38,6 +39,8 @@ describe("tennis tournament entries", () => {
   let closedA = false;
   // And whether A's event page shows only its draws (list hidden).
   let hiddenA = false;
+  // And whether the current tournament's event page shows only its draws.
+  let hiddenCurrent = false;
   const log = createLogger((l) => process.env.DEBUG_LOG && console.log(l));
   const ctx = (): EntryContext => ({ db, log, now: TC_NOW, timeZone: "America/Toronto" });
   const drive = async (_from: string, to: string) => (to.includes("Faraway") ? 100 : 30);
@@ -84,21 +87,25 @@ describe("tennis tournament entries", () => {
     server = createFakeTc({
       requests,
       edit: (file, html) =>
-        file === "entries/event-a6.html"
-          ? hiddenA
-            ? readFileSync("tests/fixtures/tennis-tc/entries/event-draws-only.html", "utf8")
-            : html.replace("<!--SELF-->", selfRow)
-          : file === "entries/search.html" && closedA
-            ? html.replace(
-                /<a role="button" href="\/onlineentry\/onlineentry\.aspx\?id=a0000000[^]*?<\/a>/,
-                "",
-              )
-            : file === "entries/tournament-a.html" && opensA
+        file === "entries/event-current.html" && hiddenCurrent
+          ? readFileSync("tests/fixtures/tennis-tc/entries/event-draws-only.html", "utf8")
+              .replaceAll(ENTRY_FIXTURE.a, TC_FIXTURE.currentTournament)
+              .replace("draw=9", "draw=15")
+          : file === "entries/event-a6.html"
+            ? hiddenA
+              ? readFileSync("tests/fixtures/tennis-tc/entries/event-draws-only.html", "utf8")
+              : html.replace("<!--SELF-->", selfRow)
+            : file === "entries/search.html" && closedA
               ? html.replace(
-                  '<ul class="list">',
-                  `<ul class="list"><li class="list__item"><span class="list__value">Entry opens</span><time datetime="${opensA}T08:00:00">${opensA}</time></li>`,
+                  /<a role="button" href="\/onlineentry\/onlineentry\.aspx\?id=a0000000[^]*?<\/a>/,
+                  "",
                 )
-              : html,
+              : file === "entries/tournament-a.html" && opensA
+                ? html.replace(
+                    '<ul class="list">',
+                    `<ul class="list"><li class="list__item"><span class="list__value">Entry opens</span><time datetime="${opensA}T08:00:00">${opensA}</time></li>`,
+                  )
+                : html,
     });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -522,5 +529,92 @@ describe("tennis tournament entries", () => {
     expect(calls).toBe(0);
     const [e] = await entriesOf(s.id);
     expect(e).toMatchObject({ drawSeenAt: null, drawSyncedAt: null, tournamentPlayerId: "77" });
+  });
+  describe("intent 0017: accepted, and the list behind it", () => {
+    const reserveRow = `<tr><td class="orange elt9998">Reserve list 2</td><td><a href="player.aspx?id=${ENTRY_FIXTURE.a}&amp;player=77">Fixture, Sam</a></td><td></td></tr>`;
+    const listOf = (entryId: string) =>
+      db
+        .select()
+        .from(tennisEntryList)
+        .where(eq(tennisEntryList.entryId, entryId))
+        .orderBy(tennisEntryList.position);
+
+    it("keeps the list as read, replaced each time, and kept once hidden (ACC-4, ACC-5)", async () => {
+      hiddenA = false;
+      selfRow = "";
+      const s = await newSource();
+      await runEnter(ctx(), s, { drive, registrar: manualRegistrar });
+      selfRow = reserveRow;
+      await runAcceptance(ctx(), s);
+      const [a] = (await entriesOf(s.id)).filter((r) => r.tournamentExternalId === ENTRY_FIXTURE.a);
+      const first = await listOf(a.id);
+      expect(first.length).toBeGreaterThan(1);
+      expect(first.filter((r) => r.status === "reserve").map((r) => r.reservePosition)).toContain(2);
+
+      const view = await loadEntry(db, a.id);
+      expect(view).toMatchObject({ status: { kind: "reserve" }, listOut: true });
+      expect(view!.mainDraw.length).toBe(first.filter((r) => r.status === "main_draw").length);
+      expect(view!.reserve.find((p) => p.isSelf)).toMatchObject({ reservePosition: 2 });
+      expect(view!.mainDraw.some((p) => p.isSelf)).toBe(false);
+
+      selfRow = reserveRow.replace(`class="orange elt9998">Reserve list 2`, `class="green elt1">Maindraw`);
+      await runAcceptance(ctx(), s);
+      const accepted = await loadEntry(db, a.id);
+      expect(accepted!.status).toMatchObject({ kind: "main_draw", label: "Accepted" });
+      expect(accepted!.mainDraw.filter((p) => p.isSelf)).toHaveLength(1);
+      expect(await listOf(a.id)).toHaveLength(first.length);
+
+      hiddenA = true;
+      try {
+        await runAcceptance(ctx(), s);
+      } finally {
+        hiddenA = false;
+      }
+      expect(await listOf(a.id)).toHaveLength(first.length);
+      expect((await loadEntry(db, a.id))!.status.label).toBe("Accepted");
+    });
+
+    it("later Friday runs read only what isn't settled, and nothing when all are (ACC-2)", async () => {
+      selfRow = "";
+      const s = await newSource();
+      await runEnter(ctx(), s, { drive, registrar: manualRegistrar });
+      selfRow = reserveRow;
+      requests.length = 0;
+      await runAcceptance(ctx(), s, { later: true });
+      // The list was read, but no tournament search.
+      expect(requests.some((r) => r.includes("event.aspx"))).toBe(true);
+      expect(requests.some((r) => r.includes("DoSearch"))).toBe(false);
+
+      await db.update(tennisEntries).set({ status: "main_draw" }).where(eq(tennisEntries.sourceId, s.id));
+      requests.length = 0;
+      expect(await runAcceptance(ctx(), s, { later: true })).toEqual({ entries: 0, listed: 0 });
+      expect(requests).toEqual([]);
+    });
+
+    it("with the list hidden, his name in the draw means accepted (ACC-3)", async () => {
+      const s = await newSource();
+      await db.insert(tennisEntries).values({
+        sourceId: s.id,
+        tournamentExternalId: TC_FIXTURE.currentTournament,
+        tournamentName: "Current",
+        startDate: "2024-09-26",
+        endDate: "2024-09-29",
+        eventNo: "13",
+        eventName: "Fixture Event 13",
+        status: "entered",
+        tournamentUrl: `${base}/tournament/${TC_FIXTURE.currentTournament}`,
+      });
+      hiddenCurrent = true;
+      try {
+        await runAcceptance(ctx(), s, { later: true });
+      } finally {
+        hiddenCurrent = false;
+      }
+      const [e] = await entriesOf(s.id);
+      expect(e).toMatchObject({ status: "main_draw", tournamentPlayerId: ENTRY_FIXTURE.selfCurrentTp });
+      // No list was shown, so none is kept.
+      expect(await listOf(e.id)).toEqual([]);
+      expect((await loadEntry(db, e.id))!.listOut).toBe(false);
+    });
   });
 });

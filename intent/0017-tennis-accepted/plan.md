@@ -32,7 +32,7 @@ list" is new; `entryStatusOf` returns null for it, which reads as
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| A1 | Server and web: "Accepted" label, Friday re-reads, draw check, `tennis_entry_list` table, entry API and page, push. | ACC-1..6 | |
+| A1 | Server and web: "Accepted" label, Friday re-reads, draw check, `tennis_entry_list` table (migration 0033), entry API and page, push. | ACC-1..6 | (this PR) |
 | A2 | iPhone: "Accepted" and the entry screen; TestFlight bump separate. | ACC-1, ACC-5 | |
 
 ## 4. Done when

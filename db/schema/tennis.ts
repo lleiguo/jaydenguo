@@ -221,7 +221,7 @@ export const tennisExplanations = pgTable(
 // Tournament entries (TEN-9..11): events the Thursday job found for him,
 // whether he's entered, and where the Friday acceptance list puts him. One
 // row per tournament and event. Only tournament facts and his own status
-// are kept; other players on entry lists aren't stored.
+// are kept here; the list itself is in tennis_entry_list.
 export const tennisEntries = pgTable(
   "tennis_entries",
   {
@@ -266,6 +266,32 @@ export const tennisEntries = pgTable(
     index("tennis_entries_start_idx").on(t.startDate),
     check("tennis_entries_status_chk", sql`${t.status} in (${inList(ENTRY_STATUSES)})`),
     check("tennis_entries_dates_chk", sql`${t.endDate} >= ${t.startDate}`),
+  ],
+);
+
+// The entry list (acceptance list) of one of his events, as last read
+// (intent 0017, ACC-4): replaced on each read, kept once the site hides it.
+// Other children: only name, tournament player number, status and reserve
+// place, as on the site.
+export const tennisEntryList = pgTable(
+  "tennis_entry_list",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => tennisEntries.id, { onDelete: "cascade" }),
+    // The site's order, from 0.
+    position: integer("position").notNull(),
+    // Two for doubles.
+    names: text("names").array().notNull(),
+    tournamentPlayerIds: text("tournament_player_ids").array().notNull(),
+    // main_draw, reserve, excluded, or null before the list is out.
+    status: text("status"),
+    reservePosition: integer("reserve_position"),
+  },
+  (t) => [
+    uniqueIndex("tennis_entry_list_entry_pos_uq").on(t.entryId, t.position),
+    check("tennis_entry_list_status_chk", sql`${t.status} in ('main_draw', 'reserve', 'excluded')`),
   ],
 );
 

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { dates, DrawLine, muted, PredictionBox } from "@/components/tennis/bits";
+import { EntryList } from "@/components/tennis/entry-list";
 import { MatchesTable } from "@/components/tennis/matches-table";
 import { formatRecord } from "@/domain/tennis";
 import { getDb } from "@/server/db";
+import { entriesForTournament } from "@/server/tennis/entry-list";
 import { explanationsFor } from "@/server/tennis/explain";
 import { loadTournament, predictAgainst } from "@/server/tennis/load";
 import { externalHref } from "@/lib/external-href";
@@ -23,7 +25,10 @@ export default async function TournamentPage({ params }: PageProps<"/tennis/tour
       ? predictAgainst(data, d.opponentKey)
       : null,
   );
-  const explanations = await explanationsFor(db, predictions);
+  const [explanations, entries] = await Promise.all([
+    explanationsFor(db, predictions),
+    t.when === "past" ? [] : entriesForTournament(db, t),
+  ]);
   return (
     <main className="flex flex-col gap-4">
       <Link href="/tennis" className="text-sm underline">
@@ -65,6 +70,17 @@ export default async function TournamentPage({ params }: PageProps<"/tennis/tour
                 />
               )}
             </div>
+          ))}
+        </section>
+      )}
+
+      {entries.length > 0 && (
+        <section aria-labelledby="acceptance" className="flex flex-col gap-3">
+          <h2 id="acceptance" className="font-semibold">
+            Acceptance list
+          </h2>
+          {entries.map((e) => (
+            <EntryList key={e.id} entry={e} timeZone={data.timeZone} />
           ))}
         </section>
       )}
