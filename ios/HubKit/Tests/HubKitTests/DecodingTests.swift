@@ -56,6 +56,7 @@ import Testing
         "getTennisOverview": { _ = try await $0.api.getTennisOverview().ok.body.json },
         "listTennisResults": { _ = try await $0.api.listTennisResults().ok.body.json },
         "getTournament": { _ = try await $0.api.getTournament(path: .init(id: id)).ok.body.json },
+        "getTennisEntry": { _ = try await $0.api.getTennisEntry(path: .init(id: "e1")).ok.body.json },
         "getTennisPlayer": { _ = try await $0.api.getTennisPlayer(path: .init(key: "1")).ok.body.json },
         "getTennisAccuracy": { _ = try await $0.api.getTennisAccuracy().ok.body.json },
         "listVideoReviews": { _ = try await $0.api.listVideoReviews().ok.body.json },

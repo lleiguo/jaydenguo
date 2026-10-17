@@ -10,6 +10,8 @@ public enum Route: Equatable, Sendable, Hashable {
     case clashes
     case tennis
     case tournament(id: String)
+    /// One upcoming entry and its acceptance list (intent 0017, ACC-5).
+    case tennisEntry(id: String)
     case player(key: String)
     case tennisResults
     case tennisAccuracy
@@ -47,6 +49,7 @@ public enum Route: Equatable, Sendable, Hashable {
         case (1, "clashes", _, _), (2, "settings", "clashes", _): self = .clashes
         case (1, "tennis", _, _): self = .tennis
         case (3, "tennis", "tournaments", let id?): self = .tournament(id: id)
+        case (3, "tennis", "entries", let id?): self = .tennisEntry(id: id)
         case (3, "tennis", "players", let key?): self = .player(key: key)
         case (2, "tennis", "results", _): self = .tennisResults
         case (2, "tennis", "accuracy", _): self = .tennisAccuracy
@@ -71,7 +74,7 @@ public enum Route: Equatable, Sendable, Hashable {
         switch self {
         case .today, .cookie: .today
         case .calendar, .event, .clashes: .calendar
-        case .tennis, .tournament, .player, .tennisResults, .tennisAccuracy: .tennis
+        case .tennis, .tournament, .tennisEntry, .player, .tennisResults, .tennisAccuracy: .tennis
         case .swimming, .meet, .swimEvent: .swimming
         case .videos, .video, .school, .suggestions, .sources, .accounts, .settings, .notifications: .more
         }

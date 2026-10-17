@@ -39,6 +39,9 @@ struct TournamentScreen: View {
                         }
                     }
                 }
+                if t.when != .past {
+                    ForEach(data.entries, id: \.id) { e in EntryListSections(entry: e) }
+                }
                 Section("His matches") {
                     if data.matches.isEmpty { Caption("No matches yet.") }
                     ForEach(data.matches, id: \.match.id) { row in
