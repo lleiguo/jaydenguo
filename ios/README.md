@@ -74,7 +74,12 @@ DATABASE_URL=postgres://hub:hub@localhost:5433/hub_fixtures APP_URL=http://local
 chat tests don't call Vertex AI. Her voice tests never use the
 microphone: they start the app with `-HubCookieClip <base64>` (debug
 builds only), which makes the recorder hand over that clip, a made-up
-voice from `tests/fixtures/assistant/question.m4a`.
+voice from `tests/fixtures/assistant/question.m4a`. Likewise `-HubCookiePicture
+<base64>` makes "Choose Photos" hand over a made-up screenshot from
+`tests/fixtures/assistant/shared/` (intent 0019), since the system Photos
+picker runs in another process. The test server's address reaches the
+tests as `TEST_RUNNER_HUB_TEST_SERVER=http://localhost:<port>` on the
+`xcodebuild test` line (default 3200).
 
 `pnpm seed` puts the sample email suggestions back, so the tests that use
 them up can run again; re-run it between full test runs.

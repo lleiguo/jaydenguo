@@ -1,4 +1,5 @@
 import HubKit
+import PhotosUI
 import SwiftUI
 
 /// The chat with Cookie (intent 0007, CK-4): the conversation so far, a text
@@ -8,6 +9,8 @@ struct CookieChatSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @FocusState private var typing: Bool
+    @State private var choosingPhotos = false
+    @State private var photos: [PhotosPickerItem] = []
     private let bottom = "bottom"
 
     var body: some View {
@@ -53,6 +56,20 @@ struct CookieChatSheet: View {
             }
         }
         .task { await store.loadIfNeeded() }
+        // SHT-1: up to three screenshots from Photos.
+        .photosPicker(
+            isPresented: $choosingPhotos, selection: $photos, maxSelectionCount: CookieAttachment.imageLimit,
+            matching: .images
+        )
+        .onChange(of: photos) {
+            let picked = photos
+            photos = []
+            Task {
+                var pictures: [Data] = []
+                for item in picked { if let data = try? await item.loadTransferable(type: Data.self) { pictures.append(data) } }
+                await store.attach(pictures: pictures)
+            }
+        }
         // Closing the chat mid-recording throws the recording away.
         .onDisappear { if model.cookieTalk.isRecording { model.cookieTalk.reset() } }
     }
@@ -66,6 +83,7 @@ struct CookieChatSheet: View {
                 Text("That's too long: \(store.draft.count) of \(CookieChat.questionLimit) characters.")
                     .font(.caption).foregroundStyle(.red)
             }
+            CookieAttachmentStrip(store: store)
             if talk.isRecording {
                 Label("Listening… \(CookieVoice.clock(talk.elapsed)). Tap the microphone to send.", systemImage: "waveform")
                     .font(.caption).foregroundStyle(.red)
@@ -83,8 +101,9 @@ struct CookieChatSheet: View {
                 .accessibilityIdentifier("cookieHint")
             }
             HStack(alignment: .bottom, spacing: 8) {
+                attach(store)
                 mic(talk)
-                TextField("Ask Cookie", text: $store.draft, axis: .vertical)
+                TextField(store.attachment == nil ? "Ask Cookie" : "Add this, summarize… (optional)", text: $store.draft, axis: .vertical)
                     .lineLimit(1...4)
                     .focused($typing)
                     .submitLabel(.send)
@@ -93,6 +112,8 @@ struct CookieChatSheet: View {
                     .padding(.vertical, 8)
                     .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 18))
                     .accessibilityIdentifier("cookieField")
+                    // SHT-3: a long paste moves out of the field.
+                    .onChange(of: store.draft) { store.draftChanged() }
                 Button { send(store) } label: {
                     Image(systemName: "arrow.up.circle.fill").font(.system(size: 32))
                 }
@@ -104,6 +125,47 @@ struct CookieChatSheet: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(.bar)
+    }
+
+    /// SHT-1: screenshots from Photos, or a picture or long text from the clipboard.
+    private func attach(_ store: CookieStore) -> some View {
+        Menu {
+            Button("Choose Photos", systemImage: "photo.on.rectangle") {
+                if let picture = Self.fixturePicture {
+                    Task { await store.attach(pictures: [picture]) }
+                } else {
+                    choosingPhotos = true
+                }
+            }
+            Button("Paste", systemImage: "doc.on.clipboard") { Task { await paste(store) } }
+        } label: {
+            Image(systemName: store.isAttaching ? "hourglass.circle.fill" : "plus.circle.fill")
+                .font(.system(size: 32))
+        }
+        .disabled(store.isAsking || store.isAttaching)
+        .accessibilityLabel("Share a screenshot or text with Cookie")
+        .accessibilityIdentifier("cookieAttach")
+    }
+
+    #if DEBUG
+    /// UI tests pass a picture (`-HubCookiePicture <base64>`): the system
+    /// Photos picker runs in another process and can't be driven reliably.
+    static let fixturePicture: Data? = {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let i = arguments.firstIndex(of: "-HubCookiePicture"), arguments.indices.contains(i + 1) else { return nil }
+        return Data(base64Encoded: arguments[i + 1])
+    }()
+    #else
+    static let fixturePicture: Data? = nil
+    #endif
+
+    private func paste(_ store: CookieStore) async {
+        let board = UIPasteboard.general
+        if board.hasImages, let images = board.images {
+            await store.attach(pictures: images.compactMap { $0.pngData() })
+        } else if let text = board.string {
+            if CookieAttachment.isLongPaste(text) { store.attach(pasted: text) } else { store.draft += text }
+        }
     }
 
     /// CK-5: a way to speak that needs no long press. Tap to start, tap
@@ -191,6 +253,51 @@ private struct CookieHint: View {
     }
 }
 
+/// What goes with the next question (intent 0019): the screenshots'
+/// thumbnails or the pasted text's length, with a way to remove it.
+private struct CookieAttachmentStrip: View {
+    let store: CookieStore
+
+    var body: some View {
+        if let attachment = store.attachment {
+            HStack(spacing: 8) {
+                switch attachment {
+                case .images(let images):
+                    ForEach(Array(images.enumerated()), id: \.offset) { _, data in Thumbnail(data: data, size: 56) }
+                case .pasted(let text):
+                    Label(text.prefix(80) + (text.count > 80 ? "…" : ""), systemImage: "doc.plaintext")
+                        .font(.caption).lineLimit(2).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Button { store.removeAttachment() } label: { Image(systemName: "xmark.circle.fill") }
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Remove " + attachment.label)
+                    .accessibilityIdentifier("cookieRemoveAttachment")
+            }
+            .padding(8)
+            .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 12))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(attachment.label)
+            .accessibilityIdentifier("cookieAttachment")
+        }
+        if let note = store.attachmentNote { Text(note).font(.caption).foregroundStyle(.orange) }
+    }
+}
+
+struct Thumbnail: View {
+    let data: Data
+    let size: CGFloat
+
+    var body: some View {
+        if let image = UIImage(data: data) {
+            Image(uiImage: image).resizable().scaledToFill()
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .accessibilityHidden(true)
+        }
+    }
+}
+
 struct CookieBubble: View {
     let message: CookieMessage
 
@@ -198,7 +305,14 @@ struct CookieBubble: View {
         let mine = message.role == .you
         HStack(alignment: .bottom, spacing: 8) {
             if mine { Spacer(minLength: 40) } else { CookieAvatar(size: 28) }
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
+                if !message.pictures.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(Array(message.pictures.enumerated()), id: \.offset) { _, data in
+                            Thumbnail(data: data, size: 72)
+                        }
+                    }
+                }
                 Text(message.text)
                     .textSelection(.enabled)
                     .padding(.horizontal, 12)

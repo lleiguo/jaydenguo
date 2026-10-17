@@ -37,6 +37,9 @@ public struct CookieMessage: Identifiable, Equatable, Sendable {
     public let waitingUntil: Date?
     /// The conversation it belongs to, so a summary finds the answer it follows.
     public let conversationId: String?
+    /// Screenshots sent with a question, shown until the chat closes; history
+    /// names them instead, as they aren't kept (intent 0019, SHSEC-1).
+    public let pictures: [Data]
 
     public struct MemoryChange: Equatable, Sendable {
         public enum Kind: Sendable { case saved, forgot }
@@ -51,7 +54,7 @@ public struct CookieMessage: Identifiable, Equatable, Sendable {
     public init(
         id: String, role: Role, text: String, kind: Kind = .answer, sourceLine: String? = nil, links: [Link] = [],
         memory: MemoryChange? = nil, changes: CookieChanges? = nil, waitingUntil: Date? = nil,
-        conversationId: String? = nil
+        conversationId: String? = nil, pictures: [Data] = []
     ) {
         self.id = id
         self.role = role
@@ -63,6 +66,7 @@ public struct CookieMessage: Identifiable, Equatable, Sendable {
         self.changes = changes
         self.waitingUntil = waitingUntil
         self.conversationId = conversationId
+        self.pictures = pictures
     }
 
     /// Still waiting for the email summary.
@@ -120,8 +124,10 @@ public enum CookieChat {
     public static func messages(_ turns: [CookieTurn]) -> [CookieMessage] {
         turns.flatMap { turn -> [CookieMessage] in
             guard let heard = turn.heard, let text = turn.text else { return [] }
-            // A recording with no words in it has no question to show.
-            let question = heard.isEmpty ? [] : [CookieMessage(id: turn.id + "-q", role: .you, text: heard)]
+            // A recording with no words in it has no question to show,
+            // unless something was shared with it (intent 0019).
+            let asked = questionText(heard, shared: turn.shared)
+            let question = asked.isEmpty ? [] : [CookieMessage(id: turn.id + "-q", role: .you, text: asked)]
             return question + [
                 CookieMessage(
                     id: turn.id, role: .cookie, text: text, kind: kind(turn.outcome.rawValue),
@@ -179,6 +185,8 @@ public enum CookieChat {
         let labels = sources.compactMap { source -> String? in
             // An email she read (intent 0009, ERA-6): its subject is the link under the answer.
             if source.email == true { return "an email" }
+            // What the parent shared with the question (intent 0019).
+            if source.shared == true { return "what you shared" }
             switch source.kind {
             case ._self: return nil
             case .conversation: return "earlier in this chat"

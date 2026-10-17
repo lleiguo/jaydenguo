@@ -42,9 +42,10 @@ the share sheet and a TestFlight build.
 | Task | Status |
 |---|---|
 | O-1 | done 2026-10-17: approved, defaults kept. |
-| S1 | built 2026-10-17 on `cookie/0019-s1-server`. |
+| S1 | merged 2026-10-17 (#148). |
+| S2 | built 2026-10-17 on `ios/0019-s2-chat` (below). |
 | SP-S2, SP-S3 | done 2026-10-17 (below). |
-| S2–S4 | next. |
+| S3, S4 | next. |
 
 **As built (S1, 2026-10-17):**
 - *API.* `POST /assistant/ask` takes `images` (1–3 JPEGs, 1 MB each,
@@ -81,3 +82,21 @@ the share sheet and a TestFlight build.
   `MAX_TOKENS` with nothing): she says she can't answer right now and
   nothing changes. 1,536 px reads a full screenshot as well as 2,048; the
   phone keeps 2,048 (SHT-2).
+
+**As built (S2, 2026-10-17):**
+- *Chat.* A + button left of the microphone: Choose Photos (the system
+  picker, 3 at most) or Paste (a picture, or text: over 500 characters it
+  becomes an attachment, otherwise it goes in the field). Typing past 500
+  characters moves the text out of the field too. Thumbnails, or the
+  paste's first line, show above the field with a remove button; the
+  field says "Add this, summarize… (optional)". A spoken question takes
+  the attachment with it (SHT-5).
+- *HubKit.* `CookieAttachment`, `CookieImage.jpeg` (ImageIO: decoded at
+  2,048 px straight from the file, quality lowered to fit 1 MB, smaller if
+  it still doesn't; shared with S3), `CookieChat.body`, and history that
+  shows "add this · 2 screenshots" and "From what you shared".
+- *Tests.* HubKit `CookieShareTests` (7: shrinking a 1290×2796 picture,
+  the body, the rules, history); UI `testALongPasteIsSharedNotAsked`,
+  `testAScreenshotIsSentWithTheQuestion` (with `-HubCookiePicture`, debug
+  builds only: XCUITest can't drive the out-of-process Photos picker); all
+  13 Cookie UI tests pass on the iPhone 18 Pro simulator, iOS 27.
