@@ -5016,6 +5016,34 @@
                       "data",
                       "mimeType"
                     ]
+                  },
+                  "images": {
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1398108
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "maxLength": 40
+                        }
+                      },
+                      "required": [
+                        "data",
+                        "mimeType"
+                      ]
+                    }
+                  },
+                  "pasted": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 8000
                   }
                 }
               }
@@ -5709,6 +5737,9 @@
             "type": "string"
           },
           "email": {
+            "type": "boolean"
+          },
+          "shared": {
             "type": "boolean"
           }
         },
@@ -10957,6 +10988,42 @@
           "waiting": {
             "$ref": "#/components/schemas/Waiting",
             "x-nullable": true
+          },
+          "shared": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "images"
+                  },
+                  "count": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "count"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "pasted"
+                  },
+                  "count": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "count"
+                ]
+              }
+            ]
           },
           "createdAt": {
             "type": "string"

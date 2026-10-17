@@ -82,8 +82,7 @@ export const suggestionsTool: Tool<Record<string, never>> = {
 async function mayApply(ctx: ToolContext): Promise<string | null> {
   if (!asksToApply(ctx.question)) return "the question didn't ask you to add or apply anything";
   if (ctx.turn.webRan) return "nothing can be applied in a question that used the web";
-  if (ctx.turn.did || ctx.turn.actionIds.length)
-    return "one change per question; this question already made one";
+  if (ctx.turn.actionIds.length) return "one change per question; this question already made one";
   if ((await changesSince(ctx.db, new Date(ctx.now.getTime() - 86_400_000))) >= CHANGE_LIMITS.perDay)
     return "that's enough changes for one day; say the Suggestions page can approve it";
   return null;

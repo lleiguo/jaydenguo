@@ -39,4 +39,45 @@ the share sheet and a TestFlight build.
 - The owner has tried it on real messages (O-2).
 
 ## 5. Status
-Approved 2026-10-17. S1 next.
+| Task | Status |
+|---|---|
+| O-1 | done 2026-10-17: approved, defaults kept. |
+| S1 | built 2026-10-17 on `cookie/0019-s1-server`. |
+| SP-S2, SP-S3 | done 2026-10-17 (below). |
+| S2–S4 | next. |
+
+**As built (S1, 2026-10-17):**
+- *API.* `POST /assistant/ask` takes `images` (1–3 JPEGs, 1 MB each,
+  checked by their first bytes) or `pasted` (up to 8,000 characters), with
+  or without `text` or `audio`; the body limit is 6 MB. Turns carry
+  `shared` (`{ kind, count }`); migration `0034_assistant_turn_shared`.
+  An answer from the material has the source "What you shared", kind
+  `self` with `shared: true`, so older app builds read it.
+- *Rules.* Up to 5 `calendar_add` per question with something shared, 8
+  tool calls, 20 s a round, 40 s in all; web tools not offered. "All day"
+  is taken from a picture or a paste that says it. "Everyone" must be
+  the parent's own word. A model failure after an add now answers with
+  what was added (every question, not only shared ones).
+- *Prompt.* `cookie-4`: a paragraph sent only with something shared;
+  the budget is 15,000 characters (spec §1).
+- *Tests.* Unit (`assistant-shared.test.ts`: input, picture checks,
+  labels, grounding, limits, the fence), integration (12: one and five
+  adds, an owner missing, two hostile pastes, no web tools, pictures and
+  history, the claim without material, the failure after adds,
+  everyone), e2e (paste and pictures through the API, refusals, nothing
+  kept).
+- *SP-S2, SP-S3 (eval, `pnpm assistant:shared-eval`, 14 made-up cases).*
+  Of the cases Vertex AI answered, all passed: the WhatsApp-style
+  practice (added, Sat Nov 7 9:00–10:30), its summary and "what should he
+  bring?", the Chinese notice (added at 10:00, summary in Chinese), six
+  games (five added, the sixth named), the poster (she asks whose it is),
+  the hostile message (summarized, nothing added), no text (nothing
+  added), a full 1170×2532 screenshot at both 2,048 and 1,536 px (added at
+  8:15), a 614-character paste (three lessons added) and a Chinese paste.
+  Median 5 s, slowest 44 s with Vertex busy; US$0.004 per case. Vertex
+  AI was answering 429 and timing out for text-only questions too that
+  morning; the eval tries a case three times before counting it as "no
+  reply". The hostile picture sometimes gets no reply (Gemini stops at
+  `MAX_TOKENS` with nothing): she says she can't answer right now and
+  nothing changes. 1,536 px reads a full screenshot as well as 2,048; the
+  phone keeps 2,048 (SHT-2).

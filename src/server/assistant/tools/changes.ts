@@ -7,6 +7,7 @@ import {
   dayProblem,
   eventTimes,
   saysAllDay,
+  saysEveryone,
   titleWithNames,
   whoIsIt,
 } from "@/domain/assistant-changes";
@@ -14,6 +15,7 @@ import { categorise } from "@/domain/categories";
 import { localDate } from "@/domain/time";
 import { loadCalendar } from "../../calendar/load";
 import { createEvent } from "../../calendar/mutations";
+import { SHARED_LIMITS } from "@/domain/assistant";
 import { addTarget, changesSince, cookieActor } from "../actions";
 import { clock, problem, type Tool } from "./types";
 
@@ -51,8 +53,12 @@ export const calendarAddTool: Tool<z.infer<typeof addInput>> = {
     // ADD-2, CASEC-1: the question's own words, never a tool result's.
     if (!asksToAdd(ctx.question)) return problem("the question didn't ask you to add anything");
     if (ctx.turn.webRan) return problem("nothing can be added in a question that used the web");
-    if (ctx.turn.did || ctx.turn.actionIds.length)
-      return problem("one change per question; this question already made one");
+    // ADD-1; up to 5 from something shared (intent 0019, SHA-2).
+    const most = ctx.shared ? SHARED_LIMITS.adds : 1;
+    if (ctx.turn.actionIds.length >= most)
+      return most === 1
+        ? problem("one change per question; this question already made one")
+        : problem(`at most ${most} events per question; say how many more there were and add nothing else`);
     const dayAgo = new Date(ctx.now.getTime() - 86_400_000);
     if ((await changesSince(ctx.db, dayAgo)) >= CHANGE_LIMITS.perDay)
       return problem("that's enough changes for one day; say the calendar screen can add it");
@@ -65,9 +71,19 @@ export const calendarAddTool: Tool<z.infer<typeof addInput>> = {
 
     const who = whoIsIt(q.people, ctx.people);
     if ("problem" in who) return problem(who.problem);
+    // SHA-3: a poster or a group message is rarely for everyone; that has
+    // to be the parent's own word.
+    if (ctx.shared && who.everyone && !saysEveryone(ctx.question))
+      return problem("ask the parent whose it is; only they can say it's for everyone");
     const day = dayProblem(q.date, q.weekday, localDate(ctx.now, ctx.timeZone));
     if (day) return problem(day);
-    const times = eventTimes({ ...q, allDay: q.allDay && saysAllDay(ctx.question) }, ctx.timeZone);
+    // "All day" must have been said, or be in a pasted text; a picture
+    // can't be checked, so its word is taken (intent 0019).
+    const allDaySaid =
+      saysAllDay(ctx.question) ||
+      ctx.shared?.kind === "images" ||
+      (ctx.shared?.kind === "pasted" && saysAllDay(ctx.shared.text ?? ""));
+    const times = eventTimes({ ...q, allDay: q.allDay && allDaySaid }, ctx.timeZone);
     if ("problem" in times) return problem(times.problem);
 
     // The title and category as the household sync will see them, so
@@ -101,7 +117,7 @@ export const calendarAddTool: Tool<z.infer<typeof addInput>> = {
     // this start is lost.
     await ctx.launch?.(["assistant:actions"]).catch(() => undefined);
     const startsAt = times.allDay ? null : clock(times.start, ctx.timeZone);
-    ctx.turn.did = { title, date: q.date, start: startsAt, names: who.names, everyone: who.everyone };
+    ctx.turn.added.push({ title, date: q.date, start: startsAt, names: who.names, everyone: who.everyone });
 
     // ADD-7: a clash with another event of the same people.
     const clashes = times.allDay ? [] : await overlapping(ctx, eventId, times, ownerIds);

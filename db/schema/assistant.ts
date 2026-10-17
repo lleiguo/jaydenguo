@@ -47,6 +47,11 @@ export const assistantTurns = pgTable(
     inputTokens: integer("input_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
     audioSeconds: real("audio_seconds"),
+    // What the parent shared with the question (intent 0019): "images" or
+    // "pasted", and how many images or characters. Never the content
+    // (SHSEC-1).
+    sharedKind: text("shared_kind"),
+    sharedCount: integer("shared_count"),
     speechChars: integer("speech_chars").notNull().default(0),
     searches: integer("searches").notNull().default(0),
     // Estimated from tokens and list prices (LIM-6).
@@ -59,6 +64,7 @@ export const assistantTurns = pgTable(
     index("assistant_turns_created_idx").on(t.createdAt),
     check("assistant_turns_mode_chk", sql`${t.mode} in (${inList(ASSISTANT_MODES)})`),
     check("assistant_turns_outcome_chk", sql`${t.outcome} in (${inList(ASSISTANT_OUTCOMES)})`),
+    check("assistant_turns_shared_chk", sql`${t.sharedKind} in ('images', 'pasted')`),
   ],
 );
 

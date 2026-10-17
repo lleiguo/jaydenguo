@@ -239,6 +239,13 @@
       "when": 1792201515528,
       "tag": "0033_tennis_entry_list",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792242182232,
+      "tag": "0034_assistant_turn_shared",
+      "breakpoints": true
     }
   ]
 }
