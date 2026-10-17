@@ -32,8 +32,8 @@ list" is new; `entryStatusOf` returns null for it, which reads as
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| A1 | Server and web: "Accepted" label, Friday re-reads, draw check, `tennis_entry_list` table (migration 0033), entry API and page, push. | ACC-1..6 | (this PR) |
-| A2 | iPhone: "Accepted" and the entry screen; TestFlight bump separate. | ACC-1, ACC-5 | (this PR) |
+| A1 | Server and web: "Accepted" label, Friday re-reads, draw check, `tennis_entry_list` table (migration 0033), entry API and page, push. | ACC-1..6 | #138, fix #141 |
+| A2 | iPhone: "Accepted" and the entry screen; TestFlight bump separate. | ACC-1, ACC-5 | #139, bump #140 |
 
 ## 4. Done when
 - On a Friday with a list out, the Tennis page says "Accepted" for each
@@ -41,4 +41,11 @@ list" is new; `entryStatusOf` returns null for it, which reads as
   main draw as the site.
 
 ## 5. Status
-Approved 2026-10-16 with the defaults. A1 next.
+Approved 2026-10-16 with the defaults. A1 (#138) and A2 (#139) merged and
+deployed 2026-10-16; TestFlight build 15 uploaded. On production the
+Tennis page shows TTC-Langley U9 Mixed as "Accepted". Its list was read
+before the deploy, so #141 reads lists for accepted entries that have none
+kept (at most every 12 hours); the 05:05 sync keeps it too.
+
+Left for the owner: Terraform apply for the Friday schedule (O-2; until
+then one 10:00 run); install build 15 (O-3).
