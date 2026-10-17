@@ -108,6 +108,12 @@ export type HouseholdWriter = {
   calendarId: string;
   // The event tagged with a hub key, if a run got that far before (DUP2-3).
   findTagged(hubKey: string): Promise<Tagged | null>;
+  // BACK-2: every event the hub tagged that is still in the calendar
+  // between these times (Google can't list by "has the tag", so it reads
+  // them all and keeps the tagged ones), and one event by ID; null when it
+  // was deleted. Reading only.
+  listTagged(timeMin: Date, timeMax: Date): Promise<Tagged[]>;
+  get(googleEventId: string): Promise<Tagged | null>;
   create(body: object): Promise<Tagged>;
   patch(googleEventId: string, body: object): Promise<Tagged>;
   // Takes the hub's tag off a twin (DUP2-2), leaving the family's event.
@@ -165,6 +171,37 @@ export function householdWriter(
       if (!res.ok) throw fail(res.status);
       const body = (await res.json()) as { items?: Tagged[] };
       return body.items?.find((e) => e.status !== "cancelled") ?? null;
+    },
+    async listTagged(timeMin, timeMax) {
+      const out: Tagged[] = [];
+      let pageToken: string | undefined;
+      let pages = 0;
+      do {
+        const query = new URLSearchParams({
+          singleEvents: "true",
+          timeMin: timeMin.toISOString(),
+          timeMax: timeMax.toISOString(),
+          maxResults: "250",
+          ...(pageToken ? { pageToken } : {}),
+        });
+        const res = await call("GET", `${base}?${query}`);
+        if (!res.ok) throw fail(res.status);
+        const body = (await res.json()) as { items?: Tagged[]; nextPageToken?: string };
+        out.push(
+          ...(body.items ?? []).filter(
+            (e) => e.status !== "cancelled" && e.extendedProperties?.private?.[HUB_TAG],
+          ),
+        );
+        pageToken = body.nextPageToken;
+      } while (pageToken && ++pages < 40);
+      return out;
+    },
+    async get(id) {
+      const res = await call("GET", one(id));
+      if (res.status === 404 || res.status === 410) return null;
+      if (!res.ok) throw fail(res.status);
+      const e = (await res.json()) as Tagged;
+      return e.status === "cancelled" ? null : e;
     },
     async create(body) {
       const res = await call("POST", base, body);

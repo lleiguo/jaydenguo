@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ATTENDANCE, type Attendance } from "@/domain/constants";
+import { ATTENDANCE, GOOGLE_ACTOR, type Attendance } from "@/domain/constants";
 import type { Person } from "@/domain/people";
 import type { ClashView, EventView, Undo } from "@/lib/calendar-types";
 import { call } from "./api";
@@ -83,7 +83,8 @@ export function EventDetail(props: {
 
       {o?.moved && (
         <div className="rounded border p-2" data-testid="moved-info">
-          You moved this (was {formatWhen(o.originalStart, o.originalEnd, e.allDay, tz)} at the source).
+          {o.createdBy === GOOGLE_ACTOR ? "Changed in Google Calendar" : "You moved this"} (was{" "}
+          {formatWhen(o.originalStart, o.originalEnd, e.allDay, tz)} at the source).
           {o.sourceChangedAt && (
             <p className="mt-1 font-medium text-amber-800 dark:text-amber-300" role="status">
               ⚠ Source changed since you moved this.
@@ -242,6 +243,22 @@ export function EventDetail(props: {
             onClick={() => act(() => call(`/api/v1/events/${e.id}`, "DELETE"), "Deleted.")}
           >
             Delete
+          </button>
+        )}
+        {e.source?.kind === "google_calendar" && e.status === "active" && (
+          // Intent 0020, TWO-4: with two-way sync on, it goes from the
+          // family's Google Calendar too, so it asks first.
+          <button
+            className="rounded border border-red-700 px-3 py-1 text-red-700 dark:text-red-400"
+            onClick={() =>
+              window.confirm(`Delete “${e.title}” from the family's Google Calendar too?`) &&
+              act(
+                () => call(`/api/v1/events/${e.id}`, "DELETE"),
+                "Deleted; it goes from Google Calendar shortly.",
+              )
+            }
+          >
+            Delete…
           </button>
         )}
       </div>

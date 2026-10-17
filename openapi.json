@@ -7885,6 +7885,9 @@
               },
               "unlinked": {
                 "type": "number"
+              },
+              "fromGoogle": {
+                "type": "number"
               }
             },
             "required": [
@@ -8030,6 +8033,9 @@
                 "type": "number"
               },
               "unlinked": {
+                "type": "number"
+              },
+              "fromGoogle": {
                 "type": "number"
               }
             },

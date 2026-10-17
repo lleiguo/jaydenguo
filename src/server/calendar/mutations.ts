@@ -9,8 +9,11 @@ import {
   eventSeries,
   sources,
 } from "@db/schema";
+import { ownersFor, type CategoryMapping } from "../../domain/categories";
 import { pairKey } from "../../domain/clashes";
-import { ATTENDANCE, CATEGORIES, type Attendance } from "../../domain/constants";
+import { ATTENDANCE, CATEGORIES, GOOGLE_ACTOR, type Attendance } from "../../domain/constants";
+import { HOUSEHOLD_KINDS } from "../../domain/duplicates";
+import { titleFromGoogle, type BackChange, type HouseholdEdit } from "../../domain/household-sync";
 import { resolveOwners } from "../../domain/people";
 import { repeatKey, sameRepeat } from "../../domain/repeats";
 import { expandSeries } from "../../domain/series";
@@ -18,6 +21,7 @@ import { isValidTimeZone, localDate } from "../../domain/time";
 import type { Undo } from "../../lib/calendar-types";
 import type { Db, Tx } from "../db/client";
 import { HttpError } from "../errors";
+import { getHouseholdSync } from "../household-sync";
 import { listPeople } from "../people";
 import { getHomeTimeZone } from "../settings";
 import { syncRecords } from "../sync/apply";
@@ -153,11 +157,26 @@ export async function updateEvent(db: Db, actor: Actor, id: string, input: z.inf
 export async function deleteEvent(db: Db, actor: Actor, id: string) {
   return db.transaction(async (tx) => {
     const e = await getEvent(tx, id);
-    if (e.sourceId) throw new HttpError(409, "events from a source can be skipped, not deleted");
+    // Intent 0020, TWO-4: with two-way sync on, a household event deleted
+    // here is deleted in Google by the next `household:sync`.
+    const deletable = e.sourceId ? await householdDeletable(tx, e.sourceId) : true;
+    if (deletable === "off")
+      throw new HttpError(
+        409,
+        "Turn on two-way sync with the household calendar (Settings) to delete its events here.",
+      );
+    if (!deletable) throw new HttpError(409, "events from a source can be skipped, not deleted");
     await tx.update(events).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(events.id, id));
     await revise(tx, id, actor, "delete", fieldsOf(e), null);
     await note(tx, "event", id);
   });
+}
+
+async function householdDeletable(tx: Tx, sourceId: string): Promise<boolean | "off"> {
+  const [source] = await tx.select({ kind: sources.kind }).from(sources).where(eq(sources.id, sourceId));
+  if (!source || !HOUSEHOLD_KINDS.includes(source.kind)) return false;
+  const sync = await getHouseholdSync(tx);
+  return sync.mode === "on" && (!sync.sourceId || sync.sourceId === sourceId) ? true : "off";
 }
 
 export async function restoreEvent(db: Db, actor: Actor, id: string) {
@@ -518,4 +537,95 @@ export async function extendAllSeries(db: Db) {
     .where(isNull(eventSeries.deletedAt));
   for (const s of all) await writeOccurrences(db, "series", s.id, localDate(new Date(), s.timeZone));
   return all.length;
+}
+
+// Intent 0020, BACK-3/4: a change made in Google Calendar to an event the
+// hub wrote there, applied by `household:sync`. A feed's event gets an
+// override, as a drag would ("changed in Google Calendar"); an event added
+// here changes itself.
+export async function applyGoogleChange(
+  db: Db,
+  change: BackChange,
+  ctx: { people: readonly { id: string; name: string }[]; mapping: CategoryMapping },
+) {
+  return db.transaction(async (tx) => {
+    const e = await getEvent(tx, change.eventId);
+    if (change.kind === "move") {
+      await writeOverride(tx, GOOGLE_ACTOR, e, {
+        newStartUtc: new Date(change.start),
+        newEndUtc: new Date(change.end),
+      });
+    } else if (change.kind === "skip") {
+      await writeOverride(tx, GOOGLE_ACTOR, e, { skip: true });
+    } else if (change.kind === "delete") {
+      await tx
+        .update(events)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(events.id, e.id));
+      await revise(tx, e.id, GOOGLE_ACTOR, "delete", fieldsOf(e), null);
+      await note(tx, "event", e.id);
+    } else {
+      const named = change.title ? titleFromGoogle(change.title, ctx.people) : null;
+      const [after] = await tx
+        .update(events)
+        .set({
+          ...(named
+            ? {
+                title: named.title,
+                ownerIds: named.owners ?? ownersFor(change.title!, ctx.mapping, ctx.people),
+              }
+            : {}),
+          startUtc: new Date(change.start),
+          endUtc: new Date(change.end),
+          allDay: change.allDay,
+          locationName: change.locationName,
+          updatedAt: new Date(),
+        })
+        .where(eq(events.id, e.id))
+        .returning();
+      await revise(tx, e.id, GOOGLE_ACTOR, "update", fieldsOf(e), fieldsOf(after));
+      await note(tx, "event", e.id);
+    }
+  });
+}
+
+// BACK-5: changed both here and in Google; the hub's later change stays
+// and goes back to Google. Kept in the event's history.
+export async function noteHubWon(db: Db, eventId: string) {
+  await db.transaction(async (tx) => {
+    await revise(tx, eventId, GOOGLE_ACTOR, "google_edit_overruled", null, { won: "hub" });
+  });
+}
+
+// TWO-4: Google now has the hub's change to a household event, so the
+// event holds it itself and the override is cleared (the event is plain
+// again). Its skip, attendance and owners stay. A removed one is cancelled,
+// as the next read of Household would.
+export async function householdEditWritten(db: Db, actor: Actor, edit: HouseholdEdit) {
+  return db.transaction(async (tx) => {
+    const e = await getEvent(tx, edit.eventId);
+    const o = await activeOverride(tx, e.id);
+    if (edit.kind === "patch") {
+      await tx
+        .update(events)
+        .set({ startUtc: new Date(edit.start), endUtc: new Date(edit.end), updatedAt: new Date() })
+        .where(eq(events.id, e.id));
+      await revise(tx, e.id, actor, "move", fieldsOf(e), { start: edit.start, end: edit.end });
+    } else {
+      await tx.update(events).set({ status: "cancelled", updatedAt: new Date() }).where(eq(events.id, e.id));
+      await revise(tx, e.id, actor, "cancel", fieldsOf(e), null);
+    }
+    if (o && o.id === edit.overrideId) {
+      if (edit.kind === "patch" && (o.skip || o.attendance || o.ownerIds)) {
+        await writeOverride(tx, actor, e, { newStartUtc: null, newEndUtc: null });
+      } else {
+        await tx
+          .update(eventOverrides)
+          .set({ clearedAt: new Date(), clearedBy: actor })
+          .where(eq(eventOverrides.id, o.id));
+        await revise(tx, e.id, actor, "override_cleared", o, null);
+      }
+    }
+    await note(tx, "event", e.id);
+  });
 }
