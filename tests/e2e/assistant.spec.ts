@@ -222,6 +222,55 @@ test("Cookie refuses a recording she can't use, and a question that is both or n
   }
 });
 
+test("Cookie reads a pasted text or screenshots and keeps only what kind they were (0019 SHT-1..4, SHSEC-1)", async ({
+  context,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "one shared chat; one project is enough");
+  await signInAs(context, OWNER);
+  await apiSend(context, "DELETE", "/api/v1/assistant/turns");
+  // The stand-in quotes the first line in its answer (answers are kept);
+  // the second line must be nowhere.
+  const message = "Coach: practice moved to Saturday at 9.\nBring orange slices for the zebra team.";
+  const read = await apiSend(context, "POST", "/api/v1/assistant/ask", { pasted: message });
+  expect(read).toMatchObject({
+    outcome: "answer",
+    heard: "",
+    sources: [{ kind: "self", label: "What you shared", shared: true }],
+  });
+  expect(read.text).toContain("Coach: practice moved");
+
+  // A tiny JPEG: the stand-in model only counts pictures.
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(64)]).toString("base64");
+  const pictures = await apiSend(context, "POST", "/api/v1/assistant/ask", {
+    text: "what is this?",
+    images: [
+      { data: jpeg, mimeType: "image/jpeg" },
+      { data: jpeg, mimeType: "image/jpeg" },
+    ],
+  });
+  expect(pictures.text).toBe("You shared 2 pictures.");
+
+  const { turns } = await apiSend(context, "GET", "/api/v1/assistant/turns?limit=10");
+  expect(turns.map((t: { shared?: unknown }) => t.shared)).toEqual([
+    { kind: "pasted", count: message.length },
+    { kind: "images", count: 2 },
+  ]);
+  expect(JSON.stringify(turns)).not.toContain("orange slices");
+  await apiSend(context, "DELETE", "/api/v1/assistant/turns");
+
+  // Refused before any model is called.
+  for (const data of [
+    { images: [{ data: Buffer.from("GIF89a").toString("base64"), mimeType: "image/jpeg" }] },
+    { images: [{ data: jpeg, mimeType: "image/png" }] },
+    { images: Array(4).fill({ data: jpeg, mimeType: "image/jpeg" }) },
+    { images: [{ data: jpeg, mimeType: "image/jpeg" }], pasted: "both" },
+    { pasted: "x".repeat(8001) },
+  ]) {
+    const res = await context.request.post("/api/v1/assistant/ask", { data, headers: { origin: APP_URL } });
+    expect(res.status()).toBe(400);
+  }
+});
+
 test("an ID that isn't one is simply not found", async ({ context }) => {
   await signInAs(context, OWNER);
   const headers = { origin: APP_URL };

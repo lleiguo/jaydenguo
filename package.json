@@ -26,7 +26,8 @@
     "smoke": "tsx src/worker/main.ts smoke",
     "seed": "tsx src/worker/main.ts seed",
     "openapi": "tsx scripts/openapi.ts",
-    "assistant:eval": "tsx scripts/assistant-eval.ts"
+    "assistant:eval": "tsx scripts/assistant-eval.ts",
+    "assistant:shared-eval": "tsx scripts/assistant-shared-eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/vertex-sdk": "^0.19.11",
