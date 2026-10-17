@@ -32,5 +32,6 @@ Approved 2026-10-16 with the defaults (8 s, one saved copy, no spinner; S-1, S-2
 - 2026-10-16: build 16 merged (#145) and archived. The upload failed:
   Xcode's App Store Connect sign-in for the team has expired. After the
   owner signs in again (Xcode → Settings → Accounts), re-run the export.
-  Next build = 17.
+  Build 17 (#151, intent 0019) is cut from a later `main` and has S1
+  too, so uploading 17 covers this.
 - Left: the upload, then O-1 (Airplane-mode check on the phone).
