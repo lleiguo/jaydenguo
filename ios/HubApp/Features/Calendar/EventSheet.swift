@@ -79,12 +79,14 @@ struct EventSheet: View {
             }
             if let o = e.override, o.moved {
                 Section("Moved") {
-                    Text("You moved this. The source had it \(store.homeTime.range(o.originalStart, o.originalEnd)).")
+                    // A move read back from the household Google Calendar (intent 0020, BACK-3, BACK-5).
+                    Text("\(o.changedInGoogle ? "Changed in Google Calendar" : "You moved this"). The source had it \(store.homeTime.range(o.originalStart, o.originalEnd)).")
+                        .accessibilityIdentifier("movedInfo")
                     if o.sourceChangedAt != nil {
-                        Label("The source changed since you moved this.", systemImage: "exclamationmark.triangle.fill")
+                        Label("The source changed since \(o.changedInGoogle ? "it was moved" : "you moved this").", systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.warning)
                         if let snap = o.snapshot {
-                            Text("When you moved it, the source had \(store.homeTime.range(snap.start, snap.end)).").font(.caption)
+                            Text("When \(o.changedInGoogle ? "it was moved" : "you moved it"), the source had \(store.homeTime.range(snap.start, snap.end)).").font(.caption)
                         }
                     }
                     Button("Use the source's time") { run { await store.useSourceTime(e) } }
