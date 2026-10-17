@@ -89,13 +89,18 @@ Google), DUP2 (no duplicates), TWSEC (security).
   4. Record hashes and `updated`; unlock.
 - **Writer**: `googleCalendarWriter` gains `patch` and `list` by
   `hubEventId`; the fence (TWSEC-1) is in the writer, not the caller.
-- **Cookie**: `assistant:actions` stops writing to Google itself; it
-  creates the hub event and starts `household:sync`. Undo deletes the hub
-  event and the job removes it from Google.
+- **Cookie**: as built (H2), `assistant:actions` keeps writing her adds
+  to Household itself (0008 GCW-5): the event comes back as a household
+  event, so the job has nothing to add. The job leaves out an event while
+  her action is pending, so it is never written twice.
 - **Schedule**: a Cloud Scheduler entry in `infra/scheduler.tf` for
   `household:sync` (Terraform apply by the owner).
 - **Settings**: the three-way switch and the dry-run list (TWO-9), the
-  last run's counts and any held run (TWSEC-2).
+  last run's counts and any held run (TWSEC-2). As built, on the Settings
+  page ("Household calendar, both ways"), next to the old copy.
+- **Starting the job** (as built): after any successful write to
+  `/api/v1/events`, `series`, `overrides` or `suggestions` (at most one
+  start waiting at a time), and at the end of every `sync` job.
 
 ## 4. Testing
 - **Unit:** title prefixes both ways (TWO-2 written, `ownersFor` reads it

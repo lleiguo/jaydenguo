@@ -26,6 +26,8 @@ export type GoogleEvent = {
   htmlLink?: string;
   start: GoogleTime;
   end: GoogleTime;
+  updated?: string;
+  extendedProperties?: { private?: Record<string, string>; shared?: Record<string, string> };
 };
 export type GoogleCalendarRaw = { items: GoogleEvent[]; timeMin: string; timeMax: string };
 
@@ -69,6 +71,9 @@ export function normaliseGoogle(raw: GoogleCalendarRaw, ctx: AdapterContext): No
   const warnings: string[] = [];
   for (const e of raw.items) {
     if (e.status === "cancelled") continue;
+    // Intent 0020, BACK-2: an event the hub wrote here is the hub's own
+    // event, not a new household one.
+    if (e.extendedProperties?.private?.hubEventId) continue;
     if (!e.start || (!e.start.date && !e.start.dateTime)) {
       warnings.push(`Skipped an event with no start time (${e.id}).`);
       continue;

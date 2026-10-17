@@ -110,6 +110,9 @@ export type HouseholdWriter = {
   findTagged(hubKey: string): Promise<Tagged | null>;
   create(body: object): Promise<Tagged>;
   patch(googleEventId: string, body: object): Promise<Tagged>;
+  // Takes the hub's tag off a twin (DUP2-2), leaving the family's event.
+  // Gone already counts as done.
+  untag(googleEventId: string): Promise<void>;
   // Gone already counts as removed.
   remove(googleEventId: string): Promise<void>;
 };
@@ -173,6 +176,20 @@ export function householdWriter(
       const res = await call("PATCH", one(id), body);
       if (!res.ok) throw fail(res.status);
       return (await res.json()) as Tagged;
+    },
+    async untag(id) {
+      const e = await fence(id);
+      if (!e) return;
+      // A full replace: a patch merges the private properties, so it can't
+      // take one away.
+      const rest = { ...e.extendedProperties?.private };
+      delete rest[HUB_TAG];
+      const res = await call("PUT", one(id), {
+        ...e,
+        extendedProperties: { ...e.extendedProperties, private: rest },
+      });
+      if (res.ok || res.status === 404 || res.status === 410) return;
+      throw fail(res.status);
     },
     async remove(id) {
       if (!(await fence(id))) return;
