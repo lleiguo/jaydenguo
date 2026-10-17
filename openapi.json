@@ -9013,6 +9013,25 @@
           "homeTimeZone"
         ]
       },
+      "Shared": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "images",
+              "pasted"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "count"
+        ]
+      },
       "Side": {
         "type": "object",
         "properties": {
@@ -10990,40 +11009,7 @@
             "x-nullable": true
           },
           "shared": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "images"
-                  },
-                  "count": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "count"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "pasted"
-                  },
-                  "count": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "count"
-                ]
-              }
-            ]
+            "$ref": "#/components/schemas/Shared"
           },
           "createdAt": {
             "type": "string"

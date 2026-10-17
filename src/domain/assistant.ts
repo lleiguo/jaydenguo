@@ -405,7 +405,9 @@ export function clipProblem(mimeType: string, bytes: Uint8Array): string | null 
 
 // --- Shared images and text (intent 0019) ---------------------------------------
 
-export type Shared = { kind: "images"; count: number } | { kind: "pasted"; count: number };
+// One object, not a union, so clients generated from openapi.json read it
+// simply.
+export type Shared = { kind: "images" | "pasted"; count: number };
 
 // SHT-2: the phone sends JPEG only, at most 1 MB.
 export function imageProblem(mimeType: string, bytes: Uint8Array): string | null {
