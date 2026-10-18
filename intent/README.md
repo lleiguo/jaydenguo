@@ -37,3 +37,4 @@ Rules:
 | 0018 | [The saved calendar first, on any connection](0018-calendar-cache-first/) | approved 2026-10-16 (chat); defaults kept | approved 2026-10-16 (chat); S-1, S-2 accepted | approved 2026-10-16; S1 next |
 | 0019 | [Cookie reads a screenshot or pasted text](0019-cookie-reads-screenshots/) | approved 2026-10-17 (chat); defaults kept | approved 2026-10-17 (chat); S-1..S-4 accepted | approved 2026-10-17; S1–S3 merged (#148–#150), S1 deployed; build 17 (#151) waits on the owner's Xcode sign-in |
 | 0020 | [One family calendar, both ways](0020-household-two-way/) | approved 2026-10-17 (chat); defaults kept | approved 2026-10-17 (chat); T-1..T-6 accepted | approved 2026-10-17; H1–H5 built; Terraform apply (O-3) waits on owner |
+| 0021 | [School stays out of the household calendar](0021-household-no-school/) | draft 2026-10-18 | draft 2026-10-18 | draft 2026-10-18 |

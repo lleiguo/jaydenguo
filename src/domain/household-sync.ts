@@ -14,6 +14,8 @@ import { schoolBlocks } from "./school-blocks";
 export const WINDOW_DAYS = 366;
 // TWSEC-2: a run that would delete or change more than this stops.
 export const BRAKE = { deletes: 10, changes: 50 };
+// Intent 0021 (NOS-1): the boys' school stays in the hub, out of Household.
+export const LEFT_OUT: readonly Category[] = ["school_class", "school_closure"];
 
 export type PlanItem = {
   id: string;
@@ -206,7 +208,9 @@ export function planHousehold(input: {
   const byKey = new Map(all.map((w) => [w.key, w]));
   // TWO-7: what has ended is never touched, whatever its state.
   const past = (w: Wanted) => Date.parse(w.end) <= now.getTime();
-  const wanted = all.filter((w) => w.active && !past(w) && Date.parse(w.start) < horizon.getTime());
+  const wanted = all.filter(
+    (w) => w.active && !LEFT_OUT.includes(w.category) && !past(w) && Date.parse(w.start) < horizon.getTime(),
+  );
   const have = new Map(links.map((l) => [l.hubKey, l]));
   const linkedGoogle = new Set(links.map((l) => l.googleEventId));
 
@@ -365,8 +369,8 @@ const sameText = (a: string | undefined | null, b: string | undefined | null) =>
 
 // Compares each event the hub wrote with what Google holds now. Only events
 // Google says changed since the hub last saw them (`updated`) and that now
-// differ in time, title or place count (BACK-2). Past events, school days
-// and events no longer in the hub are left to the write (TWO-7).
+// differ in time, title or place count (BACK-2). Past events, school (0021
+// NOS-1) and events no longer in the hub are left to the write (TWO-7).
 export function readBack(input: {
   items: PlanItem[];
   people: readonly Person[];
@@ -380,7 +384,7 @@ export function readBack(input: {
   const out: ReadBack = { changes: [], hubWon: [], seen: [], gone: [] };
   for (const link of input.links) {
     const item = byId.get(link.hubKey);
-    if (!item || Date.parse(item.end) <= now.getTime()) continue;
+    if (!item || LEFT_OUT.includes(item.category) || Date.parse(item.end) <= now.getTime()) continue;
     const g = input.google.get(link.googleEventId);
     if (!g) continue;
     const hubMade = !!item.hubMade && link.origin === "hub";
