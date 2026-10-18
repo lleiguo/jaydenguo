@@ -24,6 +24,9 @@ export type ToolContext = {
   question: string;
   // The conversation the question belongs to (a follow-up answer goes in it).
   conversationId: string;
+  // Her answer just before this question in the conversation, if any: a
+  // yes to her "Add it to the calendar?" asks to add (ADD-2).
+  lastAnswer?: string | null;
   // The question was spoken, not typed.
   spoken?: boolean;
   // What the parent shared with the question (intent 0019), with a pasted

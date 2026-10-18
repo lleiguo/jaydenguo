@@ -3,7 +3,11 @@ import {
   addingLine,
   appliedLine,
   asksToAdd,
+  asksToAddAfter,
   asksToApply,
+  claimsAdding,
+  notAddedLine,
+  offersToAdd,
   saysAllDay,
   leftBecause,
   unsureFields,
@@ -42,6 +46,55 @@ describe("the add gate (ADD-2)", () => {
       "他周四有牙医吗？",
     ])
       expect(asksToAdd(q), q).toBe(false);
+  });
+
+  it("opens for making something an event without the word add", () => {
+    for (const q of [
+      "Turn this shopping list into a calendar event",
+      "make it an event on Saturday",
+      "把购物清单放进日历",
+      "记在日历上",
+    ])
+      expect(asksToAdd(q), q).toBe(true);
+  });
+
+  it("opens for a yes to her own offer to add, and only then", () => {
+    const offer = "Milk, eggs and bread from Costco on Saturday. Add it to the calendar?";
+    const zhOffer = "周六去 Costco 买牛奶和鸡蛋。要加到日历吗？";
+    for (const yes of ["yes", "Yes please!", "ok", "Sure.", "go ahead", "好的", "可以", "嗯", "好，加吧"])
+      expect(asksToAddAfter(yes, yes.match(/[a-z]/i) ? offer : zhOffer), yes).toBe(true);
+    // No offer just before, a no, or more than a yes.
+    expect(asksToAddAfter("yes", "Costco is open until 8 pm.")).toBe(false);
+    expect(asksToAddAfter("yes", null)).toBe(false);
+    expect(asksToAddAfter("no", offer)).toBe(false);
+    expect(asksToAddAfter("不要", zhOffer)).toBe(false);
+    expect(asksToAddAfter("yes, and what time does Costco close?", offer)).toBe(false);
+    // An offer in the middle of an answer isn't her last word.
+    expect(offersToAdd("Add it to the calendar? It's on Saturday.")).toBe(false);
+  });
+});
+
+describe("saying it was added (ADD-9)", () => {
+  it("spots an answer that says an event is being added", () => {
+    for (const a of [
+      "Adding: Costco shopping, Saturday Oct 24, all day, for everyone.",
+      "Sure! I've added it to the calendar.",
+      "正在添加：Costco 购物，周六。",
+      "已经加到日历里了。",
+    ])
+      expect(claimsAdding(a), a).toBe(true);
+    for (const a of [
+      "Add it to the calendar?",
+      "Whose is it?",
+      "要加到日历吗？",
+      "What time should I add it at?",
+    ])
+      expect(claimsAdding(a), a).toBe(false);
+  });
+
+  it("says nothing was added, in her language", () => {
+    expect(notAddedLine("en")).toMatch(/^Nothing was added/);
+    expect(notAddedLine("zh")).toMatch(/^还没有加到日历/);
   });
 });
 

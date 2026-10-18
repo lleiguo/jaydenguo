@@ -291,3 +291,17 @@ quotes word for word, US$0.028 for the eight.
   calendar for tomorrow", the model passed `allDay` and it was added for
   the whole day. Now "all day" must be in the parent's words (ADD-5), or
   she asks what time.
+
+**Found in use (2026-10-18), fixed in `cookie/add-after-offer`:**
+- *A yes to her own offer added nothing.* A parent shared a screenshot of
+  a shopping list; Cookie summed it up and ended "Add it to the
+  calendar?" (0019 SHA-4). The parent's next question ("yes", or "turn
+  it into a calendar event") had no word ADD-2 knew, so `calendar_add`
+  was refused both times and no worker ran (production logs, 16:23 and
+  16:24 UTC). Now ADD-2 also opens for a short yes when her answer just
+  before it ended with an offer to add, and for "turn/make … into an
+  event" and "放进/记在…日历". The owner asked for this fix in chat.
+- *She seemed to have added it (ADD-9).* Nothing on the server checked
+  that an answer saying "Adding:" had added anything. Now such an answer
+  with nothing added is replaced by "Nothing was added to the calendar
+  yet…", and the prompt says so too. Unit and integration tests for both.
