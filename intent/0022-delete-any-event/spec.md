@@ -28,10 +28,13 @@ Read with 0001 (CAL-6, CON-4), 0004 (ICAL-6), 0011 (TID-3) and 0020
 
 ## 3. Design
 - `deleteEvent` (`src/server/calendar/mutations.ts`): drop the "source"
-  refusal; for a household source with the switch not On, delete in the
-  hub only (no `household_links` change, so `household:sync` doesn't
-  touch Google). Cookie's call passes `{ sourceEvents: false }` to keep
-  today's rule.
+  refusal and answer 404 for an event already deleted. Cookie has no
+  delete tool (she only undoes her own adds), so DEL-7 needs no change.
+- Household (DEL-4): the household sync setting keeps `onSince`, when the
+  switch last went On. `household:sync` removes a household event from
+  Google only if it was deleted after then, so one deleted while Off or
+  Dry run stays in Google even after the switch goes On. A switch turned
+  On before 0022 has no `onSince`: every delete counts, as before.
 - Sync (`src/server/sync/apply.ts`) already never writes `deleted_at`;
   a test pins it. The email "same lesson" match (0013) skips deleted
   events, so a new email about a deleted lesson comes as a new
@@ -41,8 +44,8 @@ Read with 0001 (CAL-6, CON-4), 0004 (ICAL-6), 0011 (TID-3) and 0020
 - iPhone: `EventSheet.swift` shows Delete for every event with the same
   confirm; `CalendarStore.delete` unchanged. Settings → Deleted shows the
   source.
-- No schema, migration or API shape change (`openapi.json` only loses the
-  409 description).
+- No schema or migration. `openapi.json`: the household sync setting
+  gains `onSince`.
 
 ## 4. Testing
 - Integration: delete a feed, email and household event (switch Off and

@@ -645,9 +645,16 @@ describe("two-way sync with the household calendar", () => {
     expect((await eventRow(second.id)).status).toBe("cancelled");
   });
 
-  it("refuses to delete a household event here while two-way sync is off", async () => {
+  it("deletes a household event in the hub only while two-way sync is off (intent 0022, DEL-4)", async () => {
     await setHouseholdSync(db, { mode: "off", sourceId }, launcher);
     const dinner = (await householdRows()).find((r) => r.externalId === "familydinner")!;
-    await expect(deleteEvent(db, "owner", dinner.id)).rejects.toMatchObject({ status: 409 });
+    await deleteEvent(db, "owner", dinner.id);
+    // Switched On later, the run leaves it in Google.
+    await setHouseholdSync(db, { mode: "on", sourceId }, launcher);
+    requests.length = 0;
+    expect(await run()).toMatchObject({ deleted: 0 });
+    expect(writes().filter((w) => w.method === "DELETE")).toEqual([]);
+    expect(google.has("familydinner")).toBe(true);
+    expect((await eventRow(dinner.id)).deletedAt).not.toBeNull();
   });
 });

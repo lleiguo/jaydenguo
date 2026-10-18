@@ -12,7 +12,6 @@ import {
 import { ownersFor, type CategoryMapping } from "../../domain/categories";
 import { pairKey } from "../../domain/clashes";
 import { ATTENDANCE, CATEGORIES, GOOGLE_ACTOR, type Attendance } from "../../domain/constants";
-import { HOUSEHOLD_KINDS } from "../../domain/duplicates";
 import { titleFromGoogle, type BackChange, type HouseholdEdit } from "../../domain/household-sync";
 import { resolveOwners } from "../../domain/people";
 import { repeatKey, sameRepeat } from "../../domain/repeats";
@@ -21,7 +20,6 @@ import { isValidTimeZone, localDate } from "../../domain/time";
 import type { Undo } from "../../lib/calendar-types";
 import type { Db, Tx } from "../db/client";
 import { HttpError } from "../errors";
-import { getHouseholdSync } from "../household-sync";
 import { listPeople } from "../people";
 import { getHomeTimeZone } from "../settings";
 import { syncRecords } from "../sync/apply";
@@ -153,30 +151,19 @@ export async function updateEvent(db: Db, actor: Actor, id: string, input: z.inf
   });
 }
 
-// CAL-6: a manual delete sets deleted_at; the event can be restored.
+// CAL-6, intent 0022 DEL-1: any event can be deleted; it sets deleted_at,
+// which sync never writes (DEL-3), and the event can be restored. A
+// household event deleted here with two-way sync On is deleted in Google
+// by the next `household:sync` (0020 TWO-4); with it Off or Dry run, the
+// job doesn't run for it, so it goes from the hub only (DEL-4).
 export async function deleteEvent(db: Db, actor: Actor, id: string) {
   return db.transaction(async (tx) => {
     const e = await getEvent(tx, id);
-    // Intent 0020, TWO-4: with two-way sync on, a household event deleted
-    // here is deleted in Google by the next `household:sync`.
-    const deletable = e.sourceId ? await householdDeletable(tx, e.sourceId) : true;
-    if (deletable === "off")
-      throw new HttpError(
-        409,
-        "Turn on two-way sync with the household calendar (Settings) to delete its events here.",
-      );
-    if (!deletable) throw new HttpError(409, "events from a source can be skipped, not deleted");
+    if (e.deletedAt) throw new HttpError(404, "event not found");
     await tx.update(events).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(events.id, id));
     await revise(tx, id, actor, "delete", fieldsOf(e), null);
     await note(tx, "event", id);
   });
-}
-
-async function householdDeletable(tx: Tx, sourceId: string): Promise<boolean | "off"> {
-  const [source] = await tx.select({ kind: sources.kind }).from(sources).where(eq(sources.id, sourceId));
-  if (!source || !HOUSEHOLD_KINDS.includes(source.kind)) return false;
-  const sync = await getHouseholdSync(tx);
-  return sync.mode === "on" && (!sync.sourceId || sync.sourceId === sourceId) ? true : "off";
 }
 
 export async function restoreEvent(db: Db, actor: Actor, id: string) {

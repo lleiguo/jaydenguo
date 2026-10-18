@@ -7911,6 +7911,12 @@
               "null"
             ]
           },
+          "onSince": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "sources": {
             "type": "array",
             "items": {
@@ -7943,6 +7949,7 @@
           "lastError",
           "requestedAt",
           "runStartedAt",
+          "onSince",
           "sources"
         ]
       },
@@ -8059,6 +8066,12 @@
               "string",
               "null"
             ]
+          },
+          "onSince": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -8069,7 +8082,8 @@
           "lastRunAt",
           "lastError",
           "requestedAt",
-          "runStartedAt"
+          "runStartedAt",
+          "onSince"
         ]
       },
       "MatchView": {

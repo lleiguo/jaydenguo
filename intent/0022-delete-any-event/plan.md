@@ -25,4 +25,4 @@ None.
 - The same works on the phone (O-1).
 
 ## 5. Status
-Approved 2026-10-18 with the defaults (household deletable in the hub with the switch Off; Cookie keeps her rule; Skip stays). DL1 next.
+Approved 2026-10-18 with the defaults (household deletable in the hub with the switch Off; Cookie keeps her rule; Skip stays). DL1 built: `deleteEvent` deletes any event; the web event screen has one Delete with the confirm (`src/domain/delete-confirm.ts`); Settings → Deleted shows the source. As built: Cookie has no delete tool, so nothing changed for her; a household event deleted while the switch is Off or Dry run stays in Google after it goes On, using `onSince` in the household sync setting (spec §3).

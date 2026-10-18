@@ -77,6 +77,24 @@ test("categories have their own icon, and the event shows where it came from (CA
     "href",
     "https://example.test/team/event/1",
   );
+
+  // Intent 0022, DEL-1, DEL-2, DEL-5: a source's event can be deleted too,
+  // after "Delete?", and restored.
+  let asked = "";
+  page.once("dialog", (d) => {
+    asked = d.message();
+    void d.accept();
+  });
+  await dialog.getByRole("button", { name: "Delete" }).click();
+  await expect(calEvent(page, `League game ${RUN}`)).toHaveCount(0);
+  expect(asked).toContain(`It stays deleted when ${source} syncs.`);
+  await page.goto("/settings/deleted");
+  const row = page.getByRole("listitem").filter({ hasText: `League game ${RUN}` });
+  await expect(row).toContainText(`from ${source}`);
+  await row.getByRole("button", { name: "Restore" }).click();
+  await expect(row).toHaveCount(0);
+  await openWeek(page, monday);
+  await expect(calEvent(page, `League game ${RUN}`)).toBeVisible();
 });
 
 test("people chips hide each person's events, closures stay, and hidden clashes are marked (CAL-3a, CAL-7)", async ({
@@ -315,6 +333,7 @@ test("manual events: add a repeating one in the form, delete one, restore it (CA
   await expect(calEvent(page, title)).toHaveCount(2);
 
   await calEvent(page, title).first().click();
+  page.once("dialog", (d) => d.accept());
   await page.getByRole("dialog", { name: title }).getByRole("button", { name: "Delete" }).click();
   await expect(calEvent(page, title)).toHaveCount(1);
 

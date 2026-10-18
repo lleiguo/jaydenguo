@@ -111,7 +111,12 @@ export async function scheduledHouseholdSource(db: Db): Promise<string | null> {
 }
 
 // Every event the plan needs: the window, plus anything already linked.
-async function loadItems(db: Db, links: HouseholdLink[], now: Date): Promise<PlanItem[]> {
+async function loadItems(
+  db: Db,
+  links: HouseholdLink[],
+  now: Date,
+  onSince: string | null,
+): Promise<PlanItem[]> {
   const people = await listPeople(db);
   const lo = new Date(now.getTime() - PAST_DAYS * 86_400_000);
   const hi = new Date(now.getTime() + WINDOW_DAYS * 86_400_000);
@@ -141,7 +146,12 @@ async function loadItems(db: Db, links: HouseholdLink[], now: Date): Promise<Pla
     hubMade: (!kind && !e.seriesId) || (!!kind && EMAIL_KINDS.includes(kind)),
     changedAt: o && o.createdAt > e.updatedAt ? o.createdAt : e.updatedAt,
     override: o ? { id: o.id, moved: !!o.newStartUtc, skip: o.skip } : null,
-    deleted: !!e.deletedAt && e.status === "active",
+    // Intent 0022, DEL-4: a household event deleted while the switch was
+    // Off or Dry run stays in Google.
+    deleted:
+      !!e.deletedAt &&
+      e.status === "active" &&
+      !(kind && HOUSEHOLD_KINDS.includes(kind) && onSince && e.deletedAt < new Date(onSince)),
     id: e.id,
     sourceKind: kind ?? null,
     title: e.title,
@@ -341,7 +351,7 @@ export async function runHouseholdSync(db: Db, deps: HouseholdDeps) {
       const people = await listPeople(db);
       const timeZone = await getHomeTimeZone(db);
       let links = await loadLinks(db, source.id);
-      let items = await loadItems(db, links, now);
+      let items = await loadItems(db, links, now, settings.onSince);
       // Named untagged events the writer may change (TWSEC-1), filled in
       // once the plan is known.
       const untagged = new Set<string>();
@@ -400,7 +410,7 @@ export async function runHouseholdSync(db: Db, deps: HouseholdDeps) {
         fromGoogle = back.changes.length;
         if (fromGoogle || stale.size || back.gone.length) {
           links = await loadLinks(db, source.id);
-          items = await loadItems(db, links, now);
+          items = await loadItems(db, links, now, settings.onSince);
         }
         if (fromGoogle) deps.log("household sync: changes from Google", { count: fromGoogle });
       }
