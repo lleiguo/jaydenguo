@@ -109,7 +109,7 @@ describe("planHousehold", () => {
     expect(p.update).toEqual([]);
   });
 
-  it("sends a school day as one block per child (TWO-5)", () => {
+  it("leaves school out, and takes out school days it wrote before (0021 NOS-1, NOS-2)", () => {
     const cls = (start: string, end: string, owners = [jayden.id]) =>
       item({
         sourceKind: "ical",
@@ -120,18 +120,40 @@ describe("planHousehold", () => {
         owners,
         locationName: null,
       });
-    const p = plan([
+    const closed = item({
+      sourceKind: "school_dates",
+      category: "school_closure",
+      title: "PD day",
+      allDay: true,
+      start: "2030-03-06T05:00:00.000Z",
+      end: "2030-03-07T05:00:00.000Z",
+    });
+    const day = [
       cls("2030-03-04T13:30:00.000Z", "2030-03-04T14:30:00.000Z"),
       cls("2030-03-04T19:00:00.000Z", "2030-03-04T20:00:00.000Z"),
-      cls("2030-03-04T13:30:00.000Z", "2030-03-04T14:30:00.000Z", [sam.id]),
-      cls("2030-03-04T18:00:00.000Z", "2030-03-04T19:00:00.000Z", [sam.id]),
-    ]);
-    expect(p.create.map((c) => [c.hubKey, c.body.summary])).toEqual([
-      [`school:2030-03-04:${jayden.id}`, "Jayden – School"],
-      [`school:2030-03-04:${sam.id}`, "Sam – School"],
-    ]);
-    expect(p.create[0].body.start).toMatchObject({ dateTime: "2030-03-04T13:30:00.000Z" });
-    expect(p.create[0].body.end).toMatchObject({ dateTime: "2030-03-04T20:00:00.000Z" });
+    ];
+    const pastDay = [
+      cls("2030-02-25T13:30:00.000Z", "2030-02-25T14:30:00.000Z"),
+      cls("2030-02-25T19:00:00.000Z", "2030-02-25T20:00:00.000Z"),
+    ];
+    const link = (hubKey: string, googleEventId: string): HouseholdLink => ({
+      hubKey,
+      googleEventId,
+      origin: "hub",
+      hash: "x",
+    });
+    const p = plan(
+      [...day, ...pastDay, closed],
+      [
+        link(`school:2030-03-04:${jayden.id}`, "g1"),
+        link(`school:2030-02-25:${jayden.id}`, "g2"),
+        link(closed.id, "g3"),
+      ],
+    );
+    expect(p.create).toEqual([]);
+    expect(p.update).toEqual([]);
+    // TWO-7: the past school day stays.
+    expect(p.remove.map((r) => r.googleEventId).sort()).toEqual(["g1", "g3"]);
   });
 
   it("links a hand-made household twin of a feed event instead of doubling it (DUP2-2)", () => {
