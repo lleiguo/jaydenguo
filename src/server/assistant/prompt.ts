@@ -53,7 +53,8 @@ The web
 const CHANGE_PROMPT = `
 
 Adding to the calendar
-- \`calendar_add\` adds an event, only when the question itself asks you to add, book or schedule one. One change per question.
+- \`calendar_add\` adds an event, only when the question itself asks you to add, book or schedule one, or says yes to your own "Add it to the calendar?" just before it. One change per question.
+- Never say "Adding:" or that something was added unless \`calendar_add\` answered with \`adding\`.
 - Pass what was said: the date you worked out, the weekday only if one was said, and only the people named. Never fill in a person, a day or a time yourself.
 - If it answers with something to ask, ask the parent exactly that with \`answer\` (source "self") and add nothing. Otherwise say "Adding:" and read the event back in one line (source "hub").
 - You still can't move, rename, delete or repeat an event: say which screen does it.`;

@@ -35,7 +35,53 @@ export const CHANGE_LIMITS = {
 // text in an email, an event or a web page can never start it.
 const ADD =
   /\b(add|put|schedule|book|create|set up)\b|添加|新增|安排|预约|预订|记到|放到|加(一?个|上|到|进)|约(一?个|了)/i;
-export const asksToAdd = (question: string) => ADD.test(question);
+// Asking to make something an event without the word "add": "turn this
+// into a calendar event", "make it an event", "放进日历".
+const MAKE_EVENT =
+  /\b(turn|make)\b.{0,60}\b(event|appointment|calendar)\b|(放进|放入|记在|记上|写进|变成|做成|转成).{0,12}(日历|日程|事件)/i;
+export const asksToAdd = (question: string) => ADD.test(question) || MAKE_EVENT.test(question);
+
+// Her own "Add it to the calendar?" ending her last answer (intent 0019,
+// SHA-4): its last sentence is a question about adding or the calendar.
+export function offersToAdd(answer: string | null | undefined): boolean {
+  const end = (answer ?? "").trim();
+  if (!/[?？]$/.test(end)) return false;
+  const last = end.split(/(?<=[.!。！\n])\s*/).at(-1) ?? "";
+  return asksToAdd(last) || /\bcalendar\b|日历|日程/i.test(last);
+}
+
+// A parent's short yes, in English or Chinese.
+const AGREE_EN =
+  /^(yes|yeah|yep|yup|sure|ok|okay|please|yes please|do it|go ahead|sounds good|of course|definitely|absolutely|correct|that's right|please do)( please| thanks| thank you)?$/;
+const AGREE_ZH =
+  /^(好|好的|好啊|好吧|好呀|嗯|嗯嗯|可以|可以的|行|要|要的|是|是的|对|对的|没问题|加吧|加上吧|加一下|麻烦了|谢谢)+$/;
+export function agrees(question: string): boolean {
+  const q = question
+    .trim()
+    .toLowerCase()
+    .replace(/^cookie[,，\s]*/, "")
+    .replace(/[\s.!,，。！~～]+$/, "")
+    .replace(/[,，]\s*/g, " ");
+  return AGREE_EN.test(q) || AGREE_ZH.test(q.replace(/\s+/g, ""));
+}
+
+// ADD-2 as fixed on 2026-10-18: the question asks to add, or it says yes
+// to her own offer to add at the end of the answer just before it. The
+// yes is still the parent's own word.
+export const asksToAddAfter = (question: string, lastAnswer?: string | null) =>
+  asksToAdd(question) || (offersToAdd(lastAnswer) && agrees(question));
+
+// ADD-9: an answer that says an event is being added, which the server
+// checks against what was added.
+const CLAIMS_ADD =
+  /\badding\s*:|\b(i've|i have|i'll|i will|it's|it has been|has been|have been|was|is being)\s+(added|adding)\b|\badded (it|this|that|them|the)\b|正在添加|已(经)?(添加|加上|加到|加进|加好)|加好了|添加好了|添加了|帮你加/i;
+export const claimsAdding = (answer: string) => CLAIMS_ADD.test(answer);
+
+// What the server says instead when nothing was added (ADD-9).
+export const notAddedLine = (language: string | null | undefined) =>
+  language === "zh" || language === "mixed"
+    ? "还没有加到日历里。请再说一次要添加什么、哪天、几点、是谁的。"
+    : "Nothing was added to the calendar yet. Say again what to add, the day, the time and whose it is.";
 
 // EMS-3, EMS-4: the same, for applying email suggestions, which a parent
 // may also ask for as "approve", "accept" or "update my calendar".

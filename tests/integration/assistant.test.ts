@@ -1204,6 +1204,59 @@ describe("Cookie", () => {
       expect(lastToolResult(d, 2)).toContain("didn't ask you to add");
     });
 
+    it("adds on a yes to her own offer to add, and not on a yes to anything else (ADD-2)", async () => {
+      const offer = await ask(
+        db,
+        addDeps(() => [answer(`Dentist on ${dayName} at 6 pm. Add it to the calendar?`, ["self"])]),
+        {
+          userId,
+          text: "What does this say?",
+        },
+      );
+      const d = addDeps((_req, round) =>
+        round === 1
+          ? [addCall({ weekday: dayName, people: [primary] })]
+          : [answer(`Adding: dentist, ${dayName} at 6 pm, for ${primary}.`, ["hub"])],
+      );
+      const result = await ask(db, d, { userId, conversationId: offer.conversationId, text: "Yes please" });
+      expect(result.did?.events).toHaveLength(1);
+      const [row] = await added();
+      await db
+        .update(events)
+        .set({ deletedAt: new Date() })
+        .where(sql`${events.id} = ${row.event!.id}`);
+
+      // A yes after an answer that offered nothing adds nothing.
+      await db.delete(assistantActions);
+      const plain = await ask(
+        db,
+        addDeps(() => [answer(`The dentist is open on ${dayName}.`, ["self"])]),
+        {
+          userId,
+          text: "Is the dentist open?",
+        },
+      );
+      const again = addDeps((_req, round) =>
+        round === 1 ? [addCall({ weekday: dayName, people: [primary] })] : [answer("Okay.", ["self"])],
+      );
+      const no = await ask(db, again, { userId, conversationId: plain.conversationId, text: "yes" });
+      expect(no.did).toBeNull();
+      expect(await added()).toEqual([]);
+    });
+
+    it("never says it is adding when nothing was added (ADD-9)", async () => {
+      const d = addDeps((_req, round) =>
+        round === 1
+          ? [addCall({ people: [primary] })]
+          : [answer(`Adding: dentist, ${dayName} at 6 pm, for ${primary}.`, ["hub"])],
+      );
+      // "What a nice dentist" asks for nothing, so the add is refused.
+      const result = await ask(db, d, { userId, text: "What a nice dentist" });
+      expect(result.did).toBeNull();
+      expect(await added()).toEqual([]);
+      expect(result.text).toMatch(/^Nothing was added to the calendar/);
+    });
+
     it("asks instead of guessing: a weekday that doesn't match, no person, no time, a stranger (ADD-3..5)", async () => {
       const wrongDay = dayName === "Monday" ? "Tuesday" : "Monday";
       const cases: [Record<string, unknown>, string][] = [
