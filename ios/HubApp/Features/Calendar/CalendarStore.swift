@@ -241,10 +241,15 @@ final class CalendarStore {
         }
     }
 
-    func delete(_ e: CalendarEvent) async {
-        await act("Deleted.") {
+    func delete(_ e: CalendarEvent, fromGoogle: Bool = false) async {
+        await act(fromGoogle ? "Deleted; it goes from Google Calendar shortly." : "Deleted.") {
             try await model.client.api.deleteEvent(path: .init(id: e.id)).ok.body.json.undo
         }
+    }
+
+    /// Whether two-way sync with the household calendar is On (intent 0020).
+    func householdSyncOn() async throws -> Bool {
+        try await model.client.api.getHouseholdSync().ok.body.json.mode == .on
     }
 
     /// Syncs every source (SYNC-2); the calendar reloads as each lands.

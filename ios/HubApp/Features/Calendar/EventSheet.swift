@@ -14,6 +14,9 @@ struct EventSheet: View {
     @Environment(\.openURL) private var openURL
     @State private var moving: Bool
     @State private var confirmDelete = false
+    /// Two-way sync with the household calendar is On (intent 0020), read
+    /// when Delete is pressed on a household event (intent 0022, DEL-4).
+    @State private var householdOn = false
 
     init(store: CalendarStore, eventId: String, startMoving: Bool = false, close: @escaping () -> Void, edit: @escaping (CalendarEvent) -> Void) {
         self.store = store
@@ -74,8 +77,9 @@ struct EventSheet: View {
                 }
                 if !e.isFromSource {
                     Button { edit(e) } label: { Label(e.seriesId != nil ? "Edit series" : "Edit", systemImage: "pencil") }
-                    Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash") }
                 }
+                // Intent 0022, DEL-2: any event, after "Delete?".
+                Button(role: .destructive) { Task { await askDelete(e) } } label: { Label("Delete", systemImage: "trash") }
             }
             if let o = e.override, o.moved {
                 Section("Moved") {
@@ -154,10 +158,10 @@ struct EventSheet: View {
                 run { await store.move(e, to: span) }
             }
         }
-        .confirmationDialog("Delete \(e.title)?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) { run { await store.delete(e) } }
+        .confirmationDialog(e.deleteConfirm(householdOn: householdOn).title, isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { run { await store.delete(e, fromGoogle: householdOn) } }
         } message: {
-            Text("It can be restored from Deleted on the website.")
+            Text(e.deleteConfirm(householdOn: householdOn).message ?? "Restore it from Settings → Deleted.")
         }
     }
 
@@ -175,6 +179,14 @@ struct EventSheet: View {
     /// Runs an action; most close the sheet first, so the undo banner is
     /// in view. Closing comes first: a sheet asked to close while the one
     /// on top of it ("Move to…") is still closing stays open.
+    private func askDelete(_ e: CalendarEvent) async {
+        householdOn = false
+        if DeleteConfirm.isHousehold(kind: e.source?.kind) {
+            householdOn = (try? await store.householdSyncOn()) ?? false
+        }
+        confirmDelete = true
+    }
+
     private func run(dismissing: Bool = true, _ work: @escaping () async -> Void) {
         if dismissing { close() }
         Task { await work() }

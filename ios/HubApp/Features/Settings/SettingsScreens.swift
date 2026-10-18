@@ -371,7 +371,8 @@ struct ClashesScreen: View {
     }
 }
 
-/// Settings → Deleted (CAL-6): deleted events, to restore.
+/// Settings → Deleted (CAL-6, intent 0022 DEL-5): deleted events, from a
+/// source or not, to restore.
 struct DeletedScreen: View {
     @Environment(AppModel.self) private var model
 
@@ -383,6 +384,7 @@ struct DeletedScreen: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Label(e.title, systemImage: e.category.symbol)
                             Caption(e.startDate.map { "\(model.homeTime.dayTitle(model.homeTime.localDate($0))), \(e.allDay ? "all day" : model.homeTime.time($0))" } ?? e.start)
+                            if let source = e.source { Caption("From \(source.name)") }
                         }
                         Spacer()
                         Button("Restore") { Task { await restore(e) } }.buttonStyle(.bordered)
