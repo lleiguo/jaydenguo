@@ -1,5 +1,5 @@
 # Intent: Delete any calendar event
-Status: draft (2026-10-18). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-18, in chat: "Approve intent 0022 with the defaults."). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "add a "delete" function to calendar event"

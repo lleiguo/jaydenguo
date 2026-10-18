@@ -38,4 +38,4 @@ Rules:
 | 0019 | [Cookie reads a screenshot or pasted text](0019-cookie-reads-screenshots/) | approved 2026-10-17 (chat); defaults kept | approved 2026-10-17 (chat); S-1..S-4 accepted | approved 2026-10-17; S1–S3 merged (#148–#150), S1 deployed; build 17 (#151) waits on the owner's Xcode sign-in |
 | 0020 | [One family calendar, both ways](0020-household-two-way/) | approved 2026-10-17 (chat); defaults kept | approved 2026-10-17 (chat); T-1..T-6 accepted | approved 2026-10-17; H1–H5 built; Terraform apply (O-3) waits on owner |
 | 0021 | [School stays out of the household calendar](0021-household-no-school/) | approved 2026-10-18 (chat); defaults kept | approved 2026-10-18 (chat); N-1 accepted | approved 2026-10-18; NO1 in #161 |
-| 0022 | [Delete any calendar event](0022-delete-any-event/) | draft 2026-10-18 | draft 2026-10-18 | draft 2026-10-18 |
+| 0022 | [Delete any calendar event](0022-delete-any-event/) | approved 2026-10-18 (chat); defaults kept | approved 2026-10-18 (chat); D-1..D-3 accepted | approved 2026-10-18; DL1 next |

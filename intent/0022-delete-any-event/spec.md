@@ -1,5 +1,5 @@
 # Spec: Delete any calendar event
-Status: draft (2026-10-18). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-18, in chat: "Approve intent 0022 with the defaults."); D-1..D-3 accepted. Written by Claude from [intent.md](intent.md).
 
 Read with 0001 (CAL-6, CON-4), 0004 (ICAL-6), 0011 (TID-3) and 0020
 (TWO-4). IDs here: DEL (delete).

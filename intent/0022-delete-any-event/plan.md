@@ -1,5 +1,5 @@
 # Plan: Delete any calendar event
-Status: draft (2026-10-18), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-18, in chat: "Approve intent 0022 with the defaults."), with [spec.md](spec.md).
 
 Order: the server first (the website follows in the same PR), then the
 iPhone app, then a TestFlight build.
@@ -25,4 +25,4 @@ None.
 - The same works on the phone (O-1).
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-18 with the defaults (household deletable in the hub with the switch Off; Cookie keeps her rule; Skip stays). DL1 next.
