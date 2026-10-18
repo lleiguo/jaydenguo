@@ -1,5 +1,5 @@
 # Intent: School stays out of the household calendar
-Status: draft (2026-10-18). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-18, in chat: "approve intent 0021 with the defaults (closures stay out too)"). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "one more tweak, for the kids school (Ethan/Jayden) school, no need to sync to household calendar"

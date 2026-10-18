@@ -1,5 +1,5 @@
 # Spec: School stays out of the household calendar
-Status: draft (2026-10-18). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-18, in chat: "approve intent 0021 with the defaults (closures stay out too)"); N-1 accepted. Written by Claude from [intent.md](intent.md).
 
 Read with [0020's spec](../0020-household-two-way/spec.md). IDs here: NOS
 (no school).
