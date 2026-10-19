@@ -1,6 +1,6 @@
 import { categorise } from "../../domain/categories";
 import type { MatchOutcome } from "../../domain/tennis-constants";
-import { drawView, type DrawRound, type SelfIds } from "../../domain/tennis-draw";
+import { drawView, isKnockout, type DrawRound, type SelfIds } from "../../domain/tennis-draw";
 import {
   matchKey,
   type TennisDrawRecord,
@@ -30,6 +30,30 @@ export function toDrawRounds(rounds: TcBracketRound[]): DrawRound[] {
       time: m.time,
     })),
   }));
+}
+// Whether a draw page's columns are its rounds. Round robin boxes are laid
+// out in columns too, but there each column is one player's matches, so
+// the "rounds" are wrong and out of order.
+export const isBracket = (rounds: TcBracketRound[]) => isKnockout(toDrawRounds(rounds));
+
+// The rounds to read a draw by: a knockout's bracket as it is; any other
+// shape (round robin, compass) from the draw's match list, which is in
+// schedule order, grouped by each match's round. Without a list, the
+// bracket page is all there is.
+export function drawRounds(
+  bracket: TcBracketRound[],
+  list: TcMatch[],
+  drawName: string | null,
+): TcBracketRound[] {
+  if (isBracket(bracket) || !list.length) return bracket;
+  const rounds: TcBracketRound[] = [];
+  for (const m of list) {
+    const name = m.round ?? drawName ?? "Draw";
+    const r = rounds.find((x) => x.name === name);
+    if (r) r.matches.push(m);
+    else rounds.push({ name, matches: [m] });
+  }
+  return rounds;
 }
 const MATCH_MINUTES = 60;
 

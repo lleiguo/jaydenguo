@@ -3,7 +3,7 @@ import { SyncError, type Adapter, type AdapterContext } from "../types";
 import { addDays, localDate } from "../../domain/time";
 import { drawView } from "../../domain/tennis-draw";
 import { parseEventPage } from "./entry-parse";
-import { normaliseTennis, toDrawRounds } from "./normalise";
+import { drawRounds, isBracket, normaliseTennis, toDrawRounds } from "./normalise";
 import {
   isErrorPage,
   parseBracket,
@@ -239,13 +239,12 @@ export async function fetchTennis(ctx: AdapterContext): Promise<TcRaw> {
       for (const d of t.draws) {
         const page = await client.get(`/tournament/${t.id}/Draw/${d.drawNo}/GetDrawContent`, { xhr: true });
         let rounds = page ? parseBracket(page.html, t.id, d.drawNo) : [];
-        if (!rounds.length) {
+        if (!isBracket(rounds)) {
           // Round robin and the like: the draw's match list instead.
           const list = await client.get(`/tournament/${t.id}/Draw/${d.drawNo}/GetMatchesContent`, {
             xhr: true,
           });
-          if (list)
-            rounds = [{ name: d.drawName ?? "Draw", matches: parseDrawMatches(list.html, t.id, d.drawNo) }];
+          rounds = drawRounds(rounds, list ? parseDrawMatches(list.html, t.id, d.drawNo) : [], d.drawName);
         }
         raw.draws.push({ tournamentId: t.id, drawNo: d.drawNo, rounds });
       }

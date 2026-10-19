@@ -3,7 +3,7 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { fetchTennis, profileIdFromLink } from "@/adapters/tennis-tc";
-import { normaliseTennis } from "@/adapters/tennis-tc/normalise";
+import { drawRounds, normaliseTennis, toDrawRounds } from "@/adapters/tennis-tc/normalise";
 import {
   isErrorPage,
   parseBracket,
@@ -12,8 +12,10 @@ import {
   parseTournament,
   parseTournamentsForYear,
   parseYears,
+  type TcMatch,
 } from "@/adapters/tennis-tc/parse";
 import { SyncError, type AdapterContext } from "@/adapters/types";
+import { drawView } from "@/domain/tennis-draw";
 import { createFakeTc, PLANTED_PRIVATE, TC_FIXTURE, TC_NOW, TC_PROFILE_URL } from "../e2e/support/fake-tc";
 
 // Plan M3.3: the tennis_tc parsers on the scrubbed fixtures, and the whole
@@ -87,6 +89,67 @@ describe("tennis_tc parsers", () => {
   });
 });
 
+describe("tennis_tc draw rounds", () => {
+  const p = (tp: string) => ({ memberId: null, name: `Player ${tp}`, tournamentPlayerId: tp, seed: null });
+  const m = (round: string, a: string, b: string, time: string | null = null): TcMatch => ({
+    tournamentId: "t",
+    drawNo: "1",
+    eventName: null,
+    drawName: null,
+    round,
+    sides: [
+      { players: [p(a)], won: false },
+      { players: [p(b)], won: false },
+    ],
+    sets: [],
+    note: null,
+    date: time ? "2026-10-25" : null,
+    time,
+    matchNo: null,
+  });
+  const self = { memberId: null, tournamentPlayerIds: new Set(["1"]) };
+
+  // A four-player round robin box: the draw page lays it out as columns
+  // (one per player, named after a round), not as the rounds themselves.
+  const columns = [
+    { name: "Round 3", matches: [m("Round 3", "2", "1"), m("Round 3", "3", "4")] },
+    { name: "Round 1", matches: [m("Round 1", "3", "1"), m("Round 1", "3", "2")] },
+    { name: "Round 2", matches: [m("Round 2", "4", "1"), m("Round 2", "4", "2"), m("Round 2", "4", "3")] },
+  ];
+  const list = [
+    m("Round 1", "1", "3", "17:30"),
+    m("Round 1", "2", "4", "17:30"),
+    m("Round 2", "1", "4", "18:10"),
+    m("Round 2", "2", "3", "18:10"),
+    m("Round 3", "4", "3"),
+    m("Round 3", "1", "2"),
+  ];
+
+  it("reads a round robin from its match list, in schedule order, not the draw page's columns", () => {
+    const rounds = drawRounds(columns, list, "U9");
+    expect(rounds.map((r) => [r.name, r.matches.length])).toEqual([
+      ["Round 1", 2],
+      ["Round 2", 2],
+      ["Round 3", 2],
+    ]);
+    expect(drawView(toDrawRounds(rounds), self).next).toMatchObject({
+      status: "next",
+      round: "Round 1",
+      opponent: { name: "Player 3" },
+      time: "17:30",
+    });
+  });
+
+  it("keeps a knockout bracket, and the draw page when there's no match list", () => {
+    const knockout = [
+      { name: "Semi final", matches: [m("Semi final", "1", "2"), m("Semi final", "3", "4")] },
+      { name: "Final", matches: [m("Final", "", "")] },
+    ];
+    expect(drawRounds(knockout, list, "U9")).toBe(knockout);
+    expect(drawRounds(columns, [], "U9")).toBe(columns);
+  });
+});
+
 describe("tennis_tc crawl", () => {
   let server: Server;
   let base: string;
@@ -114,7 +177,8 @@ describe("tennis_tc crawl", () => {
   it("reads his tournaments, draws and opponents, and works out his next match", async () => {
     const c = ctx({ profileUrl: TC_PROFILE_URL(base) });
     const raw = await fetchTennis(c);
-    expect(raw.requests).toBe(46);
+    // The compass draw also asks for its match list.
+    expect(raw.requests).toBe(47);
     expect(raw.truncated).toBe(false);
     expect(raw.opponents.map((o) => o.memberId).sort()).toEqual(
       TC_FIXTURE.opponents.map((o) => o.memberId).sort(),
