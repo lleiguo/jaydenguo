@@ -20,8 +20,8 @@ then the iPhone app.
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| P0+P1 | One PR. `push:test` job and a runbook line in `ios/README.md`; new kinds and migration 0036, the `more` field, registered, tennis results, swim entered / results, clash reminder, backfill, labels and targets; the SP-S1 log. Heat sheet (NTF-S2) waits on SP-S1. | NTF-1, NTF-T1..T5, NTF-S1, NTF-S3, NTF-C3, NTF-SEC1..2 | |
-| P2 | iPhone: new switches (from `more`, replacing the fixed Cookie switch), the one-time switch-on, the clash screen (`Route.clash`, `jaydenguohub://open/clashes/<event id>`) from a clash push, new targets; build bump and TestFlight separate. | NTF-C1, NTF-C2 | |
+| P0+P1 | One PR. `push:test` job and a runbook line in `ios/README.md`; new kinds and migration 0036, the `more` field, registered, tennis results, swim entered / results, clash reminder, backfill, labels and targets; the SP-S1 log. Heat sheet (NTF-S2) waits on SP-S1. | NTF-1, NTF-T1..T5, NTF-S1, NTF-S3, NTF-C3, NTF-SEC1..2 | #169 |
+| P2 | iPhone: new switches (from `more`, replacing the fixed Cookie switch), the one-time switch-on, the clash screen (`Route.clash`, `jaydenguohub://open/clashes/<event id>`) from a clash push, new targets; build bump and TestFlight separate. | NTF-C1, NTF-C2 | #170, build 20 #171 |
 
 ## 4. Done when
 - The owner's iPhone shows the test push with its real text.
@@ -32,5 +32,14 @@ then the iPhone app.
   it.
 
 ## 5. Status
-Approved 2026-10-19 with the defaults. P0+P1 built 2026-10-19; P2 next.
-Nothing arrives on the phone until the APNs key (O-2, O-3).
+Approved 2026-10-19 with the defaults. P0+P1 (#169) and P2 (#170) merged
+and deployed 2026-10-19; TestFlight build 20 uploaded (next = 21).
+
+On production `push:test` reached the notify step for 2 registered phones
+and logged "push not sent (no APNs key)" for each: nothing arrives until
+the owner does O-2 and O-3, then runs `push:test` again.
+
+Left: O-2, O-3 (APNs key, Terraform apply), O-4 (install build 20);
+SP-S1 (read "SP-S1 entry fields" from the next Commit Swimming sync's log,
+then NTF-S2 or drop it); the "Done when" checks over the next tournament
+and meet.
