@@ -175,3 +175,26 @@ func payload(_ events: [CalendarEvent], clashes: [(String, String, String?)] = [
         #expect(blocks.map { $0.classes.map(\.id) } == [["e1", "e2"], ["j1", "j2"]])
     }
 }
+
+/// Intent 0022, DEL-2, DEL-4: the same words as the website's confirm.
+@Suite struct DeleteConfirmTests {
+    @Test func asksPlainlyForAnEventAddedHere() {
+        let c = event("e1", "2026-10-05T14:00:00Z", "2026-10-05T15:00:00Z", title: "Dentist").deleteConfirm(householdOn: false)
+        #expect(c.title == "Delete “Dentist”?")
+        #expect(c.message == nil)
+    }
+
+    @Test func saysASourceEventStaysDeleted() {
+        let c = event("e1", "2026-10-05T14:00:00Z", "2026-10-05T15:00:00Z", title: "Soccer", source: "Spordle").deleteConfirm(householdOn: false)
+        #expect(c.message == "It stays deleted when Spordle syncs. Restore it from Settings → Deleted.")
+        let tennis = DeleteConfirm.text(title: "Open", sourceName: "Tennis", sourceKind: "tennis_tc", householdOn: false)
+        #expect(tennis.message?.contains("This doesn't withdraw the entry.") == true)
+    }
+
+    @Test func saysWhereAHouseholdEventGoes() {
+        let on = DeleteConfirm.text(title: "Dinner", sourceName: "Household", sourceKind: "google_calendar", householdOn: true)
+        let off = DeleteConfirm.text(title: "Dinner", sourceName: "Household", sourceKind: "google_calendar", householdOn: false)
+        #expect(on.message == "It goes from the family's Google Calendar too.")
+        #expect(off.message?.hasPrefix("It stays in the family's Google Calendar.") == true)
+    }
+}
