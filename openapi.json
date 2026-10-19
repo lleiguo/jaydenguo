@@ -2005,6 +2005,122 @@
         }
       }
     },
+    "/api/v1/household-sync": {
+      "get": {
+        "operationId": "getHouseholdSync",
+        "summary": "Two-way sync's switch, dry run, held run and last run.",
+        "description": "Spec: TWO-9",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdSyncResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "setHouseholdSync",
+        "summary": "Off, Dry run or On.",
+        "description": "Spec: TWO-9",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "dry_run",
+                      "on"
+                    ]
+                  },
+                  "sourceId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdSyncSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/household-sync/apply": {
+      "post": {
+        "operationId": "applyHouseholdSync",
+        "summary": "Apply a held run.",
+        "description": "Spec: TWSEC-2",
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Started"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sources": {
       "get": {
         "operationId": "listSources",
@@ -7681,6 +7797,295 @@
           "expiresAt"
         ]
       },
+      "HouseholdSyncResponse": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "on",
+              "off",
+              "dry_run"
+            ]
+          },
+          "sourceId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "holdNext": {
+            "type": "boolean"
+          },
+          "applyOnce": {
+            "type": "boolean"
+          },
+          "held": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "at": {
+                "type": "string"
+              },
+              "plan": {
+                "$ref": "#/components/schemas/PlanSummary"
+              }
+            },
+            "required": [
+              "reason",
+              "at",
+              "plan"
+            ],
+            "x-nullable": true
+          },
+          "dryRun": {
+            "type": "object",
+            "properties": {
+              "at": {
+                "type": "string"
+              },
+              "plan": {
+                "$ref": "#/components/schemas/PlanSummary"
+              }
+            },
+            "required": [
+              "at",
+              "plan"
+            ],
+            "x-nullable": true
+          },
+          "lastRunAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastError": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "number"
+              },
+              "updated": {
+                "type": "number"
+              },
+              "linked": {
+                "type": "number"
+              },
+              "deleted": {
+                "type": "number"
+              },
+              "unlinked": {
+                "type": "number"
+              },
+              "fromGoogle": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "created",
+              "updated",
+              "linked",
+              "deleted",
+              "unlinked"
+            ],
+            "x-nullable": true
+          },
+          "requestedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "runStartedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "onSince": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "canWrite": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "canWrite"
+              ]
+            }
+          }
+        },
+        "required": [
+          "mode",
+          "sourceId",
+          "holdNext",
+          "applyOnce",
+          "lastRunAt",
+          "lastError",
+          "requestedAt",
+          "runStartedAt",
+          "onSince",
+          "sources"
+        ]
+      },
+      "HouseholdSyncSettings": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "on",
+              "off",
+              "dry_run"
+            ]
+          },
+          "sourceId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "holdNext": {
+            "type": "boolean"
+          },
+          "applyOnce": {
+            "type": "boolean"
+          },
+          "held": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "at": {
+                "type": "string"
+              },
+              "plan": {
+                "$ref": "#/components/schemas/PlanSummary"
+              }
+            },
+            "required": [
+              "reason",
+              "at",
+              "plan"
+            ],
+            "x-nullable": true
+          },
+          "dryRun": {
+            "type": "object",
+            "properties": {
+              "at": {
+                "type": "string"
+              },
+              "plan": {
+                "$ref": "#/components/schemas/PlanSummary"
+              }
+            },
+            "required": [
+              "at",
+              "plan"
+            ],
+            "x-nullable": true
+          },
+          "lastRunAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastError": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "number"
+              },
+              "updated": {
+                "type": "number"
+              },
+              "linked": {
+                "type": "number"
+              },
+              "deleted": {
+                "type": "number"
+              },
+              "unlinked": {
+                "type": "number"
+              },
+              "fromGoogle": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "created",
+              "updated",
+              "linked",
+              "deleted",
+              "unlinked"
+            ],
+            "x-nullable": true
+          },
+          "requestedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "runStartedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "onSince": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "mode",
+          "sourceId",
+          "holdNext",
+          "applyOnce",
+          "lastRunAt",
+          "lastError",
+          "requestedAt",
+          "runStartedAt",
+          "onSince"
+        ]
+      },
       "MatchView": {
         "type": "object",
         "properties": {
@@ -8216,6 +8621,63 @@
           "opponents",
           "result",
           "score"
+        ]
+      },
+      "PlanLine": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "start"
+        ]
+      },
+      "PlanSummary": {
+        "type": "object",
+        "properties": {
+          "create": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanLine"
+            }
+          },
+          "update": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanLine"
+            }
+          },
+          "link": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanLine"
+            }
+          },
+          "remove": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanLine"
+            }
+          },
+          "unlink": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanLine"
+            }
+          }
+        },
+        "required": [
+          "create",
+          "update",
+          "link",
+          "remove",
+          "unlink"
         ]
       },
       "PlayerRef": {

@@ -63,8 +63,9 @@ export function looksAlike(a: Slot & { category: string }, b: Slot & { category:
 }
 
 // Are `a` and `b` the same event, for the same person, from what they are
-// rather than their titles?
-function sameEvent(a: DedupEvent, b: DedupEvent): boolean {
+// rather than their titles? Also how a household twin is linked to a feed's
+// event (0020 DUP2-2).
+export function sameEvent(a: DedupEvent, b: DedupEvent): boolean {
   return looksAlike(a, b) && shareOwner(a.owners, b.owners);
 }
 

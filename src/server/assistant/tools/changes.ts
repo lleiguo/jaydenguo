@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { assistantActions } from "@db/schema";
 import {
-  asksToAdd,
+  asksToAddAfter,
   CHANGE_LIMITS,
   dayInWords,
   dayProblem,
@@ -51,7 +51,9 @@ export const calendarAddTool: Tool<z.infer<typeof addInput>> = {
   input: addInput,
   async run(ctx, q) {
     // ADD-2, CASEC-1: the question's own words, never a tool result's.
-    if (!asksToAdd(ctx.question)) return problem("the question didn't ask you to add anything");
+    // Or the parent's yes to her own "Add it to the calendar?".
+    if (!asksToAddAfter(ctx.question, ctx.lastAnswer))
+      return problem("the question didn't ask you to add anything");
     if (ctx.turn.webRan) return problem("nothing can be added in a question that used the web");
     // ADD-1; up to 5 from something shared (intent 0019, SHA-2).
     const most = ctx.shared ? SHARED_LIMITS.adds : 1;

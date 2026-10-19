@@ -7,6 +7,7 @@ import { assistantSettingsInput } from "../assistant/settings";
 import { turnsQuery } from "../assistant/turns";
 import { deviceTokenInput, handoffInput } from "../auth/device";
 import { copyInput } from "../calendar-copy";
+import { householdSyncInput } from "../household-sync";
 import {
   attendanceInput,
   eventInput,
@@ -411,6 +412,34 @@ export const operations: Operation[] = [
     operationId: "runCalendarCopy",
     summary: "Copy now.",
     spec: "GCO-1",
+    status: 202,
+    response: "Started",
+  },
+
+  // Two-way sync with the household calendar (intent 0020)
+  {
+    method: "GET",
+    path: "/api/v1/household-sync",
+    operationId: "getHouseholdSync",
+    summary: "Two-way sync's switch, dry run, held run and last run.",
+    spec: "TWO-9",
+    response: "HouseholdSyncResponse",
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/household-sync",
+    operationId: "setHouseholdSync",
+    summary: "Off, Dry run or On.",
+    spec: "TWO-9",
+    body: householdSyncInput,
+    response: "HouseholdSyncSaved",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/household-sync/apply",
+    operationId: "applyHouseholdSync",
+    summary: "Apply a held run.",
+    spec: "TWSEC-2",
     status: 202,
     response: "Started",
   },

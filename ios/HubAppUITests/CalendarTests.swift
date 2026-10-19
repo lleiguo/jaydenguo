@@ -195,6 +195,28 @@ final class CalendarTests: XCTestCase {
         XCTAssertTrue(row.waitForNonExistence(timeout: 10))
     }
 
+    /// Intent 0022, DEL-1, DEL-2: a feed's event can be deleted too, after
+    /// a confirm that says it stays deleted; undo brings it back.
+    func testDeleteAFeedEventThenUndo() throws {
+        let app = try launch()
+        openCalendar(app)
+        let agenda = app.collectionViews["agenda"]
+        XCTAssertTrue(agenda.waitForExistence(timeout: 20))
+        let row = agenda.buttons.matching(NSPredicate(format: "label CONTAINS 'Hockey ice time'")).firstMatch
+        for _ in 0..<10 where !row.exists { agenda.swipeUp() }
+        row.tap()
+        let delete = app.buttons["Delete"]
+        _ = delete.waitForExistence(timeout: 10)
+        reveal(delete, in: app)
+        delete.tap()
+        let message = app.staticTexts["It stays deleted when Hockey team (sample) syncs. Restore it from Settings → Deleted."]
+        XCTAssertTrue(message.waitForExistence(timeout: 10))
+        app.sheets.buttons["Delete"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Deleted."].waitForExistence(timeout: 10))
+        app.buttons["undo"].tap()
+        XCTAssertTrue(app.staticTexts["Undone."].waitForExistence(timeout: 10))
+    }
+
     /// Edit on the event's sheet opens the editor, and Save saves.
     func testEditAnEventFromItsSheet() throws {
         let app = try launch()

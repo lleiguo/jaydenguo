@@ -3,15 +3,22 @@ import HubAPI
 import HubKit
 import SwiftUI
 
-/// Settings → General (APP-3): the home time zone (CAL-9) and the copy to
-/// Google Calendar (GCO-1, GCO-2).
+/// Settings → General (APP-3): the home time zone (CAL-9), the copy to
+/// Google Calendar (GCO-1, GCO-2) and two-way sync with the household
+/// calendar (intent 0020, TWO-9), which replaces the copy.
 struct GeneralSettingsScreen: View {
     @Environment(AppModel.self) private var model
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @State private var account: String?
 
     var body: some View {
-        RemoteContent(fetch: { try await model.client.api.getCalendarCopy().ok.body.json }) { copy in
+        RemoteContent(fetch: {
+            async let copy = model.client.api.getCalendarCopy().ok.body.json
+            // A server without it (older than intent 0020) still shows the rest.
+            async let household = try? model.client.api.getHouseholdSync().ok.body.json
+            return try await (copy: copy, household: household)
+        }) { data in
+            let copy = data.copy
             Form {
                 Section {
                     NavigationLink { TimeZonePicker() } label: {
@@ -45,6 +52,7 @@ struct GeneralSettingsScreen: View {
                 } footer: {
                     Text("Copies the first person's events, as they show here, to a separate hub calendar in Google Calendar, once a day and when you tap Copy now. Only that calendar is ever written.")
                 }
+                if let household = data.household { HouseholdSyncSection(sync: household) }
             }
         }
         .navigationTitle("General")
@@ -89,6 +97,129 @@ struct GeneralSettingsScreen: View {
             model.show(HubError.from(error)?.message ?? "Couldn't open Google.")
         }
         await model.dataChanged()
+    }
+}
+
+/// "Household calendar, both ways" (intent 0020, TWO-9, TWSEC-2): Off, Dry
+/// run or On, what a dry run would do, and "Apply" for a held run.
+private struct HouseholdSyncSection: View {
+    @Environment(AppModel.self) private var model
+    let sync: HouseholdSync
+    @State private var confirmOn = false
+
+    var body: some View {
+        Section {
+            if sync.sources.isEmpty {
+                Text("Add the household Google calendar on the Sources page first.")
+            } else {
+                if sync.sources.count > 1 {
+                    Picker("Household calendar", selection: Binding(
+                        get: { sync.sourceId },
+                        set: { id in Task { await choose(id) } }
+                    )) {
+                        Text("Choose…").tag(String?.none)
+                        ForEach(sync.sources, id: \.id) { Text($0.name).tag(Optional($0.id)) }
+                    }
+                }
+                Picker("Two-way sync", selection: Binding(
+                    get: { sync.mode },
+                    set: { mode in
+                        if mode == .on { confirmOn = true } else { Task { await set(mode) } }
+                    }
+                )) {
+                    ForEach(HouseholdMode.ordered, id: \.self) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("householdMode")
+                if let source = sync.chosenSource, !source.canWrite {
+                    Text("To switch it on, tap \u{201C}Let Cookie add events\u{201D} in Settings → Accounts for the household calendar's Google account.")
+                        .font(.callout)
+                }
+                if sync.mode == .dryRun {
+                    if let dry = sync.dryRun {
+                        Caption("What the next run would do (\(time(dry.at))):")
+                        PlanList(plan: dry.plan)
+                    } else {
+                        Caption("Working out the list…")
+                    }
+                }
+                if sync.mode == .on, let held = sync.held {
+                    Label(held.reason, systemImage: "pause.circle.fill")
+                        .foregroundStyle(.orange)
+                        .accessibilityIdentifier("householdHeld")
+                    PlanList(plan: held.plan)
+                    Button("Apply") { Task { await apply() } }
+                }
+                if sync.mode == .on, let at = sync.lastRunAt {
+                    Caption("Last run \(time(at))" + (sync.lastSummary.map { ": \($0)" } ?? "") + ".")
+                        .accessibilityIdentifier("householdStatus")
+                }
+                if let error = sync.lastError { Text(error).foregroundStyle(.red) }
+            }
+        } header: {
+            Text("Household calendar, both ways")
+        } footer: {
+            Text("Puts every event on the hub into the household calendar in Google, with whose it is in the title, and brings moves made there back. Try Dry run first: it lists what would change without writing anything.")
+        }
+        .confirmationDialog("Write the hub's events into the household calendar in Google?", isPresented: $confirmOn, titleVisibility: .visible) {
+            Button("Switch on") { Task { await set(.on) } }
+        } message: {
+            Text("The copy to Google Calendar switches off. The first run waits for you to check it.")
+        }
+    }
+
+    private func time(_ iso: String) -> String { model.homeTime.dayAndTime(iso) }
+
+    private func save(_ done: String, _ work: () async throws -> Void) async {
+        do {
+            try await work()
+            model.show(done)
+        } catch {
+            model.show(HubError.from(error)?.message ?? "Couldn't save that.")
+        }
+        await model.dataChanged()
+    }
+
+    private func set(_ mode: HouseholdMode) async {
+        await save(mode.savedMessage) {
+            try await model.client.patch("/api/v1/household-sync", ["mode": .string(mode.rawValue), "sourceId": sync.sourceId.map(JSONField.string) ?? .null])
+        }
+    }
+
+    // Choosing another calendar switches it off, as on the website.
+    private func choose(_ id: String?) async {
+        guard let id, id != sync.sourceId else { return }
+        await save("Calendar chosen. Two-way sync is off until you switch it on.") {
+            try await model.client.patch("/api/v1/household-sync", ["mode": .string("off"), "sourceId": .string(id)])
+        }
+    }
+
+    private func apply() async {
+        await save("Applying. This takes a minute or two.") { _ = try await model.client.api.applyHouseholdSync().accepted }
+    }
+}
+
+/// What a run would do, by kind of change, each part folded.
+private struct PlanList: View {
+    let plan: HouseholdPlan
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        if plan.isEmpty {
+            Text("Nothing to change: the household calendar is up to date.")
+        } else {
+            ForEach(plan.sections, id: \.heading) { part in
+                DisclosureGroup("\(part.heading): \(HouseholdPlan.count(part.lines))") {
+                    ForEach(Array(part.lines.enumerated()), id: \.offset) { _, line in
+                        VStack(alignment: .leading) {
+                            Text(line.title)
+                            Caption(model.homeTime.dayAndTime(line.start))
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -240,7 +371,8 @@ struct ClashesScreen: View {
     }
 }
 
-/// Settings → Deleted (CAL-6): deleted events, to restore.
+/// Settings → Deleted (CAL-6, intent 0022 DEL-5): deleted events, from a
+/// source or not, to restore.
 struct DeletedScreen: View {
     @Environment(AppModel.self) private var model
 
@@ -252,6 +384,7 @@ struct DeletedScreen: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Label(e.title, systemImage: e.category.symbol)
                             Caption(e.startDate.map { "\(model.homeTime.dayTitle(model.homeTime.localDate($0))), \(e.allDay ? "all day" : model.homeTime.time($0))" } ?? e.start)
+                            if let source = e.source { Caption("From \(source.name)") }
                         }
                         Spacer()
                         Button("Restore") { Task { await restore(e) } }.buttonStyle(.bordered)

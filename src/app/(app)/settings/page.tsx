@@ -4,6 +4,7 @@ import { getDb } from "@/server/db";
 import { SignOutEverywhere } from "@/components/sign-out-everywhere";
 import { TimeZoneSetting } from "@/components/time-zone-setting";
 import { CalendarCopySetting } from "@/components/calendar-copy-setting";
+import { HouseholdSyncSetting } from "@/components/household-sync-setting";
 import { PeopleSetting } from "@/components/people-setting";
 import { listPeople } from "@/server/people";
 import { getHomeTimeZone } from "@/server/settings";
@@ -34,6 +35,12 @@ export default async function SettingsPage() {
           person&apos;s events clash.
         </p>
         <PeopleSetting initial={people} />
+      </section>
+      <section aria-labelledby="household-sync" className="flex flex-col gap-3">
+        <h2 id="household-sync" className="font-semibold">
+          Household calendar, both ways
+        </h2>
+        <HouseholdSyncSetting />
       </section>
       <section aria-labelledby="calendar-copy" className="flex flex-col gap-3">
         <h2 id="calendar-copy" className="font-semibold">

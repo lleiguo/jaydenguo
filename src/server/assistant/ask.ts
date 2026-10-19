@@ -26,7 +26,7 @@ import {
   type Shared,
   type ToolKind,
 } from "@/domain/assistant";
-import { addingLine, appliedLine } from "@/domain/assistant-changes";
+import { addingLine, appliedLine, claimsAdding, notAddedLine } from "@/domain/assistant-changes";
 import { hit } from "../auth/rate-limit";
 import { HttpError } from "../errors";
 import type { Db } from "../db/client";
@@ -345,6 +345,7 @@ export async function ask(
     userId: input.userId,
     question: heard,
     conversationId,
+    lastAnswer: history.at(-1)?.answer ?? null,
     spoken: !!clip,
     shared: shared && { ...shared, text: material?.kind === "pasted" ? material.text : undefined },
     turn,
@@ -433,6 +434,10 @@ export async function ask(
     if (end) {
       const said = answerInput.safeParse(end.args);
       if (!said.success) return bark("bad answer");
+      // ADD-9: "Adding:" when nothing was added would be believed, so the
+      // server says nothing was added instead.
+      if (!turn.added.length && !turn.applied.length && claimsAdding(said.data.text))
+        return finish("answer", notAddedLine(said.data.language), [], said.data.language, "claimed add");
       const ran = [...new Set(runs.filter((r) => r.ok).map((r) => kindOf(tools, r.name)))];
       const grounded = checkGrounding(said.data.sources, ran, history.length > 0, !!shared);
       if (!grounded.ok) return bark(grounded.reason);

@@ -17,3 +17,7 @@ export type Category = (typeof CATEGORIES)[number];
 // Whose event it is lives in its owners (people), not here.
 export const ATTENDANCE = ["required", "optional"] as const;
 export type Attendance = (typeof ATTENDANCE)[number];
+
+// Who made a change read back from the household Google Calendar (intent
+// 0020, BACK-3): an override's `createdBy`, a revision's `changedBy`.
+export const GOOGLE_ACTOR = "Google Calendar";

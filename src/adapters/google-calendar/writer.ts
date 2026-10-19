@@ -82,3 +82,157 @@ export function googleCalendarWriter(token: string, calendarId: string): Calenda
     },
   };
 }
+
+// Two-way sync's writer (intent 0020, TWSEC-1). Bound to the household
+// calendar, and fenced: it changes or deletes only events the hub tagged
+// with `hubEventId`, or untagged ones the caller names (a twin being linked,
+// a household event changed in the hub), and never one that has ended.
+
+export const HUB_TAG = "hubEventId";
+
+export class Fenced extends Error {
+  constructor(
+    readonly googleEventId: string,
+    reason: string,
+  ) {
+    super(`Refused to change ${googleEventId}: ${reason}`);
+  }
+}
+
+type Tagged = GoogleEvent & {
+  updated?: string;
+  extendedProperties?: { private?: Record<string, string> };
+};
+
+export type HouseholdWriter = {
+  calendarId: string;
+  // The event tagged with a hub key, if a run got that far before (DUP2-3).
+  findTagged(hubKey: string): Promise<Tagged | null>;
+  // BACK-2: every event the hub tagged that is still in the calendar
+  // between these times (Google can't list by "has the tag", so it reads
+  // them all and keeps the tagged ones), and one event by ID; null when it
+  // was deleted. Reading only.
+  listTagged(timeMin: Date, timeMax: Date): Promise<Tagged[]>;
+  get(googleEventId: string): Promise<Tagged | null>;
+  create(body: object): Promise<Tagged>;
+  patch(googleEventId: string, body: object): Promise<Tagged>;
+  // Takes the hub's tag off a twin (DUP2-2), leaving the family's event.
+  // Gone already counts as done.
+  untag(googleEventId: string): Promise<void>;
+  // Gone already counts as removed.
+  remove(googleEventId: string): Promise<void>;
+};
+
+const endOf = (e: GoogleEvent) =>
+  Date.parse(e.end?.dateTime ?? (e.end?.date ? `${e.end.date}T00:00:00Z` : "")) || 0;
+
+export function householdWriter(
+  token: string,
+  calendarId: string,
+  opts: { now: Date; untagged?: ReadonlySet<string> },
+): HouseholdWriter {
+  const base = `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
+  const call = async (method: string, path: string, body?: unknown) => {
+    try {
+      return await politeFetch(new URL(path, googleApiBase()), {
+        method,
+        headers: {
+          authorization: `Bearer ${token}`,
+          ...(body ? { "content-type": "application/json" } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (err) {
+      if (err instanceof FetchError) throw new WriteFailed(0, true);
+      throw err;
+    }
+  };
+  const fail = (status: number) => new WriteFailed(status, status === 429 || status >= 500);
+  const one = (id: string) => `${base}/${encodeURIComponent(id)}`;
+
+  // TWSEC-1: look before touching.
+  async function fence(id: string): Promise<Tagged | null> {
+    const res = await call("GET", one(id));
+    if (res.status === 404 || res.status === 410) return null;
+    if (!res.ok) throw fail(res.status);
+    const e = (await res.json()) as Tagged;
+    if (e.status === "cancelled") return null;
+    if (!e.extendedProperties?.private?.[HUB_TAG] && !opts.untagged?.has(id))
+      throw new Fenced(id, "not an event the hub manages");
+    if (endOf(e) <= opts.now.getTime()) throw new Fenced(id, "it has ended");
+    return e;
+  }
+
+  return {
+    calendarId,
+    async findTagged(hubKey) {
+      const query = new URLSearchParams({ privateExtendedProperty: `${HUB_TAG}=${hubKey}`, maxResults: "1" });
+      const res = await call("GET", `${base}?${query}`);
+      if (!res.ok) throw fail(res.status);
+      const body = (await res.json()) as { items?: Tagged[] };
+      return body.items?.find((e) => e.status !== "cancelled") ?? null;
+    },
+    async listTagged(timeMin, timeMax) {
+      const out: Tagged[] = [];
+      let pageToken: string | undefined;
+      let pages = 0;
+      do {
+        const query = new URLSearchParams({
+          singleEvents: "true",
+          timeMin: timeMin.toISOString(),
+          timeMax: timeMax.toISOString(),
+          maxResults: "250",
+          ...(pageToken ? { pageToken } : {}),
+        });
+        const res = await call("GET", `${base}?${query}`);
+        if (!res.ok) throw fail(res.status);
+        const body = (await res.json()) as { items?: Tagged[]; nextPageToken?: string };
+        out.push(
+          ...(body.items ?? []).filter(
+            (e) => e.status !== "cancelled" && e.extendedProperties?.private?.[HUB_TAG],
+          ),
+        );
+        pageToken = body.nextPageToken;
+      } while (pageToken && ++pages < 40);
+      return out;
+    },
+    async get(id) {
+      const res = await call("GET", one(id));
+      if (res.status === 404 || res.status === 410) return null;
+      if (!res.ok) throw fail(res.status);
+      const e = (await res.json()) as Tagged;
+      return e.status === "cancelled" ? null : e;
+    },
+    async create(body) {
+      const res = await call("POST", base, body);
+      if (!res.ok) throw fail(res.status);
+      return (await res.json()) as Tagged;
+    },
+    async patch(id, body) {
+      if (!(await fence(id))) throw new WriteFailed(404, false);
+      const res = await call("PATCH", one(id), body);
+      if (!res.ok) throw fail(res.status);
+      return (await res.json()) as Tagged;
+    },
+    async untag(id) {
+      const e = await fence(id);
+      if (!e) return;
+      // A full replace: a patch merges the private properties, so it can't
+      // take one away.
+      const rest = { ...e.extendedProperties?.private };
+      delete rest[HUB_TAG];
+      const res = await call("PUT", one(id), {
+        ...e,
+        extendedProperties: { ...e.extendedProperties, private: rest },
+      });
+      if (res.ok || res.status === 404 || res.status === 410) return;
+      throw fail(res.status);
+    },
+    async remove(id) {
+      if (!(await fence(id))) return;
+      const res = await call("DELETE", one(id));
+      if (res.ok || res.status === 404 || res.status === 410) return;
+      throw fail(res.status);
+    },
+  };
+}

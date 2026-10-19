@@ -1,13 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { ATTENDANCE, type Attendance } from "@/domain/constants";
+import { ATTENDANCE, GOOGLE_ACTOR, type Attendance } from "@/domain/constants";
 import type { Person } from "@/domain/people";
 import type { ClashView, EventView, Undo } from "@/lib/calendar-types";
 import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
 import { formatWhen, fromLocalInputs, toLocalInputs } from "./time-format";
 import { externalHref } from "@/lib/external-href";
+import { deleteConfirm } from "@/domain/delete-confirm";
+import { HOUSEHOLD_KINDS } from "@/domain/duplicates";
+
+// Whether two-way sync with the household calendar is On (intent 0020).
+async function householdOn(): Promise<boolean> {
+  const res = await fetch("/api/v1/household-sync");
+  return res.ok && (await res.json()).mode === "on";
+}
 
 // Event detail (CAL-4) with the non-drag ways to resolve clashes (NFR-9,
 // CON-3, CON-4): Move to…, Skip, Accept clash, and back to the source time;
@@ -83,7 +91,8 @@ export function EventDetail(props: {
 
       {o?.moved && (
         <div className="rounded border p-2" data-testid="moved-info">
-          You moved this (was {formatWhen(o.originalStart, o.originalEnd, e.allDay, tz)} at the source).
+          {o.createdBy === GOOGLE_ACTOR ? "Changed in Google Calendar" : "You moved this"} (was{" "}
+          {formatWhen(o.originalStart, o.originalEnd, e.allDay, tz)} at the source).
           {o.sourceChangedAt && (
             <p className="mt-1 font-medium text-amber-800 dark:text-amber-300" role="status">
               ⚠ Source changed since you moved this.
@@ -236,14 +245,21 @@ export function EventDetail(props: {
             {e.seriesId ? "Edit series" : "Edit"}
           </button>
         )}
-        {!fromSource && (
-          <button
-            className="rounded border border-red-700 px-3 py-1 text-red-700 dark:text-red-400"
-            onClick={() => act(() => call(`/api/v1/events/${e.id}`, "DELETE"), "Deleted.")}
-          >
-            Delete
-          </button>
-        )}
+        {/* Intent 0022, DEL-2: any event, after "Delete?". */}
+        <button
+          className="rounded border border-red-700 px-3 py-1 text-red-700 dark:text-red-400"
+          onClick={async () => {
+            const household = !!e.source && HOUSEHOLD_KINDS.includes(e.source.kind);
+            const on = household && (await householdOn());
+            if (!window.confirm(deleteConfirm(e.title, e.source, on))) return;
+            await act(
+              () => call(`/api/v1/events/${e.id}`, "DELETE"),
+              on ? "Deleted; it goes from Google Calendar shortly." : "Deleted.",
+            );
+          }}
+        >
+          Delete
+        </button>
       </div>
 
       {moving && (

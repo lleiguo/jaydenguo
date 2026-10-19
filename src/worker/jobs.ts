@@ -13,6 +13,7 @@ import { assistantActionsJob } from "./assistant-actions";
 import { assistantEmailJob } from "./assistant-email";
 import { calendarCopyJob } from "./calendar-copy";
 import { costsSyncJob } from "./costs";
+import { householdSyncJob } from "./household-sync";
 
 export type { JobContext } from "./context";
 export type Job = { description: string; run: (args: string[], ctx: JobContext) => Promise<void> };
@@ -38,7 +39,7 @@ export const jobs: Record<string, Job> = {
     run: removeCredentialJob,
   },
   sync: {
-    description: "Sync sources: sync <source-id | all> [manual | scheduled]",
+    description: "Sync sources: sync <source-id | all | household> [manual | scheduled]",
     run: syncJob,
   },
   "gmail:check": {
@@ -81,6 +82,10 @@ export const jobs: Record<string, Job> = {
   "calendar:copy": {
     description: "Copy the calendar to the Jayden (hub) Google Calendar: calendar:copy [delete]",
     run: calendarCopyJob,
+  },
+  "household:sync": {
+    description: "Write the hub's events into the household Google Calendar (intent 0020)",
+    run: householdSyncJob,
   },
   "costs:sync": {
     description: "Read the last 35 days of the Cloud Billing export (daily)",

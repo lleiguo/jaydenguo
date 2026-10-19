@@ -22,7 +22,8 @@ export function DeletedList() {
       {events.map((e) => (
         <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
           <span>
-            {CATEGORY_INFO[e.category].icon} {e.title} · {new Date(e.start).toLocaleString()} · deleted{" "}
+            {CATEGORY_INFO[e.category].icon} {e.title} · {new Date(e.start).toLocaleString()}
+            {e.source && ` · from ${e.source.name}`} · deleted{" "}
             {e.deletedAt && new Date(e.deletedAt).toLocaleDateString()}
           </span>
           <button

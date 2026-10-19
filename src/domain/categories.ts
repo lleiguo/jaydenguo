@@ -62,7 +62,7 @@ export function ownersFor(
   return [...new Set(matched.length ? matched : (mapping.owners ?? []))];
 }
 
-const namedIn = (title: string, name: string) => {
+export const namedIn = (title: string, name: string) => {
   const n = name.trim();
   if (!n) return false;
   const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

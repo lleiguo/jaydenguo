@@ -22,6 +22,7 @@ const routes = [
   "/api/v1/changes?since=0",
   "/api/v1/clashes",
   "/api/v1/calendar-copy",
+  "/api/v1/household-sync",
   "/api/v1/sources",
   "/api/v1/credentials",
   "/api/v1/costs",
