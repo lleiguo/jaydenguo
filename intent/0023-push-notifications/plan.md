@@ -35,11 +35,11 @@ then the iPhone app.
 Approved 2026-10-19 with the defaults. P0+P1 (#169) and P2 (#170) merged
 and deployed 2026-10-19; TestFlight build 20 uploaded (next = 21).
 
-On production `push:test` reached the notify step for 2 registered phones
-and logged "push not sent (no APNs key)" for each: nothing arrives until
-the owner does O-2 and O-3, then runs `push:test` again.
+O-2 and O-3 done 2026-10-19: one APNs key for sandbox and production,
+Terraform applied. `push:test lleiguo@gmail.com` then sent 1 (no invalid
+or failed tokens), and the owner saw "Test notification" on their iPhone:
+NTF-1 is done, and pushes from 0004 onward now arrive too.
 
-Left: O-2, O-3 (APNs key, Terraform apply), O-4 (install build 20);
-SP-S1 (read "SP-S1 entry fields" from the next Commit Swimming sync's log,
+Left: SP-S1 (read "SP-S1 entry fields" from the next Commit Swimming sync's log,
 then NTF-S2 or drop it); the "Done when" checks over the next tournament
 and meet.
