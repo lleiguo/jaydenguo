@@ -34,4 +34,6 @@ Approved 2026-10-16 with the defaults (8 s, one saved copy, no spinner; S-1, S-2
   owner signs in again (Xcode → Settings → Accounts), re-run the export.
   Build 17 (#151, intent 0019) is cut from a later `main` and has S1
   too, so uploading 17 covers this.
-- Left: the upload, then O-1 (Airplane-mode check on the phone).
+- 2026-10-17: build 17 (#151), which has S1, uploaded to TestFlight;
+  build 16 was never uploaded and isn't needed.
+- Left: O-1 (Airplane-mode check on the phone, build 17 or later).
