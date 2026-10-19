@@ -1,15 +1,36 @@
 import { generateKeyPairSync, verify } from "node:crypto";
 import { createServer, type Http2Server, type ServerHttp2Session } from "node:http2";
 import type { AddressInfo } from "node:net";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, like, ne } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { conflicts, devices, events, notifications, sessions, sources, tennisEntries } from "@db/schema";
+import {
+  conflicts,
+  devices,
+  events,
+  notifications,
+  sessions,
+  settings,
+  sources,
+  swimEntries,
+  swimMeets,
+  swimResults,
+  tennisEntries,
+  tennisMatches,
+  tennisPlayers,
+  tennisTournaments,
+} from "@db/schema";
 import { createSession, findSession, type SessionUser } from "@/server/auth/session";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import { HttpError } from "@/server/errors";
 import { createLogger } from "@/server/log";
-import { notifyClashes, notifyEntryChange, notifySyncFailed } from "@/server/push/kinds";
+import {
+  notifyClashes,
+  notifyEntryChange,
+  notifySwim,
+  notifySyncFailed,
+  notifyTennisResults,
+} from "@/server/push/kinds";
 import {
   deviceSettings,
   getNotification,
@@ -260,12 +281,14 @@ describe("push notifications", () => {
     await db.delete(events).where(eq(events.sourceId, src.id));
   });
 
-  it("tells when he's accepted (once) and off the list, not other moves (TEN-10, ACC-6)", async () => {
+  it("tells when he's registered, accepted (once each) and off the list, not other moves (TEN-10, ACC-6, NTF-T2)", async () => {
     await register(await phone(), TOKEN_A);
     const entry = { id: crypto.randomUUID(), tournamentName: "Rookie Open", eventName: "U9 Orange" };
     await notifyEntryChange(db, { ...entry, status: "entered" }, "reserve", { log });
-    await notifyEntryChange(db, { ...entry, status: "found" }, "entered", { log });
     expect(sent).toHaveLength(0);
+    await notifyEntryChange(db, { ...entry, status: "found" }, "entered", { log });
+    await notifyEntryChange(db, { ...entry, status: "payment_needed" }, "entered", { log });
+    expect(sent).toHaveLength(1);
     await notifyEntryChange(db, { ...entry, status: "entered" }, "main_draw", { log });
     // Once per entry: back from the reserve list says nothing new.
     await notifyEntryChange(db, { ...entry, status: "reserve" }, "main_draw", { log });
@@ -274,9 +297,173 @@ describe("push notifications", () => {
     expect(rows.map((r) => r.title).sort()).toEqual([
       "Accepted: Rookie Open (U9 Orange)",
       "Off the entry list",
+      "Registered: Rookie Open (U9 Orange)",
     ]);
     expect(rows.find((r) => r.title.startsWith("Accepted"))?.body).toBe("He's in the main draw.");
+    expect(rows.find((r) => r.title.startsWith("Registered"))?.target).toBe(`tennis/entries/${entry.id}`);
     expect(tennisEntries).toBeDefined();
+  });
+
+  it("lists the new kinds apart, and sends them only to phones that chose them (NTF-SEC1)", async () => {
+    const old = await phone();
+    const settings = await register(old, TOKEN_A);
+    expect(settings.available.map((a) => a.kind)).not.toContain("swim");
+    expect(settings.available.map((a) => a.kind)).not.toContain("tennis_result");
+    expect(settings.more.map((a) => a.kind)).toEqual(["cookie", "tennis_result", "swim"]);
+    expect(settings.kinds).not.toContain("swim");
+    const fresh = await phone();
+    await register(fresh, TOKEN_B);
+    await setDeviceKinds(db, fresh, ["swim", "clash"]);
+    await notify(db, { ...note("swim:1"), kind: "swim" }, { log });
+    expect(sent.map((p) => p.path.slice(-64))).toEqual([TOKEN_B]);
+  });
+
+  it("reminds once of a clash still open two days before, not right after the first push (NTF-C3)", async () => {
+    await register(await phone(), TOKEN_A);
+    const [src] = await db.insert(sources).values({ kind: "ical", name: "Reminder test" }).returning();
+    const at = (h: number) => new Date(Date.now() + 30 * 3_600_000 + h * 3_600_000);
+    await db.insert(events).values([
+      {
+        sourceId: src.id,
+        externalId: "r1",
+        category: "soccer",
+        title: "Soccer game",
+        startUtc: at(0),
+        endUtc: at(2),
+      },
+      {
+        sourceId: src.id,
+        externalId: "r2",
+        category: "swimming",
+        title: "Swim meet",
+        startUtc: at(1),
+        endUtc: at(3),
+      },
+    ]);
+    // Noticed now: the first push, no reminder on top.
+    expect(await notifyClashes(db, { log })).toBe(1);
+    expect(await notifyClashes(db, { log })).toBe(0);
+    // The first push was two days ago: one reminder, once.
+    await db.update(notifications).set({ createdAt: new Date(Date.now() - 2 * 86_400_000) });
+    expect(await notifyClashes(db, { log })).toBe(1);
+    expect(await notifyClashes(db, { log })).toBe(0);
+    const titles = (await db.select().from(notifications)).map((n) => n.title).sort();
+    expect(titles[0]).toMatch(/^Clash on /);
+    expect(titles[1]).toMatch(/^Still a clash on /);
+    await db.delete(events).where(eq(events.sourceId, src.id));
+  });
+
+  it("tells each new match result once, after a silent first run (NTF-T5)", async () => {
+    await db.delete(settings).where(like(settings.key, "notified_since:%"));
+    const s = await phone();
+    await register(s, TOKEN_A);
+    await setDeviceKinds(db, s, ["tennis_result"]);
+    const [src] = await db.insert(sources).values({ kind: "tennis_tc", name: "Results test" }).returning();
+    const [me, opp] = await db
+      .insert(tennisPlayers)
+      .values([
+        { sourceId: src.id, memberId: "m1", name: "Self Player", isSelf: true },
+        { sourceId: src.id, memberId: "m2", name: "Sam Lee" },
+      ])
+      .returning();
+    const today = new Date().toISOString().slice(0, 10);
+    const [t] = await db
+      .insert(tennisTournaments)
+      .values({ sourceId: src.id, externalId: "t1", name: "Fall Open", startDate: today, endDate: today })
+      .returning();
+    const match = (n: number, winner: number, side1: string, side2: string) => ({
+      sourceId: src.id,
+      externalId: `x${n}`,
+      tournamentId: t.id,
+      round: n === 1 ? "R32" : "R16",
+      matchDate: today,
+      side1,
+      side2,
+      winner,
+      sets: [
+        [3, 6],
+        [4, 6],
+      ],
+      outcome: "played",
+      origin: "source",
+    });
+    await db.insert(tennisMatches).values(match(1, 1, me.id, opp.id));
+    // The first run marks what's known.
+    expect(await notifyTennisResults(db, { log })).toBe(0);
+    // He's side 2 and won: the score is told from his side.
+    await db.insert(tennisMatches).values(match(2, 2, opp.id, me.id));
+    expect(await notifyTennisResults(db, { log })).toBe(1);
+    expect(await notifyTennisResults(db, { log })).toBe(0);
+    const [n] = await db
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.kind, "tennis_result"), ne(notifications.title, "")));
+    expect(n).toMatchObject({
+      title: "Fall Open",
+      body: "Won 6-3 6-4 against Sam Lee (R16).",
+      target: `tennis/tournaments/${t.id}`,
+    });
+    expect(sent).toHaveLength(1);
+    await db.delete(tennisMatches).where(eq(tennisMatches.sourceId, src.id));
+    await db.delete(tennisTournaments).where(eq(tennisTournaments.sourceId, src.id));
+    await db.delete(tennisPlayers).where(eq(tennisPlayers.sourceId, src.id));
+  });
+
+  it("tells meet entries, added events and results once each (NTF-S1, NTF-S3)", async () => {
+    await db.delete(settings).where(like(settings.key, "notified_since:%"));
+    const s = await phone();
+    await register(s, TOKEN_A);
+    await setDeviceKinds(db, s, ["swim"]);
+    const [src] = await db.insert(sources).values({ kind: "commit_swim", name: "Swim test" }).returning();
+    const day = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString().slice(0, 10);
+    const [old, next] = await db
+      .insert(swimMeets)
+      .values([
+        { sourceId: src.id, externalId: "m0", name: "Known Meet", startDate: day(5), endDate: day(6) },
+        { sourceId: src.id, externalId: "m1", name: "Fall Classic", startDate: day(10), endDate: day(11) },
+      ])
+      .returning();
+    await db.insert(swimEntries).values({ meetId: old.id, distance: 50, stroke: "free", course: "SCM" });
+    // First run: silent.
+    expect(await notifySwim(db, src.id, { log })).toBe(0);
+    await db.insert(swimEntries).values([
+      { meetId: next.id, distance: 50, stroke: "free", course: "SCM", seedTimeMs: 34_120 },
+      { meetId: next.id, distance: 100, stroke: "back", course: "SCM" },
+    ]);
+    expect(await notifySwim(db, src.id, { log })).toBe(1);
+    expect(await notifySwim(db, src.id, { log })).toBe(0);
+    await db.insert(swimEntries).values({ meetId: next.id, distance: 200, stroke: "im", course: "SCM" });
+    expect(await notifySwim(db, src.id, { log })).toBe(1);
+    // Results from the known meet, yesterday.
+    await db.insert(swimResults).values([
+      {
+        sourceId: src.id,
+        externalId: "r1",
+        meetId: old.id,
+        swimDate: day(-1),
+        distance: 50,
+        stroke: "free",
+        course: "SCM",
+        timeMs: 33_870,
+        place: 2,
+        origin: "source",
+      },
+    ]);
+    expect(await notifySwim(db, src.id, { log })).toBe(1);
+    expect(await notifySwim(db, src.id, { log })).toBe(0);
+    const told = (await db.select().from(notifications).where(eq(notifications.kind, "swim")))
+      .filter((n) => n.title)
+      .map((n) => [n.title, n.body]);
+    expect(told.sort()).toEqual(
+      [
+        ["Added to Fall Classic", "200 IM NT"],
+        ["Entered: Fall Classic", "50 Free 34.12, 100 Back NT"],
+        ["Results: Known Meet", "50 Free 33.87 (2nd, best time)"],
+      ].sort(),
+    );
+    await db.delete(swimResults).where(eq(swimResults.sourceId, src.id));
+    await db.delete(swimEntries).where(inArray(swimEntries.meetId, [old.id, next.id]));
+    await db.delete(swimMeets).where(eq(swimMeets.sourceId, src.id));
   });
 
   it("says a source keeps failing at most once a day (SYNC-4, PUSH-5)", async () => {

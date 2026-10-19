@@ -14,6 +14,7 @@ import { assistantEmailJob } from "./assistant-email";
 import { calendarCopyJob } from "./calendar-copy";
 import { costsSyncJob } from "./costs";
 import { householdSyncJob } from "./household-sync";
+import { pushTestJob } from "./push-test";
 
 export type { JobContext } from "./context";
 export type Job = { description: string; run: (args: string[], ctx: JobContext) => Promise<void> };
@@ -90,6 +91,10 @@ export const jobs: Record<string, Job> = {
   "costs:sync": {
     description: "Read the last 35 days of the Cloud Billing export (daily)",
     run: costsSyncJob,
+  },
+  "push:test": {
+    description: "Send a test notification to the phones: push:test [email]",
+    run: pushTestJob,
   },
   backup: {
     description: "Export the database to the backup bucket (nightly)",

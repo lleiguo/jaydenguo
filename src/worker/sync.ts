@@ -27,7 +27,14 @@ import {
   STALE_RUN_MS,
   minGapMs,
 } from "../server/sync/policy";
-import { notifyClashes, notifyNextMatches, notifySuggestions, notifySyncFailed } from "../server/push/kinds";
+import {
+  notifyClashes,
+  notifyNextMatches,
+  notifySuggestions,
+  notifySwim,
+  notifySyncFailed,
+  notifyTennisResults,
+} from "../server/push/kinds";
 import { pruneMemories } from "../server/assistant/memory";
 import { pruneHistory } from "../server/assistant/turns";
 import { pruneNotifications } from "../server/push/notify";
@@ -101,6 +108,9 @@ export async function syncTennisDraws(
     log("tennis draws read", { source: source.name, tournaments: tournamentIds.length, ...counts });
     await notifyNextMatches(db, { log, now: now() }).catch((err) =>
       log("match notifications failed", { error: err }, "WARNING"),
+    );
+    await notifyTennisResults(db, { log, now: now() }).catch((err) =>
+      log("result notifications failed", { error: err }, "WARNING"),
     );
     const explained = await explainNextMatches(db, claudeExplainer(), log);
     log("tennis explanations", explained);
@@ -258,9 +268,18 @@ async function runLocked(
     await notifyClashes(db, { log, now: now() }).catch((err) =>
       log("clash notifications failed", { error: err }, "WARNING"),
     );
-    if (batch.tennis)
+    if (batch.tennis) {
       await notifyNextMatches(db, { log, now: now() }).catch((err) =>
         log("match notifications failed", { error: err }, "WARNING"),
+      );
+      await notifyTennisResults(db, { log, now: now() }).catch((err) =>
+        log("result notifications failed", { error: err }, "WARNING"),
+      );
+    }
+    // Intent 0023, NTF-S1, NTF-S3: his meet entries and results.
+    if (batch.swim)
+      await notifySwim(db, sourceId, { log, now: now() }).catch((err) =>
+        log("swim notifications failed", { error: err }, "WARNING"),
       );
     // Tournament entries (TEN-9, TEN-10) on every Tennis refresh: entry
     // lists, matching tournaments not open yet, and skipped ones. Best
