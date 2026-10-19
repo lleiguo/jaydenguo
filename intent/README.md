@@ -39,3 +39,4 @@ Rules:
 | 0020 | [One family calendar, both ways](0020-household-two-way/) | approved 2026-10-17 (chat); defaults kept | approved 2026-10-17 (chat); T-1..T-6 accepted | approved 2026-10-17; H1–H5 built; Terraform apply (O-3) waits on owner |
 | 0021 | [School stays out of the household calendar](0021-household-no-school/) | approved 2026-10-18 (chat); defaults kept | approved 2026-10-18 (chat); N-1 accepted | approved 2026-10-18; NO1 in #161 |
 | 0022 | [Delete any calendar event](0022-delete-any-event/) | approved 2026-10-18 (chat); defaults kept | approved 2026-10-18 (chat); D-1..D-3 accepted | approved 2026-10-18; DL1, DL2 merged (#164, #165); TestFlight build 19 uploaded |
+| 0023 | [A push for each step of tennis and swimming, every suggestion and clash](0023-push-notifications/) | draft 2026-10-19 | draft 2026-10-19 | draft 2026-10-19 |
