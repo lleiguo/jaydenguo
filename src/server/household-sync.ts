@@ -51,6 +51,11 @@ export type HouseholdSyncSettings = {
   // job that hasn't begun yet will see later changes too.
   requestedAt: string | null;
   runStartedAt: string | null;
+  // When the switch last went On. A household event deleted in the hub
+  // before then was deleted while Off or Dry run, so it stays in Google
+  // (intent 0022, DEL-4). Null for a switch turned On before 0022: every
+  // delete counts, as before.
+  onSince: string | null;
 };
 
 const EMPTY: HouseholdSyncSettings = {
@@ -65,6 +70,7 @@ const EMPTY: HouseholdSyncSettings = {
   last: null,
   requestedAt: null,
   runStartedAt: null,
+  onSince: null,
 };
 
 export async function getHouseholdSync(db: DbOrTx): Promise<HouseholdSyncSettings> {
@@ -127,6 +133,7 @@ export async function setHouseholdSync(
     held: input.mode === "on" ? current.held : null,
     dryRun: input.mode === "dry_run" ? current.dryRun : null,
     lastError: null,
+    ...(turningOn && { onSince: new Date().toISOString() }),
   });
   // TWO-8: Household holds everything now, so the one-way copy stops.
   if (turningOn) await saveCopySettings(db, { enabled: false });

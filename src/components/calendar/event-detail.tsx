@@ -8,6 +8,14 @@ import { call } from "./api";
 import { CATEGORY_INFO } from "./categories";
 import { formatWhen, fromLocalInputs, toLocalInputs } from "./time-format";
 import { externalHref } from "@/lib/external-href";
+import { deleteConfirm } from "@/domain/delete-confirm";
+import { HOUSEHOLD_KINDS } from "@/domain/duplicates";
+
+// Whether two-way sync with the household calendar is On (intent 0020).
+async function householdOn(): Promise<boolean> {
+  const res = await fetch("/api/v1/household-sync");
+  return res.ok && (await res.json()).mode === "on";
+}
 
 // Event detail (CAL-4) with the non-drag ways to resolve clashes (NFR-9,
 // CON-3, CON-4): Move to…, Skip, Accept clash, and back to the source time;
@@ -237,30 +245,21 @@ export function EventDetail(props: {
             {e.seriesId ? "Edit series" : "Edit"}
           </button>
         )}
-        {!fromSource && (
-          <button
-            className="rounded border border-red-700 px-3 py-1 text-red-700 dark:text-red-400"
-            onClick={() => act(() => call(`/api/v1/events/${e.id}`, "DELETE"), "Deleted.")}
-          >
-            Delete
-          </button>
-        )}
-        {e.source?.kind === "google_calendar" && e.status === "active" && (
-          // Intent 0020, TWO-4: with two-way sync on, it goes from the
-          // family's Google Calendar too, so it asks first.
-          <button
-            className="rounded border border-red-700 px-3 py-1 text-red-700 dark:text-red-400"
-            onClick={() =>
-              window.confirm(`Delete “${e.title}” from the family's Google Calendar too?`) &&
-              act(
-                () => call(`/api/v1/events/${e.id}`, "DELETE"),
-                "Deleted; it goes from Google Calendar shortly.",
-              )
-            }
-          >
-            Delete…
-          </button>
-        )}
+        {/* Intent 0022, DEL-2: any event, after "Delete?". */}
+        <button
+          className="rounded border border-red-700 px-3 py-1 text-red-700 dark:text-red-400"
+          onClick={async () => {
+            const household = !!e.source && HOUSEHOLD_KINDS.includes(e.source.kind);
+            const on = household && (await householdOn());
+            if (!window.confirm(deleteConfirm(e.title, e.source, on))) return;
+            await act(
+              () => call(`/api/v1/events/${e.id}`, "DELETE"),
+              on ? "Deleted; it goes from Google Calendar shortly." : "Deleted.",
+            );
+          }}
+        >
+          Delete
+        </button>
       </div>
 
       {moving && (

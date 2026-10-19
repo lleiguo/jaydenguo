@@ -179,7 +179,8 @@ export async function loadEvent(db: DbOrTx, id: string): Promise<EventView | nul
   return toView(row, new Map(), homeTz, await listPeople(db));
 }
 
-// The "Deleted" view (CAL-6): manual events that can be restored.
+// The "Deleted" view (CAL-6, intent 0022 DEL-5): deleted events, from a
+// source or not, that can be restored.
 export async function loadDeleted(db: DbOrTx): Promise<EventView[]> {
   const rows = await baseQuery(db)
     .where(isNotNull(events.deletedAt))

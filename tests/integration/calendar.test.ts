@@ -231,9 +231,33 @@ describe("calendar service", () => {
     await deleteEvent(db, actor, id);
     expect((await cal()).events.find((e) => e.id === id)).toBeUndefined();
     expect((await loadDeleted(db)).find((e) => e.id === id)).toBeDefined();
+    await expect(deleteEvent(db, actor, id)).rejects.toMatchObject({ status: 404 });
     await restoreEvent(db, actor, id);
     expect((await cal()).events.find((e) => e.id === id)).toBeDefined();
-    await expect(deleteEvent(db, actor, await gameId())).rejects.toThrow(/skipped, not deleted/);
+  });
+
+  it("deletes a source's event, which stays deleted through syncs (intent 0022, DEL-1, DEL-3, DEL-5)", async () => {
+    const id = await gameId();
+    const shown = async () => (await cal()).events.some((e) => e.id === id);
+    await deleteEvent(db, actor, id);
+    expect(await shown()).toBe(false);
+    // The source still has it, unchanged and then changed: still deleted.
+    await syncRecords(db, { sourceId }, [game0], window, { actor: "sync" });
+    await syncRecords(db, { sourceId }, [{ ...game0, title: "Game (renamed)" }], window, { actor: "sync" });
+    expect(await shown()).toBe(false);
+    // The source drops it: cancelled, and still deleted.
+    await syncRecords(db, { sourceId }, [], window, { actor: "sync" });
+    const [row] = await db.select().from(events).where(eq(events.id, id));
+    expect(row.status).toBe("cancelled");
+    expect(row.deletedAt).not.toBeNull();
+    await syncRecords(db, { sourceId }, [{ ...game0, title: "Game (renamed)" }], window, { actor: "sync" });
+    expect(await shown()).toBe(false);
+    const deleted = (await loadDeleted(db)).find((e) => e.id === id)!;
+    expect(deleted.source?.id).toBe(sourceId);
+    // Restored, it shows the source's latest version.
+    await restoreEvent(db, actor, id);
+    expect((await cal()).events.find((e) => e.id === id)?.title).toBe("Game (renamed)");
+    await syncRecords(db, { sourceId }, [game0], window, { actor: "sync" });
   });
 
   it("shows a household copy of a source's game once, as the source's", async () => {
