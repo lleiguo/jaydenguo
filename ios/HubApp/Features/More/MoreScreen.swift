@@ -51,6 +51,7 @@ struct MoreDestination: View {
         case .videos: VideosScreen()
         case .video(let id): VideoDetailScreen(id: id)
         case .notifications: NotificationsScreen()
+        case .clash(let id): ClashScreen(eventId: id)
         default: EmptyView()
         }
     }

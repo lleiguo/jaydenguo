@@ -21,7 +21,7 @@ then the iPhone app.
 | # | What | Spec | PR |
 |---|---|---|---|
 | P0+P1 | One PR. `push:test` job and a runbook line in `ios/README.md`; new kinds and migration 0036, the `more` field, registered, tennis results, swim entered / results, clash reminder, backfill, labels and targets; the SP-S1 log. Heat sheet (NTF-S2) waits on SP-S1. | NTF-1, NTF-T1..T5, NTF-S1, NTF-S3, NTF-C3, NTF-SEC1..2 | |
-| P2 | iPhone: new switches, the one-time switch-on, the clash screen from a clash push, new targets; build bump and TestFlight separate. | NTF-C1, NTF-C2 | |
+| P2 | iPhone: new switches (from `more`, replacing the fixed Cookie switch), the one-time switch-on, the clash screen (`Route.clash`, `jaydenguohub://open/clashes/<event id>`) from a clash push, new targets; build bump and TestFlight separate. | NTF-C1, NTF-C2 | |
 
 ## 4. Done when
 - The owner's iPhone shows the test push with its real text.

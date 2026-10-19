@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let info = response.notification.request.content.userInfo
         let id = Push.id(from: info)
         let target = info["target"] as? String
-        await MainActor.run { Self.model?.openNotification(id: id, target: target) }
+        let kind = info["kind"] as? String
+        await MainActor.run { Self.model?.openNotification(id: id, target: target, kind: kind) }
     }
 }

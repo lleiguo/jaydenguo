@@ -30,6 +30,14 @@ public enum Push {
         URL(string: "jaydenguohub://open/\(target)").flatMap { Route(url: $0) }
     }
 
+    /// A clash push targets its first event (so older builds open that);
+    /// this build opens the clash itself (intent 0023, NTF-C2).
+    public static func route(target: String, kind: String?) -> Route? {
+        let route = route(target: target)
+        if kind == "clash", case .event(let id) = route { return .clash(eventId: id) }
+        return route
+    }
+
     public typealias Text = Components.Schemas.NotificationView
 
     /// Fetches the text with the device token. Nil when it can't (offline,
