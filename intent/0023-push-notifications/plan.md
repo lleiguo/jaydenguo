@@ -1,5 +1,5 @@
 # Plan: A push for each step of his tennis and swimming, every suggestion and every clash
-Status: draft (2026-10-19), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-19, in chat: "approve, defaults"), with [spec.md](spec.md).
 
 Order: the APNs key first (nothing arrives without it), then the server,
 then the iPhone app.
@@ -33,5 +33,5 @@ then the iPhone app.
   it.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan, and on
+Approved 2026-10-19 with the defaults. P0 and P1 next; nothing arrives on the phone until
 the APNs key (O-2, O-3).

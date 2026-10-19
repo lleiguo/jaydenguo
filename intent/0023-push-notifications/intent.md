@@ -1,5 +1,5 @@
 # Intent: A push for each step of his tennis and swimming, every suggestion and every clash
-Status: draft (2026-10-19). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-19, in chat: "approve, defaults"); defaults kept. Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "next feature to add: push notification, I would like to receive

@@ -1,5 +1,5 @@
 # Spec: A push for each step of his tennis and swimming, every suggestion and every clash
-Status: draft (2026-10-19). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-19, in chat: "approve, defaults"); N-1..N-3 accepted. Written by Claude from [intent.md](intent.md).
 
 Read with 0001 (TEN-9..11, SWM-2, SWM-3, SYNC-5), 0004 (PUSH-1..6),
 0009 (ERA-3, the `OPT_IN_KINDS` rule) and 0017 (ACC-6).
