@@ -67,6 +67,8 @@ function splitsFor(
 
 export function normaliseCommit(raw: CommitRaw, ctx: AdapterContext): NormalisedBatch {
   const warnings: string[] = [];
+  // Intent 0023, SP-S1: field names only, read from the sync's log.
+  if (raw.entryFields?.length) warnings.push(`SP-S1 entry fields: ${raw.entryFields.join(", ")}`);
   const today = localDate(ctx.now, ctx.homeTimeZone);
   const from = new Date(`${addDays(today, -PAST_DAYS)}T00:00:00Z`);
   const meetsUrl = `${raw.siteUrl}/meets`;

@@ -8,8 +8,10 @@ IDs here: NTF (notifications).
 ## 1. What changes in earlier specs
 - **0004 PUSH-1** Adds kinds `tennis_result` and `swim`; `entry_change`
   also fires when he's entered; `clash` also fires once as a reminder.
-- **0004 PUSH-3** New kinds on by default; `suggestion` switched on once by
-  the new app build for phones that never set it.
+- **0004 PUSH-3** The new app build switches `suggestion`, `tennis_result`
+  and `swim` on once. (As built: the server can't put the new kinds in a
+  new registration's defaults, because builds before this one can't decode
+  them; the new build turns them on itself, as Cookie's kind in 0009.)
 - **0004 PUSH-4** A clash push opens the clash screen, not one event.
 - **0004 PUSH-6** Stays; the key goes into production (owner, O-2, O-3).
 

@@ -4547,7 +4547,9 @@
                         "video",
                         "sync_failed",
                         "suggestion",
-                        "cookie"
+                        "cookie",
+                        "tennis_result",
+                        "swim"
                       ]
                     }
                   }
@@ -6829,7 +6831,9 @@
                 "video",
                 "sync_failed",
                 "suggestion",
-                "cookie"
+                "cookie",
+                "tennis_result",
+                "swim"
               ]
             }
           },
@@ -6848,7 +6852,39 @@
                     "video",
                     "sync_failed",
                     "suggestion",
-                    "cookie"
+                    "cookie",
+                    "tennis_result",
+                    "swim"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "label"
+              ]
+            }
+          },
+          "more": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "clash",
+                    "draw",
+                    "entry_action",
+                    "entry_change",
+                    "video",
+                    "sync_failed",
+                    "suggestion",
+                    "cookie",
+                    "tennis_result",
+                    "swim"
                   ]
                 },
                 "label": {
@@ -6865,7 +6901,8 @@
         "required": [
           "registered",
           "kinds",
-          "available"
+          "available",
+          "more"
         ]
       },
       "DeviceTokenResponse": {
@@ -8506,7 +8543,9 @@
               "video",
               "sync_failed",
               "suggestion",
-              "cookie"
+              "cookie",
+              "tennis_result",
+              "swim"
             ]
           },
           "title": {

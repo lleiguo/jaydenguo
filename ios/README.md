@@ -148,6 +148,11 @@ Until then the worker only logs them. Development builds use Apple's
 sandbox and TestFlight builds production; each phone registers whichever
 it is.
 
+To check they arrive, run the worker job `push:test` (or `push:test
+<email>` for one parent's phones): the phone shows "Test notification",
+and the worker logs `notified … sent: 1` per phone, or "push not sent (no
+APNs key)" while the key is missing.
+
 ## Lost phone
 
 On the website, Settings → **Sign out everywhere** ends every session

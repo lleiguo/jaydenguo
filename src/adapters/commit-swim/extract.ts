@@ -68,6 +68,9 @@ export type CommitRaw = {
   meets: CommitResultMeet[];
   swims: CommitSwim[];
   splits: CommitSplit[];
+  // Intent 0023, SP-S1: the field names (never values) on his entries, to
+  // learn whether heats and lanes come before the meet. Logged by the sync.
+  entryFields?: string[];
 };
 
 export type ExtractArgs = { athleteFirstName: string | null; gapMs: number };
@@ -129,6 +132,7 @@ export async function extractInPage(args: ExtractArgs): Promise<ExtractResult> {
     }
   }
   const signups: CommitSignup[] = [];
+  const entryFields = new Set<string>();
   for (const m of signupDocs) {
     const invited = (m.invitedAthleteIds ?? []).includes(athleteId);
     const commitment = (m.commitments ?? []).find((c: any) => c.athleteId === athleteId);
@@ -141,6 +145,7 @@ export async function extractInPage(args: ExtractArgs): Promise<ExtractResult> {
     for (const e of events) {
       const entry = (e.activeEntries ?? []).find((a: any) => a.athleteId === athleteId);
       if (!entry || e.individualOrRelay === "R") continue;
+      for (const k of Object.keys(entry)) entryFields.add(k);
       entries.push({
         distance: Number(e.distance),
         stroke: String(e.stroke),
@@ -219,6 +224,6 @@ export async function extractInPage(args: ExtractArgs): Promise<ExtractResult> {
     }));
 
   const siteUrl = `${w.location.origin}/app/${superTeamId}`;
-  return { ok: true, raw: { siteUrl, signups, meets, swims, splits } };
+  return { ok: true, raw: { siteUrl, signups, meets, swims, splits, entryFields: [...entryFields].sort() } };
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }

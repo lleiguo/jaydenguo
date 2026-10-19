@@ -19,11 +19,11 @@
     },
     {
       "kind": "entry_action",
-      "label": "Tournament entry to finish or pay"
+      "label": "Tournament open to enter, or to pay"
     },
     {
       "kind": "entry_change",
-      "label": "Moved into the main draw, or off the entry list"
+      "label": "Registered, accepted, or off the entry list"
     },
     {
       "kind": "video",
@@ -36,6 +36,20 @@
     {
       "kind": "suggestion",
       "label": "New email suggestion"
+    }
+  ],
+  "more": [
+    {
+      "kind": "cookie",
+      "label": "Cookie's answer is ready"
+    },
+    {
+      "kind": "tennis_result",
+      "label": "Tennis match result"
+    },
+    {
+      "kind": "swim",
+      "label": "Swim meet entries and results"
     }
   ]
 }

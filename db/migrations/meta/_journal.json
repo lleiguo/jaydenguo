@@ -253,6 +253,13 @@
       "when": 1792259106562,
       "tag": "0035_household_links",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792418870063,
+      "tag": "0036_notification_kinds_0023",
+      "breakpoints": true
     }
   ]
 }

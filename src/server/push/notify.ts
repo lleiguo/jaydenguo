@@ -93,6 +93,26 @@ export async function notify(db: DbOrTx, n: NewNotification, deps: NotifyDeps = 
   }
 }
 
+// Marks an event as noticed without sending anything (intent 0023): the
+// first run's backfill (N-3), and one key per swim or entry so a later push
+// lists only what's new. True when the key is new.
+export async function claim(db: DbOrTx, kind: NotificationKind, dedupKey: string): Promise<boolean> {
+  const rows = await db
+    .insert(notifications)
+    .values({ kind, dedupKey, title: "", body: "", target: "" })
+    .onConflictDoNothing({ target: notifications.dedupKey })
+    .returning({ id: notifications.id });
+  return rows.length > 0;
+}
+
+export async function claimed(db: DbOrTx, dedupKey: string): Promise<Date | null> {
+  const [row] = await db
+    .select({ createdAt: notifications.createdAt })
+    .from(notifications)
+    .where(eq(notifications.dedupKey, dedupKey));
+  return row?.createdAt ?? null;
+}
+
 // Kept 90 days (spec §4.2).
 export async function pruneNotifications(db: DbOrTx, now = new Date()) {
   const cutoff = new Date(now.getTime() - 90 * 86_400_000);
@@ -117,6 +137,8 @@ export type DeviceSettings = {
   registered: boolean;
   kinds: NotificationKind[];
   available: { kind: NotificationKind; label: string }[];
+  // Kinds builds before intent 0023 can't decode; they ignore this field.
+  more: { kind: NotificationKind; label: string }[];
 };
 
 const deviceOnly = (session: SessionUser) => {
@@ -134,6 +156,7 @@ export async function deviceSettings(db: DbOrTx, session: SessionUser): Promise<
       kind,
       label: NOTIFICATION_LABEL[kind],
     })),
+    more: OPT_IN_KINDS.map((kind) => ({ kind, label: NOTIFICATION_LABEL[kind] })),
   };
 }
 
