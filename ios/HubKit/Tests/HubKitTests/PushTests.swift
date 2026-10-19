@@ -32,5 +32,7 @@ import Testing
         #expect(s.available.count == 7)
         #expect(!s.kinds.contains(.suggestion))
         #expect(s.kinds.contains(.clash))
+        // Intent 0023: kinds older builds can't read come apart.
+        #expect(s.more.map(\.kind) == [.cookie, .tennisResult, .swim])
     }
 }
