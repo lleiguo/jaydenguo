@@ -371,6 +371,88 @@ struct ClashesScreen: View {
     }
 }
 
+/// One event's open clashes, from a clash notification (intent 0023,
+/// NTF-C2): both events side by side, and the ways to settle it here.
+struct ClashScreen: View {
+    @Environment(AppModel.self) private var model
+    let eventId: String
+
+    var body: some View {
+        RemoteContent(fetch: {
+            try await model.client.api.listClashes(query: .init(days: 60)).ok.body.json.clashes
+                .filter { ($0.a == eventId || $0.b == eventId) && $0.acceptedId == nil }
+        }) { clashes in
+            List {
+                if clashes.isEmpty {
+                    Section {
+                        Label("Already resolved", systemImage: "checkmark.circle").foregroundStyle(.green)
+                        Button("Open the event") { open(eventId, day: nil) }
+                    }
+                }
+                ForEach(clashes, id: \.a) { c in
+                    Section {
+                        side(c.eventA)
+                        side(c.eventB)
+                        Button("Accept clash: both stay", systemImage: "checkmark") {
+                            Task {
+                                await act("Clash accepted.") {
+                                    _ = try await model.client.api.acceptClash(body: .json(.init(a: c.a, b: c.b))).ok
+                                }
+                            }
+                        }
+                        .accessibilityIdentifier("accept-clash")
+                    } header: {
+                        Text("Overlap \(Int(c.overlapMin)) min")
+                    }
+                }
+            }
+        }
+        .navigationTitle("Clash")
+    }
+
+    @ViewBuilder private func side(_ e: CalendarEvent) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(e.title, systemImage: e.category.symbol).font(.headline)
+            Caption([when(e), e.locationName].compactMap { $0 }.joined(separator: " · "))
+            HStack {
+                Button("Skip this one", systemImage: "forward.end") {
+                    Task {
+                        await act("Skipped \(e.title).") {
+                            _ = try await model.client.api.skipEvent(path: .init(id: e.id), body: .json(.init(skip: true))).ok
+                        }
+                    }
+                }
+                .accessibilityIdentifier("skip-\(e.id)")
+                Spacer()
+                Button("Open") { open(e.id, day: e.startDate.map { model.homeTime.localDate($0) }) }
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func open(_ id: String, day: String?) {
+        if let day { model.pendingEventDay = day }
+        model.go(.event(id: id))
+    }
+
+    private func when(_ e: CalendarEvent) -> String {
+        guard let s = e.startDate else { return e.start }
+        if e.allDay { return model.homeTime.dayTitle(model.homeTime.localDate(s)) }
+        return "\(model.homeTime.dayTitle(model.homeTime.localDate(s))), \(model.homeTime.time(s))"
+    }
+
+    private func act(_ done: String, _ work: () async throws -> Void) async {
+        do {
+            try await work()
+            model.show(done)
+        } catch {
+            model.show(HubError.from(error)?.message ?? "That didn't work.")
+        }
+        await model.dataChanged()
+    }
+}
+
 /// Settings → Deleted (CAL-6, intent 0022 DEL-5): deleted events, from a
 /// source or not, to restore.
 struct DeletedScreen: View {

@@ -45,16 +45,18 @@ struct NotificationsScreen: View {
                         ))
                         .accessibilityIdentifier("kind-\(item.kind.rawValue)")
                     }
-                    // Not in the server's list: builds before it couldn't read it (intent 0009).
-                    Toggle("Cookie's answer is ready", isOn: Binding(
-                        get: { settings.kinds.contains(where: { $0.rawValue == "cookie" }) },
-                        set: { on in
-                            var kinds = Set(settings.kinds.map(\.rawValue))
-                            if on { kinds.insert("cookie") } else { kinds.remove("cookie") }
-                            Task { await model.setNotificationKinds(Array(kinds)) }
-                        }
-                    ))
-                    .accessibilityIdentifier("kind-cookie")
+                    // Kinds older builds can't read come apart, in `more` (intents 0009, 0023).
+                    ForEach(settings.more, id: \.kind) { item in
+                        Toggle(item.label, isOn: Binding(
+                            get: { settings.kinds.contains(where: { $0.rawValue == item.kind.rawValue }) },
+                            set: { on in
+                                var kinds = Set(settings.kinds.map(\.rawValue))
+                                if on { kinds.insert(item.kind.rawValue) } else { kinds.remove(item.kind.rawValue) }
+                                Task { await model.setNotificationKinds(Array(kinds)) }
+                            }
+                        ))
+                        .accessibilityIdentifier("kind-\(item.kind.rawValue)")
+                    }
                 }
             }
         }
@@ -77,7 +79,7 @@ struct NotificationsPrompt: View {
                 VStack(alignment: .leading, spacing: 18) {
                     Image(systemName: "bell.badge").font(.largeTitle).foregroundStyle(.tint).accessibilityHidden(true)
                     Text("Turn on notifications?").font(.title2.bold())
-                    Text("The hub can tell you when something needs you: a new clash in the next two weeks, a tennis draw or entry, a finished video review, or a source that keeps failing.")
+                    Text("The hub can tell you when something needs you: a new clash in the next two weeks, each tennis step (open to enter, registered, accepted, the draw, results), his swim meet entries and results, new suggestions, a finished video review, or a source that keeps failing.")
                     Text("You choose which kinds in Settings → App → Notifications. What they say comes from the hub, not through Apple.")
                         .foregroundStyle(.secondary)
                 }

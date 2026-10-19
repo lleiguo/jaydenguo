@@ -8,6 +8,8 @@ public enum Route: Equatable, Sendable, Hashable {
     case calendar(date: String?)
     case event(id: String)
     case clashes
+    /// One event's open clashes, to decide which gives way (intent 0023, NTF-C2).
+    case clash(eventId: String)
     case tennis
     case tournament(id: String)
     /// One upcoming entry and its acceptance list (intent 0017, ACC-5).
@@ -47,6 +49,7 @@ public enum Route: Equatable, Sendable, Hashable {
         case (1, "calendar", _, _): self = .calendar(date: query.first { $0.name == "date" }?.value)
         case (2, "events", let id?, _): self = .event(id: id)
         case (1, "clashes", _, _), (2, "settings", "clashes", _): self = .clashes
+        case (2, "clashes", let id?, _): self = .clash(eventId: id)
         case (1, "tennis", _, _): self = .tennis
         case (3, "tennis", "tournaments", let id?): self = .tournament(id: id)
         case (3, "tennis", "entries", let id?): self = .tennisEntry(id: id)
@@ -76,7 +79,7 @@ public enum Route: Equatable, Sendable, Hashable {
         case .calendar, .event, .clashes: .calendar
         case .tennis, .tournament, .tennisEntry, .player, .tennisResults, .tennisAccuracy: .tennis
         case .swimming, .meet, .swimEvent: .swimming
-        case .videos, .video, .school, .suggestions, .sources, .accounts, .settings, .notifications: .more
+        case .videos, .video, .school, .suggestions, .sources, .accounts, .settings, .notifications, .clash: .more
         }
     }
 

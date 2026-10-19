@@ -26,6 +26,15 @@ import Testing
     @Test func knowsItsTab() {
         #expect(Route.meet(id: "m").tab == .swimming)
         #expect(Route.video(id: "v").tab == .more)
+        #expect(Route.clash(eventId: "e").tab == .more)
+    }
+
+    @Test func clashPushOpensTheClash() {
+        #expect(Route(url: URL(string: "jaydenguohub://open/clashes/e1")!) == .clash(eventId: "e1"))
+        #expect(Push.route(target: "events/e1", kind: "clash") == .clash(eventId: "e1"))
+        #expect(Push.route(target: "events/e1", kind: "suggestion") == .event(id: "e1"))
+        #expect(Push.route(target: "tennis/entries/n1", kind: "entry_change") == .tennisEntry(id: "n1"))
+        #expect(Push.route(target: "swimming/meets/m1", kind: "swim") == .meet(id: "m1"))
     }
 }
 

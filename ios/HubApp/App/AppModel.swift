@@ -275,7 +275,7 @@ final class AppModel {
         case .tournament, .tennisEntry, .player, .tennisResults, .tennisAccuracy: tennisPath = [route]
         case .swimming: swimmingPath = []
         case .meet, .swimEvent: swimmingPath = [route]
-        case .school, .suggestions, .sources, .accounts, .settings, .videos, .notifications: morePath = [route]
+        case .school, .suggestions, .sources, .accounts, .settings, .videos, .notifications, .clash: morePath = [route]
         case .video: morePath = [.videos, route]
         default: pendingRoute = route
         }
@@ -366,6 +366,7 @@ final class AppModel {
                 topic: Bundle.main.bundleIdentifier ?? "com.jaydenguo.hub"
             ))).ok.body.json
             await offerCookieNotifications()
+            await offerNewNotifications()
         } catch {
             pushProblem = HubError.from(error)?.message ?? "Couldn't turn on notifications for this phone."
         }
@@ -380,6 +381,18 @@ final class AppModel {
         else { return }
         UserDefaults.standard.set(true, forKey: key)
         let kinds = Set(settings.kinds.map(\.rawValue)).union(["cookie"])
+        await setNotificationKinds(Array(kinds))
+    }
+
+    /// Intent 0023 (NTF-C1, NTF-T5, NTF-S1): every suggestion, his match
+    /// results and his swim meets, switched on once by this build. Any of
+    /// them can be switched off again in Settings → Notifications.
+    private func offerNewNotifications() async {
+        let offered = "newKindsOffered.0023"
+        guard let settings = notificationSettings, settings.registered, !UserDefaults.standard.bool(forKey: offered)
+        else { return }
+        UserDefaults.standard.set(true, forKey: offered)
+        let kinds = Set(settings.kinds.map(\.rawValue)).union(["suggestion", "tennis_result", "swim"])
         await setNotificationKinds(Array(kinds))
     }
 
@@ -403,11 +416,12 @@ final class AppModel {
 
     /// PUSH-4: the target the extension saved, or asked for now when it
     /// couldn't (offline when the notification came).
-    func openNotification(id: String?, target: String?) {
-        if let target, let route = Push.route(target: target) { return go(route) }
+    func openNotification(id: String?, target: String?, kind: String?) {
+        if let target, let route = Push.route(target: target, kind: kind) { return go(route) }
         guard let id else { return }
         Task {
-            if let text = await Push.text(id: id, client: client), let route = Push.route(target: text.target) { go(route) }
+            if let text = await Push.text(id: id, client: client),
+               let route = Push.route(target: text.target, kind: text.kind.rawValue) { go(route) }
         }
     }
 
