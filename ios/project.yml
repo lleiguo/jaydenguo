@@ -40,7 +40,7 @@ targets:
       path: HubApp/Info.plist
       properties:
         # A generic name: nothing about Jayden on the home screen (AUTH-3).
-        CFBundleDisplayName: Hub
+        CFBundleDisplayName: Cookie
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
@@ -94,7 +94,7 @@ targets:
     info:
       path: HubWidgets/Info.plist
       properties:
-        CFBundleDisplayName: Hub
+        CFBundleDisplayName: Cookie
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         HubAppGroup: $(HUB_APP_GROUP)
@@ -123,7 +123,7 @@ targets:
     info:
       path: HubNotify/Info.plist
       properties:
-        CFBundleDisplayName: Hub
+        CFBundleDisplayName: Cookie
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         HubAppGroup: $(HUB_APP_GROUP)
@@ -136,7 +136,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_STRICT_CONCURRENCY: complete
         SKIP_INSTALL: YES
-  # "Review in Hub" from the share sheet (EXT-3).
+  # "Review in Cookie" from the share sheet (EXT-3).
   HubShare:
     type: app-extension
     platform: iOS
@@ -153,7 +153,7 @@ targets:
     info:
       path: HubShare/Info.plist
       properties:
-        CFBundleDisplayName: Review in Hub
+        CFBundleDisplayName: Review in Cookie
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         HubAppGroup: $(HUB_APP_GROUP)

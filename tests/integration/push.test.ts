@@ -146,7 +146,7 @@ describe("push notifications", () => {
     expect(push.headers["apns-topic"]).toBe("com.jaydenguo.hub");
     expect(push.headers["apns-push-type"]).toBe("alert");
     expect(push.body).toEqual({
-      aps: { alert: { title: "Hub", body: "New update" }, "mutable-content": 1, sound: "default" },
+      aps: { alert: { title: "Cookie", body: "New update" }, "mutable-content": 1, sound: "default" },
       id,
       kind: "clash",
     });

@@ -115,7 +115,7 @@ holds its team ID with no `.dev` suffix.
 
 **First time only**
 
-1. App Store Connect → **Apps** → **+** → New App: iOS, name "Hub" (or any
+1. App Store Connect → **Apps** → **+** → New App: iOS, name "Cookie" (or any
    name not about the family: AUTH-3), bundle ID `com.jaydenguo.hub`, SKU
    `hub`. Don't fill in the store listing: the app is never published
    (INFR-4).

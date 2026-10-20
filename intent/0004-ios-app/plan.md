@@ -128,7 +128,8 @@ Results go in a `## Spikes` section of this file.
 **N2 as built (2026-09-29):**
 - Tooling: Xcode 27 with the iOS 27 Simulator; XcodeGen generates
   `JaydenHub.xcodeproj`, which isn't committed (`ios/project.yml`). The
-  app is called "Hub" on the home screen (AUTH-3).
+  app is called "Hub" on the home screen (AUTH-3); renamed "Cookie"
+  (and "Review in Cookie" in the share sheet) by the owner, 2026-10-19.
 - HubKit: `HubAPI` is generated from `openapi.json` (a symlink) by Apple's
   generator plugin; `HubKit` has the config, Keychain token store, PKCE,
   sign-in request, `HubClient` (bearer and `X-App-Version` middleware;
