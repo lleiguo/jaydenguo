@@ -136,7 +136,7 @@ struct TodayScreen: View {
         let open = today.clashes.filter { $0.acceptedId == nil }
         if !open.isEmpty {
             Section("Clashes in the next 7 days") {
-                ForEach(open, id: \.a) { c in
+                ForEach(open, id: \.self) { c in
                     Button { selected = EventRef(id: c.eventA.id) } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Label("\(c.eventA.title) and \(c.eventB.title)", systemImage: "exclamationmark.triangle.fill")

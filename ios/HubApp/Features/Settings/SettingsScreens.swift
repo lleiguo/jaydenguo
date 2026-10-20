@@ -329,7 +329,7 @@ struct ClashesScreen: View {
     var body: some View {
         RemoteContent(fetch: { try await model.client.api.listClashes(query: .init(days: 60)).ok.body.json.clashes }) { clashes in
             List {
-                ForEach(clashes, id: \.a) { c in
+                ForEach(clashes, id: \.self) { c in
                     VStack(alignment: .leading, spacing: 4) {
                         Label(c.eventA.title, systemImage: c.eventA.category.symbol)
                         Label(c.eventB.title, systemImage: c.eventB.category.symbol)
@@ -389,7 +389,7 @@ struct ClashScreen: View {
                         Button("Open the event") { open(eventId, day: nil) }
                     }
                 }
-                ForEach(clashes, id: \.a) { c in
+                ForEach(clashes, id: \.self) { c in
                     Section {
                         side(c.eventA)
                         side(c.eventB)

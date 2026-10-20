@@ -296,7 +296,7 @@ describe("Cookie reads an email when asked (plan R1–R2)", () => {
     expect(out.outcome).toBe("failed");
     const [followup] = await db.select().from(assistantTurns).where(eq(assistantTurns.id, out.turnId!));
     expect(followup.answer).toMatch(/couldn't read the mail/);
-    expect(JSON.stringify(lines)).not.toContain("503");
+    expect(JSON.stringify(lines)).not.toContain("Gmail said");
 
     // A read whose job never ran is closed by the daily tidy-up.
     const stuck = await readFor();
