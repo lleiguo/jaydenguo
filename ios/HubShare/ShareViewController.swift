@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// "Review in Hub" from any app's share sheet (intent 0004, EXT-3; VID-1):
+/// "Review in Cookie" from any app's share sheet (intent 0004, EXT-3; VID-1):
 /// the shared link with a sport, note and date, submitted with the device
 /// token. A Google Photos link can't be read by the site (F-4), so it's
 /// handed to the app, which opens the Photos picker with the note kept.
@@ -88,7 +88,7 @@ struct ShareView: View {
                     Text("There's no link to review in what was shared.")
                 }
             }
-            .navigationTitle("Review in Hub")
+            .navigationTitle("Review in Cookie")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(done == nil ? "Cancel" : "Done") { close() } }

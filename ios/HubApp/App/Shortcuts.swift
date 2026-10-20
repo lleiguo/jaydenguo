@@ -66,12 +66,12 @@ struct RefreshAllIntent: AppIntent {
         let rest = recent > 0 ? " \(recent) synced within the hour and were left alone." : ""
         return .result(dialog: started == 0 && recent > 0
             ? "Everything synced within the hour, so nothing was refreshed."
-            : "Refreshing \(started) source\(started == 1 ? "" : "s"). Changes show in Hub in a minute or two.\(rest)")
+            : "Refreshing \(started) source\(started == 1 ? "" : "s"). Changes show in Cookie in a minute or two.\(rest)")
     }
 }
 
-/// The phrases Siri and Spotlight offer. They say "Hub", never a name
-/// (AUTH-3).
+/// The phrases Siri and Spotlight offer. They say the app name ("Cookie"),
+/// never a person's name (AUTH-3).
 struct HubShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: WhatsNextIntent(), phrases: ["What's next in \(.applicationName)", "\(.applicationName) what's next"],

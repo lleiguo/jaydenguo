@@ -19,7 +19,7 @@ struct SignInView: View {
                 .font(.system(size: 64))
                 .foregroundStyle(.tint)
                 .accessibilityHidden(true)
-            Text("Hub").font(.largeTitle.bold())
+            Text("Cookie").font(.largeTitle.bold())
             Text("Sign in with the Google account that's allowed to use the site.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)

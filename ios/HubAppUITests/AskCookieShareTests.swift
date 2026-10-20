@@ -50,8 +50,8 @@ final class AskCookieShareTests: XCTestCase {
         XCTAssertTrue(share.waitForExistence(timeout: 10), photos.debugDescription)
         share.tap()
 
-        // iOS lists the app ("Hub"); its two share extensions are chosen from there.
-        let hubCell = photos.cells["Hub"].firstMatch
+        // iOS lists the app ("Cookie"); its two share extensions are chosen from there.
+        let hubCell = photos.cells["Cookie"].firstMatch
         XCTAssertTrue(hubCell.waitForExistence(timeout: 10), photos.debugDescription)
         hubCell.tap()
         let ask = photos.descendants(matching: .any).matching(NSPredicate(format: "label == 'Ask Cookie'")).firstMatch

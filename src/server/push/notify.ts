@@ -39,7 +39,7 @@ export type NotifyDeps = {
 };
 
 // What Apple sees: nothing about the family (PUSH-2, AUTH-3).
-export const GENERIC_ALERT = { title: "Hub", body: "New update" };
+export const GENERIC_ALERT = { title: "Cookie", body: "New update" };
 
 // Never throws: a notification must not fail the job that noticed the event.
 export async function notify(db: DbOrTx, n: NewNotification, deps: NotifyDeps = {}): Promise<string | null> {
