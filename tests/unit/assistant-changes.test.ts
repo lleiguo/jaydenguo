@@ -169,6 +169,9 @@ describe("whose it is (ADD-3, GCW-6)", () => {
     expect(whoIsIt(["sam"], people)).toEqual({ everyone: false, ids: ["p3"], names: ["Sam"] });
     expect(whoIsIt(["Jayden", "Sam", "jayden"], people)).toMatchObject({ ids: ["p1", "p3"] });
     expect(whoIsIt([], people)).toHaveProperty("problem");
+    // Intent 0024, OWN-4: nobody named is the asker's, when they're one of People.
+    expect(whoIsIt([], people, "p2")).toEqual({ everyone: false, ids: ["p2"], names: [people[1].name] });
+    expect(whoIsIt([], people, "someone-else")).toHaveProperty("problem");
     expect(whoIsIt(["  "], people)).toHaveProperty("problem");
     const stranger = whoIsIt(["Alex"], people);
     expect(stranger).toHaveProperty("problem");

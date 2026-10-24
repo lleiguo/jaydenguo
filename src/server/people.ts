@@ -1,7 +1,7 @@
 import { and, arrayOverlaps, asc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
-import { changeLog, eventOverrides, events, eventSeries, people, sources } from "@db/schema";
-import { parseMapping } from "../domain/categories";
+import { changeLog, eventOverrides, events, eventSeries, people, sources, users } from "@db/schema";
+import { parseMapping, personWithEmail } from "../domain/categories";
 import type { Person } from "../domain/people";
 import type { Db, DbOrTx } from "./db/client";
 import { HttpError } from "./errors";
@@ -20,6 +20,12 @@ export const emailsInput = z.object({
 
 export async function listPeopleEmails(db: DbOrTx): Promise<{ id: string; emails: string[] }[]> {
   return db.select({ id: people.id, emails: people.emails }).from(people);
+}
+
+// The person a signed-in parent is, by their email (OWN-4).
+export async function personOfUser(db: DbOrTx, userId: string): Promise<string | null> {
+  const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
+  return personWithEmail(u?.email, await listPeopleEmails(db));
 }
 
 export async function setEmails(db: Db, id: string, emails: string[]) {

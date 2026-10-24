@@ -68,6 +68,9 @@ export type CalendarPayload = {
   homeTimeZone: string;
   // Primary person first.
   people: Person[];
+  // The signed-in parent's person, by their Google email (intent 0024,
+  // OWN-4): a new event is ticked for them. Only on GET /api/v1/events.
+  me?: string | null;
   cursor: number;
 };
 

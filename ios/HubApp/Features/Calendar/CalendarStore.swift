@@ -61,6 +61,8 @@ final class CalendarStore {
         return showSkipped ? all : all.filter { !$0.isSkipped }
     }
     var people: [Person] { index?.payload.people ?? [] }
+    /// The signed-in parent's person (intent 0024, OWN-4).
+    var me: String? { index?.payload.me ?? nil }
     var closures: Set<String> { Set(index?.payload.closures ?? []) }
 
     var sources: [(id: String, name: String)] {
