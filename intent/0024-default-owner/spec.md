@@ -1,5 +1,5 @@
 # Spec: An event belongs to whoever it names, else whoever made it
-Status: draft (2026-10-24). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-24, in chat: "Approve intent 0024 with the defaults."). Written by Claude from [intent.md](intent.md).
 
 Read with 0001 (CON-1, CON-5), 0008 (ADD-3, GCW-6), 0009 (EMS), 0019
 (SHA-3) and 0020 (TWO-2, BACK-2). IDs here: OWN (whose an event is),

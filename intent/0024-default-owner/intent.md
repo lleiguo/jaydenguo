@@ -1,5 +1,5 @@
 # Intent: An event belongs to whoever it names, else whoever made it
-Status: draft (2026-10-24). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-24, in chat: "Approve intent 0024 with the defaults."). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "for any event created, don't default to everyone, if it has an owner like

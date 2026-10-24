@@ -1,5 +1,5 @@
 # Plan: An event belongs to whoever it names, else whoever made it
-Status: draft (2026-10-24), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-24, in chat: "Approve intent 0024 with the defaults."), with [spec.md](spec.md).
 
 Order: emails on People and the sync rule first (the visible fix for the
 family's Google Calendar), then the hub's own forms and Cookie.
@@ -31,4 +31,4 @@ family's Google Calendar), then the hub's own forms and Cookie.
 - Cookie adds an unnamed event for the parent who asked.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved. OW1 next.
