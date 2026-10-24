@@ -260,6 +260,13 @@
       "when": 1792418870063,
       "tag": "0036_notification_kinds_0023",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792875844589,
+      "tag": "0037_people-emails",
+      "breakpoints": true
     }
   ]
 }

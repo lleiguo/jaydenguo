@@ -2,11 +2,11 @@ import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { sources, syncRuns } from "@db/schema";
 import { adapterFor } from "../adapters/registry";
 import { SyncError, type AdapterContext } from "../adapters/types";
-import { ownersFor, parseMapping } from "../domain/categories";
+import { ownersFor, parseMapping, personWithEmail } from "../domain/categories";
 import type { Db } from "../server/db/client";
 import type { Logger } from "../server/log";
 import { extendAllSeries } from "../server/calendar/mutations";
-import { listPeople } from "../server/people";
+import { listPeople, listPeopleEmails } from "../server/people";
 import { getHomeTimeZone } from "../server/settings";
 import { syncSwim } from "../server/swim/apply";
 import { syncTennis } from "../server/tennis/apply";
@@ -219,12 +219,12 @@ async function runLocked(
     };
     const raw = await withTimeout(adapter.fetchRaw(ctx), SOURCE_TIMEOUT_MS);
     const batch = adapter.normalise(raw, ctx);
-    // Whose events, from title rules, names in the title and the source's
-    // default owners.
-    const people = await listPeople(db);
-    const records = batch.records.map((r) => ({
+    // Whose events, from title rules, names in the title, who made it
+    // (intent 0024) and the source's default owners.
+    const [people, emails] = await Promise.all([listPeople(db), listPeopleEmails(db)]);
+    const records = batch.records.map(({ creatorEmail, ...r }) => ({
       ...r,
-      ownerIds: ownersFor(r.title, ctx.source.mapping, people),
+      ownerIds: ownersFor(r.title, ctx.source.mapping, people, personWithEmail(creatorEmail, emails)),
     }));
     const plan = await syncRecords(db, { sourceId }, records, batch.window, {
       actor: "sync",

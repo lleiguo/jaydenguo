@@ -37,12 +37,19 @@ export const people = pgTable(
     name: text("name").notNull().unique(),
     isPrimary: boolean("is_primary").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
+    // Their Google emails, lower-case (intent 0024, OWN-6): an event they
+    // made with no name in it is theirs. Shown only to signed-in parents.
+    emails: text("emails")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex("people_primary_uq")
       .on(t.isPrimary)
       .where(sql`${t.isPrimary}`),
+    check("people_emails_lower_chk", sql`${t.emails}::text = lower(${t.emails}::text)`),
   ],
 );
 

@@ -22,6 +22,9 @@ export type SourceRecord = {
   // Whose event (`people.id`s), from the source's mapping; none means the
   // primary person.
   ownerIds?: string[];
+  // Who made it, where the source says (intent 0024, OWN-2); only read to
+  // work out the owners, never stored or hashed.
+  creatorEmail?: string | null;
 };
 
 // The span of time the source was asked about. Only stored events that

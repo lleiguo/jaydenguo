@@ -27,6 +27,8 @@ export type GoogleEvent = {
   start: GoogleTime;
   end: GoogleTime;
   updated?: string;
+  // Who made it (intent 0024, OWN-2).
+  creator?: { email?: string };
   extendedProperties?: { private?: Record<string, string>; shared?: Record<string, string> };
 };
 export type GoogleCalendarRaw = { items: GoogleEvent[]; timeMin: string; timeMax: string };
@@ -93,6 +95,7 @@ export function normaliseGoogle(raw: GoogleCalendarRaw, ctx: AdapterContext): No
       endUtc: end.at < start.at ? start.at : end.at,
       allDay: start.allDay,
       sourceUrl: e.htmlLink ?? null,
+      creatorEmail: e.creator?.email ?? null,
     });
   }
   return { records, window: { from: new Date(raw.timeMin), to: new Date(raw.timeMax) }, warnings };

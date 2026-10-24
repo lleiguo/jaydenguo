@@ -37,6 +37,11 @@ describe("Google Calendar adapter (SRC-1)", () => {
     expect(byId("jkl012")).toMatchObject({ category: "other", attendance: "required" });
   });
 
+  it("says who made an event, when Google does (intent 0024, OWN-2)", () => {
+    expect(byId("jkl012")?.creatorEmail).toBe("Parent@example.com");
+    expect(byId("def456")?.creatorEmail).toBeNull();
+  });
+
   it("leaves out events the hub wrote there itself (intent 0020, BACK-2)", () => {
     const tagged = {
       ...raw,
