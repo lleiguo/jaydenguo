@@ -1,0 +1,2 @@
+ALTER TABLE "people" ADD COLUMN "emails" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "people" ADD CONSTRAINT "people_emails_lower_chk" CHECK ("people"."emails"::text = lower("people"."emails"::text));

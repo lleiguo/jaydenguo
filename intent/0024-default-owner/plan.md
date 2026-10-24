@@ -31,4 +31,5 @@ family's Google Calendar), then the hub's own forms and Cookie.
 - Cookie adds an unnamed event for the parent who asked.
 
 ## 5. Status
-Approved. OW1 next.
+Approved. SP-1 done 2026-10-24: Google gives `creator.email` on household
+events, including ones the other parent made. OW1 in review.

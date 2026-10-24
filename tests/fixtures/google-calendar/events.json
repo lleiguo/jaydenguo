@@ -35,6 +35,7 @@
       "id": "jkl012",
       "status": "confirmed",
       "summary": "Parent-teacher interview (parent)",
+      "creator": { "email": "Parent@example.com" },
       "start": { "dateTime": "2026-10-15T16:00:00-04:00" },
       "end": { "dateTime": "2026-10-15T16:20:00-04:00" }
     }

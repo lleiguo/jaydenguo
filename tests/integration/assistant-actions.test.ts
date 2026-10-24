@@ -251,7 +251,8 @@ describe("Cookie writes what she added to the family calendar (plan E2)", () => 
   });
 
   it("keeps the people she was asked for when the title alone would say otherwise (everyone)", async () => {
-    const result = await add({ title: "family dinner", people: ["everyone"] });
+    // Not "family dinner": that title alone is everyone's now (intent 0024, OWN-5).
+    const result = await add({ title: "dinner at the lake", people: ["everyone"] });
     await run(fakeGoogle());
     const action = await actionOf(result.turnId);
     const [override] = await db
@@ -259,6 +260,15 @@ describe("Cookie writes what she added to the family calendar (plan E2)", () => 
       .from(eventOverrides)
       .where(eq(eventOverrides.eventId, action.eventId!));
     expect(override?.ownerIds?.sort()).toEqual(people.map((p) => p.id).sort());
+    const day = await loadCalendar(db, new Date("2033-05-04T00:00:00Z"), new Date("2033-05-06T00:00:00Z"));
+    const dinner = day.events.find((e) => e.id === action.eventId);
+    expect(dinner?.owners.sort()).toEqual(people.map((p) => p.id).sort());
+  });
+
+  it('"family" in the title is everyone\'s without an override (intent 0024, OWN-5)', async () => {
+    const result = await add({ title: "family dinner", people: ["everyone"] });
+    await run(fakeGoogle());
+    const action = await actionOf(result.turnId);
     const day = await loadCalendar(db, new Date("2033-05-04T00:00:00Z"), new Date("2033-05-06T00:00:00Z"));
     const dinner = day.events.find((e) => e.id === action.eventId);
     expect(dinner?.owners.sort()).toEqual(people.map((p) => p.id).sort());

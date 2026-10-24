@@ -18,7 +18,7 @@ import {
 } from "../calendar/mutations";
 import { createCredentialInput, signInCodeInput, updateCredentialInput } from "../credentials/store";
 import { approveInput } from "../email/suggestions";
-import { personInput } from "../people";
+import { emailsInput, personInput } from "../people";
 import { deviceKindsInput, registerDeviceInput } from "../push/notify";
 import { createSourceInput, updateSourceInput } from "../sources";
 import { addResultInput, correctResultInput, createMeetInput } from "../swim/mutations";
@@ -159,6 +159,15 @@ export const operations: Operation[] = [
     path: "/api/v1/people/{id}",
     operationId: "removePerson",
     summary: "Remove a person.",
+    response: "Ok",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/people/{id}/emails",
+    operationId: "setPersonEmails",
+    summary: "Set a person's Google emails, so events they make are theirs.",
+    spec: "OWN-6",
+    body: emailsInput,
     response: "Ok",
   },
 

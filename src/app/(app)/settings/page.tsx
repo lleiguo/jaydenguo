@@ -6,7 +6,7 @@ import { TimeZoneSetting } from "@/components/time-zone-setting";
 import { CalendarCopySetting } from "@/components/calendar-copy-setting";
 import { HouseholdSyncSetting } from "@/components/household-sync-setting";
 import { PeopleSetting } from "@/components/people-setting";
-import { listPeople } from "@/server/people";
+import { listPeople, listPeopleEmails } from "@/server/people";
 import { getHomeTimeZone } from "@/server/settings";
 
 export default async function SettingsPage() {
@@ -14,7 +14,7 @@ export default async function SettingsPage() {
   const db = await getDb();
   const devices = await listSessions(db, session);
   const homeTimeZone = await getHomeTimeZone(db);
-  const people = await listPeople(db);
+  const [people, emails] = await Promise.all([listPeople(db), listPeopleEmails(db)]);
   // Keep the saved zone selectable even if this runtime's list lacks it.
   const zones = Intl.supportedValuesOf("timeZone");
   if (!zones.includes(homeTimeZone)) zones.unshift(homeTimeZone);
@@ -32,9 +32,12 @@ export default async function SettingsPage() {
         </h2>
         <p className="text-sm">
           Whose events are on the calendar. Each event belongs to one or more of them, and only the same
-          person&apos;s events clash.
+          person&apos;s events clash. An event with no one&apos;s name in it belongs to whoever made it, by
+          their Google email.
         </p>
-        <PeopleSetting initial={people} />
+        <PeopleSetting
+          initial={people.map((p) => ({ ...p, emails: emails.find((e) => e.id === p.id)?.emails ?? [] }))}
+        />
       </section>
       <section aria-labelledby="household-sync" className="flex flex-col gap-3">
         <h2 id="household-sync" className="font-semibold">

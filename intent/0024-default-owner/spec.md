@@ -44,10 +44,14 @@ OWNSEC (security).
 - **Schema.** `people.emails text[] not null default '{}'`, with a check
   that values are lower-case; uniqueness across people is checked on
   save (`src/server/people.ts`). `pnpm db:generate --name people-emails`.
-- **Domain.** `ownersFor(title, mapping, people, creatorEmail?)`: rules
-  and names (OWN-1); then "family"/"everyone" → all people (OWN-5); then
-  the person with `creatorEmail` (OWN-2); then `mapping.owners`, then
-  empty (= primary) (OWN-3). `people` carries `emails`.
+  As built (OW1): set with `POST /api/v1/people/{id}/emails`; the emails
+  are not on `Person` or `GET /api/v1/people`, so they can't reach Cookie
+  or the app by accident (OWNSEC-1).
+- **Domain.** `ownersFor(title, mapping, people, creatorId?)`: rules
+  and names (OWN-1); then "family"/"everyone"/"everybody" → all people
+  (OWN-5); then the creator (OWN-2); then `mapping.owners`, then empty
+  (= primary) (OWN-3). As built: the caller turns the email into a
+  person with `personWithEmail`, so `ownersFor` stays pure.
 - **Google read.** `GoogleEvent` gains `creator?: { email?: string }`;
   the adapter puts it on the `SourceRecord` as `creatorEmail`;
   `src/worker/sync.ts` passes it to `ownersFor`. `creatorEmail` is not

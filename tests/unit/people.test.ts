@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ownersFor, parseMapping } from "@/domain/categories";
+import { ownersFor, parseMapping, personWithEmail } from "@/domain/categories";
 import { resolveOwners, type Person } from "@/domain/people";
 
 const JAYDEN = "00000000-0000-4000-8000-000000000001";
@@ -65,5 +65,50 @@ describe("ownersFor", () => {
     const none = parseMapping({ default: "other" });
     expect(ownersFor("Leighton Park walk", none, people)).toEqual([]);
     expect(ownersFor("Leighton Park walk", mapping, people)).toEqual([JAYDEN]);
+  });
+});
+
+// Intent 0024: an event belongs to whoever it names, else whoever made it.
+describe("ownersFor with who made it (OWN-1..OWN-5)", () => {
+  const household = parseMapping({ default: "other", owners: [JAYDEN, LEI, ETHAN] });
+
+  it("a name wins over who made it (OWN-1)", () => {
+    expect(ownersFor("Jayden tennis", household, people, LEI)).toEqual([JAYDEN]);
+  });
+
+  it("no name: whoever made it, not the default owners (OWN-2, OWN-5)", () => {
+    expect(ownersFor("Dentist", household, people, LEI)).toEqual([LEI]);
+  });
+
+  it("an unknown maker falls back to the default owners (OWN-3)", () => {
+    expect(ownersFor("Dentist", household, people, null)).toEqual([JAYDEN, LEI, ETHAN]);
+    expect(ownersFor("Dentist", household, people, "00000000-0000-4000-8000-00000000ffff")).toEqual([
+      JAYDEN,
+      LEI,
+      ETHAN,
+    ]);
+  });
+
+  it('"family" or "everyone" in the title is everyone\'s (OWN-5)', () => {
+    const none = parseMapping({ default: "other" });
+    expect(ownersFor("Family dinner", none, people, LEI)).toEqual([JAYDEN, LEI, ETHAN]);
+    expect(ownersFor("BBQ for everyone", none, people, LEI)).toEqual([JAYDEN, LEI, ETHAN]);
+    expect(ownersFor("Familyfest", none, people, LEI)).toEqual([LEI]);
+  });
+});
+
+describe("personWithEmail (OWN-2)", () => {
+  const emails = [
+    { id: LEI, emails: ["parent@example.com"] },
+    { id: ETHAN, emails: [] },
+  ];
+
+  it("matches ignoring case and spaces", () => {
+    expect(personWithEmail(" Parent@Example.com", emails)).toBe(LEI);
+  });
+
+  it("is null for no email or no match", () => {
+    expect(personWithEmail(null, emails)).toBeNull();
+    expect(personWithEmail("other@example.com", emails)).toBeNull();
   });
 });

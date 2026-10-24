@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, arrayOverlaps, asc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { changeLog, eventOverrides, events, eventSeries, people, sources } from "@db/schema";
 import { parseMapping } from "../domain/categories";
@@ -11,6 +11,34 @@ import { HttpError } from "./errors";
 // not removed.
 
 export const personInput = z.object({ name: z.string().trim().min(1).max(40) });
+
+// Intent 0024, OWN-6: a person's Google emails, so an event they made with
+// no name in it is theirs.
+export const emailsInput = z.object({
+  emails: z.array(z.string().trim().toLowerCase().pipe(z.email("that isn't an email address"))).max(5),
+});
+
+export async function listPeopleEmails(db: DbOrTx): Promise<{ id: string; emails: string[] }[]> {
+  return db.select({ id: people.id, emails: people.emails }).from(people);
+}
+
+export async function setEmails(db: Db, id: string, emails: string[]) {
+  const unique = [...new Set(emails)];
+  const [other] = unique.length
+    ? await db
+        .select({ name: people.name })
+        .from(people)
+        .where(and(ne(people.id, id), arrayOverlaps(people.emails, unique)))
+    : [];
+  if (other) throw new HttpError(409, `that email is already ${other.name}'s`);
+  const [p] = await db
+    .update(people)
+    .set({ emails: unique })
+    .where(eq(people.id, id))
+    .returning({ id: people.id });
+  if (!p) throw new HttpError(404, "not found");
+  await db.insert(changeLog).values({ kind: "people", refId: id });
+}
 
 export async function listPeople(db: DbOrTx): Promise<Person[]> {
   return db

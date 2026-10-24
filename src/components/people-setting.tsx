@@ -6,7 +6,7 @@ import type { Person } from "@/domain/people";
 
 // People whose events the calendar holds (owner, 2026-09-28). The calendar
 // shows a chip for each; the first is the person the site is about.
-export function PeopleSetting({ initial }: { initial: Person[] }) {
+export function PeopleSetting({ initial }: { initial: (Person & { emails: string[] })[] }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const send = async (url: string, method: string, body?: unknown) => {
@@ -27,7 +27,7 @@ export function PeopleSetting({ initial }: { initial: Person[] }) {
     <div className="flex flex-col gap-2 text-sm">
       <ul className="flex flex-col gap-2" data-testid="people">
         {initial.map((p) => (
-          <li key={p.id}>
+          <li key={p.id} className="flex flex-col gap-1">
             <form
               className="flex flex-wrap items-center gap-2"
               aria-label={`Rename ${p.name}`}
@@ -67,6 +67,31 @@ export function PeopleSetting({ initial }: { initial: Person[] }) {
                   Remove
                 </button>
               )}
+            </form>
+            <form
+              className="flex flex-wrap items-center gap-2"
+              aria-label={`${p.name}'s Google email`}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const raw = String(new FormData(e.currentTarget).get("emails") ?? "");
+                await send(`/api/v1/people/${p.id}/emails`, "POST", {
+                  emails: raw.split(/[\s,]+/).filter(Boolean),
+                });
+              }}
+            >
+              <input
+                name="emails"
+                type="text"
+                inputMode="email"
+                autoComplete="off"
+                defaultValue={p.emails.join(", ")}
+                placeholder="Google email (optional)"
+                aria-label="Google email"
+                className="min-w-64 rounded border px-2 py-1"
+              />
+              <button className="rounded border px-2 py-1" type="submit">
+                Save email
+              </button>
             </form>
           </li>
         ))}

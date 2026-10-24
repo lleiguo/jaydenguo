@@ -46,12 +46,15 @@ export function categorise(
 }
 
 // Whose event (owner, 2026-09-29): every matching rule's owner plus anyone
-// named in the title as a whole word ("Jayden swimming", "Lei's dentist"),
-// else the source's default owners. Empty means the primary person.
+// named in the title as a whole word ("Jayden swimming", "Lei's dentist").
+// Else (intent 0024) "family" or "everyone" in the title is everyone's
+// (OWN-5), then whoever made it (OWN-2), then the source's default owners
+// (OWN-3). Empty means the primary person.
 export function ownersFor(
   title: string,
   mapping: CategoryMapping,
   people: readonly { id: string; name: string }[] = [],
+  creatorId?: string | null,
 ): string[] {
   const t = title.toLowerCase();
   const byRule = (mapping.rules ?? [])
@@ -59,7 +62,22 @@ export function ownersFor(
     .map((r) => r.owner!);
   const byName = people.filter((p) => namedIn(title, p.name)).map((p) => p.id);
   const matched = [...byRule, ...byName];
-  return [...new Set(matched.length ? matched : (mapping.owners ?? []))];
+  if (matched.length) return [...new Set(matched)];
+  if (people.length && EVERYONE_WORDS.some((w) => namedIn(title, w))) return people.map((p) => p.id);
+  if (creatorId && people.some((p) => p.id === creatorId)) return [creatorId];
+  return [...new Set(mapping.owners ?? [])];
+}
+
+const EVERYONE_WORDS = ["family", "everyone", "everybody"];
+
+// OWN-2, OWN-4: the person with this Google email, if any.
+export function personWithEmail(
+  email: string | null | undefined,
+  people: readonly { id: string; emails: readonly string[] }[],
+): string | null {
+  const e = email?.trim().toLowerCase();
+  if (!e) return null;
+  return people.find((p) => p.emails.includes(e))?.id ?? null;
 }
 
 export const namedIn = (title: string, name: string) => {

@@ -21,7 +21,14 @@ import {
 } from "@/server/calendar/mutations";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
-import { addPerson, listPeople, removePerson } from "@/server/people";
+import {
+  addPerson,
+  emailsInput,
+  listPeople,
+  listPeopleEmails,
+  removePerson,
+  setEmails,
+} from "@/server/people";
 import { syncRecords } from "@/server/sync/apply";
 
 const actor = "owner@example.test";
@@ -193,6 +200,20 @@ describe("calendar service", () => {
     await setAttendance(db, actor, cls, "optional");
     expect(await clashes()).toHaveLength(0);
     await deleteEvent(db, actor, cls);
+  });
+
+  it("a person's Google emails are saved lower-case and can't be on two people (OWN-6)", async () => {
+    const one = await addPerson(db, "Email One");
+    const two = await addPerson(db, "Email Two");
+    const { emails } = emailsInput.parse({ emails: [" One@Example.com ", "one@example.com"] });
+    await setEmails(db, one, emails);
+    expect((await listPeopleEmails(db)).find((p) => p.id === one)?.emails).toEqual(["one@example.com"]);
+    await expect(setEmails(db, two, ["one@example.com"])).rejects.toThrow(/already Email One's/);
+    expect(() => emailsInput.parse({ emails: ["not an email"] })).toThrow();
+    await setEmails(db, one, []);
+    expect((await listPeopleEmails(db)).find((p) => p.id === one)?.emails).toEqual([]);
+    await removePerson(db, one);
+    await removePerson(db, two);
   });
 
   it("removing a person gives their events back to the primary person", async () => {
