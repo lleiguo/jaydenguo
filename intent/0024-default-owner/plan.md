@@ -32,4 +32,4 @@ family's Google Calendar), then the hub's own forms and Cookie.
 
 ## 5. Status
 Approved. SP-1 done 2026-10-24: Google gives `creator.email` on household
-events, including ones the other parent made. OW1 in review.
+events, including ones the other parent made. OW1 merged (#182). OW2 in review.
