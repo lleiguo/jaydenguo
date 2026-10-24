@@ -39,7 +39,7 @@
     "drizzle-orm": "^0.45.3",
     "google-auth-library": "^10.5.0",
     "ical.js": "^2.2.1",
-    "next": "16.3.8",
+    "next": "16.4.3",
     "node-html-parser": "^9.0.4",
     "openid-client": "^6.8.8",
     "pg": "^8.23.0",
@@ -47,7 +47,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "temporal-polyfill": "^1.0.5",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -61,7 +61,7 @@
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.28.2",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.3",
     "fast-check": "^4.10.2",
     "jose": "^6.2.12",
     "prettier": "^3.9.9",
