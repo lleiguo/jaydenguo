@@ -31,6 +31,8 @@ type Series = {
 export function EventForm(props: {
   tz: string;
   people: Person[];
+  // The signed-in parent's person (intent 0024, OWN-4).
+  me?: string | null;
   event?: EventView;
   series?: Series;
   defaultDate?: string;
@@ -42,7 +44,12 @@ export function EventForm(props: {
   const [repeat, setRepeat] = useState(!!series);
   const [allDay, setAllDay] = useState(series?.allDay ?? event?.allDay ?? false);
   const [error, setError] = useState<string | null>(null);
-  const owners = event?.owners ?? resolveOwners(series?.ownerIds, props.people);
+  // A new event is the signed-in parent's (intent 0024, OWN-4).
+  const owners =
+    event?.owners ??
+    (!series && props.me && props.people.some((p) => p.id === props.me)
+      ? [props.me]
+      : resolveOwners(series?.ownerIds, props.people));
   const endTimeFromSeries = series
     ? (() => {
         const [h, m] = series.startTime.split(":").map(Number);

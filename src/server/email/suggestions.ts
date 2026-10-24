@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { emailMessages, emailSuggestions, events, sources } from "@db/schema";
+import { credentials, emailMessages, emailSuggestions, events, sources } from "@db/schema";
+import { ownersFor, parseMapping, personWithEmail } from "../../domain/categories";
 import { CATEGORIES } from "../../domain/constants";
 import { looksAlike } from "../../domain/duplicates";
 import { localDate, zonedToUtc } from "../../domain/time";
@@ -9,6 +10,7 @@ import { createEvent, moveEvent, skipEvent } from "../calendar/mutations";
 import type { Undo } from "../../lib/calendar-types";
 import type { Db } from "../db/client";
 import { HttpError } from "../errors";
+import { listPeople, listPeopleEmails } from "../people";
 import { getHomeTimeZone } from "../settings";
 
 // The approve-or-reject queue (EML-2, EML-3, plan M5.8). Approving a new
@@ -202,6 +204,19 @@ async function pending(db: Db, id: string) {
   return s;
 }
 
+// Intent 0024, OWN-4: whose a new event from an email is. A name in the
+// title, else the parent whose mailbox it came from, else the source's
+// default owners.
+async function mailboxOwners(db: Db, sourceId: string, title: string): Promise<string[]> {
+  const [src] = await db
+    .select({ mapping: sources.categoryMapping, username: credentials.username })
+    .from(sources)
+    .leftJoin(credentials, eq(credentials.id, sources.credentialId))
+    .where(eq(sources.id, sourceId));
+  const [people, emails] = await Promise.all([listPeople(db), listPeopleEmails(db)]);
+  return ownersFor(title, parseMapping(src?.mapping), people, personWithEmail(src?.username, emails));
+}
+
 export async function approveSuggestion(
   db: Db,
   actor: string,
@@ -238,6 +253,7 @@ export async function approveSuggestion(
           title: parsed.title,
           category: parsed.category,
           attendance: "required",
+          ownerIds: await mailboxOwners(db, s.sourceId, parsed.title),
           start: t.start,
           end: t.end,
           allDay: t.allDay,

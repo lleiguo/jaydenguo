@@ -126,6 +126,8 @@ struct EventEditor: View {
         guard !loaded else { return }
         loaded = true
         let primary = store.people.first { $0.isPrimary }?.id
+        // A new event is the signed-in parent's (intent 0024, OWN-4).
+        let mine = store.me.flatMap { me in store.people.contains { $0.id == me } ? me : nil } ?? primary
         switch target {
         case .new(let date):
             let base = homeTime.startOfDay(date) ?? .now
@@ -136,7 +138,7 @@ struct EventEditor: View {
                 start = base.addingTimeInterval(((Date.now.timeIntervalSince(base) / 3600).rounded(.down) + 1) * 3600)
             }
             end = start.addingTimeInterval(3600)
-            owners = primary.map { [$0] } ?? []
+            owners = mine.map { [$0] } ?? []
             weekdays = [CalendarDates.weekday(date)]
         case .existing(let e):
             title = e.title

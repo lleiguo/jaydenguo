@@ -244,13 +244,19 @@ export const saysEveryone = (question: string) => SAYS_EVERYONE.test(question);
 export type Who = { everyone: boolean; ids: string[]; names: string[] };
 
 // ADD-3: whose event it is. Every name must be one of People; "everyone"
-// means the whole family. With nobody named she asks.
+// means the whole family. With nobody named it's the asker's (intent 0024,
+// OWN-4), or she asks when the asker isn't one of People.
 export function whoIsIt(
   named: readonly string[],
   people: readonly { id: string; name: string }[],
+  asker?: string | null,
 ): Who | { problem: string } {
   const names = named.map((n) => n.trim()).filter(Boolean);
-  if (!names.length) return { problem: "no person was named; ask whose event it is and add nothing" };
+  if (!names.length) {
+    const me = people.find((p) => p.id === asker);
+    if (me) return { everyone: false, ids: [me.id], names: [me.name] };
+    return { problem: "no person was named; ask whose event it is and add nothing" };
+  }
   if (names.some((n) => EVERYONE.test(n)))
     return { everyone: true, ids: people.map((p) => p.id), names: people.map((p) => p.name) };
   const found: { id: string; name: string }[] = [];

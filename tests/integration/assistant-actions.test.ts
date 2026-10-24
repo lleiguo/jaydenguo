@@ -21,7 +21,7 @@ import { CHANGE_TOOLS, HUB_TOOLS } from "@/server/assistant/tools";
 import { loadCalendar, loadEvent } from "@/server/calendar/load";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
-import { addPerson, listPeople } from "@/server/people";
+import { addPerson, listPeople, setEmails } from "@/server/people";
 import { syncRecords } from "@/server/sync/apply";
 import { runAssistantActions } from "@/worker/assistant-actions";
 
@@ -263,6 +263,21 @@ describe("Cookie writes what she added to the family calendar (plan E2)", () => 
     const day = await loadCalendar(db, new Date("2033-05-04T00:00:00Z"), new Date("2033-05-06T00:00:00Z"));
     const dinner = day.events.find((e) => e.id === action.eventId);
     expect(dinner?.owners.sort()).toEqual(people.map((p) => p.id).sort());
+  });
+
+  it("with nobody named, it's the asking parent's (intent 0024, OWN-4)", async () => {
+    const parent = people[1];
+    await setEmails(db, parent.id, ["cookie-writer@example.test"]);
+    try {
+      const result = await add({ people: [] });
+      const action = await actionOf(result.turnId);
+      expect((await eventOf(action.eventId!)).ownerIds).toEqual([parent.id]);
+      await run(fakeGoogle());
+      const day = await loadCalendar(db, new Date("2033-05-04T00:00:00Z"), new Date("2033-05-06T00:00:00Z"));
+      expect(day.events.find((e) => e.id === action.eventId)?.owners).toEqual([parent.id]);
+    } finally {
+      await setEmails(db, parent.id, []);
+    }
   });
 
   it('"family" in the title is everyone\'s without an override (intent 0024, OWN-5)', async () => {

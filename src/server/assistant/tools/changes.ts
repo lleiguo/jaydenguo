@@ -15,6 +15,7 @@ import { categorise } from "@/domain/categories";
 import { localDate } from "@/domain/time";
 import { loadCalendar } from "../../calendar/load";
 import { createEvent } from "../../calendar/mutations";
+import { personOfUser } from "../../people";
 import { SHARED_LIMITS } from "@/domain/assistant";
 import { addTarget, changesSince, cookieActor } from "../actions";
 import { clock, problem, type Tool } from "./types";
@@ -71,7 +72,7 @@ export const calendarAddTool: Tool<z.infer<typeof addInput>> = {
         "events can't be added until the family's Google Calendar is connected on the Accounts page; say so",
       );
 
-    const who = whoIsIt(q.people, ctx.people);
+    const who = whoIsIt(q.people, ctx.people, await personOfUser(ctx.db, ctx.userId));
     if ("problem" in who) return problem(who.problem);
     // SHA-3: a poster or a group message is rarely for everyone; that has
     // to be the parent's own word.

@@ -460,6 +460,7 @@ export function CalendarApp({ initialView, initialDate }: { initialView?: string
           <EventForm
             tz={data.homeTimeZone}
             people={data.people}
+            me={data.me}
             event={editing === "new" || series ? undefined : editing}
             series={series}
             defaultDate={range?.from.slice(0, 10)}
