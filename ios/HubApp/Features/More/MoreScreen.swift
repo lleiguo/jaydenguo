@@ -11,6 +11,7 @@ struct MoreScreen: View {
         List {
             Section {
                 NavigationLink(value: Route.school) { Label("School", systemImage: "graduationcap") }
+                NavigationLink(value: Route.mail) { Label("Today's mail", systemImage: "envelope.open") }
                 NavigationLink(value: Route.suggestions) {
                     Label("Suggestions", systemImage: "envelope")
                         .badge(pending)
@@ -52,6 +53,7 @@ struct MoreDestination: View {
         case .video(let id): VideoDetailScreen(id: id)
         case .notifications: NotificationsScreen()
         case .clash(let id): ClashScreen(eventId: id)
+        case .mail: MailScreen()
         default: EmptyView()
         }
     }

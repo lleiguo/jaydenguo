@@ -3471,7 +3471,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": "Done."
           },
           "default": {
@@ -3527,6 +3527,97 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MailTodoView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mail/speech": {
+      "get": {
+        "operationId": "getMailScript",
+        "summary": "The day's mail as parts to read aloud, in order.",
+        "description": "Spec: MA-1",
+        "parameters": [
+          {
+            "name": "day",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailScript"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mail/speech/{part}": {
+      "get": {
+        "operationId": "getMailSpeech",
+        "summary": "One part read aloud. Any error means: use the phone's own voice.",
+        "description": "Spec: MA-2, MSEC-5",
+        "parameters": [
+          {
+            "name": "part",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The answer as speech.",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             }
@@ -8534,6 +8625,58 @@
           "topic",
           "read",
           "todos"
+        ]
+      },
+      "MailScript": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MailSpeechPart"
+            }
+          }
+        },
+        "required": [
+          "day",
+          "parts"
+        ]
+      },
+      "MailSpeechPart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "zh"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "itemId",
+          "title",
+          "text",
+          "language"
         ]
       },
       "MailTodoView": {

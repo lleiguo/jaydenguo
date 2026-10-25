@@ -1,0 +1,121 @@
+{
+  "connected": false,
+  "today": "2026-10-25",
+  "days": [
+    {
+      "day": "2026-10-25",
+      "items": [
+        {
+          "id": "3d4cb6fa-eeea-457d-8b15-c51a3066bb24",
+          "receivedAt": "2026-10-25T21:20:04.419Z",
+          "senderName": "Coach Sam",
+          "senderAddress": "coach@example.test",
+          "subject": "Extra practice next week",
+          "messageUrl": "https://mail.google.com/mail/u/0/#inbox/seed-mail-1",
+          "summary": "Coach Sam adds an extra practice next Wednesday, 6 to 7:30 pm, probably at Oak Park. Bring water.",
+          "skipped": null,
+          "language": "en",
+          "routine": false,
+          "newsletter": null,
+          "people": [],
+          "topic": "soccer",
+          "suggestion": {
+            "id": "a9589905-8c07-4f9e-879a-ceeea1f5b82c",
+            "status": "pending",
+            "title": "Extra soccer practice",
+            "date": "2026-10-28"
+          },
+          "read": false,
+          "todos": [
+            {
+              "id": "e569395d-77b6-49ec-a1c2-3e3b6f38e6e6",
+              "itemId": "3d4cb6fa-eeea-457d-8b15-c51a3066bb24",
+              "subject": "Extra practice next week",
+              "messageUrl": "https://mail.google.com/mail/u/0/#inbox/seed-mail-1",
+              "text": "Bring water to Wednesday's practice",
+              "dueOn": null,
+              "people": [],
+              "done": false,
+              "overdue": false
+            }
+          ]
+        },
+        {
+          "id": "6f8cdf24-e87d-473c-a480-2003deda4c0f",
+          "receivedAt": "2026-10-25T20:20:04.419Z",
+          "senderName": "School office",
+          "senderAddress": "office@example.test",
+          "subject": "Field trip form",
+          "messageUrl": "https://mail.google.com/mail/u/0/#inbox/seed-mail-3",
+          "summary": "The field trip to the science centre is next Friday. Sign the permission form by Monday and send $5.",
+          "skipped": null,
+          "language": "en",
+          "routine": false,
+          "newsletter": null,
+          "people": [],
+          "topic": "school",
+          "suggestion": null,
+          "read": false,
+          "todos": [
+            {
+              "id": "d05e69c0-d252-473d-b8d8-b027b2f6a429",
+              "itemId": "6f8cdf24-e87d-473c-a480-2003deda4c0f",
+              "subject": "Field trip form",
+              "messageUrl": "https://mail.google.com/mail/u/0/#inbox/seed-mail-3",
+              "text": "Sign the field trip form",
+              "dueOn": "2026-10-28",
+              "people": [],
+              "done": false,
+              "overdue": false
+            }
+          ]
+        },
+        {
+          "id": "3c97c0e5-6610-4065-818c-9f7471e3423c",
+          "receivedAt": "2026-10-25T19:20:04.420Z",
+          "senderName": "Club shop",
+          "senderAddress": "shop@example.test",
+          "subject": "Your receipt",
+          "messageUrl": "https://mail.google.com/mail/u/0/#inbox/seed-mail-4",
+          "summary": "A receipt for a team jersey.",
+          "skipped": null,
+          "language": "en",
+          "routine": true,
+          "newsletter": null,
+          "people": [],
+          "topic": "soccer",
+          "suggestion": null,
+          "read": false,
+          "todos": []
+        }
+      ]
+    }
+  ],
+  "todos": [
+    {
+      "id": "d05e69c0-d252-473d-b8d8-b027b2f6a429",
+      "itemId": "6f8cdf24-e87d-473c-a480-2003deda4c0f",
+      "subject": "Field trip form",
+      "messageUrl": "https://mail.google.com/mail/u/0/#inbox/seed-mail-3",
+      "text": "Sign the field trip form",
+      "dueOn": "2026-10-28",
+      "people": [],
+      "done": false,
+      "overdue": false
+    },
+    {
+      "id": "e569395d-77b6-49ec-a1c2-3e3b6f38e6e6",
+      "itemId": "3d4cb6fa-eeea-457d-8b15-c51a3066bb24",
+      "subject": "Extra practice next week",
+      "messageUrl": "https://mail.google.com/mail/u/0/#inbox/seed-mail-1",
+      "text": "Bring water to Wednesday's practice",
+      "dueOn": null,
+      "people": [],
+      "done": false,
+      "overdue": false
+    }
+  ],
+  "unread": 2,
+  "openTodos": 2,
+  "lastRun": null
+}

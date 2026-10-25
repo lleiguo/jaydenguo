@@ -10,6 +10,8 @@ struct TodayScreen: View {
     @Environment(CalendarStore.self) private var calendar
     @Environment(\.openURL) private var openURL
     @State private var state: Loadable<Components.Schemas.TodayView> = .loading
+    /// Today's mail card (intent 0025, MD-6).
+    @State private var mail: MailView?
     @State private var selected: EventRef?
     @State private var editing: EventEditor.Target?
     /// Edit opens once the event's sheet is gone (see CalendarScreen).
@@ -31,6 +33,7 @@ struct TodayScreen: View {
                         .font(.headline)
                         .listRowBackground(Color.secondary.opacity(0.15))
                 }
+                if let mail, MailGroups.showsCard(mail) { MailCard(mail: mail) }
                 let events = today.events.filter { calendar.filters.isVisible($0) }
                 if let next = nextUp(events) { nextUpSection(next) }
                 eventsSection(today, events)
@@ -44,6 +47,7 @@ struct TodayScreen: View {
             .onAppear { model.todayShown() }
         }
         .navigationTitle("Today")
+        .safeAreaInset(edge: .bottom) { MailMiniPlayer() }
         .task { await refresh() }
         .refreshable { await refresh() }
         .onChange(of: model.changes) { Task { await refresh() } }
@@ -65,6 +69,7 @@ struct TodayScreen: View {
         let next = await load { try await model.client.api.getToday().ok.body.json }
         if case .failed = next, state.value != nil { return }
         state = next
+        mail = (try? await model.client.api.getMail().ok.body.json) ?? mail
         await calendar.ensureLoaded()
     }
 

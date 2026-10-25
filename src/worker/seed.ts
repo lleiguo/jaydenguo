@@ -15,6 +15,8 @@ import {
   videoReviewRounds,
   videoReviews,
   notifications,
+  mailItems,
+  mailTodos,
 } from "@db/schema";
 import type { Category } from "../domain/constants";
 import { addDays, localDate, weekday, zonedToUtc } from "../domain/time";
@@ -617,6 +619,79 @@ export async function seedJob(_args: string[], ctx: JobContext) {
         gmailMessageId: sg.key,
         messageUrl: `https://mail.google.com/mail/u/0/#inbox/${sg.key}`,
         ...values,
+      });
+  }
+
+  // Today's mail (intent 0025): three made-up emails read today, one with
+  // the suggestion above, and two to-dos, reset on every run so the app's
+  // tests always see the same day.
+  await db.delete(mailTodos);
+  await db.delete(mailItems).where(eq(mailItems.sourceId, gmail));
+  const [practiceSuggestion] = await db
+    .select({ id: emailSuggestions.id })
+    .from(emailSuggestions)
+    .where(and(eq(emailSuggestions.sourceId, gmail), eq(emailSuggestions.gmailMessageId, "seed-mail-1")));
+  const mail = [
+    {
+      key: "seed-mail-1",
+      senderName: "Coach Sam",
+      senderAddress: "coach@example.test",
+      subject: "Extra practice next week",
+      summary:
+        "Coach Sam adds an extra practice next Wednesday, 6 to 7:30 pm, probably at Oak Park. Bring water.",
+      topic: "soccer",
+      suggestionId: practiceSuggestion?.id ?? null,
+      todos: [{ text: "Bring water to Wednesday's practice", dueOn: null }],
+    },
+    {
+      key: "seed-mail-3",
+      senderName: "School office",
+      senderAddress: "office@example.test",
+      subject: "Field trip form",
+      summary:
+        "The field trip to the science centre is next Friday. Sign the permission form by Monday and send $5.",
+      topic: "school",
+      suggestionId: null,
+      todos: [{ text: "Sign the field trip form", dueOn: addDays(today, 3) }],
+    },
+    {
+      key: "seed-mail-4",
+      senderName: "Club shop",
+      senderAddress: "shop@example.test",
+      subject: "Your receipt",
+      summary: "A receipt for a team jersey.",
+      topic: "soccer",
+      suggestionId: null,
+      routine: true,
+      todos: [],
+    },
+  ];
+  for (const [n, m] of mail.entries()) {
+    const [item] = await db
+      .insert(mailItems)
+      .values({
+        sourceId: gmail,
+        gmailMessageId: m.key,
+        messageUrl: `https://mail.google.com/mail/u/0/#inbox/${m.key}`,
+        receivedAt: new Date(Date.now() - (n + 1) * 3_600_000),
+        day: today,
+        senderName: m.senderName,
+        senderAddress: m.senderAddress,
+        subject: m.subject,
+        summary: m.summary,
+        language: "en",
+        routine: m.routine ?? false,
+        topic: m.topic,
+        suggestionId: m.suggestionId,
+      })
+      .returning({ id: mailItems.id });
+    for (const t of m.todos)
+      await db.insert(mailTodos).values({
+        itemId: item.id,
+        subject: m.subject,
+        messageUrl: `https://mail.google.com/mail/u/0/#inbox/${m.key}`,
+        text: t.text,
+        dueOn: t.dueOn,
       });
   }
 

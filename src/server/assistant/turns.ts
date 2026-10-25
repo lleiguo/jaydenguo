@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
-import { assistantTurns, mailItems } from "@db/schema";
+import { assistantTurns, mailItems, mailSpeech } from "@db/schema";
 import {
   LIMITS,
   sharedLabel,
@@ -170,7 +170,7 @@ export async function monthSpendUsd(db: DbOrTx, now: Date): Promise<number> {
   const tz = await getHomeTimeZone(db);
   const [year, month] = localDate(now, tz).split("-").map(Number);
   const start = zonedToUtc({ year, month, day: 1, hour: 0, minute: 0, second: 0 }, tz);
-  const [[row], [mail]] = await Promise.all([
+  const [[row], [mail], [spoken]] = await Promise.all([
     db
       .select({ total: sql<number>`coalesce(sum(${assistantTurns.costUsd}), 0)::float` })
       .from(assistantTurns)
@@ -180,6 +180,10 @@ export async function monthSpendUsd(db: DbOrTx, now: Date): Promise<number> {
       .select({ total: sql<number>`coalesce(sum(${mailItems.costUsd}), 0)::float` })
       .from(mailItems)
       .where(gte(mailItems.createdAt, start)),
+    db
+      .select({ total: sql<number>`coalesce(sum(${mailSpeech.costUsd}), 0)::float` })
+      .from(mailSpeech)
+      .where(gte(mailSpeech.createdAt, start)),
   ]);
-  return (row?.total ?? 0) + (mail?.total ?? 0);
+  return (row?.total ?? 0) + (mail?.total ?? 0) + (spoken?.total ?? 0);
 }

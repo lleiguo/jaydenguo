@@ -274,6 +274,13 @@
       "when": 1792952548790,
       "tag": "0038_mail_digest",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792966584726,
+      "tag": "0039_mail_speech",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,7 @@ import {
   check,
   date,
   index,
+  integer,
   jsonb,
   numeric,
   pgTable,
@@ -103,4 +104,20 @@ export const mailTodos = pgTable(
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [index("mail_todos_open_idx").on(t.doneAt, t.dueOn)],
+);
+
+// What reading the day aloud cost (MA-2, MSEC-5): one row per part made,
+// numbers only, never the words. Kept, like Cookie's cost numbers.
+export const mailSpeech = pgTable(
+  "mail_speech",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    day: date("day").notNull(),
+    // "intro", "others", "todos", or a mail item's ID.
+    part: text("part").notNull(),
+    chars: integer("chars").notNull(),
+    costUsd: numeric("cost_usd", { precision: 10, scale: 4, mode: "number" }).notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("mail_speech_created_idx").on(t.createdAt)],
 );

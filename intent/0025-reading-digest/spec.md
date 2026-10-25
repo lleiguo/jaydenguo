@@ -72,7 +72,7 @@ IDs here: MD (the digest), MS (which mail), MT (things to do), MG
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | MA-1 | Play the day. | A Play button on the Mail screen and the Today card reads: "You have N emails." Then for each, topic, sender and summary, then the open to-dos. Routine mail: "and N others". About 60–90 seconds for a normal day. |
-| MA-2 | The voice. | Cookie's server voice (0007 VOX-5), in each summary's language. At 80% of the cap, or if the voice fails, the phone's voice. Made when first played, not at 06:30; kept for the day so a second play costs nothing. |
+| MA-2 | The voice. | Cookie's server voice (0007 VOX-5), in each summary's language. At 80% of the cap, or if the voice fails, the phone's voice. Made when first played, not at 06:30; kept for the day so a second play costs nothing. As built (MD3): made part by part (intro, each email, "and N others", the to-dos) from what the server stored, never from text the phone sends; the phone keeps the day's parts, so a second play on that phone costs nothing; any part the server can't voice is read by the phone. |
 | MA-3 | Controls. | Pause, skip to the next email, back. Playing continues with the screen locked (background audio), with the now-playing item on the lock screen. |
 | MA-4 | The notification. | Kind `mail`, sent when the 06:30 run finishes with new mail: "Today's mail: 4 emails, 2 to do" (plus "1 overdue" per MT-4). Its text follows 0004 PUSH-2 (fetched by the extension, not sent through Apple). Tapping it opens the Mail screen. No mail: no notification. As built (MD2): "new" is mail summarized since the last morning notification (at most a day back), not only in that run, because the 05:00 daily sync already summarizes the night's mail; routine mail isn't counted; one a day (dedup `mail:<date>`). |
 
@@ -123,7 +123,7 @@ call (0008 EMS-1), text capped at `MAX_TEXT` (8,000 characters).
 |---|---|
 | `mail_items` | id, source_id, gmail_message_id (unique per source), message_url, received_at, day (home date), sender_name, sender_address, subject, summary (null when `skipped`: limit, cap or failed), language, routine, newsletter (json: picked items, other items), people (person IDs, or empty = family), topic, suggestion_id (nullable), read_by (user IDs), cost, created_at |
 | `mail_todos` | id, item_id (set null when the summary goes), subject, message_url, text, due_on (nullable), people, done_at, done_by, created_at |
-| `mail_audio` | day, language mix, object path, cost (the spoken digest, deleted next day); with MD3 |
+| `mail_speech` | day, part (intro, item, others, todos), chars, cost, created_at: what reading aloud cost, numbers only (MD3; replaces `mail_audio`, since the audio is kept on the phone, not the server) |
 
 As built (MD1): no `mail_runs` table; the run's state is the email
 source's own sync run (`sync_runs`), which the API reports as `lastRun`.
@@ -143,7 +143,8 @@ quote". The body is never stored (MSEC-1).
 | `POST /api/v1/mail/refresh` | Starts `mail:digest` (manual-refresh limits). |
 | `POST /api/v1/mail/items/{id}/read` | Marks read for this parent. |
 | `PATCH /api/v1/mail/todos/{id}` | `done: true/false`. |
-| `POST /api/v1/mail/audio` | The day's spoken digest (made once, MA-2); returns a URL and chapter marks per email for skip. |
+| `GET /api/v1/mail/speech?day=` | The day's script: parts in order, each with its words and language (MA-1). As built in MD3, with the next row, in place of `POST /api/v1/mail/audio`. |
+| `GET /api/v1/mail/speech/{part}?day=` | One part as MP3 (MA-2). Any error means the phone reads that part. |
 
 OpenAPI regenerated. Old app builds never see the kind `mail` (opt-in).
 

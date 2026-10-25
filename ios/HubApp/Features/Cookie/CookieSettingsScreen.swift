@@ -63,7 +63,7 @@ struct CookieSettingsScreen: View {
                     Button("Clear history", role: .destructive) { confirmClear = true }
                         .accessibilityIdentifier("cookieClear")
                 } footer: {
-                    Text("Removes the words of every question and answer, for everyone. What they cost stays on the Costs page.")
+                    Text("Removes the words of every question and answer, and today's mail summaries, for everyone. What they cost stays on the Costs page.")
                 }
             }
         }
@@ -162,7 +162,9 @@ struct CookieSettingsScreen: View {
         do {
             _ = try await model.client.api.clearAssistantHistory().noContent
             model.cookie.reset()
-            model.show("Cookie's history is cleared.")
+            // Intent 0025, MSEC-3: today's mail goes with it.
+            model.mailPlayer.reset()
+            model.show("Cookie's history and today's mail are cleared.")
         } catch {
             model.show(HubError.from(error)?.message ?? "Couldn't clear the history.")
         }

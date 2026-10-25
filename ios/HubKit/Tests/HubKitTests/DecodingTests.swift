@@ -43,6 +43,8 @@ import Testing
         "listSources": { _ = try await $0.api.listSources().ok.body.json },
         "listCredentials": { _ = try await $0.api.listCredentials().ok.body.json },
         "getCosts": { _ = try await $0.api.getCosts().ok.body.json },
+        "getMail": { _ = try await $0.api.getMail().ok.body.json },
+        "getMailScript": { _ = try await $0.api.getMailScript().ok.body.json },
         "listAssistantTurns": { _ = try await $0.api.listAssistantTurns().ok.body.json },
         "getAssistantSettings": { _ = try await $0.api.getAssistantSettings().ok.body.json },
         "listAssistantMemories": { _ = try await $0.api.listAssistantMemories().ok.body.json },
