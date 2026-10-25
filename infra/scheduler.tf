@@ -1,5 +1,5 @@
 # Scheduled triggers (plan M1.5, M1.13 and M3b; spec SYNC-1, NFR-3, TEN-9..11;
-# intent 0020 BACK-1). Cloud Scheduler starts an
+# intent 0020 BACK-1; intent 0025 MD-1). Cloud Scheduler starts an
 # execution of the worker job with the job name as an argument override,
 # using the Cloud Run Admin API. The scheduler stores no personal data.
 locals {
@@ -44,6 +44,12 @@ locals {
       description = "Read the household calendar hourly at night (BACK-1)"
       schedule    = var.household_sync_night_schedule
       args        = ["sync", "household", "scheduled"]
+    }
+    # Intent 0025, MD-1, MA-4: today's mail, summarized and announced.
+    "mail-digest" = {
+      description = "Summarize today's mail and send the morning notification (intent 0025)"
+      schedule    = var.mail_digest_schedule
+      args        = ["mail:digest"]
     }
     "nightly-backup" = {
       description = "Export the database to the backup bucket (NFR-3)"

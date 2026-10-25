@@ -78,3 +78,19 @@ About 5–6 working days: MD1 2, MD2 0.5, MD3 1.5–2, MD4 1, MD5 0.5.
   to-dos; a newsletter's summary covers only its picks): 10/10 twice,
   people and topic 9/10 (the jersey receipt is tagged to the child),
   about US$0.03 a run. The owner's real-mail check is O-4.
+
+**As built (MD2, 2026-10-25):**
+- *Schedule.* Cloud Scheduler job `mail-digest` (`mail_digest_schedule`,
+  default `30 6 * * *`, home time zone) starts `mail:digest`. It needs the
+  owner's `terraform apply` (O-3); until then, the digest is built by the
+  05:00 daily sync and pull to refresh, with no notification (M-6).
+- *Notification.* After its sync, `mail:digest` sends kind `mail` to
+  every phone that has it on: "Today's mail", "N emails, M to do[, K
+  overdue]". New mail is mail summarized since the last morning
+  notification (at most a day back), routine mail not counted; nothing new,
+  nothing sent; one a day. Pull to refresh never notifies. The app turns
+  the kind on and opens the Mail screen from it in MD3; builds before that
+  never receive it (opt-in).
+- *Tests.* One more integration test (`mail-digest.test.ts`): nothing new
+  sends nothing; the counts with a routine email and an overdue to-do; a
+  rerun the same morning sends nothing more. `terraform validate` passes.
