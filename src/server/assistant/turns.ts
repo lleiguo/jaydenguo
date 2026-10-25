@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
-import { assistantTurns } from "@db/schema";
+import { assistantTurns, mailItems } from "@db/schema";
 import {
   LIMITS,
   sharedLabel,
@@ -170,9 +170,16 @@ export async function monthSpendUsd(db: DbOrTx, now: Date): Promise<number> {
   const tz = await getHomeTimeZone(db);
   const [year, month] = localDate(now, tz).split("-").map(Number);
   const start = zonedToUtc({ year, month, day: 1, hour: 0, minute: 0, second: 0 }, tz);
-  const [row] = await db
-    .select({ total: sql<number>`coalesce(sum(${assistantTurns.costUsd}), 0)::float` })
-    .from(assistantTurns)
-    .where(gte(assistantTurns.createdAt, start));
-  return row?.total ?? 0;
+  const [[row], [mail]] = await Promise.all([
+    db
+      .select({ total: sql<number>`coalesce(sum(${assistantTurns.costUsd}), 0)::float` })
+      .from(assistantTurns)
+      .where(gte(assistantTurns.createdAt, start)),
+    // Intent 0025, MSEC-5: today's mail counts toward Cookie's cap.
+    db
+      .select({ total: sql<number>`coalesce(sum(${mailItems.costUsd}), 0)::float` })
+      .from(mailItems)
+      .where(gte(mailItems.createdAt, start)),
+  ]);
+  return (row?.total ?? 0) + (mail?.total ?? 0);
 }

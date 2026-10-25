@@ -11,3 +11,4 @@ export * from "./household-links";
 export * from "./costs";
 export * from "./push";
 export * from "./assistant";
+export * from "./mail";

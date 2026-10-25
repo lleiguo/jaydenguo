@@ -18,6 +18,7 @@ import { claudeExplainer, explainNextMatches } from "../server/tennis/explain";
 import { tennisRegistrar } from "./tennis-registrar";
 import { syncRecords } from "../server/sync/apply";
 import { defaultEmailExtractor, syncEmails } from "../server/email/apply";
+import { defaultDigestModel, digestEmails, pruneMail, type DigestConfig } from "../server/mail/digest";
 import { assistantActionsJob } from "./assistant-actions";
 import { closeStaleReads } from "./assistant-email";
 import {
@@ -254,6 +255,17 @@ async function runLocked(
       });
       counts.added += read.suggestions;
       await notifySuggestions(db, source, run.id, read.suggestions, { log, now: now() });
+      // Intent 0025: today's mail, after the suggestions so each summary can
+      // point to its email's suggestion (MT-3). Never fails the run.
+      await digestEmails(db, sourceId, batch.emails, {
+        model: defaultDigestModel(),
+        now: now(),
+        homeTimeZone,
+        log,
+        config: (source.config as { digest?: DigestConfig } | null)?.digest,
+      }).catch((err) =>
+        log("mail digest failed", { error: err instanceof Error ? err.name : "unknown" }, "WARNING"),
+      );
     }
     await db
       .update(syncRuns)
@@ -378,6 +390,8 @@ export async function syncJob(args: string[], ctx: JobContext) {
     ctx.log("notifications pruned", { removed: await pruneNotifications(db) });
     // Cookie (intent 0007, MEM-4, MEM-9): old chat text and long-forgotten facts.
     ctx.log("assistant pruned", { turns: await pruneHistory(db), memories: await pruneMemories(db) });
+    // Intent 0025, MSEC-3: summaries after 14 days, to-dos after 30.
+    ctx.log("mail pruned", await pruneMail(db, new Date(), await getHomeTimeZone(db)));
   }
   ctx.log("sync job done", { results });
 }

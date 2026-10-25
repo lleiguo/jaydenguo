@@ -2290,6 +2290,18 @@
                           "maxLength": 100
                         }
                       },
+                      "digest": {
+                        "type": "object",
+                        "properties": {
+                          "labelsOnly": {
+                            "type": "boolean"
+                          },
+                          "about": {
+                            "type": "string",
+                            "maxLength": 300
+                          }
+                        }
+                      },
                       "entry": {
                         "type": "object",
                         "properties": {
@@ -2510,6 +2522,18 @@
                           "type": "string",
                           "minLength": 1,
                           "maxLength": 100
+                        }
+                      },
+                      "digest": {
+                        "type": "object",
+                        "properties": {
+                          "labelsOnly": {
+                            "type": "boolean"
+                          },
+                          "about": {
+                            "type": "string",
+                            "maxLength": 300
+                          }
                         }
                       },
                       "entry": {
@@ -3344,6 +3368,165 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RejectedResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mail": {
+      "get": {
+        "operationId": "getMail",
+        "summary": "Today's mail and the days still kept, with the to-dos.",
+        "description": "Spec: MD-5",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 14
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mail/refresh": {
+      "post": {
+        "operationId": "refreshMail",
+        "summary": "Read the email source again (pull to refresh).",
+        "description": "Spec: MD-2",
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Started"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mail/items/{id}/read": {
+      "post": {
+        "operationId": "markMailRead",
+        "summary": "This parent has seen the summary.",
+        "description": "Spec: MD-6",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done."
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mail/todos/{id}": {
+      "patch": {
+        "operationId": "setMailTodo",
+        "summary": "Tick or untick a to-do.",
+        "description": "Spec: MT-2",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "done": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "done"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailTodoView"
                 }
               }
             }
@@ -4610,7 +4793,8 @@
                         "suggestion",
                         "cookie",
                         "tennis_result",
-                        "swim"
+                        "swim",
+                        "mail"
                       ]
                     }
                   }
@@ -6659,6 +6843,9 @@
                   "video": {
                     "type": "number"
                   },
+                  "mail": {
+                    "type": "number"
+                  },
                   "explanation": {
                     "type": "number"
                   },
@@ -6669,6 +6856,7 @@
                 "required": [
                   "email",
                   "video",
+                  "mail",
                   "explanation",
                   "assistant"
                 ]
@@ -6900,7 +7088,8 @@
                 "suggestion",
                 "cookie",
                 "tennis_result",
-                "swim"
+                "swim",
+                "mail"
               ]
             }
           },
@@ -6921,7 +7110,8 @@
                     "suggestion",
                     "cookie",
                     "tennis_result",
-                    "swim"
+                    "swim",
+                    "mail"
                   ]
                 },
                 "label": {
@@ -6951,7 +7141,8 @@
                     "suggestion",
                     "cookie",
                     "tennis_result",
-                    "swim"
+                    "swim",
+                    "mail"
                   ]
                 },
                 "label": {
@@ -7756,6 +7947,9 @@
           },
           "assistant": {
             "type": "number"
+          },
+          "mail": {
+            "type": "number"
           }
         },
         "required": [
@@ -7763,7 +7957,8 @@
           "video",
           "email",
           "explanation",
-          "assistant"
+          "assistant",
+          "mail"
         ]
       },
       "Forecast": {
@@ -8190,6 +8385,262 @@
           "onSince"
         ]
       },
+      "MailDayView": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MailItemView"
+            }
+          }
+        },
+        "required": [
+          "day",
+          "items"
+        ]
+      },
+      "MailItemView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "receivedAt": {
+            "type": "string"
+          },
+          "senderName": {
+            "type": "string"
+          },
+          "senderAddress": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "messageUrl": {
+            "type": "string"
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "skipped": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "failed",
+              "limit",
+              "cap",
+              null
+            ]
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "routine": {
+            "type": "boolean"
+          },
+          "newsletter": {
+            "type": "object",
+            "properties": {
+              "picked": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "others": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "picked",
+              "others"
+            ],
+            "x-nullable": true
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "topic": {
+            "type": "string"
+          },
+          "suggestion": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "title",
+              "date"
+            ],
+            "x-nullable": true
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "todos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MailTodoView"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "receivedAt",
+          "senderName",
+          "senderAddress",
+          "subject",
+          "messageUrl",
+          "summary",
+          "skipped",
+          "language",
+          "routine",
+          "people",
+          "topic",
+          "read",
+          "todos"
+        ]
+      },
+      "MailTodoView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "messageUrl": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "dueOn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "done": {
+            "type": "boolean"
+          },
+          "overdue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "itemId",
+          "subject",
+          "messageUrl",
+          "text",
+          "dueOn",
+          "people",
+          "done",
+          "overdue"
+        ]
+      },
+      "MailView": {
+        "type": "object",
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "today": {
+            "type": "string"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MailDayView"
+            }
+          },
+          "todos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MailTodoView"
+            }
+          },
+          "unread": {
+            "type": "number"
+          },
+          "openTodos": {
+            "type": "number"
+          },
+          "lastRun": {
+            "type": "object",
+            "properties": {
+              "at": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "at",
+              "status"
+            ],
+            "x-nullable": true
+          }
+        },
+        "required": [
+          "connected",
+          "today",
+          "days",
+          "todos",
+          "unread",
+          "openTodos"
+        ]
+      },
       "MatchView": {
         "type": "object",
         "properties": {
@@ -8612,7 +9063,8 @@
               "suggestion",
               "cookie",
               "tennis_result",
-              "swim"
+              "swim",
+              "mail"
             ]
           },
           "title": {

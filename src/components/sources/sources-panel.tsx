@@ -26,7 +26,12 @@ type Source = {
   name: string;
   enabled: boolean;
   credentialLabel: string | null;
-  config: { entry?: EntrySettings; senders?: string[]; labels?: string[] } | null;
+  config: {
+    entry?: EntrySettings;
+    senders?: string[];
+    labels?: string[];
+    digest?: { labelsOnly?: boolean; about?: string };
+  } | null;
   categoryMapping: Mapping;
   lastSuccessAt: string | null;
   lastRun: Run | null;
@@ -495,7 +500,11 @@ function SendersForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            config: { senders: splitList(f.get("senders")), labels: splitList(f.get("labels")) },
+            config: {
+              senders: splitList(f.get("senders")),
+              labels: splitList(f.get("labels")),
+              digest: { labelsOnly: f.get("labelsOnly") === "on", about: String(f.get("about") ?? "") },
+            },
           }),
         });
         if (!res.ok) return setError((await res.json().catch(() => ({}))).error ?? "Couldn't save.");
@@ -518,6 +527,24 @@ function SendersForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
           name="labels"
           className="rounded border px-2 py-1"
           defaultValue={(s.config?.labels ?? []).join(", ")}
+        />
+      </label>
+      {/* Intent 0025, MS-2, MS-3, MN-2: the morning read of today's mail. */}
+      <p className="text-neutral-600 dark:text-neutral-400">
+        Add the label <code>Hub/Read</code> here, and label mail <code>Hub/Read</code> in Gmail (by hand or
+        with a filter), to have it read each morning.
+      </p>
+      <label className="flex items-center gap-2">
+        <input type="checkbox" name="labelsOnly" defaultChecked={!!s.config?.digest?.labelsOnly} />
+        Morning read: labelled mail only (suggestions still use the whole list)
+      </label>
+      <label className="flex flex-col">
+        About us, for reading newsletters (e.g. &quot;grade 5, tennis U10, soccer U11&quot;)
+        <input
+          name="about"
+          maxLength={300}
+          className="rounded border px-2 py-1"
+          defaultValue={s.config?.digest?.about ?? ""}
         />
       </label>
       <p className="text-neutral-600 dark:text-neutral-400">

@@ -267,6 +267,13 @@
       "when": 1792875844589,
       "tag": "0037_people-emails",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792952548790,
+      "tag": "0038_mail_digest",
+      "breakpoints": true
     }
   ]
 }

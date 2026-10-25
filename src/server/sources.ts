@@ -70,6 +70,14 @@ const configSchema = z.object({
     .max(30)
     .optional(),
   labels: z.array(z.string().trim().min(1).max(100)).max(20).optional(),
+  // gmail, intent 0025: the morning read. Labelled mail only (MS-3), and a
+  // line about the family that newsletters are read against (MN-2).
+  digest: z
+    .object({
+      labelsOnly: z.boolean().optional(),
+      about: z.string().trim().max(300).optional(),
+    })
+    .optional(),
   // tennis_tc: tournament entries (TEN-9). The home postal code is sent to
   // the tournament site's search and, with the venue, to the routing
   // service for drive times; it's never shown outside the Sources page.

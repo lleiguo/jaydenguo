@@ -43,7 +43,7 @@ IDs here: MD (the digest), MS (which mail), MT (things to do), MG
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | MS-1 | The allow-list and its labels. | The digest reads what the email source's allow-list allows (senders and labels, 0001 EML-1), with every message checked by `senderAllowed` or its label IDs after the search (0009 ERSEC-4). No email source, or one switched off: the Mail screen says Gmail isn't set up for this, and where to set it up. |
-| MS-2 | `Hub/Read`. | Settings → Sources shows a hint under the email source's labels: "Label mail `Hub/Read` in Gmail to have it read each morning". Owner's step O-2 adds the label and a Gmail filter. A message with the label is read whoever sent it. |
+| MS-2 | `Hub/Read`. | The Sources page shows a hint under the email source's labels: "Label mail `Hub/Read` in Gmail to have it read each morning". Owner's step O-2 adds the label and a Gmail filter. A message with the label is read whoever sent it. |
 | MS-3 | Label only (question 1). | A switch on the email source, "Morning read: labelled mail only" (default off). On: only messages with a label from the list are read for the digest; suggestions still use the whole list. |
 
 ### 2.3 Things to do (MT)
@@ -65,7 +65,7 @@ IDs here: MD (the digest), MS (which mail), MT (things to do), MG
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | MN-1 | Long mail condensed. | An email over about 400 words, or with several separate items, is a newsletter. Its summary is the at most 3 items that concern this family, each one line, and "N other items" folded under it (one line each, shown on tap). |
-| MN-2 | What "concerns us" means. | The model is given: the people's names, a short "about us" line the owner writes in Settings → Mail (e.g. "Jayden: grade 5, tennis U10, soccer U11"; empty by default), the teams and activities the calendar names, and the titles of the next 14 days' events. An item naming one of these, or a whole-school item with a date or a to-do, concerns us. |
+| MN-2 | What "concerns us" means. | The model is given: the people's names, a short "about us" line the owner writes on the email source in Settings → Sources (e.g. "Jayden: grade 5, tennis U10, soccer U11"; empty by default; as built in MD1), the teams and activities the calendar names, and the titles of the next 14 days' events. An item naming one of these, or a whole-school item with a date or a to-do, concerns us. |
 | MN-3 | Nothing lost. | Items not picked stay listed under "N other items"; the Gmail link is always there. |
 
 ### 2.6 Reading aloud (MA)
@@ -100,15 +100,20 @@ IDs here: MD (the digest), MS (which mail), MT (things to do), MG
 
 ### 3.1 Flow
 ```
-06:30 scheduler → worker mail:digest
-  open the Gmail credential → search: allow-list (or labels only, MS-3), since last run
-  → senderAllowed / label check → skip message IDs already read
-  → per message (≤ 40): Flash, structured, no tools, with the context of MN-2
-      → { routine, summary, newsletter_items[], other_items[], todos[], people[], topic, language }
+06:30 scheduler → worker mail:digest → sync of the email source (as any sync)
+  the email source's own read: allow-list search, senderAllowed / label check
+  → suggestions (0008, unchanged)
+  → digest: mail received in the last 48 h, labelled only if MS-3, not read before
+  → per message (≤ 40 a day): Flash, structured, no tools, with the context of MN-2
+      → { routine, summary, language, people[], topic, todos[], newsletter }
   → write mail_items, mail_todos; link to email_suggestion by gmail_message_id
-  → push kind `mail` to parents' phones (06:30 run only, new mail only)
-daily sync / pull to refresh → the same job, no push
+  → push kind `mail` to parents' phones (06:30 run only, new mail only; MD2)
+daily sync / pull to refresh → the same sync, no push
 ```
+
+As built (MD1): the digest runs inside the email source's sync, on the
+mail that sync already fetched, rather than a second Gmail search. A digest
+failure never fails the sync.
 
 The summarizer is one call per message on the hub's existing structured
 call (0008 EMS-1), text capped at `MAX_TEXT` (8,000 characters).
@@ -116,14 +121,16 @@ call (0008 EMS-1), text capped at `MAX_TEXT` (8,000 characters).
 ### 3.2 Data
 | Table | Columns |
 |---|---|
-| `mail_items` | id, gmail_message_id (unique), received_at, day (home date), sender_name, sender_address, subject, summary, language, routine, newsletter (json: picked items, other items), people (person IDs, or empty = family), topic, suggestion_id (nullable), read_by (user IDs), cost, created_at |
-| `mail_todos` | id, item_id, text, due_on (nullable), people, done_at, done_by, created_at |
-| `mail_runs` | id, started_at, finished_at, state, since, found, summarized, failed_reason |
-| `mail_audio` | day, language mix, object path, cost (the spoken digest, deleted next day) |
+| `mail_items` | id, source_id, gmail_message_id (unique per source), message_url, received_at, day (home date), sender_name, sender_address, subject, summary (null when `skipped`: limit, cap or failed), language, routine, newsletter (json: picked items, other items), people (person IDs, or empty = family), topic, suggestion_id (nullable), read_by (user IDs), cost, created_at |
+| `mail_todos` | id, item_id (set null when the summary goes), subject, message_url, text, due_on (nullable), people, done_at, done_by, created_at |
+| `mail_audio` | day, language mix, object path, cost (the spoken digest, deleted next day); with MD3 |
+
+As built (MD1): no `mail_runs` table; the run's state is the email
+source's own sync run (`sync_runs`), which the API reports as `lastRun`.
 
 One migration (`pnpm db:generate --name mail_digest`), plus the
 notification kind (`mail` in `NOTIFICATION_KINDS` and `OPT_IN_KINDS`).
-Email source config gains `labelsOnlyForDigest` (MS-3).
+Email source config gains `digest: { labelsOnly, about }` (MS-3, MN-2).
 
 Sender name, address and subject are kept with the summary: they're what
 the screen shows, and 0001 §7.2 allows "extracted fields and a short

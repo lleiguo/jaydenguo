@@ -49,4 +49,32 @@ About 5–6 working days: MD1 2, MD2 0.5, MD3 1.5–2, MD4 1, MD5 0.5.
 | Task | Status |
 |---|---|
 | O-1 | done 2026-10-25: approved, defaults kept. |
-| MD1 | next. |
+| MD1 | built 2026-10-25 on `mail/md1-digest`. |
+
+**As built (MD1, 2026-10-25):**
+- *Where it runs.* The digest runs inside the email source's sync, on the
+  mail that sync already fetched (spec §3.1), after the suggestions, so
+  each summary links its suggestion. `mail:digest` is a sync of the email
+  source; MD2 schedules it and adds the push. No `mail_runs` table: the
+  sync run is the run (spec §3.2).
+- *Data.* Migration `0038_mail_digest`: `mail_items`, `mail_todos`, and
+  the kind `mail` (opt-in). Retention and Clear history clear both;
+  Cookie's monthly spend counts the digest; Costs page line "Mail digest".
+- *Settings.* On the email source in Settings → Sources: the `Hub/Read`
+  hint, "Morning read: labelled mail only", and the "about us" line. No
+  separate Settings → Mail page.
+- *API.* `GET /api/v1/mail`, `POST /api/v1/mail/refresh`,
+  `POST /api/v1/mail/items/{id}/read`, `PATCH /api/v1/mail/todos/{id}`.
+  Audio comes with MD3.
+- *Tests.* 11 integration tests (`mail-digest.test.ts`): once per email,
+  context and no body kept, 48 h and labels only, the suggestion link, a
+  hostile email, routine and newsletters, the day's limit, the cap and a
+  failing model, the spend, read and ticked, retention; and the email sync
+  end to end through the fake Gmail.
+- *Eval (SP-M2, made-up mail).* `scripts/mail-digest-check.ts`: 10 emails
+  (field trip, practice change, library books, receipt, a 7-item
+  bulletin, a Chinese tennis email, a hostile one, snacks, fees, a
+  furnace visit). After two prompt fixes (things to bring to an event are
+  to-dos; a newsletter's summary covers only its picks): 10/10 twice,
+  people and topic 9/10 (the jersey receipt is tagged to the child),
+  about US$0.03 a run. The owner's real-mail check is O-4.
