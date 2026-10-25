@@ -18,6 +18,7 @@ import {
 } from "../calendar/mutations";
 import { createCredentialInput, signInCodeInput, updateCredentialInput } from "../credentials/store";
 import { approveInput } from "../email/suggestions";
+import { speechQuery } from "../mail/speech";
 import { mailQuery, todoPatch } from "../mail/view";
 import { emailsInput, personInput } from "../people";
 import { deviceKindsInput, registerDeviceInput } from "../push/notify";
@@ -641,6 +642,7 @@ export const operations: Operation[] = [
     operationId: "markMailRead",
     summary: "This parent has seen the summary.",
     spec: "MD-6",
+    status: 204,
     response: null,
   },
   {
@@ -651,6 +653,25 @@ export const operations: Operation[] = [
     spec: "MT-2",
     body: todoPatch,
     response: "MailTodoView",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/mail/speech",
+    operationId: "getMailScript",
+    summary: "The day's mail as parts to read aloud, in order.",
+    spec: "MA-1",
+    query: speechQuery,
+    response: "MailScript",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/mail/speech/{part}",
+    operationId: "getMailSpeech",
+    summary: "One part read aloud. Any error means: use the phone's own voice.",
+    spec: "MA-2, MSEC-5",
+    query: speechQuery,
+    response: null,
+    binary: "audio/mpeg",
   },
 
   // Swimming

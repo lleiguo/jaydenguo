@@ -50,7 +50,8 @@ About 5–6 working days: MD1 2, MD2 0.5, MD3 1.5–2, MD4 1, MD5 0.5.
 |---|---|
 | O-1 | done 2026-10-25: approved, defaults kept. |
 | MD1 | merged and deployed 2026-10-25 (#186); migration 0038 applied in production. The first real digest comes with the next email sync; the owner's check is O-2, O-4. |
-| MD2 | next. |
+| MD2 | merged and deployed 2026-10-25 (#188); the 06:30 schedule waits for the owner's `terraform apply` (O-3). |
+| MD3 | built 2026-10-25 on `mail/md3-app`. |
 
 **As built (MD1, 2026-10-25):**
 - *Where it runs.* The digest runs inside the email source's sync, on the
@@ -95,3 +96,32 @@ About 5–6 working days: MD1 2, MD2 0.5, MD3 1.5–2, MD4 1, MD5 0.5.
 - *Tests.* One more integration test (`mail-digest.test.ts`): nothing new
   sends nothing; the counts with a routine email and an overdue to-do; a
   rerun the same morning sends nothing more. `terraform validate` passes.
+
+**As built (MD3, 2026-10-25):**
+- *Server.* The day's script (`GET /api/v1/mail/speech`) and one part as
+  speech (`GET /api/v1/mail/speech/{part}`), in place of
+  `POST /mail/audio`. The script is the intro, each readable email by
+  topic, "and N others", and the open to-dos, written from what's stored.
+  Speech uses Cookie's voice and her switches (spoken answers, 80% of the
+  cap); each part's cost goes in `mail_speech` (migration 0039, numbers
+  only), counted toward the cap and on the Costs line. Fixed in passing:
+  `POST /mail/items/{id}/read` is declared 204, as it answers. The seed has
+  today's mail (three emails, two to-dos) for the app and its tests.
+- *App.* Today shows the mail card ("2 emails, 2 to do", Play) when there
+  is mail today or an open to-do. The Mail screen opens from the card,
+  More → Today's mail and the notification (`jaydenguohub://open/mail`).
+  It shows the to-dos (tick for both parents; due, overdue in red), today
+  by topic (summary, newsletter's other items, the linked suggestion with
+  Approve, Open in Gmail), "Also came in (N)", the earlier days folded,
+  person chips, and pull to refresh (reads the email source). Summaries on
+  screen count as read. The player reads the parts one after another
+  (back, pause, next, stop; it stays on the last part when done). It keeps
+  playing with the screen locked, with the lock-screen controls, and keeps
+  the day's audio on the phone. The build turns "Today's mail"
+  notifications on once. Clear history and sign-out remove the audio.
+- *Tests.* Integration: the script and a spoken part (cost row, 404 for
+  an unknown part, 409 with spoken answers off). HubKit: 7 mail tests
+  (grouping, the card, chips, the suggestion, the queue, the day's audio,
+  the route) and decoding of `getMail` and `getMailScript`. UI
+  (`MailTests`, against the seed server): card → list → tick and untick a
+  to-do; Play through the five parts, back, stop.

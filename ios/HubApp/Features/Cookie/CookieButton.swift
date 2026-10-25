@@ -20,9 +20,11 @@ struct CookieButton: View {
             avatar(talk, offline: offline)
         }
         .padding(.trailing, 16)
-        // Above the tab bar, and above the undo banner while it shows.
-        .padding(.bottom, model.toast == nil ? 62 : 124)
+        // Above the tab bar, and above the undo banner and today's mail
+        // player while they show (intent 0025, MA-3).
+        .padding(.bottom, (model.toast == nil ? 62 : 124) + (model.mailPlayer.isActive ? 56 : 0))
         .animation(.snappy, value: model.toast)
+        .animation(.snappy, value: model.mailPlayer.isActive)
         .animation(.snappy, value: talk.phase)
         .sensoryFeedback(.impact(weight: .medium), trigger: talk.began)
         .sensoryFeedback(.impact(weight: .light), trigger: talk.ended)

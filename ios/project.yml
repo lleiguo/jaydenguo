@@ -59,7 +59,8 @@ targets:
         NSMicrophoneUsageDescription: Cookie listens while you hold her button, to hear your question. Recordings aren't kept.
         HubAppGroup: $(HUB_APP_GROUP)
         # Background app refresh keeps the widgets current (EXT-2).
-        UIBackgroundModes: [fetch]
+        # audio: today's mail keeps reading with the screen locked (intent 0025, MA-3).
+        UIBackgroundModes: [fetch, audio]
         BGTaskSchedulerPermittedIdentifiers: [com.jaydenguo.hub.refresh]
         ITSAppUsesNonExemptEncryption: false
         # Only for development builds pointed at a local server (release

@@ -4,6 +4,7 @@ import {
   dailyCosts,
   emailMessages,
   mailItems,
+  mailSpeech,
   settings,
   tennisExplanations,
   videoReviewRounds,
@@ -65,7 +66,7 @@ const r2 = (x: number) => Math.round(x * 100) / 100;
 async function featureCosts(db: DbOrTx, from: string, tz: string, month: string) {
   const localDay = (col: unknown) => sql<string>`to_char(${col} at time zone ${tz}, 'YYYY-MM-DD')`;
   const since = new Date(`${from}T00:00:00Z`);
-  const [video, email, explanations, assistant, mail] = await Promise.all([
+  const [video, email, explanations, assistant, mail, spoken] = await Promise.all([
     db
       .select({
         day: localDay(videoReviewRounds.createdAt),
@@ -107,6 +108,14 @@ async function featureCosts(db: DbOrTx, from: string, tz: string, month: string)
       .from(mailItems)
       .where(gte(mailItems.createdAt, since))
       .groupBy(sql`1`),
+    db
+      .select({
+        day: localDay(mailSpeech.createdAt),
+        cost: sql<number>`coalesce(sum(${mailSpeech.costUsd}), 0)::float`,
+      })
+      .from(mailSpeech)
+      .where(gte(mailSpeech.createdAt, since))
+      .groupBy(sql`1`),
   ]);
   const byDay = new Map<string, FeatureDay>();
   const at = (day: string) => {
@@ -119,7 +128,7 @@ async function featureCosts(db: DbOrTx, from: string, tz: string, month: string)
   for (const x of explanations)
     at(x.day).explanation += costUsd(x.model, { input: x.input ?? 0, output: x.output ?? 0 });
   for (const a of assistant) at(a.day).assistant += a.cost ?? 0;
-  for (const m of mail) at(m.day).mail += m.cost ?? 0;
+  for (const m of [...mail, ...spoken]) at(m.day).mail += m.cost ?? 0;
   const days = [...byDay.values()]
     .map((d) => ({
       day: d.day,

@@ -1,0 +1,40 @@
+{
+  "day": "2026-10-25",
+  "parts": [
+    {
+      "id": "intro",
+      "itemId": null,
+      "title": "Today's mail",
+      "language": "en",
+      "text": "You have 2 emails and 2 to do."
+    },
+    {
+      "id": "6f8cdf24-e87d-473c-a480-2003deda4c0f",
+      "itemId": "6f8cdf24-e87d-473c-a480-2003deda4c0f",
+      "title": "Field trip form",
+      "language": "en",
+      "text": "School. From School office: The field trip to the science centre is next Friday. Sign the permission form by Monday and send $5."
+    },
+    {
+      "id": "3d4cb6fa-eeea-457d-8b15-c51a3066bb24",
+      "itemId": "3d4cb6fa-eeea-457d-8b15-c51a3066bb24",
+      "title": "Extra practice next week",
+      "language": "en",
+      "text": "Soccer. From Coach Sam: Coach Sam adds an extra practice next Wednesday, 6 to 7:30 pm, probably at Oak Park. Bring water."
+    },
+    {
+      "id": "others",
+      "itemId": null,
+      "title": "Also came in",
+      "language": "en",
+      "text": "And 1 other email."
+    },
+    {
+      "id": "todos",
+      "itemId": null,
+      "title": "To do",
+      "language": "en",
+      "text": "To do: Sign the field trip form; Bring water to Wednesday's practice."
+    }
+  ]
+}

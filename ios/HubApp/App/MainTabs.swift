@@ -15,7 +15,11 @@ struct MainTabs: View {
             if let calendar {
                 TabView(selection: $model.selectedTab) {
                     Tab("Today", systemImage: "sun.max", value: Route.Tab.today) {
-                        NavigationStack { TodayScreen() }
+                        NavigationStack(path: $model.todayPath) {
+                            TodayScreen().navigationDestination(for: Route.self) { route in
+                                if route == .mail { MailScreen() }
+                            }
+                        }
                     }
                     Tab("Calendar", systemImage: "calendar", value: Route.Tab.calendar) {
                         NavigationStack { CalendarScreen() }

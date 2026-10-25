@@ -27,6 +27,8 @@ final class AppModel {
     var tennisPath: [Route] = []
     var swimmingPath: [Route] = []
     var morePath: [Route] = []
+    /// Today's stack: the mail (intent 0025).
+    var todayPath: [Route] = []
     /// Source kinds being refreshed from a sport screen (APP-7).
     private(set) var refreshing: Set<String> = []
     var signInError: String?
@@ -69,12 +71,18 @@ final class AppModel {
     let cookie: CookieStore
     /// Talking to her: recording and speech (plan K6).
     let cookieTalk: CookieTalk
+    /// Reading today's mail aloud (intent 0025, MA-1..3).
+    let mailPlayer: MailPlayer
 
     init(client: HubClient, events: AsyncStream<HubEvent>, lock: AppLock) {
         self.client = client
         self.lock = lock
         cookie = CookieStore(client: client)
         cookieTalk = CookieTalk(store: cookie, client: client)
+        mailPlayer = MailPlayer(client: client)
+        mailPlayer.onRead = { id in
+            Task { _ = try? await client.api.markMailRead(path: .init(id: id)).noContent }
+        }
         phase = client.isSignedIn ? .signedIn : .signedOut
         cookieTalk.chatOpen = { [weak self] in self?.cookieOpen ?? false }
         Task { [weak self] in
@@ -157,6 +165,7 @@ final class AppModel {
         // The client already removed the token and the offline cache (SEC-3).
         cookieTalk.reset()
         cookie.reset()
+        mailPlayer.reset()
         cookieOpen = false
         widgetItems = nil
         offlineSince = nil
@@ -277,6 +286,7 @@ final class AppModel {
         case .meet, .swimEvent: swimmingPath = [route]
         case .school, .suggestions, .sources, .accounts, .settings, .videos, .notifications, .clash: morePath = [route]
         case .video: morePath = [.videos, route]
+        case .mail: todayPath = [.mail]
         default: pendingRoute = route
         }
     }
@@ -367,6 +377,7 @@ final class AppModel {
             ))).ok.body.json
             await offerCookieNotifications()
             await offerNewNotifications()
+            await offerMailNotifications()
         } catch {
             pushProblem = HubError.from(error)?.message ?? "Couldn't turn on notifications for this phone."
         }
@@ -393,6 +404,16 @@ final class AppModel {
         else { return }
         UserDefaults.standard.set(true, forKey: offered)
         let kinds = Set(settings.kinds.map(\.rawValue)).union(["suggestion", "tennis_result", "swim"])
+        await setNotificationKinds(Array(kinds))
+    }
+
+    /// "Today's mail" (intent 0025, MA-4), switched on once by this build.
+    private func offerMailNotifications() async {
+        let offered = "newKindsOffered.0025"
+        guard let settings = notificationSettings, settings.registered, !UserDefaults.standard.bool(forKey: offered)
+        else { return }
+        UserDefaults.standard.set(true, forKey: offered)
+        let kinds = Set(settings.kinds.map(\.rawValue)).union(["mail"])
         await setNotificationKinds(Array(kinds))
     }
 

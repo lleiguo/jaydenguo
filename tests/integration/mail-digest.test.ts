@@ -8,6 +8,7 @@ import {
   emailMessages,
   emailSuggestions,
   mailItems,
+  mailSpeech,
   mailTodos,
   notifications,
   people,
@@ -26,7 +27,9 @@ import { scriptedModel } from "@/server/llm/scripted";
 import { LlmError } from "@/server/llm/types";
 import { createLogger } from "@/server/log";
 import { clearMail, digestEmails, DIGEST_LIMITS, pruneMail, type DigestOutput } from "@/server/mail/digest";
+import { fakeSpeech } from "@/server/assistant/speech";
 import { notifyMail } from "@/server/mail/notify";
+import { mailScript, speakMailPart } from "@/server/mail/speech";
 import { loadMail, markMailRead, setTodoDone } from "@/server/mail/view";
 import { syncSource } from "@/worker/sync";
 import { createGmailFake } from "../e2e/support/fake-gmail";
@@ -328,6 +331,74 @@ describe("today's mail", () => {
     ).toBeNull();
     expect(await db.select().from(notifications).where(eq(notifications.kind, "mail"))).toHaveLength(1);
     await db.delete(notifications).where(eq(notifications.kind, "mail"));
+  });
+
+  it("reads the day aloud from what's stored: intro, emails by topic, the rest, to-dos (MA-1, MA-2)", async () => {
+    const model = scriptedModel("gemini", (req) =>
+      /Receipt/.test(req.prompt)
+        ? output({ routine: true, summary: "A receipt.", todos: [] })
+        : /Practice/.test(req.prompt)
+          ? output({ topic: "soccer", summary: "Practice moves to 6:30.", todos: [] })
+          : output(),
+    );
+    await digest(
+      [
+        email({ id: `p-${randomUUID()}`, subject: "Practice", from: "Coach Ray <coach@school.example>" }),
+        email({ id: `f-${randomUUID()}` }),
+        email({ id: `r-${randomUUID()}`, subject: "Receipt" }),
+      ],
+      model,
+    );
+    const script = await mailScript(db, now);
+    expect(script.day).toBe("2029-03-05");
+    expect(script.parts.map((p) => (p.id.length === 36 ? "item" : p.id))).toEqual([
+      "intro",
+      "item",
+      "item",
+      "others",
+      "todos",
+    ]);
+    expect(script.parts.map((p) => p.text)).toEqual([
+      "You have 2 emails and 2 to do.",
+      expect.stringMatching(/^School\. From Ms Lee: /),
+      "Soccer. From Coach Ray: Practice moves to 6:30.",
+      "And 1 other email.",
+      "To do: Sign the permission form; Bring $5.",
+    ]);
+
+    const [u] = await db
+      .insert(users)
+      .values({ email: `s-${randomUUID()}@example.test` })
+      .returning();
+    const before = await monthSpendUsd(db, now);
+    const audio = await speakMailPart(
+      db,
+      { speech: fakeSpeech, now },
+      { userId: u.id, part: script.parts[1].id },
+    );
+    expect(audio.mimeType).toBe("audio/mpeg");
+    const [row] = await db.select().from(mailSpeech).where(eq(mailSpeech.day, "2029-03-05"));
+    // Numbers only, never the words (MSEC-1).
+    expect(row).toMatchObject({ part: "item", chars: script.parts[1].text.length });
+    expect(await monthSpendUsd(db, now)).toBeCloseTo(before + row.costUsd, 4);
+    await expect(
+      speakMailPart(db, { speech: fakeSpeech, now }, { userId: u.id, part: randomUUID() }),
+    ).rejects.toMatchObject({
+      status: 404,
+    });
+    // Spoken answers off: the phone reads it.
+    const settings = await getAssistantSettings(db);
+    await saveAssistantSettings(db, { speak: false });
+    try {
+      await expect(
+        speakMailPart(db, { speech: fakeSpeech, now }, { userId: u.id, part: "intro" }),
+      ).rejects.toMatchObject({
+        status: 409,
+      });
+    } finally {
+      await saveAssistantSettings(db, { speak: settings.speak });
+    }
+    await db.delete(mailSpeech).where(eq(mailSpeech.day, "2029-03-05"));
   });
 
   it("summaries go after 14 days and to-dos after 30, or when done a day (MSEC-3)", async () => {

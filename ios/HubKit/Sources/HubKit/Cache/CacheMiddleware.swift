@@ -11,8 +11,10 @@ struct CacheMiddleware: ClientMiddleware {
 
     /// Live-only answers: the change feed must never replay an old cursor,
     /// and nothing from Cookie is kept on the phone (intent 0007, CSEC-8).
+    /// The mail's spoken parts have their own day's store (intent 0025, MA-2).
     static let liveOnly: Set<String> = [
         "getChanges", "listAssistantTurns", "getAssistantSettings", "listAssistantMemories", "getAssistantSpeech",
+        "getMailSpeech",
     ]
     /// Kept by the app itself: the calendar saves its last load under one
     /// name (intent 0018, SAV-4), so an old copy is never replayed as new.
