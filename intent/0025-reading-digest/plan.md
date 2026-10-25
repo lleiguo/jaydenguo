@@ -49,7 +49,8 @@ About 5–6 working days: MD1 2, MD2 0.5, MD3 1.5–2, MD4 1, MD5 0.5.
 | Task | Status |
 |---|---|
 | O-1 | done 2026-10-25: approved, defaults kept. |
-| MD1 | built 2026-10-25 on `mail/md1-digest`. |
+| MD1 | merged and deployed 2026-10-25 (#186); migration 0038 applied in production. The first real digest comes with the next email sync; the owner's check is O-2, O-4. |
+| MD2 | next. |
 
 **As built (MD1, 2026-10-25):**
 - *Where it runs.* The digest runs inside the email source's sync, on the
