@@ -18,6 +18,7 @@ import {
 } from "../calendar/mutations";
 import { createCredentialInput, signInCodeInput, updateCredentialInput } from "../credentials/store";
 import { approveInput } from "../email/suggestions";
+import { mailQuery, todoPatch } from "../mail/view";
 import { emailsInput, personInput } from "../people";
 import { deviceKindsInput, registerDeviceInput } from "../push/notify";
 import { createSourceInput, updateSourceInput } from "../sources";
@@ -613,6 +614,43 @@ export const operations: Operation[] = [
     summary: "Reject.",
     spec: "EML-3",
     response: "RejectedResponse",
+  },
+
+  // Today's mail (intent 0025)
+  {
+    method: "GET",
+    path: "/api/v1/mail",
+    operationId: "getMail",
+    summary: "Today's mail and the days still kept, with the to-dos.",
+    spec: "MD-5",
+    query: mailQuery,
+    response: "MailView",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/mail/refresh",
+    operationId: "refreshMail",
+    summary: "Read the email source again (pull to refresh).",
+    spec: "MD-2",
+    status: 202,
+    response: "Started",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/mail/items/{id}/read",
+    operationId: "markMailRead",
+    summary: "This parent has seen the summary.",
+    spec: "MD-6",
+    response: null,
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/mail/todos/{id}",
+    operationId: "setMailTodo",
+    summary: "Tick or untick a to-do.",
+    spec: "MT-2",
+    body: todoPatch,
+    response: "MailTodoView",
   },
 
   // Swimming

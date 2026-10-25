@@ -11,6 +11,7 @@ import { tennisAcceptanceJob, tennisCheckJob, tennisDrawWatchJob, tennisEnterJob
 import { videoReviewJob } from "./video/review";
 import { assistantActionsJob } from "./assistant-actions";
 import { assistantEmailJob } from "./assistant-email";
+import { mailDigestJob } from "./mail-digest";
 import { calendarCopyJob } from "./calendar-copy";
 import { costsSyncJob } from "./costs";
 import { householdSyncJob } from "./household-sync";
@@ -79,6 +80,10 @@ export const jobs: Record<string, Job> = {
     description:
       "Find the email a parent asked Cookie about and write her summary: assistant:email <read-id>",
     run: assistantEmailJob,
+  },
+  "mail:digest": {
+    description: "Read the email source and summarize today's mail (intent 0025, morning)",
+    run: mailDigestJob,
   },
   "calendar:copy": {
     description: "Copy the calendar to the Jayden (hub) Google Calendar: calendar:copy [delete]",

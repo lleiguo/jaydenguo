@@ -26,6 +26,8 @@ export type EmailMessage = {
   text: string;
   // Gmail's link to the message, for the approved event (EML-3).
   url: string;
+  // It carries one of the allow-list's labels (intent 0025, MS-3).
+  byLabel?: boolean;
 };
 
 type Header = { name: string; value: string };
@@ -153,6 +155,7 @@ export function normaliseGmail(raw: GmailRaw, ctx: AdapterContext): NormalisedBa
       receivedAt: new Date(Number(m.internalDate ?? Date.parse(header(m, "Date")) ?? 0)).toISOString(),
       text: messageText(m.payload),
       url: `https://mail.google.com/mail/u/0/#all/${m.id}`,
+      byLabel,
     });
   }
   // No calendar records: suggestions become events only when approved. An

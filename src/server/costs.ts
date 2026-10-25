@@ -3,6 +3,7 @@ import {
   assistantTurns,
   dailyCosts,
   emailMessages,
+  mailItems,
   settings,
   tennisExplanations,
   videoReviewRounds,
@@ -37,13 +38,15 @@ const num = (v: string | undefined) => {
   return v && Number.isFinite(n) && n > 0 ? n : null;
 };
 
-// `assistant` is Cookie (intent 0007, LIM-6).
+// `assistant` is Cookie (intent 0007, LIM-6); `mail` today's mail (intent
+// 0025, MSEC-5).
 export type FeatureDay = {
   day: string;
   video: number;
   email: number;
   explanation: number;
   assistant: number;
+  mail: number;
 };
 type Feature = Exclude<keyof FeatureDay, "day">;
 
@@ -62,7 +65,7 @@ const r2 = (x: number) => Math.round(x * 100) / 100;
 async function featureCosts(db: DbOrTx, from: string, tz: string, month: string) {
   const localDay = (col: unknown) => sql<string>`to_char(${col} at time zone ${tz}, 'YYYY-MM-DD')`;
   const since = new Date(`${from}T00:00:00Z`);
-  const [video, email, explanations, assistant] = await Promise.all([
+  const [video, email, explanations, assistant, mail] = await Promise.all([
     db
       .select({
         day: localDay(videoReviewRounds.createdAt),
@@ -96,11 +99,19 @@ async function featureCosts(db: DbOrTx, from: string, tz: string, month: string)
       .from(assistantTurns)
       .where(gte(assistantTurns.createdAt, since))
       .groupBy(sql`1`),
+    db
+      .select({
+        day: localDay(mailItems.createdAt),
+        cost: sql<number>`coalesce(sum(${mailItems.costUsd}), 0)::float`,
+      })
+      .from(mailItems)
+      .where(gte(mailItems.createdAt, since))
+      .groupBy(sql`1`),
   ]);
   const byDay = new Map<string, FeatureDay>();
   const at = (day: string) => {
     let d = byDay.get(day);
-    if (!d) byDay.set(day, (d = { day, video: 0, email: 0, explanation: 0, assistant: 0 }));
+    if (!d) byDay.set(day, (d = { day, video: 0, email: 0, explanation: 0, assistant: 0, mail: 0 }));
     return d;
   };
   for (const v of video) at(v.day).video += v.cost ?? 0;
@@ -108,6 +119,7 @@ async function featureCosts(db: DbOrTx, from: string, tz: string, month: string)
   for (const x of explanations)
     at(x.day).explanation += costUsd(x.model, { input: x.input ?? 0, output: x.output ?? 0 });
   for (const a of assistant) at(a.day).assistant += a.cost ?? 0;
+  for (const m of mail) at(m.day).mail += m.cost ?? 0;
   const days = [...byDay.values()]
     .map((d) => ({
       day: d.day,
@@ -115,6 +127,7 @@ async function featureCosts(db: DbOrTx, from: string, tz: string, month: string)
       email: r2(d.email),
       explanation: r2(d.explanation),
       assistant: r2(d.assistant),
+      mail: r2(d.mail),
     }))
     .sort((a, b) => a.day.localeCompare(b.day));
   const inMonth = days.filter((d) => d.day.startsWith(month));
@@ -126,6 +139,7 @@ async function featureCosts(db: DbOrTx, from: string, tz: string, month: string)
       email: total("email"),
       explanation: total("explanation"),
       assistant: total("assistant"),
+      mail: total("mail"),
     },
   };
 }

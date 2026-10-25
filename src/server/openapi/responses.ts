@@ -20,6 +20,7 @@ import type { SchoolDay } from "../calendar/school-day";
 import type { CostsView } from "../costs";
 import type { CredentialView } from "../credentials/store";
 import type { SuggestionView } from "../email/suggestions";
+import type { MailTodoView, MailView } from "../mail/view";
 import type { createSource, listSources, RunView } from "../sources";
 import type { EventDetail, listMeets, loadMeet, loadPersonalBests, ResultView } from "../swim/load";
 import type {
@@ -87,6 +88,9 @@ export type { CostsView };
 export type SuggestionsResponse = { suggestions: SuggestionView[]; pending: number };
 export type ApproveResponse = { eventId: string | null };
 export type RejectedResponse = { rejected: true };
+
+// Today's mail (intent 0025)
+export type { MailView, MailTodoView };
 
 // Swimming (SWM)
 export type SwimMeetsResponse = Awaited<ReturnType<typeof listMeets>>;
