@@ -74,7 +74,7 @@ IDs here: MD (the digest), MS (which mail), MT (things to do), MG
 | MA-1 | Play the day. | A Play button on the Mail screen and the Today card reads: "You have N emails." Then for each, topic, sender and summary, then the open to-dos. Routine mail: "and N others". About 60–90 seconds for a normal day. |
 | MA-2 | The voice. | Cookie's server voice (0007 VOX-5), in each summary's language. At 80% of the cap, or if the voice fails, the phone's voice. Made when first played, not at 06:30; kept for the day so a second play costs nothing. |
 | MA-3 | Controls. | Pause, skip to the next email, back. Playing continues with the screen locked (background audio), with the now-playing item on the lock screen. |
-| MA-4 | The notification. | Kind `mail`, sent when the 06:30 run finishes with new mail: "Today's mail: 4 emails, 2 to do" (plus "1 overdue" per MT-4). Its text follows 0004 PUSH-2 (fetched by the extension, not sent through Apple). Tapping it opens the Mail screen. No mail: no notification. |
+| MA-4 | The notification. | Kind `mail`, sent when the 06:30 run finishes with new mail: "Today's mail: 4 emails, 2 to do" (plus "1 overdue" per MT-4). Its text follows 0004 PUSH-2 (fetched by the extension, not sent through Apple). Tapping it opens the Mail screen. No mail: no notification. As built (MD2): "new" is mail summarized since the last morning notification (at most a day back), not only in that run, because the 05:00 daily sync already summarizes the night's mail; routine mail isn't counted; one a day (dedup `mail:<date>`). |
 
 ### 2.7 Listen mode (ML)
 | ID | Requirement | Acceptance criteria |

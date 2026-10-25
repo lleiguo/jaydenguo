@@ -115,6 +115,12 @@ variable "household_sync_night_schedule" {
   default     = "0 22-23,0-5 * * *"
 }
 
+variable "mail_digest_schedule" {
+  description = "Cron schedule for today's mail and its morning notification (intent 0025, MD-1, MA-4), in home_time_zone."
+  type        = string
+  default     = "30 6 * * *"
+}
+
 variable "daily_backup_schedule" {
   description = "Cron schedule for the nightly database export (NFR-3), in home_time_zone."
   type        = string

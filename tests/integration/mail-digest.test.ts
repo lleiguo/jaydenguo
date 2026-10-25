@@ -9,6 +9,7 @@ import {
   emailSuggestions,
   mailItems,
   mailTodos,
+  notifications,
   people,
   sources,
   users,
@@ -25,6 +26,7 @@ import { scriptedModel } from "@/server/llm/scripted";
 import { LlmError } from "@/server/llm/types";
 import { createLogger } from "@/server/log";
 import { clearMail, digestEmails, DIGEST_LIMITS, pruneMail, type DigestOutput } from "@/server/mail/digest";
+import { notifyMail } from "@/server/mail/notify";
 import { loadMail, markMailRead, setTodoDone } from "@/server/mail/view";
 import { syncSource } from "@/worker/sync";
 import { createGmailFake } from "../e2e/support/fake-gmail";
@@ -288,6 +290,44 @@ describe("today's mail", () => {
     expect(await loadMail(db, randomUUID(), now).then((v) => v.days[0].items[0].read)).toBe(false);
     expect(view.openTodos).toBe(1);
     expect(view.todos.find((t) => t.id === sign.id)).toMatchObject({ done: true, overdue: false });
+  });
+
+  it("the morning run announces new mail once a day, with to-dos and overdue ones (MA-4, MT-4)", async () => {
+    await db.delete(notifications).where(eq(notifications.kind, "mail"));
+    const sender = { send: async () => "sent" as const };
+    const morning = new Date("2029-03-09T11:30:00Z");
+    // Nothing new: no notification.
+    expect(await notifyMail(db, { now: morning, homeTimeZone: TZ, log, sender })).toBeNull();
+    const at = new Date("2029-03-09T10:00:00Z");
+    const model = scriptedModel("gemini", (req) =>
+      /Receipt/.test(req.prompt) ? output({ routine: true, summary: "A receipt.", todos: [] }) : output(),
+    );
+    await digest(
+      [
+        email({ id: `a-${randomUUID()}`, receivedAt: "2029-03-09T09:00:00.000Z" }),
+        email({ id: `b-${randomUUID()}`, subject: "Receipt", receivedAt: "2029-03-09T09:10:00.000Z" }),
+      ],
+      model,
+      at,
+    );
+    const id = await notifyMail(db, { now: morning, homeTimeZone: TZ, log, sender });
+    expect(id).not.toBeNull();
+    const rows = await db.select().from(notifications).where(eq(notifications.kind, "mail"));
+    // The routine receipt isn't counted; the form was due on the 8th.
+    expect(rows).toEqual([
+      expect.objectContaining({
+        title: "Today's mail",
+        body: "1 email, 2 to do, 1 overdue",
+        target: "mail",
+        dedupKey: "mail:2029-03-09",
+      }),
+    ]);
+    // A rerun the same morning sends nothing more.
+    expect(
+      await notifyMail(db, { now: new Date(morning.getTime() + 60_000), homeTimeZone: TZ, log, sender }),
+    ).toBeNull();
+    expect(await db.select().from(notifications).where(eq(notifications.kind, "mail"))).toHaveLength(1);
+    await db.delete(notifications).where(eq(notifications.kind, "mail"));
   });
 
   it("summaries go after 14 days and to-dos after 30, or when done a day (MSEC-3)", async () => {
