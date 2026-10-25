@@ -41,3 +41,4 @@ Rules:
 | 0022 | [Delete any calendar event](0022-delete-any-event/) | approved 2026-10-18 (chat); defaults kept | approved 2026-10-18 (chat); D-1..D-3 accepted | approved 2026-10-18; DL1, DL2 merged (#164, #165); TestFlight build 19 uploaded |
 | 0023 | [A push for each step of tennis and swimming, every suggestion and clash](0023-push-notifications/) | approved 2026-10-19 (chat); defaults kept | approved 2026-10-19 (chat); N-1..N-3 accepted | approved 2026-10-19; P0–P2 merged and deployed (#169, #170), build 20 uploaded; APNs key in, test push arrived (NTF-1) |
 | 0024 | [An event belongs to whoever it names, else whoever made it](0024-default-owner/) | approved 2026-10-24 (chat); defaults kept | approved 2026-10-24 (chat); C-1..C-3 accepted | approved 2026-10-24; OW1 next |
+| 0025 | [Today's mail, summarized and read aloud](0025-reading-digest/) | draft 2026-10-25 | draft 2026-10-25 | draft 2026-10-25 |
