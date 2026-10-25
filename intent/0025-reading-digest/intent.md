@@ -1,5 +1,5 @@
 # Intent: Today's mail, summarized and read aloud
-Status: draft (2026-10-25). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-25, in chat: "approve, defaults"); defaults kept. Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "can I also turn family hub into a reading app, e.g. it reads certain

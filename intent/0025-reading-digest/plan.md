@@ -1,5 +1,5 @@
 # Plan: Today's mail, summarized and read aloud
-Status: draft (2026-10-25), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-25, in chat), with [spec.md](spec.md).
 
 Order: the server first (the job, the summaries, the API), so the digest
 can be checked against real mail on the website's API and the eval before
@@ -46,4 +46,7 @@ procedure. MD2 can wait for O-3 without blocking MD3 or MD4.
 About 5–6 working days: MD1 2, MD2 0.5, MD3 1.5–2, MD4 1, MD5 0.5.
 
 ## 6. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+| Task | Status |
+|---|---|
+| O-1 | done 2026-10-25: approved, defaults kept. |
+| MD1 | next. |

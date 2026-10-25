@@ -1,5 +1,5 @@
 # Spec: Today's mail, summarized and read aloud
-Status: draft (2026-10-25). Written by Claude from [intent.md](intent.md),
+Status: approved (owner, 2026-10-25, in chat: "approve, defaults"); M-1..M-6 accepted. Written by Claude from [intent.md](intent.md),
 with its defaults.
 
 Read with 0001 (EML-1..3, §7.2, CRED-4), 0004 (PUSH-1..6), 0007 (VOX-5,
