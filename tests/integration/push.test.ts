@@ -1,7 +1,7 @@
 import { generateKeyPairSync, verify } from "node:crypto";
 import { createServer, type Http2Server, type ServerHttp2Session } from "node:http2";
 import type { AddressInfo } from "node:net";
-import { and, eq, inArray, like, ne } from "drizzle-orm";
+import { and, eq, inArray, like, ne, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   conflicts,
@@ -115,6 +115,15 @@ describe("push notifications", () => {
     body: "Soccer and Swim practice",
     target: "events/x",
   });
+  // Clashes are read from the whole calendar, so other files' events in the
+  // next two weeks would add to the count: start the clash tests from empty
+  // calendar tables, as calendar.test.ts does.
+  async function emptyCalendar() {
+    await db.execute(
+      sql`truncate conflicts, event_overrides, event_revisions, events, event_series, change_log restart identity cascade`,
+    );
+    await db.execute(sql`delete from people where not is_primary`);
+  }
 
   it("registers a phone with the default kinds, and lets it choose (PUSH-3)", async () => {
     await expect(register(await phone("browser"), TOKEN_A)).rejects.toBeInstanceOf(HttpError);
@@ -226,6 +235,7 @@ describe("push notifications", () => {
   });
 
   it("notifies a new clash once, and not an accepted one (PUSH-1, PUSH-5)", async () => {
+    await emptyCalendar();
     await register(await phone(), TOKEN_A);
     const [src] = await db.insert(sources).values({ kind: "ical", name: "Push test" }).returning();
     const at = (h: number) => new Date(Date.now() + 3 * 86_400_000 + h * 3_600_000);
@@ -322,6 +332,7 @@ describe("push notifications", () => {
   });
 
   it("reminds once of a clash still open two days before, not right after the first push (NTF-C3)", async () => {
+    await emptyCalendar();
     await register(await phone(), TOKEN_A);
     const [src] = await db.insert(sources).values({ kind: "ical", name: "Reminder test" }).returning();
     const at = (h: number) => new Date(Date.now() + 30 * 3_600_000 + h * 3_600_000);

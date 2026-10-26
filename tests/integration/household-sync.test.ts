@@ -649,7 +649,9 @@ describe("two-way sync with the household calendar", () => {
     await setHouseholdSync(db, { mode: "off", sourceId }, launcher);
     const dinner = (await householdRows()).find((r) => r.externalId === "familydinner")!;
     await deleteEvent(db, "owner", dinner.id);
-    // Switched On later, the run leaves it in Google.
+    // Switched On later, the run leaves it in Google. "Later" is by the
+    // millisecond (deletedAt < onSince): wait for the clock to move on.
+    await new Promise((r) => setTimeout(r, 5));
     await setHouseholdSync(db, { mode: "on", sourceId }, launcher);
     requests.length = 0;
     expect(await run()).toMatchObject({ deleted: 0 });
