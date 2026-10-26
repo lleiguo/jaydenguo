@@ -7245,13 +7245,32 @@
                 "label"
               ]
             }
+          },
+          "extra": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "label"
+              ]
+            }
           }
         },
         "required": [
           "registered",
           "kinds",
           "available",
-          "more"
+          "more",
+          "extra"
         ]
       },
       "DeviceTokenResponse": {

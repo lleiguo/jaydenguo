@@ -309,7 +309,10 @@ describe("push notifications", () => {
     const settings = await register(old, TOKEN_A);
     expect(settings.available.map((a) => a.kind)).not.toContain("swim");
     expect(settings.available.map((a) => a.kind)).not.toContain("tennis_result");
-    expect(settings.more.map((a) => a.kind)).toEqual(["cookie", "tennis_result", "swim", "mail"]);
+    // `more` never gains a kind: builds 20–23 decode it into a fixed list
+    // (intent 0025). Later kinds are in `extra`.
+    expect(settings.more.map((a) => a.kind)).toEqual(["cookie", "tennis_result", "swim"]);
+    expect(settings.extra).toEqual([{ kind: "mail", label: "Today's mail" }]);
     expect(settings.kinds).not.toContain("swim");
     const fresh = await phone();
     await register(fresh, TOKEN_B);

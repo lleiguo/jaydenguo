@@ -1,3 +1,4 @@
+import HubAPI
 import HubKit
 import SwiftUI
 import UserNotifications
@@ -56,6 +57,19 @@ struct NotificationsScreen: View {
                             }
                         ))
                         .accessibilityIdentifier("kind-\(item.kind.rawValue)")
+                    }
+                    // Kinds added after build 23 come as plain strings, in
+                    // `extra` (intent 0025); only those this build knows show.
+                    ForEach(settings.extra.filter { Components.Schemas.DeviceSettings.KindsPayloadPayload(rawValue: $0.kind) != nil }, id: \.kind) { item in
+                        Toggle(item.label, isOn: Binding(
+                            get: { settings.kinds.contains(where: { $0.rawValue == item.kind }) },
+                            set: { on in
+                                var kinds = Set(settings.kinds.map(\.rawValue))
+                                if on { kinds.insert(item.kind) } else { kinds.remove(item.kind) }
+                                Task { await model.setNotificationKinds(Array(kinds)) }
+                            }
+                        ))
+                        .accessibilityIdentifier("kind-\(item.kind)")
                     }
                 }
             }

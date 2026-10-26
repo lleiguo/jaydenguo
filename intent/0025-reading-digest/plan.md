@@ -52,7 +52,8 @@ About 5–6 working days: MD1 2, MD2 0.5, MD3 1.5–2, MD4 1, MD5 0.5.
 | MD1 | merged and deployed 2026-10-25 (#186); migration 0038 applied in production. The first real digest comes with the next email sync; the owner's check is O-2, O-4. |
 | MD2 | merged and deployed 2026-10-25 (#188); the 06:30 schedule waits for the owner's `terraform apply` (O-3). |
 | MD3 | merged and deployed 2026-10-25 (#190); TestFlight build 24 (#191) uploaded 2026-10-25. The owner's phone check is O-4. |
-| MD4 | built 2026-10-25 on `cookie/0025-md4-listen`. |
+| MD4 | merged and deployed 2026-10-25 (#193). |
+| MD5 | security review 2026-10-25 ([security-review.md](security-review.md)): F-1 fixed on `mail/kinds-compat`, with build 25. |
 
 **As built (MD1, 2026-10-25):**
 - *Where it runs.* The digest runs inside the email source's sync, on the

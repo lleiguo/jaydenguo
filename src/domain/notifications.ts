@@ -39,6 +39,12 @@ export const NOTIFICATION_LABEL: Record<NotificationKind, string> = {
 // 0009); they're listed apart, in `more` (intent 0023, NTF-SEC1).
 export const OPT_IN_KINDS: readonly NotificationKind[] = ["cookie", "tennis_result", "swim", "mail"];
 
+// What `more` lists, for ever: builds 20–23 decode its kinds into a fixed
+// list, so a kind added later would stop them loading their notification
+// settings. Later kinds (intent 0025's `mail` on) go in `extra`, whose kind
+// is any string.
+export const MORE_KINDS: readonly NotificationKind[] = ["cookie", "tennis_result", "swim"];
+
 // The owner's answer to the intent's open question 3: all on except new
 // email suggestions.
 export const DEFAULT_KINDS: NotificationKind[] = NOTIFICATION_KINDS.filter(
