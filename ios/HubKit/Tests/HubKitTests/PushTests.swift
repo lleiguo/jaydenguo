@@ -34,5 +34,20 @@ import Testing
         #expect(s.kinds.contains(.clash))
         // Intent 0023: kinds older builds can't read come apart.
         #expect(s.more.map(\.kind) == [.cookie, .tennisResult, .swim])
+        // Intent 0025: later kinds are plain strings, so none can break a build.
+        #expect(s.extra.map(\.kind) == ["mail"])
+    }
+
+    /// Why later kinds go in `extra` (intent 0025): a kind a build doesn't
+    /// know breaks `more` (a fixed list) but not `extra` (plain strings).
+    @Test func aKindFromTheFutureOnlyFitsInExtra() async throws {
+        let base = try String(decoding: Fixtures.data("getDeviceSettings"), as: UTF8.self)
+        let transport = FixtureTransport()
+        let client = testClient(transport: transport)
+        transport.bodyOverride = base.replacingOccurrences(of: #""kind": "mail""#, with: #""kind": "brand_new""#)
+        let s = try await client.api.getDeviceSettings().ok.body.json
+        #expect(s.extra.map(\.kind) == ["brand_new"])
+        transport.bodyOverride = base.replacingOccurrences(of: #""kind": "swim""#, with: #""kind": "brand_new""#)
+        await #expect(throws: (any Error).self) { _ = try await client.api.getDeviceSettings().ok.body.json }
     }
 }

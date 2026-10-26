@@ -51,5 +51,11 @@
       "kind": "swim",
       "label": "Swim meet entries and results"
     }
+  ],
+  "extra": [
+    {
+      "kind": "mail",
+      "label": "Today's mail"
+    }
   ]
 }

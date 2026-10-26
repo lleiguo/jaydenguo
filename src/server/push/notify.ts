@@ -4,6 +4,7 @@ import { devices, notifications, sessions } from "@db/schema";
 import {
   APNS_ENVIRONMENTS,
   DEFAULT_KINDS,
+  MORE_KINDS,
   NOTIFICATION_KINDS,
   OPT_IN_KINDS,
   NOTIFICATION_LABEL,
@@ -138,7 +139,11 @@ export type DeviceSettings = {
   kinds: NotificationKind[];
   available: { kind: NotificationKind; label: string }[];
   // Kinds builds before intent 0023 can't decode; they ignore this field.
+  // Never gains a kind (MORE_KINDS).
   more: { kind: NotificationKind; label: string }[];
+  // Kinds added after build 23 (intent 0025): a plain string, so a kind a
+  // build doesn't know yet can't break it. Builds before 25 ignore it.
+  extra: { kind: string; label: string }[];
 };
 
 const deviceOnly = (session: SessionUser) => {
@@ -156,7 +161,11 @@ export async function deviceSettings(db: DbOrTx, session: SessionUser): Promise<
       kind,
       label: NOTIFICATION_LABEL[kind],
     })),
-    more: OPT_IN_KINDS.map((kind) => ({ kind, label: NOTIFICATION_LABEL[kind] })),
+    more: MORE_KINDS.map((kind) => ({ kind, label: NOTIFICATION_LABEL[kind] })),
+    extra: OPT_IN_KINDS.filter((k) => !MORE_KINDS.includes(k)).map((kind) => ({
+      kind,
+      label: NOTIFICATION_LABEL[kind],
+    })),
   };
 }
 
