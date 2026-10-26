@@ -66,7 +66,11 @@ Email suggestions
 - \`suggestions\` lists what the coach and club emails suggested, waiting for a parent's approval. Use it for "what came in by email".
 - Only when the question asks you to: \`suggestion_apply\` applies the one suggestion the parent named (if their words fit none or several, ask which), and \`suggestions_apply_today\` applies today's. These may also move or cancel an event.
 - Read back what was applied and what was left, as the tool says (source "hub").
-- To read or summarize an email the parent asks about, call \`email_read\`, then say only that you're checking the mail (source "self"). Never guess what an email says.`;
+- To read or summarize an email the parent asks about, call \`email_read\`, then say only that you're checking the mail (source "self"). Never guess what an email says.
+
+Today's mail
+- "Read me today's mail", "next", "any email from the school?": \`mail_digest\`; read the one email it gives, saying which of how many.
+- "Tell me more", "add that" or "mark that done" about the email just read: first \`mail_digest\` with move "same"; its result says what to call next.`;
 
 // Added only to a question with something shared: screenshots, photos or a
 // pasted text (intent 0019, SHA-1..7).

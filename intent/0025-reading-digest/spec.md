@@ -24,6 +24,10 @@ IDs here: MD (the digest), MS (which mail), MT (things to do), MG
 - **0007 LIM-5** The monthly cap also covers the digest (MSEC-5).
 - **0004 PUSH-1** Adds kind `mail` (opt-in, the 0009 `OPT_IN_KINDS`
   rule).
+- **0007 TOOL-15 (prompt budget)** goes from 15,000 to 16,500 characters
+  (as built, MD4): the two mail tools and their paragraph add about 1,260,
+  sent only with an email source; main had about 300 to spare. About 300
+  tokens more per question.
 
 ## 2. Requirements
 

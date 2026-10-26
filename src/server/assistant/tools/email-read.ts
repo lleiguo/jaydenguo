@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { mailItems } from "@db/schema";
 import { languageOf } from "@/domain/assistant";
 import { emailSource } from "../email";
 import { newRead, READ_LIMITS, readsLastHour } from "../email-read";
@@ -9,6 +11,8 @@ import { problem, type Tool } from "./types";
 // starts the worker, and the summary follows in the chat.
 
 const readInput = z.object({
+  // Intent 0025, ML-3: "tell me more" about an email from `mail_digest`.
+  mail_item_id: z.uuid().optional().describe("An email's id from `mail_digest`"),
   about: z
     .string()
     .min(1)
@@ -45,14 +49,27 @@ export const emailReadTool: Tool<z.infer<typeof readInput>> = {
       );
     if ((await readsLastHour(ctx.db, ctx.userId, ctx.now)) >= READ_LIMITS.perHour)
       return problem("that's enough emails for this hour; say to ask again a little later");
+    // ML-3: an email from today's mail is found by its subject and sender,
+    // over the days since it came.
+    let target: { about: string; from: string; days: number } | null = null;
+    if (q.mail_item_id) {
+      const [item] = await ctx.db.select().from(mailItems).where(eq(mailItems.id, q.mail_item_id));
+      if (!item) return problem("that email isn't in today's mail any more; ask what it was about");
+      const days = Math.ceil((ctx.now.getTime() - item.receivedAt.getTime()) / 86_400_000) + 1;
+      target = {
+        about: item.subject,
+        from: item.senderAddress,
+        days: Math.min(Math.max(days, 1), READ_LIMITS.maxDays),
+      };
+    }
     const read = await newRead(
       ctx.db,
       {
         userId: ctx.userId,
         conversationId: ctx.conversationId,
-        about: q.about.trim(),
-        fromHint: q.from?.trim() || null,
-        days: q.days ?? READ_LIMITS.defaultDays,
+        about: target?.about ?? q.about.trim(),
+        fromHint: target?.from ?? (q.from?.trim() || null),
+        days: target?.days ?? q.days ?? READ_LIMITS.defaultDays,
         language: languageOf(ctx.question),
       },
       ctx.now,

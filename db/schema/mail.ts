@@ -121,3 +121,14 @@ export const mailSpeech = pgTable(
   },
   (t) => [index("mail_speech_created_idx").on(t.createdAt)],
 );
+
+// Where Cookie is in today's mail, per conversation (ML-6): "next" carries
+// on from here for 30 minutes. IDs and filters only, never the mail.
+export const mailListenCursors = pgTable("mail_listen_cursors", {
+  conversationId: uuid("conversation_id").primaryKey(),
+  day: date("day").notNull(),
+  // The mail item IDs in the order she reads them, and how far she got.
+  order: uuid("order").array().notNull(),
+  position: integer("position").notNull().default(0),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});

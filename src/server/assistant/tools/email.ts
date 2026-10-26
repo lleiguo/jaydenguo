@@ -19,6 +19,7 @@ import {
 import { changesSince } from "../actions";
 import { applySuggestion, emailSource, readIfStale, type SuggestionRow } from "../email";
 import { emailReadTool } from "./email-read";
+import { MAIL_TOOLS } from "./mail";
 import { dayOf, problem, stamp, type Tool, type ToolContext } from "./types";
 
 // Email suggestions (intent 0008, EMS-2..5): what came in by email, and
@@ -201,4 +202,6 @@ export const EMAIL_TOOLS = [
   suggestionApplyTool,
   suggestionsApplyTodayTool,
   emailReadTool,
+  // Intent 0025, ML: today's mail, from the morning digest.
+  ...MAIL_TOOLS,
 ] as Tool[];
