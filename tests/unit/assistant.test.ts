@@ -374,6 +374,8 @@ describe("the prompt (TOOL-15, TOOL-17)", () => {
       "suggestion_apply",
       "suggestions_apply_today",
       "email_read",
+      "mail_digest",
+      "mail_todo_done",
       "memory_search",
       "memory_save",
       "memory_forget",

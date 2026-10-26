@@ -43,8 +43,9 @@ export const LIMITS = {
   // for the email suggestion tools (intent 0008); each paragraph and its
   // tools are sent only when they can be used. Raised to 15,000 for the
   // paragraph about something shared (intent 0019), sent only with it and
-  // never with the web tools.
-  promptChars: 15_000,
+  // never with the web tools. Raised to 16,500 for today's mail (intent
+  // 0025, ML), sent only with an email source.
+  promptChars: 16_500,
   // LIM-2, LIM-3
   outputTokens: 500,
   questionChars: 500,

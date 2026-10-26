@@ -125,3 +125,42 @@ About 5–6 working days: MD1 2, MD2 0.5, MD3 1.5–2, MD4 1, MD5 0.5.
   the route) and decoding of `getMail` and `getMailScript`. UI
   (`MailTests`, against the seed server): card → list → tick and untick a
   to-do; Play through the five parts, back, stop.
+
+**As built (MD4, 2026-10-25):**
+- *Tools.* `mail_digest` reads today's mail one email at a time from what
+  the digest stored, in the spoken digest's order (topic, then time), with
+  the email's open to-dos and pending calendar suggestion; filters by day,
+  person, topic and sender words. `move` is "start", "next" or "same"
+  ("same" gives the email just read again, for "tell me more", "add that"
+  and "mark that done"). Past the last email: the open to-dos, then that's
+  all. One email per call rather than three (spec §3.4): she reads them
+  aloud one at a time. Reading one marks it read for that parent.
+- *Her place* (ML-6) is a row per conversation in `mail_listen_cursors`
+  (migration 0040: the order of item IDs and the position, nothing of the
+  mail), kept 30 minutes.
+- *Tell me more* (ML-3): `email_read` takes `mail_item_id` and looks for
+  that email by its subject and sender over the days since it came,
+  instead of a new Gmail lookup by message ID; no worker change.
+- *Add that* (ML-4) is `suggestion_apply` with the email's suggestion, as
+  0008. *Mark that done* (ML-5) is `mail_todo_done`, only when the question
+  asks, ticked as "Cookie".
+- *One step at a time.* The prompt only says to call `mail_digest` with
+  move "same" first; that result says which tool comes next and with
+  which id. Found in the eval: a prompt line naming both steps made Gemini
+  stall until the round timed out ("add that" failed every time).
+- *Budget.* The two tools and their prompt lines add about 1,260
+  characters, sent only with an email source; the prompt budget (0007
+  TOOL-15) goes from 15,000 to 16,500 (spec §1).
+- *Tests.* 5 integration tests (`assistant-mail.test.ts`): offered with
+  the email tools; one at a time and next across questions, a new
+  conversation and after 30 minutes from the top; filters and marked read;
+  tell me more; mark done only when asked. Cookie's eval gains 6 cases
+  (read, next, tell me more, in Chinese, from a sender, add that) and
+  `--only <from>-<to>` for a run of follow-ups.
+- *Eval (2026-10-25, gemini-3.8-flash).* The six listen cases pass (one
+  "from Coach Sam" run lost to a stall, passing on rerun). Whole set: 66/77
+  answerable right (86%), nothing made up, no unasked changes, US$0.40;
+  `main` the same evening: 59/71 (83%). Both lose 11–12 questions to the
+  model not answering within the round's timeout (about 22 s, two
+  attempts) on unrelated questions: an existing problem, not the mail
+  tools.

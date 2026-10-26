@@ -1,7 +1,7 @@
 // Cookie's eval set (intent 0007, spec §4.6, plan K1.7): typed questions in
 // English, Mandarin and mixed, asked of the real model over seed data.
 //
-//   DATABASE_URL=… VERTEX_PROJECT=… pnpm assistant:eval [--only <n>]
+//   DATABASE_URL=… VERTEX_PROJECT=… pnpm assistant:eval [--only <n> | --only <from>-<to>]
 //
 // Run it by hand before a release and whenever the prompt, the tools or
 // the model change, and paste the summary into the plan. It needs a
@@ -203,6 +203,14 @@ const CASES: Case[] = [
   // Calendar changes from email are still the suggestions, not a read.
   { q: "What calendar changes came in by email?", want: "answer", emailOn: true, any: [/practice|game/i] },
   { q: "What's on today?", want: "answer", emailOn: true, long: true },
+  // Today's mail (intent 0025, ML): read from the seed's digest, one
+  // email at a time; "next" carries on; "tell me more" goes to read it.
+  { q: "Read me today's mail", want: "answer", emailOn: true, any: [/field trip/i] },
+  { q: "next", want: "answer", emailOn: true, followUp: true, any: [/practice/i] },
+  { q: "Tell me more about that one", want: "reads", emailOn: true, followUp: true },
+  { q: "今天有什么邮件？", want: "answer", emailOn: true, any: [/field trip|郊游|春游|科学|表格|签/i] },
+  { q: "Any email from Coach Sam today?", want: "answer", emailOn: true, any: [/practice|Wednesday/i] },
+  { q: "Add that to the calendar", want: "adds", emailOn: true, addOn: true, followUp: true },
   // Able to add, but not asked to: nothing changes.
   { q: "What's on today?", want: "answer", addOn: true, long: true },
   { q: "Move swim practice to 5 pm.", want: "cant", addOn: true },
@@ -252,9 +260,10 @@ function judge(c: Case, r: AskResult): string[] {
 
 async function main() {
   if (process.env.K_SERVICE || process.env.CLOUD_RUN_JOB) throw new Error("the eval is for local use only");
-  const only = process.argv.includes("--only")
-    ? Number(process.argv[process.argv.indexOf("--only") + 1])
-    : null;
+  // One case, or a range (a follow-up needs the case before it).
+  const onlyArg = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] : null;
+  const [from, to] = onlyArg ? onlyArg.split("-").map(Number) : [null, null];
+  const only = from === null ? null : { from, to: to ?? from };
   const handle = await createPool();
   const db = createDb(handle.pool);
   try {
@@ -296,7 +305,7 @@ async function main() {
     const rows: { c: Case; r: AskResult; faults: string[]; ms: number }[] = [];
     let conversationId: string | undefined;
     for (const [i, c] of CASES.entries()) {
-      if (only !== null && i + 1 !== only) continue;
+      if (only !== null && (i + 1 < only.from || i + 1 > only.to)) continue;
       await db.execute(sql`delete from rate_limits where key like 'assistant:%'`);
       await saveAssistantSettings(db, { web: !!c.webOn, addCalendarSourceId: c.addOn ? household.id : null });
       await db.execute(sql`update sources set enabled = ${!!c.emailOn} where name = 'Coach email (sample)'`);
