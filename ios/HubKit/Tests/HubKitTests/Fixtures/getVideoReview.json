@@ -5,13 +5,13 @@
   "url": null,
   "provider": "drive",
   "note": "Forehand rally (sample)",
-  "filmedOn": "2026-09-28",
+  "filmedOn": "2026-10-24",
   "status": "done",
   "progress": null,
   "errorMessage": null,
   "pickerUri": null,
   "mediaName": "forehand.mp4",
-  "createdAt": "2026-10-01T07:39:50.711Z",
+  "createdAt": "2026-10-27T14:21:54.792Z",
   "deletedAt": null,
   "segmentStart": null,
   "segmentEnd": null,
@@ -48,8 +48,31 @@
     "filmNext": "Film from the side, level with the hitting zone."
   },
   "costUsd": 0.01,
-  "finishedAt": "2026-10-01T07:39:50.710Z",
+  "finishedAt": "2026-10-27T14:56:34.001Z",
   "hasPlayback": true,
+  "questions": [
+    {
+      "id": "b2f421c3-13dc-434d-889e-34795dee31d3",
+      "question": "Is his elbow high at contact?",
+      "status": "done",
+      "answer": {
+        "answer": "The elbow stays high through the swing; the racket still starts back late.",
+        "points": [
+          {
+            "at": "0:03",
+            "why": "Above the shoulder line",
+            "good": true,
+            "text": "Elbow high at contact"
+          }
+        ]
+      },
+      "errorMessage": null,
+      "costUsd": 0.01,
+      "createdAt": "2026-10-27T14:56:56.033Z",
+      "finishedAt": "2026-10-27T14:56:56.995Z"
+    }
+  ],
+  "cannotAsk": null,
   "rounds": [
     {
       "round": "review",
