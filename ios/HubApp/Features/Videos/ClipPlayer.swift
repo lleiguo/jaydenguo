@@ -12,6 +12,7 @@ final class ClipPlayer {
     let player = AVPlayer()
     private(set) var time: Double = 0
     private(set) var speed: Float = 1
+    private(set) var playing = false
     private(set) var loading = false
     private(set) var ready = false
     private(set) var error: String?
@@ -35,7 +36,10 @@ final class ClipPlayer {
             player.isMuted = true
             player.replaceCurrentItem(with: AVPlayerItem(url: file))
             observer = player.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 10), queue: .main) { [weak self] t in
-                MainActor.assumeIsolated { self?.time = t.seconds.isFinite ? t.seconds : 0 }
+                MainActor.assumeIsolated {
+                    self?.time = t.seconds.isFinite ? t.seconds : 0
+                    self?.playing = self?.player.rate != 0
+                }
             }
             ready = true
         } catch {
@@ -46,13 +50,21 @@ final class ClipPlayer {
     /// Shows a moment, paused, frame-exact (PLAY-4).
     func seek(to seconds: Double) {
         player.pause()
+        playing = false
         player.seek(to: CMTime(seconds: seconds, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
         time = seconds
+    }
+
+    /// Play or pause, for the full-screen view's own controls (intent 0026, FS-3).
+    func togglePlay() {
+        if player.rate != 0 { player.pause() } else { player.rate = speed }
+        playing = player.rate != 0
     }
 
     /// One frame back or forward (PLAY-3).
     func step(_ frames: Int) {
         player.pause()
+        playing = false
         player.currentItem?.step(byCount: frames)
     }
 
