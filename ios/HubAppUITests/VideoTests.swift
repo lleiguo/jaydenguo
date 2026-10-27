@@ -136,6 +136,7 @@ final class VideoTests: XCTestCase {
         app.tabBars.buttons["More"].tap()
         app.buttons["Videos"].tap()
         app.navigationBars.buttons["New review"].tap()
+        app.buttons["Paste a link"].tap()
         let link = app.textFields["videoLink"]
         XCTAssertTrue(link.waitForExistence(timeout: 10))
         link.tap()

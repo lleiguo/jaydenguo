@@ -16,23 +16,46 @@ export const photosPickerBase = () => process.env.PHOTOS_PICKER_BASE ?? "https:/
 export const MAX_VIDEO_BYTES = 400 * 1024 * 1024;
 
 export class VideoFetchError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = "VideoFetchError";
   }
 }
 
-async function google(url: URL, token: string, init: RequestInit = {}): Promise<Response> {
-  try {
-    return await fetch(url, {
-      ...init,
-      headers: { authorization: `Bearer ${token}`, "user-agent": USER_AGENT, ...init.headers },
-      signal: AbortSignal.timeout(60_000),
-    });
-  } catch {
-    throw new VideoFetchError("Couldn't reach Google. Try again later.");
+// A short call (a picker session, the pick) gets a minute and is tried once
+// more on a dropped connection. Downloading the video gets longer: Google
+// can take over a minute to start sending a video it has just finished
+// processing, and the timeout covers the whole transfer.
+const CALL_TIMEOUT_MS = 60_000;
+export const DOWNLOAD_TIMEOUT_MS = () => Number(process.env.VIDEO_DOWNLOAD_TIMEOUT_MS ?? 10 * 60_000);
+
+async function google(
+  url: URL,
+  token: string,
+  init: RequestInit = {},
+  { timeoutMs = CALL_TIMEOUT_MS, tries = (init.method ?? "GET") === "GET" ? 2 : 1 } = {},
+): Promise<Response> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(url, {
+        ...init,
+        headers: { authorization: `Bearer ${token}`, "user-agent": USER_AGENT, ...init.headers },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      if (attempt < tries) continue;
+      const timedOut = err instanceof Error && err.name === "TimeoutError";
+      throw new VideoFetchError(
+        timedOut
+          ? "Google took too long to answer. Try again in a few minutes."
+          : "Couldn't reach Google. Try again later.",
+        { cause: err },
+      );
+    }
   }
 }
+
+const downloading = () => ({ timeoutMs: DOWNLOAD_TIMEOUT_MS(), tries: 1 });
 
 async function download(res: Response, dest: string) {
   if (!res.body) throw new VideoFetchError("Google sent an empty file.");
@@ -46,11 +69,16 @@ async function download(res: Response, dest: string) {
       else done(null, chunk);
     },
   });
-  await pipeline(
-    Readable.fromWeb(res.body as import("node:stream/web").ReadableStream),
-    limit,
-    createWriteStream(dest),
-  );
+  try {
+    await pipeline(
+      Readable.fromWeb(res.body as import("node:stream/web").ReadableStream),
+      limit,
+      createWriteStream(dest),
+    );
+  } catch (err) {
+    if (err instanceof VideoFetchError) throw err;
+    throw new VideoFetchError("The download from Google stopped part way. Try again.", { cause: err });
+  }
   return seen;
 }
 
@@ -87,6 +115,8 @@ export async function downloadDriveFile(token: string, fileId: string, dest: str
   const res = await google(
     new URL(`/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`, base),
     token,
+    {},
+    downloading(),
   );
   if (!res.ok) throw new VideoFetchError(`Couldn't download the video from Google Drive (${res.status}).`);
   await download(res, dest);
@@ -200,7 +230,7 @@ export class VideoNotReadyError extends VideoFetchError {
 }
 
 export async function downloadPickedVideo(token: string, video: PickedVideo, dest: string) {
-  const res = await google(new URL(`${video.baseUrl}=dv`), token);
+  const res = await google(new URL(`${video.baseUrl}=dv`), token, {}, downloading());
   if (res.status === 404) throw new VideoNotReadyError();
   if (!res.ok) throw new VideoFetchError(`Couldn't download the video from Google Photos (${res.status}).`);
   await download(res, dest);

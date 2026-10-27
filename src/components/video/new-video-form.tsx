@@ -59,12 +59,12 @@ export function NewVideoForm({ today, connected }: { today: string; connected: b
       <fieldset className="flex flex-wrap gap-4">
         <legend className="sr-only">Where the video is</legend>
         <label className="flex items-center gap-1">
-          <input type="radio" name="source" value="link" defaultChecked />
-          Paste a link
+          <input type="radio" name="source" value="photos" defaultChecked />
+          Pick from Google Photos
         </label>
         <label className="flex items-center gap-1">
-          <input type="radio" name="source" value="photos" />
-          Pick from Google Photos
+          <input type="radio" name="source" value="link" />
+          Paste a link
         </label>
       </fieldset>
       <label className="flex flex-col gap-1 group-has-[input[value=photos]:checked]:hidden">
