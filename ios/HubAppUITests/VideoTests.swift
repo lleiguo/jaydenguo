@@ -88,6 +88,39 @@ final class VideoTests: XCTestCase {
         let point = element(app, "currentPoint")
         XCTAssertTrue(point.label.hasPrefix("Fix 1"), point.label)
     }
+
+    /// intent 0026, FS-1..4: full screen keeps the moment, its point and the
+    /// speed; a frame step there carries back to the page on close.
+    func testFullScreenKeepsTheMoment() throws {
+        let app = launch()
+        app.open(URL(string: "jaydenguohub://open/videos/\(sample)")!)
+        XCTAssertTrue(element(app, "videoTime").waitForExistence(timeout: 30), "the playback copy loads")
+        let jump = app.buttons["Show 0:02 in the video"].firstMatch
+        for _ in 0..<6 where !jump.isHittable { app.swipeUp() }
+        jump.tap()
+        let open = app.buttons["openFullScreen"]
+        for _ in 0..<6 where !open.isHittable { app.swipeDown() }
+        open.tap()
+
+        let time = element(app, "fullScreenTime")
+        XCTAssertTrue(time.waitForExistence(timeout: 10), "full screen opens")
+        XCTAssertEqual(time.label, "0:02")
+        XCTAssertTrue(element(app, "fullScreenControls").descendants(matching: .any)["currentPoint"].label.hasPrefix("Fix 1"))
+        XCTAssertFalse(app.tabBars.firstMatch.isHittable, "full screen covers the tab bar")
+        let controls = element(app, "fullScreenControls")
+        controls.buttons["Half speed"].tap()
+        controls.buttons["Forward one frame"].tap()
+
+        // FS-2: sideways, the controls are still there.
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(controls.buttons["Back one frame"].waitForHittable(timeout: 5))
+        XCUIDevice.shared.orientation = .portrait
+        app.buttons["closeFullScreen"].tap()
+        let pageTime = element(app, "videoTime")
+        XCTAssertTrue(pageTime.waitForExistence(timeout: 10))
+        XCTAssertEqual(pageTime.label, "0:02", "one frame on stays at 0:02")
+        XCTAssertTrue(app.buttons["Half speed"].isSelected, "the speed carries back")
+    }
     /// intent 0005, SPT-4..6: the seeded older review's sport was detected;
     /// change only its label, then change it back.
     func testChangeTheSportLabel() throws {
@@ -168,6 +201,11 @@ final class VideoTests: XCTestCase {
 private extension XCUIElement {
     func waitForLabel(_ label: String, timeout: TimeInterval = 5) -> Bool {
         let predicate = NSPredicate(format: "label == %@", label)
+        return XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: predicate, object: self)], timeout: timeout) == .completed
+    }
+
+    func waitForHittable(timeout: TimeInterval = 5) -> Bool {
+        let predicate = NSPredicate(format: "hittable == true")
         return XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: predicate, object: self)], timeout: timeout) == .completed
     }
 }

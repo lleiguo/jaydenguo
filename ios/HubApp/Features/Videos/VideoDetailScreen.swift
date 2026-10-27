@@ -19,6 +19,11 @@ struct VideoDetailScreen: View {
     /// A new sport for a finished review, waiting for "review again" or
     /// "only the label" (intent 0005, SPT-6).
     @State private var newSport: String?
+    /// The clip full screen (intent 0026, FS-1).
+    @State private var fullScreen = false
+    /// The page is on screen: full screen hides it without leaving (FS-4),
+    /// so the clip, Cookie's button and landscape stay as they are.
+    @State private var shown = false
 
     var body: some View {
         Group {
@@ -32,9 +37,6 @@ struct VideoDetailScreen: View {
         }
         .navigationTitle(review.map { "\(VideoSport.text($0.sport.rawValue, source: $0.sportSource.rawValue)) · \($0.filmedOn)" } ?? "Review")
         .navigationBarTitleDisplayMode(.inline)
-        // Cookie's button stays off the player (intent 0007, CK-1).
-        .onAppear { model.cookieHiddenBy += 1 }
-        .onDisappear { model.cookieHiddenBy -= 1 }
         // VID-5: follow the job while it runs.
         .task(id: model.changes) {
             await refresh()
@@ -43,8 +45,23 @@ struct VideoDetailScreen: View {
                 await refresh()
             }
         }
-        .onAppear { OrientationLock.allowLandscape = true }
+        .fullScreenCover(isPresented: $fullScreen) {
+            if let r = review {
+                FullScreenPlayer(clip: clip, points: r.advice.map(VideoTimeline.points) ?? [],
+                                 duration: r.durationSec ?? max(clip.time, 1))
+            }
+        }
+        .onAppear {
+            guard !shown else { return }
+            shown = true
+            // Cookie's button stays off the player (intent 0007, CK-1).
+            model.cookieHiddenBy += 1
+            OrientationLock.allowLandscape = true
+        }
         .onDisappear {
+            guard !fullScreen else { return }
+            shown = false
+            model.cookieHiddenBy -= 1
             OrientationLock.allowLandscape = false
             clip.close()
         }
@@ -170,25 +187,31 @@ struct VideoDetailScreen: View {
             if clip.ready {
                 VideoPlayer(player: clip.player)
                     .aspectRatio(16 / 9, contentMode: .fit)
+                    .overlay(alignment: .topTrailing) {
+                        Button { fullScreen = true } label: {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .padding(8)
+                                .background(.black.opacity(0.5), in: Circle())
+                                .foregroundStyle(.white)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(8)
+                        .accessibilityLabel("Full screen")
+                        .accessibilityIdentifier("openFullScreen")
+                    }
                     .listRowInsets(EdgeInsets())
                 PointStrip(points: points, time: clip.time, duration: r.durationSec ?? max(clip.time, 1)) { clip.seek(to: $0) }
-                let active = VideoTimeline.active(points, at: clip.time)
-                Group {
-                    if let active {
-                        Text("\(active.label): ").bold().foregroundStyle(active.good ? .good : .warning) + Text(active.text)
-                    } else {
-                        Text(points.isEmpty ? "No points name a time." : "Points show here as the video reaches them.")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .font(.subheadline)
-                .accessibilityIdentifier("currentPoint")
+                CurrentPoint(points: points, time: clip.time)
                 // Speeds on one row, frame steps and the time on the next, so
                 // neither wraps at large text sizes (APP-6).
-                HStack { speedButtons }
+                HStack { ClipSpeedButtons(clip: clip) }
                     .buttonStyle(.bordered)
-                HStack { stepButtons }
-                    .buttonStyle(.bordered)
+                HStack {
+                    ClipStepButtons(clip: clip)
+                    Spacer(minLength: 8)
+                    Text(VideoTimeline.clock(clip.time)).monospacedDigit().accessibilityIdentifier("videoTime")
+                }
+                .buttonStyle(.bordered)
                 if let start = r.segmentStart, start > 0 {
                     Caption("This is the reviewed part. Times count from its start (\(VideoTimeline.clock(start)) in the original).")
                 }
@@ -203,24 +226,6 @@ struct VideoDetailScreen: View {
         } footer: {
             Text("A private copy of the reviewed part, without sound, kept until you delete it.")
         }
-    }
-
-    @ViewBuilder private var speedButtons: some View {
-        ForEach(ClipPlayer.speeds, id: \.self) { s in
-            Button(s == 1 ? "1×" : "\(String(format: "%g", s))×") { clip.setSpeed(s) }
-                .tint(clip.speed == s ? .accentColor : .secondary)
-                .accessibilityLabel(s == 1 ? "Normal speed" : s == 0.5 ? "Half speed" : "Quarter speed")
-                .accessibilityAddTraits(clip.speed == s ? .isSelected : [])
-        }
-    }
-
-    @ViewBuilder private var stepButtons: some View {
-        Button { clip.step(-1) } label: { Image(systemName: "backward.frame") }
-            .accessibilityLabel("Back one frame")
-        Button { clip.step(1) } label: { Image(systemName: "forward.frame") }
-            .accessibilityLabel("Forward one frame")
-        Spacer(minLength: 8)
-        Text(VideoTimeline.clock(clip.time)).monospacedDigit().accessibilityIdentifier("videoTime")
     }
 
     // MARK: Actions
