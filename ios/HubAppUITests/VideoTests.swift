@@ -121,6 +121,46 @@ final class VideoTests: XCTestCase {
         XCTAssertEqual(pageTime.label, "0:02", "one frame on stays at 0:02")
         XCTAssertTrue(app.buttons["Half speed"].isSelected, "the speed carries back")
     }
+    /// intent 0026, ASK-1..4, ASK-10: a spoken question lands in the box,
+    /// a typed one is asked and answered, and its time jumps the clip.
+    /// Each run adds an answer to the sample: `pnpm seed` clears them.
+    func testAskAboutTheVideo() throws {
+        let app = XCUIApplication()
+        let clip = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("tests/fixtures/assistant/question.m4a")
+        app.launchArguments = ["-HubBaseURL", server, "-HubUITestToken", token, "-HubNoLock",
+                               "-HubCookieClip", try Data(contentsOf: clip).base64EncodedString()]
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20))
+        app.open(URL(string: "jaydenguohub://open/videos/\(sample)")!)
+        XCTAssertTrue(element(app, "videoTime").waitForExistence(timeout: 30), "the playback copy loads")
+
+        let field = element(app, "questionField")
+        for _ in 0..<10 where !field.isHittable { app.swipeUp() }
+        if element(app, "cannotAsk").exists {
+            throw XCTSkip("The sample has had its questions: run `pnpm seed` to clear them.")
+        }
+        // The stand-in transcriber hears "What's on today?" in any clip.
+        element(app, "questionMic").press(forDuration: 1.2)
+        XCTAssertTrue(field.waitForValue("What's on today?", timeout: 15), String(describing: field.value))
+
+        field.clearText()
+        field.typeText("Is his elbow high at contact?")
+        app.buttons["askQuestion"].tap()
+        let answer = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "The elbow stays high")).firstMatch
+        XCTAssertTrue(answer.waitForExistence(timeout: 60), "the stand-in model answers")
+        // The review's good point is at 0:03 too; the answer's comes last.
+        let jumps = app.buttons.matching(identifier: "Show 0:03 in the video")
+        let jump = jumps.element(boundBy: jumps.count - 1)
+        for _ in 0..<6 where !jump.isHittable { app.swipeUp() }
+        jump.tap()
+        let point = element(app, "currentPoint")
+        for _ in 0..<10 where !point.isHittable { app.swipeDown() }
+        XCTAssertTrue(point.label.hasPrefix("Answer"), point.label)
+    }
+
     /// intent 0005, SPT-4..6: the seeded older review's sport was detected;
     /// change only its label, then change it back.
     func testChangeTheSportLabel() throws {
@@ -174,7 +214,7 @@ final class VideoTests: XCTestCase {
         XCTAssertTrue(link.waitForExistence(timeout: 10))
         link.tap()
         link.typeText("https://youtu.be/dQw4w9WgXcQ")
-        let noteField = app.textFields["Note (what to look at)"]
+        let noteField = app.textFields["Note or question (what to look at)"]
         noteField.tap()
         noteField.typeText(note)
         app.navigationBars.buttons["Review"].tap()
@@ -202,6 +242,18 @@ private extension XCUIElement {
     func waitForLabel(_ label: String, timeout: TimeInterval = 5) -> Bool {
         let predicate = NSPredicate(format: "label == %@", label)
         return XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: predicate, object: self)], timeout: timeout) == .completed
+    }
+
+    func waitForValue(_ value: String, timeout: TimeInterval = 5) -> Bool {
+        let predicate = NSPredicate(format: "value == %@", value)
+        return XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: predicate, object: self)], timeout: timeout) == .completed
+    }
+
+    /// Taps at the end of the text, then deletes it all.
+    func clearText() {
+        coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        guard let text = value as? String, !text.isEmpty else { return }
+        typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: text.count))
     }
 
     func waitForHittable(timeout: TimeInterval = 5) -> Bool {

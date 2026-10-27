@@ -78,7 +78,7 @@ struct ShareView: View {
                             ForEach(VideoSport.all, id: \.self) { Text(VideoSport.label($0)).tag($0) }
                         }
                         DatePicker("Filmed on", selection: $filmedOn, in: ...Date.now, displayedComponents: .date)
-                        TextField("Note (what to look at)", text: $note, axis: .vertical)
+                        TextField("Note or question (what to look at)", text: $note, axis: .vertical)
                     }
                     if !client.isSignedIn {
                         Text("Sign in to Hub first, then share again.").foregroundStyle(.orange)
