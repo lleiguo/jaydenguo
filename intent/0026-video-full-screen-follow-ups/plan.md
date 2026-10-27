@@ -1,5 +1,5 @@
 # Plan: Full-screen video and follow-up questions on a review
-Status: draft (2026-10-27), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-27, in chat: "Approve, defaults"), with [spec.md](spec.md).
 
 Order: full screen first (app only, no server change, ships on its own),
 then the questions' server side, then the web and iPhone screens.
@@ -34,4 +34,4 @@ then the questions' server side, then the web and iPhone screens.
 - The costs page shows the question's cost with videos.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-27. FQ1 next.

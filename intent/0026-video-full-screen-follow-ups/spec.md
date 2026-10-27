@@ -1,5 +1,5 @@
 # Spec: Full-screen video and follow-up questions on a review
-Status: draft (2026-10-27). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-27, in chat: "Approve, defaults"); Q-1..Q-5 accepted. Written by Claude from [intent.md](intent.md).
 
 Read with 0001 (VID-3, VID-4, §6.3), 0007 (CK-2, CSEC-1/2/7), 0003 (PLAY-1..8), 0004 (IVID-2),
 0005 (SPT-6), 0006, 0014 (WVR-2, WVR-3) and 0002 (costs).
