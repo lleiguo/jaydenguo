@@ -22,6 +22,7 @@ test("a Drive video is reviewed, played, deleted and restored", async ({ page, c
   await connectVideos(page, info.project.name);
 
   const note = `forehand ${info.project.name} ${Date.now()}`;
+  await page.getByLabel("Paste a link").check();
   await page.getByLabel("Video link").fill(DRIVE_LINK);
   await page.getByRole("combobox", { name: "Sport" }).selectOption("tennis");
   await page.getByLabel("Note (what to look at)").fill(note);
@@ -77,6 +78,7 @@ test("the sport is detected, relabelled, then reviewed again", async ({ page, co
   await connectVideos(page, info.project.name);
 
   await expect(page.getByRole("combobox", { name: "Sport" })).toHaveValue("auto");
+  await page.getByLabel("Paste a link").check();
   await page.getByLabel("Video link").fill(DRIVE_LINK);
   await page.getByLabel("Note (what to look at)").fill(`sport ${info.project.name} ${Date.now()}`);
   await page.getByRole("button", { name: "Review" }).click();
@@ -125,6 +127,7 @@ test("a YouTube link is saved with its note but not reviewed (F-3)", async ({ pa
   await signInAs(context, OWNER);
   await page.goto("/videos");
   const note = `YouTube ${info.project.name} ${Date.now()}`;
+  await page.getByLabel("Paste a link").check();
   await page.getByLabel("Video link").fill("https://youtu.be/dQw4w9WgXcQ");
   await page.getByRole("combobox", { name: "Sport" }).selectOption("hockey");
   await page.getByLabel("Note (what to look at)").fill(note);
@@ -136,6 +139,7 @@ test("a YouTube link is saved with its note but not reviewed (F-3)", async ({ pa
 test("a Google Photos share link is refused with a pointer to the picker", async ({ page, context }) => {
   await signInAs(context, OWNER);
   await page.goto("/videos");
+  await page.getByLabel("Paste a link").check();
   await page.getByLabel("Video link").fill("https://photos.app.goo.gl/AbCdEf123");
   await page.getByRole("button", { name: "Review" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Google Photos" })).toContainText(

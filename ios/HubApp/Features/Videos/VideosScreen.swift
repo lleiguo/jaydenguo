@@ -140,8 +140,8 @@ struct NewReviewSheet: View {
     @Environment(\.dismiss) private var dismiss
     let opened: (String) -> Void
 
-    enum Source: String, CaseIterable { case link = "Paste a link", photos = "Google Photos" }
-    @State private var source: Source = .link
+    enum Source: String, CaseIterable { case photos = "Google Photos", link = "Paste a link" }
+    @State private var source: Source = .photos
     @State private var url = ""
     @State private var sport = VideoSport.auto
     @State private var filmedOn = Date.now
@@ -156,7 +156,6 @@ struct NewReviewSheet: View {
     init(draft: PendingReview? = nil, opened: @escaping (String) -> Void) {
         self.opened = opened
         if let draft {
-            _source = State(initialValue: .photos)
             _sport = State(initialValue: draft.sport)
             _note = State(initialValue: draft.note)
             _filmedOn = State(initialValue: VideoLink.date(draft.filmedOn) ?? .now)

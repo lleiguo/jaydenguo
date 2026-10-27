@@ -296,7 +296,8 @@ export async function videoReviewJob(args: string[], ctx: JobContext, deps: Revi
       finishedAt: new Date(),
       costUsd: await totalCost(),
     });
-    ctx.log("video review failed", { id, error: err }, "WARNING");
+    const cause = err instanceof Error ? err.cause : undefined;
+    ctx.log("video review failed", { id, error: err, ...(cause ? { cause } : {}) }, "WARNING");
     await notifyReview("failed", message);
   } finally {
     // Nothing else is kept after the review (VID-2, intent 0003).
