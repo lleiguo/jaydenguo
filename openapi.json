@@ -5402,6 +5402,184 @@
         }
       }
     },
+    "/api/v1/videos/{id}/questions": {
+      "post": {
+        "operationId": "askVideoQuestion",
+        "summary": "Ask about a finished review; a job answers it.",
+        "description": "Spec: ASK-1..3, ASK-6",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "question"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoQuestion"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/{id}/questions/{qid}/retry": {
+      "post": {
+        "operationId": "retryVideoQuestion",
+        "summary": "Ask a failed question again.",
+        "description": "Spec: ASK-5",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Started"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/videos/{id}/transcribe": {
+      "post": {
+        "operationId": "transcribeVideoQuestion",
+        "summary": "A spoken question, as words for the question box; nothing is kept.",
+        "description": "Spec: ASK-10, ASKSEC-3",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "audio": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1398108
+                      },
+                      "mimeType": {
+                        "type": "string",
+                        "maxLength": 40
+                      }
+                    },
+                    "required": [
+                      "data",
+                      "mimeType"
+                    ]
+                  }
+                },
+                "required": [
+                  "audio"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscribedQuestion"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/videos/settings": {
       "get": {
         "operationId": "getVideoSettings",
@@ -6027,6 +6205,47 @@
         },
         "required": [
           "accepted"
+        ]
+      },
+      "AnswerOutput": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "why": {
+                  "type": "string"
+                },
+                "good": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "text",
+                "at",
+                "why",
+                "good"
+              ]
+            }
+          }
+        },
+        "required": [
+          "answer",
+          "points"
         ]
       },
       "AppliedKind": {
@@ -12124,6 +12343,17 @@
           "record"
         ]
       },
+      "TranscribedQuestion": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
       "TurnView": {
         "type": "object",
         "properties": {
@@ -12312,6 +12542,98 @@
           "status"
         ]
       },
+      "VideoQuestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "done",
+              "failed",
+              "answering"
+            ]
+          },
+          "answer": {
+            "type": "object",
+            "properties": {
+              "answer": {
+                "type": "string"
+              },
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "why": {
+                      "type": "string"
+                    },
+                    "good": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "at",
+                    "why",
+                    "good"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "answer",
+              "points"
+            ],
+            "x-nullable": true
+          },
+          "errorMessage": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "costUsd": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "status",
+          "errorMessage",
+          "costUsd",
+          "createdAt",
+          "finishedAt"
+        ]
+      },
       "VideoRestored": {
         "type": "object",
         "properties": {
@@ -12443,6 +12765,18 @@
           "hasPlayback": {
             "type": "boolean"
           },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VideoQuestion"
+            }
+          },
+          "cannotAsk": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "rounds": {
             "type": "array",
             "items": {
@@ -12512,6 +12846,8 @@
           "costUsd",
           "finishedAt",
           "hasPlayback",
+          "questions",
+          "cannotAsk",
           "rounds"
         ]
       },

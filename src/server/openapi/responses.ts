@@ -35,7 +35,8 @@ import type { TennisCheckView } from "../tennis/check";
 import type { EntryListView } from "../tennis/entry-list";
 import type { DrawPrediction, TennisOverview } from "../tennis/overview";
 import type { TodayView } from "../today";
-import type { Detected, Review } from "../video/prompts";
+import type { Answer, Detected, Review } from "../video/prompts";
+import type { VideoQuestion } from "../video/questions";
 import type { VideoReviewDetail, VideoReviewSummary } from "../video/store";
 
 // Small acknowledgements shared by many routes.
@@ -140,6 +141,11 @@ export type VideoSettingsResponse = { google: { drive: boolean; photos: boolean 
 // detect → DetectOutput, review and combinedReview → ReviewOutput.
 export type DetectOutput = Detected;
 export type ReviewOutput = Review;
+// intent 0026: a follow-up question and its answer (ASK-2, ASK-4), and a
+// spoken question's words (ASK-10).
+export type { VideoQuestion };
+export type AnswerOutput = Answer;
+export type TranscribedQuestion = { text: string };
 
 // Cookie, the family assistant (intent 0007)
 export type AssistantAnswer = AskResult;

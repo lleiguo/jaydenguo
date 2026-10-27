@@ -17,12 +17,15 @@ export const videosTool: Tool<z.infer<typeof input>> = {
   kind: "hub",
   label: "Videos",
   description:
-    "Video technique reviews: the latest reviews (date filmed, sport, note, status), or one review's points with `id`. The reviews are AI feedback, not a coach's assessment: say so.",
+    "Video technique reviews: the latest reviews (date filmed, sport, note, status), or one review's points and the parent's follow-up questions with their answers with `id`. The reviews are AI feedback, not a coach's assessment: say so.",
   input,
   async run(ctx, q) {
     if (q.id) {
       const r = await getVideoReview(ctx.db, q.id);
       if (!r || r.deletedAt) return problem("no review with that id");
+      const answered = r.questions
+        .filter((x) => x.status === "done")
+        .map((x) => ({ question: x.question, answer: x.answer }));
       return {
         filmedOn: r.filmedOn,
         sport: r.sport,
@@ -30,6 +33,8 @@ export const videosTool: Tool<z.infer<typeof input>> = {
         status: r.status,
         aiFeedback: r.combinedReview ?? undefined,
         failed: r.errorMessage ?? undefined,
+        // intent 0026, ASK-8: the answered follow-ups, oldest first.
+        followUps: answered.length ? answered : undefined,
       };
     }
     const reviews = await listVideoReviews(ctx.db, { sport: q.sport });

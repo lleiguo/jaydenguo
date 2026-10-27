@@ -2,9 +2,9 @@ import { createServer, type Server } from "node:http";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { credentials, notifications, videoReviewRounds, videoReviews } from "@db/schema";
+import { credentials, notifications, videoQuestions, videoReviewRounds, videoReviews } from "@db/schema";
 import { createDb, createPool, type PoolHandle } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import type { JobLauncher } from "@/server/jobs/launcher";
@@ -25,6 +25,9 @@ import {
 } from "@/server/video/store";
 import { HttpError } from "@/server/errors";
 import { videoReviewJob, type ReviewDeps } from "@/worker/video/review";
+import { videoQuestionJob } from "@/worker/video/question";
+import { askQuestion, retryQuestion, transcribeQuestion } from "@/server/video/questions";
+import { scriptedTranscriber } from "@/server/assistant/transcribe";
 import { createGoogleMediaFake } from "../e2e/support/fake-google-media";
 
 // Video reviews end to end in the worker (plan M5.2-M5.5): link saved,
@@ -92,6 +95,7 @@ describe("video reviews", { timeout: 60_000 }, () => {
     await handle.close();
   });
   beforeEach(async () => {
+    await db.delete(videoQuestions);
     await db.delete(videoReviewRounds);
     await db.delete(videoReviews);
     started.length = 0;
@@ -489,6 +493,138 @@ describe("video reviews", { timeout: 60_000 }, () => {
       const r = (await getVideoReview(db, id))!;
       expect(r.status).toBe("done");
       expect(r.hasPlayback).toBe(false);
+    });
+  });
+
+  // Intent 0026: follow-up questions on a finished review (ASK-1..7, ASK-10).
+  describe("questions", () => {
+    let dir: string;
+    let store: MediaStore;
+    const DRIVE = "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view";
+    const qDeps = (model: StructuredModel = fakeModel()) => ({ model: () => model, media: () => store });
+    const ask = (id: string, question: string) => askQuestion(db, id, { question }, launcher);
+    beforeAll(async () => {
+      dir = await mkdtemp(`${tmpdir()}/media-`);
+      store = localMediaStore(dir);
+    });
+    afterAll(async () => {
+      await rm(dir, { recursive: true, force: true });
+    });
+    async function reviewed() {
+      const id = await saved({ url: DRIVE, note: "forehand" });
+      await videoReviewJob([id], ctx(), deps({ media: () => store }));
+      return id;
+    }
+
+    it("answers from the video, with the earlier answers, and counts the cost (ASK-2..4, ASK-7)", async () => {
+      const id = await reviewed();
+      const seen: string[] = [];
+      const model = fakeModel();
+      const watching: StructuredModel = {
+        ...model,
+        call: async (req) => {
+          seen.push(req.prompt);
+          expect(req.media?.kind).toBe("video");
+          return model.call(req);
+        },
+      };
+      const first = await ask(id, "Is his elbow high?");
+      expect(first.status).toBe("queued");
+      expect(started.at(-1)).toEqual(["video:question", first.id]);
+      // One at a time (ASK-3).
+      await expect(ask(id, "And the grip?")).rejects.toMatchObject({ status: 409 });
+      await videoQuestionJob([first.id], ctx(), qDeps(watching));
+
+      const second = await ask(id, "And the grip?");
+      await videoQuestionJob([second.id], ctx(), qDeps(watching));
+      expect(seen[1]).toContain('"Is his elbow high?"');
+      expect(seen[1]).toContain('"And the grip?"');
+      expect(seen[0]).not.toContain("And the grip?");
+
+      const r = (await getVideoReview(db, id))!;
+      expect(r.questions.map((q) => [q.question, q.status])).toEqual([
+        ["Is his elbow high?", "done"],
+        ["And the grip?", "done"],
+      ]);
+      expect(r.questions[0].answer?.points[0].at).toBe("0:03");
+      expect(r.questions[0].costUsd).toBeCloseTo(0.01, 5);
+      expect(r.cannotAsk).toBeNull();
+      // The review's rounds stay the review's; the questions are rounds for the costs page.
+      expect(r.rounds.map((x) => x.round)).toEqual(["review"]);
+      const rounds = await db.select().from(videoReviewRounds).where(eq(videoReviewRounds.reviewId, id));
+      expect(rounds.filter((x) => x.round === "question")).toHaveLength(2);
+    });
+
+    it("says why when the answer fails, and asks again (ASK-5)", async () => {
+      const id = await reviewed();
+      const q = await ask(id, "Is his elbow high?");
+      await videoQuestionJob([q.id], ctx(), qDeps(failingAt("question")));
+      let r = (await getVideoReview(db, id))!;
+      expect(r.questions[0]).toMatchObject({ status: "failed", errorMessage: "Gemini is busy." });
+      await retryQuestion(db, id, q.id, launcher);
+      await videoQuestionJob([q.id], ctx(), qDeps());
+      r = (await getVideoReview(db, id))!;
+      expect(r.questions[0].status).toBe("done");
+      await expect(retryQuestion(db, id, q.id, launcher)).rejects.toMatchObject({ status: 409 });
+    });
+
+    it("stops at 10 answered questions (ASK-6)", async () => {
+      const id = await reviewed();
+      await db.insert(videoQuestions).values(
+        Array.from({ length: 10 }, (_, i) => ({
+          reviewId: id,
+          question: `q${i}`,
+          status: "done",
+          answer: {},
+        })),
+      );
+      await expect(ask(id, "One more?")).rejects.toMatchObject({
+        status: 409,
+        message: "This review has had 10 questions. Start a new review to ask more.",
+      });
+    });
+
+    it("refuses without a copy, on a deleted review, or before it is done (ASK-1, ASKSEC-1)", async () => {
+      const id = await reviewed();
+      await deletePlayback(db, store, id);
+      await expect(ask(id, "Elbow?")).rejects.toMatchObject({
+        status: 409,
+        message: "The video was deleted, so no more questions can be asked.",
+      });
+      const other = await reviewed();
+      await deleteVideoReview(db, other);
+      await expect(ask(other, "Elbow?")).rejects.toMatchObject({ status: 404 });
+      const queued = await saved({ url: DRIVE });
+      await expect(ask(queued, "Elbow?")).rejects.toMatchObject({ status: 409 });
+      await expect(ask("00000000-0000-4000-8000-000000000000", "Elbow?")).rejects.toMatchObject({
+        status: 404,
+      });
+    });
+
+    it("turns a spoken question into words and counts it, keeping no words (ASK-10, ASKSEC-3)", async () => {
+      const id = await reviewed();
+      const heard = await transcribeQuestion(
+        db,
+        id,
+        { data: Buffer.from("clip"), mimeType: "audio/mp4" },
+        scriptedTranscriber("  Look at his forehand  "),
+      );
+      expect(heard).toEqual({ text: "Look at his forehand" });
+      const [round] = await db
+        .select()
+        .from(videoReviewRounds)
+        .where(and(eq(videoReviewRounds.reviewId, id), eq(videoReviewRounds.round, "transcribe")));
+      expect(round.output).toEqual({});
+      expect((await getVideoReview(db, id))!.rounds.map((x) => x.round)).toEqual(["review"]);
+      await deleteVideoReview(db, id);
+      await expect(
+        transcribeQuestion(
+          db,
+          id,
+          { data: Buffer.from("clip"), mimeType: "audio/mp4" },
+          scriptedTranscriber("x"),
+        ),
+      ).rejects.toMatchObject({ status: 404 });
     });
   });
 });

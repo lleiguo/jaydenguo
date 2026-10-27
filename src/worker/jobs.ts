@@ -9,6 +9,7 @@ import { senderCheckJob } from "./sender-check";
 import { smokeJob, syncJob } from "./sync";
 import { tennisAcceptanceJob, tennisCheckJob, tennisDrawWatchJob, tennisEnterJob } from "./tennis-entries";
 import { videoReviewJob } from "./video/review";
+import { videoQuestionJob } from "./video/question";
 import { assistantActionsJob } from "./assistant-actions";
 import { assistantEmailJob } from "./assistant-email";
 import { mailDigestJob } from "./mail-digest";
@@ -71,6 +72,10 @@ export const jobs: Record<string, Job> = {
   "video:review": {
     description: "Fetch a linked video and review it: video:review <id>",
     run: (args, ctx) => videoReviewJob(args, ctx),
+  },
+  "video:question": {
+    description: "Answer a follow-up question on a review: video:question <question id>",
+    run: (args, ctx) => videoQuestionJob(args, ctx),
   },
   "assistant:actions": {
     description: "Write what Cookie added to the household Google Calendar, and take back what was undone",

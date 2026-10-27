@@ -1,6 +1,6 @@
 import { scriptedModel, type ScriptedModel } from "../llm/scripted";
 import type { ModelRequest } from "../llm/types";
-import type { Detected, Review } from "./prompts";
+import type { Answer, Detected, Review } from "./prompts";
 
 // A stand-in model that answers every step with fixed, valid output: for
 // tests, and for trying the video pages locally without Vertex AI
@@ -21,6 +21,14 @@ export function fakeReview(): Review {
   };
 }
 
+// intent 0026, ASK-2.
+export function fakeAnswer(): Answer {
+  return {
+    answer: "The elbow stays high through the swing; the racket still starts back late.",
+    points: [{ text: "Elbow high at contact", at: "0:03", why: "Above the shoulder line", good: true }],
+  };
+}
+
 export type FakeOptions = {
   // What detection answers (intent 0005); tennis, sure, by default.
   detect?: Detected;
@@ -37,6 +45,8 @@ export function fakeScript(opts: FakeOptions = {}) {
         }) satisfies Detected;
       case "review":
         return fakeReview();
+      case "question":
+        return fakeAnswer();
       default:
         throw new Error(`no fake answer for ${req.purpose}`);
     }

@@ -18,6 +18,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import {
+  QUESTION_STATUSES,
   SPORT_SOURCES,
   VIDEO_PROVIDERS,
   VIDEO_SPORTS,
@@ -31,7 +32,17 @@ const inList = (values: readonly string[]) => sql.raw(values.map((v) => `'${v}'`
 // 0006). The rounds of those reviews are still stored, so the checks on a
 // round still allow their values.
 const STORED_MODELS = ["gemini", "claude"];
-const STORED_ROUNDS = ["detect", "review", "critique", "rebuttal", "final_score", "combine"];
+// question and transcribe: intent 0026, ASK-7 and ASK-10.
+const STORED_ROUNDS = [
+  "detect",
+  "review",
+  "critique",
+  "rebuttal",
+  "final_score",
+  "combine",
+  "question",
+  "transcribe",
+];
 
 export const videoReviews = pgTable(
   "video_reviews",
@@ -115,5 +126,31 @@ export const videoReviewRounds = pgTable(
     index("video_review_rounds_review_idx").on(t.reviewId, t.createdAt),
     check("video_review_rounds_round_chk", sql`${t.round} in (${inList(STORED_ROUNDS)})`),
     check("video_review_rounds_model_chk", sql`${t.model} in (${inList(STORED_MODELS)})`),
+  ],
+);
+
+// Follow-up questions on a finished review (intent 0026, ASK-1..7): the
+// parent's words and Gemini's answer, kept with the review. The model call
+// itself is a `question` round, for the costs page.
+export const videoQuestions = pgTable(
+  "video_questions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => videoReviews.id),
+    question: text("question").notNull(),
+    status: text("status").notNull().default("queued"),
+    answer: jsonb("answer"),
+    errorMessage: text("error_message"),
+    costUsd: numeric("cost_usd", { precision: 10, scale: 4, mode: "number" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    startedAt: ts("started_at"),
+    finishedAt: ts("finished_at"),
+  },
+  (t) => [
+    index("video_questions_review_idx").on(t.reviewId, t.createdAt),
+    check("video_questions_status_chk", sql`${t.status} in (${inList(QUESTION_STATUSES)})`),
+    check("video_questions_question_chk", sql`length(${t.question}) between 1 and 500`),
   ],
 );

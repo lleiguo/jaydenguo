@@ -96,8 +96,8 @@ export function NewVideoForm({ today, connected }: { today: string; connected: b
         </label>
       </div>
       <label className="flex flex-col gap-1">
-        Note (what to look at)
-        <input name="note" maxLength={500} placeholder="second serve, focus on toss" className={field} />
+        Note or question (what to look at)
+        <input name="note" maxLength={500} placeholder="review his forehand technique" className={field} />
       </label>
       <fieldset className="flex flex-wrap items-end gap-3">
         <legend className="mb-1">
