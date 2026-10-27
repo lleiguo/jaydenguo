@@ -47,12 +47,25 @@ test("a Drive video is reviewed, played, deleted and restored", async ({ page, c
   expect(part.headers()["content-range"]).toMatch(/^bytes 0-99\/\d+$/);
   expect((await part.body()).length).toBe(100);
 
+  // Intent 0026: a follow-up question is answered from the video, and its
+  // time jumps the player (ASK-1..4).
+  await page.getByLabel("Your question").fill("Is his elbow high at contact?");
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  const asked = page.getByTestId("video-question");
+  await expect(asked).toContainText("Is his elbow high at contact?");
+  await expect(asked).toContainText("The elbow stays high", { timeout: 60_000 });
+  await asked.getByRole("button", { name: "Show 0:03 in the video" }).click();
+  await expect(page.getByTestId("current-point")).toContainText("Answer 1: Elbow high at contact");
+
   // PLAY-7: the copy can be deleted; the review stays.
   page.once("dialog", (d) => void d.accept());
   await page.getByRole("button", { name: "Delete video" }).click();
   await expect(video).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "The review" })).toBeVisible();
   expect((await page.request.get(`/api/v1/videos/${id}/video`)).status()).toBe(404);
+  // ASK-1: no copy, no more questions; the answer stays.
+  await expect(page.getByText("The video was deleted, so no more questions can be asked.")).toBeVisible();
+  await expect(asked).toContainText("The elbow stays high");
 
   // It's in the history, and can be deleted and restored (VID-4).
   await page.goto("/videos?sport=tennis");

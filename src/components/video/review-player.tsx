@@ -69,8 +69,8 @@ export function JumpTo({ at }: { at: string }) {
   );
 }
 
-const pointLabel = (p: TimelinePoint) =>
-  p.kind === "good" ? "Good" : `Fix ${Number(p.key.split("-")[1]) + 1}`;
+export const pointLabel = (p: TimelinePoint) =>
+  p.answer ? `Answer ${p.answer}` : p.kind === "good" ? "Good" : `Fix ${Number(p.key.split("-")[1]) + 1}`;
 
 export function ReviewPlayer({
   reviewId,
@@ -135,7 +135,15 @@ export function ReviewPlayer({
               cx={`${pct(p.sec)}%`}
               cy="10"
               r={active?.key === p.key ? 7 : 5}
-              className={`cursor-pointer ${p.kind === "good" ? "fill-green-600" : "fill-amber-500"}`}
+              // An answer's points are rings, the review's are dots (intent 0026, ASK-4).
+              strokeWidth={p.answer ? 2.5 : undefined}
+              className={`cursor-pointer ${
+                p.answer
+                  ? `fill-white dark:fill-neutral-950 ${p.kind === "good" ? "stroke-green-600" : "stroke-amber-500"}`
+                  : p.kind === "good"
+                    ? "fill-green-600"
+                    : "fill-amber-500"
+              }`}
               onClick={() => seek(p.sec)}
             >
               <title>{`${pointLabel(p)} at ${formatClockTime(p.sec)}: ${p.text}`}</title>

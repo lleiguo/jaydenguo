@@ -3,10 +3,17 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { call } from "@/components/calendar/api";
-import { SPORT_LABEL, sportText, VIDEO_SPORTS, type VideoSport } from "@/domain/video-constants";
-import { timelinePoints } from "@/domain/review-timeline";
+import {
+  MAX_QUESTION_CHARS,
+  SPORT_LABEL,
+  sportText,
+  VIDEO_SPORTS,
+  type VideoSport,
+} from "@/domain/video-constants";
+import { answerPoints, timelinePoints } from "@/domain/review-timeline";
 import { formatClockTime } from "@/domain/video-links";
 import type { Review } from "@/server/video/prompts";
+import type { VideoQuestion } from "@/server/video/questions";
 import type { VideoReviewDetail } from "@/server/video/store";
 import { inProgress, STATUS_LABEL, statusTone } from "./history";
 import { JumpTo, PlaybackProvider, ReviewPlayer, usePlayback, usePlayer } from "./review-player";
@@ -21,20 +28,28 @@ export function ReviewView({ initial }: { initial: VideoReviewDetail }) {
   const [r, setR] = useState(initial);
   const [message, setMessage] = useState<string | null>(null);
   const running = inProgress(r.status);
+  const answering = r.questions.some((q) => q.status === "queued" || q.status === "answering");
   const advice = r.status === "done" ? (r.combinedReview as Review | null) : null;
-  const points = useMemo(() => (advice ? timelinePoints(advice) : []), [advice]);
+  // The review's points and the follow-up answers' (intent 0026, ASK-4).
+  const points = useMemo(() => {
+    const answers = r.questions.flatMap((q) => (q.status === "done" && q.answer ? [q.answer] : []));
+    return [...(advice ? timelinePoints(advice) : []), ...answerPoints(answers)].sort(
+      (a, b) => a.sec - b.sec,
+    );
+  }, [advice, r.questions]);
   const playback = usePlayback(points);
   const hasPlayer = r.status === "done" && r.hasPlayback;
 
-  // VID-5: progress while the job runs.
+  // VID-5: progress while the job runs; intent 0026, ASK-3: and while a
+  // question is being answered.
   useEffect(() => {
-    if (!running) return;
+    if (!running && !answering) return;
     const timer = setInterval(async () => {
       const res = await fetch(`/api/v1/videos/${r.id}`);
       if (res.ok) setR((await res.json()) as VideoReviewDetail);
     }, 3000);
     return () => clearInterval(timer);
-  }, [running, r.id]);
+  }, [running, answering, r.id]);
 
   const segment =
     r.segmentStart !== null || r.segmentEnd !== null
@@ -130,10 +145,15 @@ export function ReviewView({ initial }: { initial: VideoReviewDetail }) {
                 points={points}
                 durationSec={r.durationSec}
                 segmentStart={r.segmentStart}
-                onDeleted={() => setR({ ...r, hasPlayback: false })}
+                onDeleted={async () => {
+                  // Read again: no copy also means no more questions (intent 0026, ASK-1).
+                  const res = await fetch(`/api/v1/videos/${r.id}`);
+                  setR(res.ok ? ((await res.json()) as VideoReviewDetail) : { ...r, hasPlayback: false });
+                }}
               />
             )}
             {advice && <ReviewCard review={advice} />}
+            <Questions r={r} onChanged={setR} />
             <p className={`text-xs ${muted}`}>
               {r.rounds.length} model calls
               {r.costUsd !== null && ` · about $${r.costUsd.toFixed(2)}`}
@@ -320,5 +340,146 @@ function ReviewCard({ review }: { review: Review }) {
         <p>{review.filmNext}</p>
       </div>
     </section>
+  );
+}
+
+// intent 0026, ASK-1..5: follow-up questions on the review, oldest first,
+// and a box to ask the next one. Answers come from a job; the page polls.
+function Questions({ r, onChanged }: { r: VideoReviewDetail; onChanged: (r: VideoReviewDetail) => void }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const answered = r.questions.filter((q) => q.status === "done");
+
+  async function send(url: string, body?: unknown) {
+    setError(null);
+    setBusy(true);
+    try {
+      await call(url, "POST", body);
+      const res = await fetch(`/api/v1/videos/${r.id}`);
+      if (res.ok) onChanged((await res.json()) as VideoReviewDetail);
+      return true;
+    } catch (err) {
+      setError((err as Error).message);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className={`${card} flex flex-col gap-3`} aria-label="Questions about this video">
+      <h2 className="text-lg font-semibold">Ask about this video</h2>
+      {r.questions.length > 0 && (
+        <ol className="flex flex-col gap-3">
+          {r.questions.map((q) => (
+            <QuestionItem
+              key={q.id}
+              q={q}
+              n={answered.indexOf(q) + 1}
+              busy={busy}
+              onRetry={() => send(`/api/v1/videos/${r.id}/questions/${q.id}/retry`)}
+            />
+          ))}
+        </ol>
+      )}
+      {r.cannotAsk && !r.questions.some((q) => q.status === "queued" || q.status === "answering") ? (
+        <p className={`text-sm ${muted}`}>{r.cannotAsk}</p>
+      ) : (
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (await send(`/api/v1/videos/${r.id}/questions`, { question: text })) setText("");
+          }}
+        >
+          <label className="flex flex-col gap-1 text-sm">
+            <span className={muted}>
+              Gemini watches the video again to answer, so each question costs about as much as the review.
+            </span>
+            <textarea
+              aria-label="Your question"
+              value={text}
+              maxLength={MAX_QUESTION_CHARS}
+              rows={2}
+              placeholder="Was his elbow high at 0:03?"
+              onChange={(e) => setText(e.target.value)}
+              className="rounded border px-2 py-1 dark:bg-neutral-900"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={busy || !text.trim() || r.cannotAsk !== null}
+            className="self-start rounded-md border bg-neutral-900 px-4 py-1.5 text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+          >
+            Ask
+          </button>
+        </form>
+      )}
+      {error && (
+        <p role="alert" className="text-red-700 dark:text-red-400">
+          {error}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function QuestionItem({
+  q,
+  n,
+  busy,
+  onRetry,
+}: {
+  q: VideoQuestion;
+  n: number;
+  busy: boolean;
+  onRetry: () => void;
+}) {
+  const player = usePlayer();
+  return (
+    <li className="flex flex-col gap-1" data-testid="video-question">
+      <p className="font-medium">{q.question}</p>
+      <p className={`text-xs ${muted}`}>{new Date(q.createdAt).toLocaleString()}</p>
+      {(q.status === "queued" || q.status === "answering") && (
+        <p aria-live="polite" className={muted}>
+          Answering… (usually under 2 minutes)
+        </p>
+      )}
+      {q.status === "failed" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-red-700 dark:text-red-400">{q.errorMessage ?? "The answer failed."}</p>
+          <button
+            type="button"
+            disabled={busy}
+            className="rounded border px-3 py-0.5 text-sm"
+            onClick={onRetry}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+      {q.status === "done" && q.answer && (
+        <>
+          <p>{q.answer.answer}</p>
+          {q.answer.points.length > 0 && (
+            <ul className="flex flex-col gap-1 pl-5 list-disc">
+              {q.answer.points.map((p, i) => (
+                <li
+                  key={i}
+                  data-active={player?.activeKey === `q${n}-${i}` ? "" : undefined}
+                  className="rounded data-[active]:bg-yellow-100 dark:data-[active]:bg-yellow-950"
+                >
+                  <span className="font-medium">{p.text}</span>
+                  {p.at && <JumpTo at={p.at} />}
+                  <span className={`block ${muted}`}>{p.why}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {q.costUsd !== null && <p className={`text-xs ${muted}`}>About ${q.costUsd.toFixed(2)}</p>}
+        </>
+      )}
+    </li>
   );
 }
