@@ -12,6 +12,7 @@ import {
   people,
   sources,
   tennisEntries,
+  videoQuestions,
   videoReviewRounds,
   videoReviews,
   notifications,
@@ -764,6 +765,7 @@ export async function seedJob(_args: string[], ctx: JobContext) {
       finishedAt: new Date(),
       deletedAt: null,
     };
+    await db.delete(videoQuestions).where(eq(videoQuestions.reviewId, v.id));
     await db.delete(videoReviewRounds).where(eq(videoReviewRounds.reviewId, v.id));
     await db
       .insert(videoReviews)

@@ -25,7 +25,7 @@ test("a Drive video is reviewed, played, deleted and restored", async ({ page, c
   await page.getByLabel("Paste a link").check();
   await page.getByLabel("Video link").fill(DRIVE_LINK);
   await page.getByRole("combobox", { name: "Sport" }).selectOption("tennis");
-  await page.getByLabel("Note (what to look at)").fill(note);
+  await page.getByLabel("Note or question (what to look at)").fill(note);
   await page.getByRole("button", { name: "Review" }).click();
 
   await expect(page).toHaveURL(/\/videos\/[0-9a-f-]{36}$/);
@@ -80,7 +80,9 @@ test("the sport is detected, relabelled, then reviewed again", async ({ page, co
   await expect(page.getByRole("combobox", { name: "Sport" })).toHaveValue("auto");
   await page.getByLabel("Paste a link").check();
   await page.getByLabel("Video link").fill(DRIVE_LINK);
-  await page.getByLabel("Note (what to look at)").fill(`sport ${info.project.name} ${Date.now()}`);
+  await page
+    .getByLabel("Note or question (what to look at)")
+    .fill(`sport ${info.project.name} ${Date.now()}`);
   await page.getByRole("button", { name: "Review" }).click();
   await expect(page).toHaveURL(/\/videos\/[0-9a-f-]{36}$/);
   await expect(page.getByTestId("review-status")).toHaveText("Done", { timeout: 90_000 });
@@ -108,7 +110,7 @@ test("a video picked in Google Photos is reviewed (F-4)", async ({ page, context
   await page.getByLabel("Pick from Google Photos").check();
   await expect(page.getByLabel("Video link")).toBeHidden();
   await page.getByRole("combobox", { name: "Sport" }).selectOption("swimming");
-  await page.getByLabel("Note (what to look at)").fill(`IM turn ${info.project.name}`);
+  await page.getByLabel("Note or question (what to look at)").fill(`IM turn ${info.project.name}`);
   await page.getByRole("button", { name: "Review" }).click();
   await expect(page).toHaveURL(/\/videos\/[0-9a-f-]{36}$/);
 
@@ -130,7 +132,7 @@ test("a YouTube link is saved with its note but not reviewed (F-3)", async ({ pa
   await page.getByLabel("Paste a link").check();
   await page.getByLabel("Video link").fill("https://youtu.be/dQw4w9WgXcQ");
   await page.getByRole("combobox", { name: "Sport" }).selectOption("hockey");
-  await page.getByLabel("Note (what to look at)").fill(note);
+  await page.getByLabel("Note or question (what to look at)").fill(note);
   await page.getByRole("button", { name: "Review" }).click();
   const row = page.getByTestId("video-row").filter({ hasText: note });
   await expect(row.getByTestId("video-status")).toHaveText("Saved (not reviewable)");

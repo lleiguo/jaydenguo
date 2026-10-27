@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { credentials, videoReviewRounds, videoReviews } from "@db/schema";
 import { AUTO_SPORT, VIDEO_SPORTS, type SportSource, type VideoSport } from "../../domain/video-constants";
@@ -7,6 +7,7 @@ import type { Db, DbOrTx } from "../db/client";
 import { HttpError } from "../errors";
 import type { JobLauncher } from "../jobs/launcher";
 import type { MediaStore } from "./media-store";
+import { cannotAsk, listQuestions, type VideoQuestion } from "./questions";
 
 // Video reviews for the web app (plan M5.2, M5.6; spec VID-1..5). The web
 // app saves the link and starts the worker job; the worker fetches the
@@ -250,6 +251,10 @@ export type VideoReviewDetail = VideoReviewSummary & {
   finishedAt: string | null;
   // A playback copy is kept (intent 0003, PLAY-1).
   hasPlayback: boolean;
+  // Follow-up questions, oldest first (intent 0026, ASK-4), and why a new
+  // one can't be asked now, or null when it can (ASK-1, ASK-3, ASK-6).
+  questions: VideoQuestion[];
+  cannotAsk: string | null;
   rounds: {
     round: string;
     model: string;
@@ -264,11 +269,20 @@ export type VideoReviewDetail = VideoReviewSummary & {
 export async function getVideoReview(db: DbOrTx, id: string): Promise<VideoReviewDetail | null> {
   const [row] = await db.select().from(videoReviews).where(eq(videoReviews.id, id));
   if (!row) return null;
+  // The review's own rounds; questions and their recordings are in
+  // `questions` (intent 0026).
   const rounds = await db
     .select()
     .from(videoReviewRounds)
-    .where(and(eq(videoReviewRounds.reviewId, id), isNull(videoReviewRounds.supersededAt)))
+    .where(
+      and(
+        eq(videoReviewRounds.reviewId, id),
+        isNull(videoReviewRounds.supersededAt),
+        inArray(videoReviewRounds.round, ["detect", "review"]),
+      ),
+    )
     .orderBy(asc(videoReviewRounds.createdAt));
+  const questions = await listQuestions(db, id);
   return {
     ...summary(row),
     segmentStart: row.segmentStart,
@@ -279,6 +293,8 @@ export async function getVideoReview(db: DbOrTx, id: string): Promise<VideoRevie
     costUsd: row.costUsd,
     finishedAt: row.finishedAt?.toISOString() ?? null,
     hasPlayback: row.playbackKey !== null,
+    questions,
+    cannotAsk: cannotAsk(row, questions),
     rounds: rounds.map((r) => ({
       round: r.round,
       model: r.model,

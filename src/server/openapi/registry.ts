@@ -26,6 +26,7 @@ import { createSourceInput, updateSourceInput } from "../sources";
 import { addResultInput, correctResultInput, createMeetInput } from "../swim/mutations";
 import { addMatchInput, correctMatchInput } from "../tennis/mutations";
 import { changeSportInput, createVideoInput } from "../video/store";
+import { askQuestionInput, transcribeInput } from "../video/questions";
 
 // Every /api/v1 operation, for openapi.json (intent 0004, API-4). `response`
 // names a type exported from ./responses.ts; null means an empty body
@@ -1008,6 +1009,34 @@ export const operations: Operation[] = [
     spec: "PLAY-7",
     status: 204,
     response: null,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/videos/{id}/questions",
+    operationId: "askVideoQuestion",
+    summary: "Ask about a finished review; a job answers it.",
+    spec: "ASK-1..3, ASK-6",
+    body: askQuestionInput,
+    status: 202,
+    response: "VideoQuestion",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/videos/{id}/questions/{qid}/retry",
+    operationId: "retryVideoQuestion",
+    summary: "Ask a failed question again.",
+    spec: "ASK-5",
+    status: 202,
+    response: "Started",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/videos/{id}/transcribe",
+    operationId: "transcribeVideoQuestion",
+    summary: "A spoken question, as words for the question box; nothing is kept.",
+    spec: "ASK-10, ASKSEC-3",
+    body: transcribeInput,
+    response: "TranscribedQuestion",
   },
   {
     method: "GET",
