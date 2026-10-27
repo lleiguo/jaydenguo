@@ -34,4 +34,12 @@ then the questions' server side, then the web and iPhone screens.
 - The costs page shows the question's cost with videos.
 
 ## 5. Status
-Approved 2026-10-27. FQ1 next.
+Approved 2026-10-27. FQ1–FQ4 merged and deployed 2026-10-27 (#199–#202,
+deploy of f66388f; migration 0041). FQ1's TestFlight build was folded into
+FQ4's: build 27 (#203) is archived, but the upload waits for the owner to
+sign in to Xcode again ("Failed to Use Accounts").
+
+Left: the owner's checks O-2 and O-3 (full screen on the phone; a real
+question by voice and on the website), and SP-F1 (time and cost of a
+question on a 10-minute review with real Gemini), measured on the first
+real question.
