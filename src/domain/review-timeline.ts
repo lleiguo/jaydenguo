@@ -13,6 +13,8 @@ export type TimelinePoint = {
   kind: "good" | "fix";
   text: string;
   sec: number;
+  // The follow-up answer it comes from, counting from 1 (intent 0026, ASK-4).
+  answer?: number;
 };
 
 type CitedPoint = { text: string; at: string | null };
@@ -26,6 +28,26 @@ export function timelinePoints(review: { good: CitedPoint[]; fix: CitedPoint[] }
     });
   }
   return points.sort((a, b) => a.sec - b.sec);
+}
+
+// The points of the follow-up answers, keyed "q1-0", "q2-1"…, where n is
+// the answer's place among the answered questions (intent 0026, ASK-4).
+export function answerPoints(answers: { points: (CitedPoint & { good: boolean })[] }[]): TimelinePoint[] {
+  const points: TimelinePoint[] = [];
+  answers.forEach((a, n) =>
+    a.points.forEach((p, i) => {
+      const sec = citedSeconds(p.at);
+      if (sec !== null)
+        points.push({
+          key: `q${n + 1}-${i}`,
+          kind: p.good ? "good" : "fix",
+          text: p.text,
+          sec,
+          answer: n + 1,
+        });
+    }),
+  );
+  return points;
 }
 
 // How long a point stays on screen after its time.
