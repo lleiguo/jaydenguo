@@ -9,7 +9,7 @@ then the questions' server side, then the web and iPhone screens.
 |---|---|---|
 | O-1 | Approve intent, spec and plan; answer the open questions or keep the defaults. | All |
 | O-2 | Install the TestFlight build; open a review full screen, upright and sideways. | FQ1 done |
-| O-3 | Ask one question on a real review, on the phone and the website. | FQ4 done |
+| O-3 | Ask one question on a real review, on the phone (once by voice) and the website. | FQ4 done |
 
 ## 2. Spikes
 | # | Question | How | Blocks |
@@ -20,15 +20,17 @@ then the questions' server side, then the web and iPhone screens.
 | # | What | Spec | PR |
 |---|---|---|---|
 | FQ1 | iPhone full-screen player; TestFlight build. | FS-1..4 | |
-| FQ2 | `video_questions` table, `question` round, prompt and schema, the job, the API, OpenAPI, Cookie's tool, the note's label on the web. | ASK-1..3, ASK-5..9, ASKSEC | |
+| FQ2 | The transcribe route, `video_questions` table, `question` round, prompt and schema, the job, the API, OpenAPI, Cookie's tool, the note's label on the web. | ASK-1..3, ASK-5..9, ASK-10 (route), ASKSEC | |
 | FQ3 | Web: the thread and the ask box, answer points on the strip. | ASK-1, ASK-3, ASK-4 | |
-| FQ4 | iPhone: the thread and the ask box, answer points in both players, the note's label; TestFlight build. | ASK-1, ASK-3, ASK-4, ASK-9 | |
+| FQ4 | iPhone: the thread and the ask box, answer points in both players, the hold-to-talk mic, the note's label; TestFlight build. | ASK-1, ASK-3, ASK-4, ASK-9, ASK-10 | |
 
 ## 4. Done when
 - The owner opens a review full screen on the phone, sideways, steps
   frames and closes back to the same moment.
 - The owner asks a question on a real review and gets an answer with a
   time that jumps the player, on the website and on the phone.
+- On the phone, a question spoken with the mic appears in the box and is
+  answered.
 - The costs page shows the question's cost with videos.
 
 ## 5. Status

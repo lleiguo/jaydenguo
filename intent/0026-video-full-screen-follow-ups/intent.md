@@ -37,7 +37,12 @@ questions on a review."
   order, and the next question sees the earlier ones.
 - **The note says it's for questions too.** The form's note keeps working
   as now; its label says a specific question can go there.
+- **Ask by voice in the app.** Hold the mic next to the question box and
+  speak, as with Cookie. The words appear in the box to check or fix
+  before pressing Ask. (The keyboard's own dictation works too, on the
+  phone and on the website.)
 - **Not here.** Full screen on the website (the browser has it already);
+  a hold-to-talk mic on the website;
   questions to Cookie that watch the video; asking about a review whose
   video copy was deleted or never saved; changing the review itself from
   an answer; sound.
@@ -50,6 +55,8 @@ questions on a review."
 - Answers are AI feedback, not a coach's assessment, framed for his age,
   like the review (VID-3).
 - The playback copy stays private (PLAY-2); nothing new leaves the app.
+- Voice works like Cookie's (0007 CK-2, CSEC-2): the recording isn't
+  kept, and turning it into words is a small Gemini call.
 - The iPhone parts need a TestFlight build.
 
 ## Open questions (defaults in brackets)

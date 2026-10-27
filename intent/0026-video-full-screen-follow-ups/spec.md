@@ -1,7 +1,7 @@
 # Spec: Full-screen video and follow-up questions on a review
 Status: draft (2026-10-27). Written by Claude from [intent.md](intent.md).
 
-Read with 0001 (VID-3, VID-4, §6.3), 0003 (PLAY-1..8), 0004 (IVID-2),
+Read with 0001 (VID-3, VID-4, §6.3), 0007 (CK-2, CSEC-1/2/7), 0003 (PLAY-1..8), 0004 (IVID-2),
 0005 (SPT-6), 0006, 0014 (WVR-2, WVR-3) and 0002 (costs).
 IDs here: FS (full screen), ASK (follow-up questions), ASKSEC (security).
 
@@ -13,10 +13,13 @@ IDs here: FS (full screen), ASK (follow-up questions), ASKSEC (security).
 - **0003 PLAY-7** Deleting the video also ends questions on that review;
   the questions and answers already asked stay.
 - **0004 IVID-2** The iPhone player gains a full-screen view (FS-1..4).
+- **0007 CK-2, CSEC-2** Cookie's hold-to-talk recording is reused for the
+  question box (ASK-10); Cookie's own flow is unchanged.
 - **0001 VID-4** Deleting a review hides its questions with it; restoring
   brings them back.
-- **0001 §6.3 rounds** A new stored round, `question`, so the costs page
-  counts each question with its review.
+- **0001 §6.3 rounds** New stored rounds, `question` and `transcribe`, so
+  the costs page counts each question and each spoken question with its
+  review.
 - **0005 SPT-6, 0014 WVR-2** Unchanged; the question job makes its Gemini
   clip from the playback copy the same way a review re-run does.
 
@@ -42,19 +45,21 @@ IDs here: FS (full screen), ASK (follow-up questions), ASKSEC (security).
 | ASK-7 | Costs count. | Each question's Gemini call is stored as a `question` round of the review, so the costs page counts it with videos (0002). The question shows its own cost under the answer, like the review. |
 | ASK-8 | Cookie sees the thread. | Cookie's videos tool (TOOL-6) returns a review's questions and answers with its points. Cookie still can't ask new ones. |
 | ASK-9 | The note says it can be a question. | The web and iPhone forms label the note "Note or question (what to look at)", e.g. "review his forehand technique". Behaviour unchanged. |
+| ASK-10 | Hold to talk in the app. | A mic button next to the question box works like Cookie's (CK-2): hold 0.2 s to record (haptic, level ring), release to stop, slide off to cancel, under 0.5 s discarded with "Hold to talk", stops at 30 s. The clip is turned into words (Cookie's Gemini transcriber, with the family's names for spelling) and put in the box, after any text already there, without asking. The parent checks it and presses Ask. If nothing is heard: "Didn't catch that. Try again." The first use asks for the microphone (the existing permission text). The website keeps the box only (the browser's or keyboard's dictation works there). |
 
 ### 2.3 Security (ASKSEC)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | ASKSEC-1 | Signed-in only. | The question routes use the site's own auth (AUTH-2) and the device token, like the other video routes. A question on another review's id, a deleted review or a missing one gives 404. |
 | ASKSEC-2 | The question is data. | The prompt quotes the question as the parent's words; it can't change the instructions or the answer's shape (schema-checked). Questions and answers aren't logged, only ids, status and cost. |
+| ASKSEC-3 | Audio isn't kept. | As CSEC-2: the clip is in a protected temporary file on the phone, deleted once sent or cancelled, and in memory on the server for the request only. The transcript isn't logged (CSEC-7) or stored. The transcribe route is signed-in only (CSEC-1) and 404s for a deleted or missing review; 30 s / 1 MB at most. |
 
 ## 3. Design
 - **Data.** New table `video_questions`: `id`, `review_id` (→
   `video_reviews`), `question` (≤500), `status` (`queued`, `answering`,
   `done`, `failed`), `answer` (jsonb), `error_message`, `cost_usd`,
   `created_at`, `finished_at`; index on (`review_id`, `created_at`).
-  `REVIEW_ROUNDS` gains `question`; the round's check constraint changes
+  `REVIEW_ROUNDS` gains `question` and `transcribe`; the round's check constraint changes
   (a migration from `pnpm db:generate`). The round row stores the
   question's id in its output for the costs breakdown.
 - **Answer schema** (`prompts.ts`): `{ answer: string, points: [{ text,
@@ -78,6 +83,12 @@ IDs here: FS (full screen), ASK (follow-up questions), ASKSEC (security).
   view shown with `fullScreenCover`, with an `AVPlayerLayer`-backed view
   (not `VideoPlayer`, whose controls can't hold ours) and the existing
   `PointStrip`. `VideoDetailScreen` gains the thread and the ask box.
+- **Voice.** New `POST /api/v1/videos/{id}/transcribe` `{ audio: {
+  data, mimeType } }` → `{ text }`, using `clipOf` and Cookie's
+  `geminiTranscriber` with `spellingList`, as Cookie's ask does. Its cost
+  is stored as a `transcribe` round of the review (no output text kept),
+  so the costs page counts it with videos. iPhone: `CookieRecorder` is
+  reused as is, wrapped in a small `HoldToTalkButton`.
 - No Terraform or new cloud resources.
 
 ## 4. Testing
@@ -91,6 +102,10 @@ IDs here: FS (full screen), ASK (follow-up questions), ASKSEC (security).
   a jump button that seeks the player.
 - iPhone UI test: open full screen, step a frame, change speed, close,
   same time on the page; ask a question against the fake server.
+- Integration: the transcribe route with the scripted transcriber returns
+  its text; 401 signed out; too-long audio refused.
+- Production: the owner holds the mic, says a question, checks the text
+  and asks it.
 - Production: the owner asks one question on a real review, on the phone,
   and opens full screen sideways.
 
@@ -101,3 +116,4 @@ IDs here: FS (full screen), ASK (follow-up questions), ASKSEC (security).
 | Q-2 | An answer may disagree with the review. | Accept; the answer stands under the review, the review isn't changed (intent question 3). |
 | Q-3 | Older reviews from before 0014 have a 2-minute copy, and reviews with the video deleted can't be asked about. | Accept; make a new review for those. |
 | Q-4 | Our own full-screen controls mean the system's Picture in Picture and AirPlay buttons aren't there. | Accept; neither is used today. |
+| Q-5 | A wrong word in the transcript would make Gemini answer the wrong question. | The text goes in the box first; nothing is asked until Ask is pressed. |
