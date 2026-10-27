@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseRange } from "@/domain/byte-range";
-import { activePoint, citedSeconds, timelinePoints } from "@/domain/review-timeline";
+import { activePoint, answerPoints, citedSeconds, timelinePoints } from "@/domain/review-timeline";
 import { localMediaStore, playbackKey } from "@/server/video/media-store";
 
 // Playback copies next to their reviews (intent 0003, PLAY-2..5, PLAY-8).
@@ -95,5 +95,24 @@ describe("localMediaStore", () => {
   it("refuses keys it didn't make", async () => {
     const store = localMediaStore(tmpdir());
     await expect(store.size("../etc/passwd")).rejects.toThrow("bad media key");
+  });
+});
+
+// Intent 0026, ASK-4: follow-up answers' points on the same strip.
+describe("answerPoints", () => {
+  it("keys each answer's points by its place among the answers", () => {
+    const answers = [
+      { points: [{ text: "Elbow high", at: "0:03", good: true }] },
+      {
+        points: [
+          { text: "No moment", at: null, good: false },
+          { text: "Late turn", at: "0:01-0:02", good: false },
+        ],
+      },
+    ];
+    expect(answerPoints(answers)).toEqual([
+      { key: "q1-0", kind: "good", text: "Elbow high", sec: 3, answer: 1 },
+      { key: "q2-1", kind: "fix", text: "Late turn", sec: 1, answer: 2 },
+    ]);
   });
 });
