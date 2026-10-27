@@ -29,6 +29,20 @@ import Testing
         #expect(VideoTimeline.clock(65.4) == "1:05")
     }
 
+    /// intent 0026, ASK-4: the recorded sample has one answered question.
+    @Test func answersJoinTheTimeline() async throws {
+        let r = try await review
+        #expect(r.questions.count == 1)
+        #expect(r.cannotAsk == nil)
+        #expect(!r.isAnswering)
+        let answer = try #require(VideoTimeline.answerPoints(r.questions).first)
+        #expect(answer.id == "q1-0")
+        #expect(answer.label == "Answer 1")
+        #expect(answer.seconds == 3)
+        #expect(r.timeline.contains(answer))
+        #expect(r.timeline.map(\.seconds) == r.timeline.map(\.seconds).sorted())
+    }
+
     @Test func segmentTimesParse() {
         #expect(VideoTimeline.parse("") == .some(nil))
         #expect(VideoTimeline.parse("1:05") == .some(65))

@@ -19,9 +19,9 @@ then the questions' server side, then the web and iPhone screens.
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| FQ1 | iPhone full-screen player; TestFlight build. | FS-1..4 | |
-| FQ2 | The transcribe route, `video_questions` table, `question` round, prompt and schema, the job, the API, OpenAPI, Cookie's tool, the note's label on the web. | ASK-1..3, ASK-5..9, ASK-10 (route), ASKSEC | |
-| FQ3 | Web: the thread and the ask box, answer points on the strip. | ASK-1, ASK-3, ASK-4 | |
+| FQ1 | iPhone full-screen player (its TestFlight build is FQ4's, so the owner installs once). | FS-1..4 | #199 |
+| FQ2 | The transcribe route, `video_questions` table, `question` round, prompt and schema, the job, the API, OpenAPI, Cookie's tool, the note's label on the web. | ASK-1..3, ASK-5..9, ASK-10 (route), ASKSEC | #200 |
+| FQ3 | Web: the thread and the ask box, answer points on the strip. | ASK-1, ASK-3, ASK-4 | #201 |
 | FQ4 | iPhone: the thread and the ask box, answer points in both players, the hold-to-talk mic, the note's label; TestFlight build. | ASK-1, ASK-3, ASK-4, ASK-9, ASK-10 | |
 
 ## 4. Done when

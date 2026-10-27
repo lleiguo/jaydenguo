@@ -24,6 +24,13 @@ struct VideoDetailScreen: View {
     /// The page is on screen: full screen hides it without leaving (FS-4),
     /// so the clip, Cookie's button and landscape stay as they are.
     @State private var shown = false
+    /// The next follow-up question, typed or spoken (intent 0026, ASK-1, ASK-10).
+    @State private var draft = ""
+    @State private var asking = false
+    /// Goes up after a question is asked, so following the answer starts again.
+    @State private var follow = 0
+    @State private var voice = QuestionVoice()
+    @FocusState private var typing: Bool
 
     var body: some View {
         Group {
@@ -38,16 +45,17 @@ struct VideoDetailScreen: View {
         .navigationTitle(review.map { "\(VideoSport.text($0.sport.rawValue, source: $0.sportSource.rawValue)) · \($0.filmedOn)" } ?? "Review")
         .navigationBarTitleDisplayMode(.inline)
         // VID-5: follow the job while it runs.
-        .task(id: model.changes) {
+        .task(id: "\(model.changes)-\(follow)") {
             await refresh()
-            while let r = review, r.isRunning, !Task.isCancelled {
+            // intent 0026, ASK-3: and while a question is being answered.
+            while let r = review, r.isRunning || r.isAnswering, !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(3))
                 await refresh()
             }
         }
         .fullScreenCover(isPresented: $fullScreen) {
             if let r = review {
-                FullScreenPlayer(clip: clip, points: r.advice.map(VideoTimeline.points) ?? [],
+                FullScreenPlayer(clip: clip, points: r.timeline,
                                  duration: r.durationSec ?? max(clip.time, 1))
             }
         }
@@ -95,7 +103,7 @@ struct VideoDetailScreen: View {
 
     private func content(_ r: VideoDetail) -> some View {
         let advice = r.advice
-        let points = advice.map(VideoTimeline.points) ?? []
+        let points = r.timeline
         return List {
             header(r)
             if r.status == "done", r.hasPlayback { player(r, points: points) }
@@ -104,6 +112,7 @@ struct VideoDetailScreen: View {
                                jump: clip.ready ? { clip.seek(to: $0) } : nil,
                                active: clip.ready ? VideoTimeline.active(points, at: clip.time)?.id : nil)
             }
+            if r.status == "done" { questions(r) }
             Section {
                 if r.deletedAt == nil {
                     Button("Delete review", role: .destructive) { confirmDelete = true }
@@ -228,6 +237,78 @@ struct VideoDetailScreen: View {
         }
     }
 
+    // MARK: Follow-up questions (intent 0026, ASK-1..5, ASK-10)
+
+    @ViewBuilder
+    private func questions(_ r: VideoDetail) -> some View {
+        let answered = r.questions.filter { $0.status == .done }
+        Section {
+            ForEach(r.questions, id: \.id) { q in
+                QuestionRow(q: q, number: answered.firstIndex { $0.id == q.id }.map { $0 + 1 },
+                            jump: clip.ready ? { clip.seek(to: $0) } : nil,
+                            active: clip.ready ? VideoTimeline.active(r.timeline, at: clip.time)?.id : nil) {
+                    Task { await retryQuestion(q.id) }
+                }
+            }
+            if let why = r.cannotAsk, !r.isAnswering {
+                Caption(why).accessibilityIdentifier("cannotAsk")
+            } else {
+                HStack(alignment: .bottom, spacing: 8) {
+                    TextField("Was his elbow high at 0:03?", text: $draft, axis: .vertical)
+                        .lineLimit(1...5)
+                        .focused($typing)
+                        .onChange(of: draft) { if draft.count > 500 { draft = String(draft.prefix(500)) } }
+                        .accessibilityLabel("Your question")
+                        .accessibilityIdentifier("questionField")
+                    HoldToTalkButton(voice: voice) {
+                        typing = false
+                        await voice.holdBegan(model.client, reviewId: id)
+                    } end: { inside in
+                        await voice.holdEnded(inside: inside, model.client, reviewId: id)
+                    }
+                }
+                Button {
+                    Task { await ask() }
+                } label: {
+                    if asking { ProgressView() } else { Text("Ask") }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(asking || r.isAnswering || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("askQuestion")
+            }
+        } header: {
+            Text("Ask about this video")
+        } footer: {
+            Text("Gemini watches the video again to answer, so each question costs about as much as the review. Hold the mic to speak.")
+        }
+        .onAppear {
+            voice.heard = { text in draft = draft.isEmpty ? text : "\(draft) \(text)" }
+            voice.say = { model.show($0) }
+        }
+    }
+
+    private func ask() async {
+        let question = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !question.isEmpty else { return }
+        asking = true
+        defer { asking = false }
+        do {
+            _ = try await model.client.api.askVideoQuestion(path: .init(id: id), body: .json(.init(question: question))).accepted
+            draft = ""
+            typing = false
+        } catch {
+            model.show(HubError.from(error)?.message ?? "That didn't work.")
+        }
+        follow += 1
+    }
+
+    private func retryQuestion(_ qid: String) async {
+        await act("Asking again.") {
+            _ = try await model.client.api.retryVideoQuestion(path: .init(id: id, qid: qid)).accepted
+        }
+        follow += 1
+    }
+
     // MARK: Actions
 
     private func act(_ done: String, _ work: () async throws -> Void) async {
@@ -265,10 +346,11 @@ struct VideoDetailScreen: View {
     private func deleteVideo() async {
         clip.close()
         await act("Video deleted. The review stays.") { _ = try await model.client.api.deletePlayback(path: .init(id: id)).noContent }
+        await refresh()
     }
 }
 
-/// Markers for the advice's points under the clip (PLAY-4); the same jumps
+/// Markers for the advice's and the answers' points under the clip (PLAY-4); the same jumps
 /// are buttons in the advice for VoiceOver, so this strip is hidden from it.
 struct PointStrip: View {
     let points: [VideoTimeline.Point]
@@ -283,8 +365,10 @@ struct PointStrip: View {
                 Capsule().fill(Color.secondary.opacity(0.3)).frame(height: 3)
                 Rectangle().fill(Color.primary).frame(width: 2, height: 16).offset(x: x(time) - 1)
                 ForEach(points) { p in
+                    // An answer's points are rings, the review's are dots (intent 0026, ASK-4).
                     Circle()
-                        .fill(p.good ? Color.green : .orange)
+                        .fill(p.answer == nil ? (p.good ? Color.green : .orange) : Color(.systemBackground))
+                        .stroke(p.good ? Color.green : .orange, lineWidth: p.answer == nil ? 0 : 3)
                         .frame(width: 14, height: 14)
                         .offset(x: x(p.seconds) - 7)
                         .onTapGesture { seek(p.seconds) }
@@ -351,5 +435,53 @@ struct DrillRows: View {
                 Caption(d.reps)
             }
         }
+    }
+}
+
+/// One follow-up question and its answer (intent 0026, ASK-4, ASK-5).
+struct QuestionRow: View {
+    let q: VideoQuestion
+    /// Its place among the answered questions, for "Answer 1".
+    let number: Int?
+    let jump: ((Double) -> Void)?
+    let active: String?
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(q.question).font(.subheadline.bold())
+            switch q.status {
+            case .queued, .answering:
+                HStack { ProgressView(); Text("Answering…").foregroundStyle(.secondary) }
+                    .accessibilityElement(children: .combine)
+            case .failed:
+                Text(q.errorMessage ?? "The answer failed.").foregroundStyle(.red)
+                Button("Try again", action: retry).buttonStyle(.borderless)
+            case .done:
+                if let answer = q.answer {
+                    Text(answer.answer)
+                    ForEach(Array(answer.points.enumerated()), id: \.offset) { i, p in
+                        let key = number.map { "q\($0)-\(i)" }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(p.text).fontWeight(active != nil && active == key ? .bold : .regular)
+                            Caption(p.why)
+                            if let at = p.at {
+                                if let jump, let sec = VideoTimeline.seconds(at) {
+                                    Button("at \(at)") { jump(sec) }
+                                        .font(.caption)
+                                        .buttonStyle(.borderless)
+                                        .accessibilityLabel("Show \(VideoTimeline.clock(sec)) in the video")
+                                } else {
+                                    Caption("at \(at)")
+                                }
+                            }
+                        }
+                        .padding(.leading, 8)
+                    }
+                    if let cost = q.costUsd { Caption(String(format: "About $%.2f", cost)) }
+                }
+            }
+        }
+        .accessibilityIdentifier("videoQuestion")
     }
 }

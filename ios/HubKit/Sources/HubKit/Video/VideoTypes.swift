@@ -4,6 +4,8 @@ import OpenAPIRuntime
 
 public typealias VideoSummary = Components.Schemas.VideoReviewSummary
 public typealias VideoDetail = Components.Schemas.VideoReviewDetail
+/// A follow-up question on a review and its answer (intent 0026, ASK-2, ASK-4).
+public typealias VideoQuestion = Components.Schemas.VideoQuestion
 
 /// What a review says (VID-3). The API sends it as JSON without a schema;
 /// it's decoded here.
@@ -41,6 +43,18 @@ extension VideoDetail {
     public var advice: ReviewContent? { combinedReview.decoded() }
 
     public var isRunning: Bool { VideoStatus.running(status) }
+
+    /// A question is waiting for its answer (intent 0026, ASK-3).
+    public var isAnswering: Bool { questions.contains { $0.isAnswering } }
+
+    /// The review's points and the follow-up answers', in time order (ASK-4).
+    public var timeline: [VideoTimeline.Point] {
+        ((advice.map(VideoTimeline.points) ?? []) + VideoTimeline.answerPoints(questions)).sorted { $0.seconds < $1.seconds }
+    }
+}
+
+extension VideoQuestion {
+    public var isAnswering: Bool { status == .queued || status == .answering }
 }
 
 public enum VideoStatus {
@@ -120,9 +134,12 @@ public enum VideoTimeline {
         public let good: Bool
         public let text: String
         public let seconds: Double
+        /// The follow-up answer it comes from, counting from 1 (intent 0026).
+        public var answer: Int? = nil
 
-        /// "Good", "Fix 2".
+        /// "Good", "Fix 2", "Answer 1".
         public var label: String {
+            if let answer { return "Answer \(answer)" }
             if good { return "Good" }
             let n = (Int(id.split(separator: "-").last ?? "0") ?? 0) + 1
             return "Fix \(n)"
@@ -152,6 +169,20 @@ public enum VideoTimeline {
             }
         }
         return out.sorted { $0.seconds < $1.seconds }
+    }
+
+    /// The answered follow-ups' points, keyed "q1-0", "q2-1"… by the
+    /// answer's place among the answered questions (intent 0026, ASK-4).
+    public static func answerPoints(_ questions: [VideoQuestion]) -> [Point] {
+        var out: [Point] = []
+        for (n, q) in questions.filter({ $0.status == .done }).enumerated() {
+            for (i, p) in (q.answer?.points ?? []).enumerated() {
+                if let sec = seconds(p.at) {
+                    out.append(Point(id: "q\(n + 1)-\(i)", good: p.good, text: p.text, seconds: sec, answer: n + 1))
+                }
+            }
+        }
+        return out
     }
 
     /// The point on screen at time t: the latest whose window holds t.
