@@ -155,8 +155,8 @@ export type DeviceSettings = {
   // build doesn't know yet can't break it. Builds before 25 ignore it.
   extra: { kind: string; label: string }[];
   // Whose events "Time to leave" covers (intent 0027, TRF-A3); empty for
-  // everyone.
-  leavePeople: string[];
+  // everyone. Optional in the schema so app fixtures from before it decode.
+  leavePeople?: string[];
 };
 
 const deviceOnly = (session: SessionUser) => {
