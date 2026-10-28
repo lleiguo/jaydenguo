@@ -3,17 +3,19 @@ import { requirePageSession } from "@/server/auth/current";
 import { getDb } from "@/server/db";
 import { SignOutEverywhere } from "@/components/sign-out-everywhere";
 import { TimeZoneSetting } from "@/components/time-zone-setting";
+import { HomeAddressSetting } from "@/components/home-address-setting";
 import { CalendarCopySetting } from "@/components/calendar-copy-setting";
 import { HouseholdSyncSetting } from "@/components/household-sync-setting";
 import { PeopleSetting } from "@/components/people-setting";
 import { listPeople, listPeopleEmails } from "@/server/people";
-import { getHomeTimeZone } from "@/server/settings";
+import { getHomeAddress, getHomeTimeZone } from "@/server/settings";
 
 export default async function SettingsPage() {
   const session = await requirePageSession();
   const db = await getDb();
   const devices = await listSessions(db, session);
   const homeTimeZone = await getHomeTimeZone(db);
+  const homeAddress = await getHomeAddress(db);
   const [people, emails] = await Promise.all([listPeople(db), listPeopleEmails(db)]);
   // Keep the saved zone selectable even if this runtime's list lacks it.
   const zones = Intl.supportedValuesOf("timeZone");
@@ -25,6 +27,7 @@ export default async function SettingsPage() {
           General
         </h2>
         <TimeZoneSetting initial={homeTimeZone} zones={zones} />
+        <HomeAddressSetting initial={homeAddress} />
       </section>
       <section aria-labelledby="people" className="flex flex-col gap-3">
         <h2 id="people" className="font-semibold">

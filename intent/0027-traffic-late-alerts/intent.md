@@ -50,7 +50,8 @@ we find out in the car.
 2. How early is the leave-by push? [10 minutes before leave-by; leave-by
    includes 5 minutes to park and walk in.]
 3. Where from, if the phone hasn't shared a place? [Home: the address of
-   a saved place you mark as home.]
+   a saved place you mark as home. As built: an address in Settings →
+   General, since saved places have no screen.]
 4. Which traffic source? [Google Routes API with traffic, from the GCP
    project we already have; Apple's on-phone ETA can't run reliably in
    the background.]

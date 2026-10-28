@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { VIDEO_SPORTS } from "@/domain/video-constants";
-import { isValidTimeZone } from "@/domain/time";
+import { settingsInput } from "../settings-input";
 import { askInput } from "../assistant/ask";
 import { memoriesQuery, memoryInput, memoryPatch } from "../assistant/memory";
 import { assistantSettingsInput } from "../assistant/settings";
@@ -21,6 +21,7 @@ import { approveInput } from "../email/suggestions";
 import { speechQuery } from "../mail/speech";
 import { mailQuery, todoPatch } from "../mail/view";
 import { emailsInput, personInput } from "../people";
+import { locationInput } from "../push/location";
 import { deviceKindsInput, registerDeviceInput } from "../push/notify";
 import { createSourceInput, updateSourceInput } from "../sources";
 import { addResultInput, correctResultInput, createMeetInput } from "../swim/mutations";
@@ -57,7 +58,6 @@ export type Operation = {
 
 const skipInput = z.object({ skip: z.boolean().default(true) });
 const acceptClashInput = z.object({ a: z.uuid(), b: z.uuid() });
-const settingsInput = z.object({ homeTimeZone: z.string().refine(isValidTimeZone, "unknown time zone") });
 
 export const operations: Operation[] = [
   // The iPhone app's sign-in (intent 0004, API-1, API-5)
@@ -120,16 +120,16 @@ export const operations: Operation[] = [
     method: "GET",
     path: "/api/v1/settings",
     operationId: "getSettings",
-    summary: "The home time zone.",
-    spec: "CAL-9",
+    summary: "The home time zone and home's address.",
+    spec: "CAL-9, TRF-R2",
     response: "SettingsResponse",
   },
   {
     method: "PATCH",
     path: "/api/v1/settings",
     operationId: "updateSettings",
-    summary: "Change the home time zone.",
-    spec: "CAL-9",
+    summary: "Change the home time zone or home's address.",
+    spec: "CAL-9, TRF-R2",
     body: settingsInput,
     response: "SettingsResponse",
   },
@@ -915,10 +915,27 @@ export const operations: Operation[] = [
     method: "PATCH",
     path: "/api/v1/devices/current",
     operationId: "setDeviceKinds",
-    summary: "Choose which kinds of notification this phone gets.",
-    spec: "PUSH-3",
+    summary: "Choose which kinds of notification this phone gets, and whose events Time to leave covers.",
+    spec: "PUSH-3, TRF-A3",
     body: deviceKindsInput,
     response: "DeviceSettings",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/devices/current/location",
+    operationId: "saveDeviceLocation",
+    summary: "This phone's latest place, for Time to leave (kept a day, rounded to about 100 m).",
+    spec: "TRF-A2, TRFSEC-1",
+    body: locationInput,
+    response: "DeviceLocationResponse",
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/devices/current/location",
+    operationId: "forgetDeviceLocation",
+    summary: "Forget this phone's place.",
+    spec: "TRF-A2",
+    response: "DeviceLocationResponse",
   },
   {
     method: "GET",

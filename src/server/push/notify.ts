@@ -1,6 +1,6 @@
 import { and, eq, gt, isNull, lt, ne, sql } from "drizzle-orm";
 import { z } from "zod";
-import { devices, notifications, sessions } from "@db/schema";
+import { deviceLocations, devices, notifications, sessions } from "@db/schema";
 import {
   APNS_ENVIRONMENTS,
   DEFAULT_KINDS,
@@ -37,6 +37,8 @@ export type NotifyDeps = {
   now?: Date;
   // Only this account's phones (intent 0009, ERA-3: the parent who asked).
   userId?: string;
+  // Only this phone (intent 0027: each phone's own "Time to leave").
+  deviceId?: string;
 };
 
 // What Apple sees: nothing about the family (PUSH-2, AUTH-3).
@@ -68,6 +70,7 @@ export async function notify(db: DbOrTx, n: NewNotification, deps: NotifyDeps = 
           isNull(sessions.revokedAt),
           gt(sessions.expiresAt, now),
           deps.userId ? eq(sessions.userId, deps.userId) : undefined,
+          deps.deviceId ? eq(devices.id, deps.deviceId) : undefined,
         ),
       );
     const sender = deps.sender ?? defaultSender(log);
@@ -132,7 +135,14 @@ export const registerDeviceInput = z.object({
   topic: z.string().regex(/^com\.jaydenguo\.hub(\.dev)?$/, "Not this app's bundle ID"),
 });
 
-export const deviceKindsInput = z.object({ kinds: z.array(z.enum(NOTIFICATION_KINDS)) });
+// Builds before intent 0027 send `kinds` only; `leavePeople` is whose
+// events "Time to leave" covers (TRF-A3), empty for everyone.
+export const deviceKindsInput = z
+  .object({
+    kinds: z.array(z.enum(NOTIFICATION_KINDS)).optional(),
+    leavePeople: z.array(z.uuid()).max(20).optional(),
+  })
+  .refine((v) => v.kinds !== undefined || v.leavePeople !== undefined, "Nothing to change");
 
 export type DeviceSettings = {
   registered: boolean;
@@ -144,6 +154,9 @@ export type DeviceSettings = {
   // Kinds added after build 23 (intent 0025): a plain string, so a kind a
   // build doesn't know yet can't break it. Builds before 25 ignore it.
   extra: { kind: string; label: string }[];
+  // Whose events "Time to leave" covers (intent 0027, TRF-A3); empty for
+  // everyone.
+  leavePeople: string[];
 };
 
 const deviceOnly = (session: SessionUser) => {
@@ -166,6 +179,7 @@ export async function deviceSettings(db: DbOrTx, session: SessionUser): Promise<
       kind,
       label: NOTIFICATION_LABEL[kind],
     })),
+    leavePeople: row?.leavePeople ?? [],
   };
 }
 
@@ -195,14 +209,25 @@ export async function registerDevice(
   return deviceSettings(db, session);
 }
 
-export async function setDeviceKinds(db: DbOrTx, session: SessionUser, kinds: NotificationKind[]) {
+export async function setDeviceKinds(
+  db: DbOrTx,
+  session: SessionUser,
+  input: { kinds?: NotificationKind[]; leavePeople?: string[] },
+) {
   deviceOnly(session);
   const [row] = await db
     .update(devices)
-    .set({ kinds: [...new Set(kinds)], updatedAt: new Date() })
+    .set({
+      ...(input.kinds ? { kinds: [...new Set(input.kinds)] } : {}),
+      ...(input.leavePeople ? { leavePeople: [...new Set(input.leavePeople)] } : {}),
+      updatedAt: new Date(),
+    })
     .where(eq(devices.sessionId, session.sessionId))
-    .returning({ id: devices.id });
+    .returning({ id: devices.id, kinds: devices.kinds });
   if (!row) throw new HttpError(409, "Turn on notifications for this phone first.");
+  // Intent 0027, TRF-A2: "Time to leave" off forgets this phone's place.
+  if (!row.kinds.includes("leave"))
+    await db.delete(deviceLocations).where(eq(deviceLocations.deviceId, row.id));
   return deviceSettings(db, session);
 }
 

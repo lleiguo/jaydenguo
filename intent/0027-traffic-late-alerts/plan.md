@@ -9,7 +9,7 @@ location and settings, then infra goes live.
 |---|---|---|
 | O-1 | Answer the intent's questions (or "defaults"). | all |
 | O-2 | Terraform apply: Routes API, key secret, scheduler job. | TL4 |
-| O-3 | Mark home on a saved place. | prod test |
+| O-3 | Type the home address in Settings → General. | prod test |
 | O-4 | Install the TestFlight build, turn on "Time to leave", allow location. | prod test |
 
 ## 2. Spikes
@@ -21,7 +21,7 @@ location and settings, then infra goes live.
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| TL1 | Schema (device_locations, leave_people, is_home, kind `leave`), location API, home flag on the web. | TRF-A4, TRFSEC-1..3 | |
+| TL1 | Schema (device_locations, leave_alerts, leave_people, kind `leave`), location API, home address on the web. | TRF-A4, TRFSEC-1..3 | |
 | TL2 | Routes client, `leave:check` job, decision table, pushes. | TRF-E, TRF-R, TRF-P, TRFSEC-2 | |
 | TL3 | iPhone: kind switch, location permission and reporting, people, home; build bump, TestFlight. | TRF-A1..A4 | |
 | TL4 | Infra: API, key, secret, scheduler. | TRFSEC-4 | |
@@ -35,4 +35,4 @@ location and settings, then infra goes live.
   row per phone, none older than 24 h.
 
 ## 5. Status
-Approved 2026-10-27. TL1 next.
+Approved 2026-10-27. TL1 built (schema, location API, home address).

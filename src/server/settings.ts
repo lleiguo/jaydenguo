@@ -18,3 +18,23 @@ export async function setHomeTimeZone(db: DbOrTx, tz: string) {
     .values({ key: "home_time_zone", value: tz })
     .onConflictDoUpdate({ target: settings.key, set: { value: tz, updatedAt: new Date() } });
 }
+
+// Home, where "Time to leave" starts from when the phone hasn't shared a
+// place (intent 0027, TRF-R2). An address for the route service, never
+// logged. Empty clears it.
+export async function getHomeAddress(db: DbOrTx): Promise<string | null> {
+  const [row] = await db.select().from(settings).where(eq(settings.key, "home_address"));
+  return typeof row?.value === "string" && row.value.trim() ? row.value : null;
+}
+
+export async function setHomeAddress(db: DbOrTx, address: string) {
+  const value = address.trim();
+  if (!value) {
+    await db.delete(settings).where(eq(settings.key, "home_address"));
+    return;
+  }
+  await db
+    .insert(settings)
+    .values({ key: "home_address", value })
+    .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date() } });
+}
