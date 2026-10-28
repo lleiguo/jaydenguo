@@ -36,10 +36,9 @@ location and settings, then infra goes live.
 
 ## 5. Status
 Approved 2026-10-27. TL1–TL4 merged and deployed 2026-10-27 (#207, #208,
-#209); build 28 bump merged (#210) and archived. Simulator check against a
+#209); build 28 bump merged (#210), uploaded to TestFlight 2026-10-27. Simulator check against a
 local server: the location prompt, the place stored rounded, whose events
-saved. Waiting on the owner: re-sign in to Xcode so build 28 uploads to
-TestFlight; Terraform apply for the `leave-check` scheduler job (O-2);
+saved. Waiting on the owner: Terraform apply for the `leave-check` scheduler job (O-2);
 home address on Settings → General (O-3); turn on Time to leave on the
 phone (O-4). Then: the first real leave-by push (done-when), SP-T1 from
 the worker logs, SP-T2 on the phone.
