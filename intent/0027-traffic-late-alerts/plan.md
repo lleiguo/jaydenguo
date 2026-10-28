@@ -21,10 +21,10 @@ location and settings, then infra goes live.
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| TL1 | Schema (device_locations, leave_alerts, leave_people, kind `leave`), location API, home address on the web. | TRF-A4, TRFSEC-1..3 | |
-| TL2 | Routes client, `leave:check` job, decision table, pushes. | TRF-E, TRF-R, TRF-P, TRFSEC-2 | |
-| TL3 | iPhone: kind switch, location permission and reporting, people, home; build bump, TestFlight. | TRF-A1..A4 | |
-| TL4 | Infra: the scheduler job (the Routes API and the worker's access exist for TEN-9; no key). Built with TL2. | TRF-R3, TRFSEC-4 | |
+| TL1 | Schema (device_locations, leave_alerts, leave_people, kind `leave`), location API, home address on the web. | TRF-A4, TRFSEC-1..3 | #207 |
+| TL2 | Routes client, `leave:check` job, decision table, pushes. | TRF-E, TRF-R, TRF-P, TRFSEC-2 | #208 |
+| TL3 | iPhone: kind switch, location permission and reporting, people, home; build bump, TestFlight. | TRF-A1..A4 | #209, build 28 #210 |
+| TL4 | Infra: the scheduler job (the Routes API and the worker's access exist for TEN-9; no key). Built with TL2. | TRF-R3, TRFSEC-4 | #208 |
 
 ## 4. Done when
 - A leave-by push arrives on the owner's iPhone before a real event with
@@ -35,4 +35,11 @@ location and settings, then infra goes live.
   row per phone, none older than 24 h.
 
 ## 5. Status
-Approved 2026-10-27. TL1 built (schema, location API, home address). TL2 built (Routes client, `leave:check` job, pushes); goes live with TL4. TL3 built (the switch shows from `extra`; location permission and reporting, Time to leave section with whose events); SP-T2 is checked on the owner's phone after TestFlight.
+Approved 2026-10-27. TL1–TL4 merged and deployed 2026-10-27 (#207, #208,
+#209); build 28 bump merged (#210) and archived. Simulator check against a
+local server: the location prompt, the place stored rounded, whose events
+saved. Waiting on the owner: re-sign in to Xcode so build 28 uploads to
+TestFlight; Terraform apply for the `leave-check` scheduler job (O-2);
+home address on Settings → General (O-3); turn on Time to leave on the
+phone (O-4). Then: the first real leave-by push (done-when), SP-T1 from
+the worker logs, SP-T2 on the phone.
