@@ -6,7 +6,7 @@ import type { JobContext } from "./context";
 export async function leaveCheckJob(_args: string[], ctx: JobContext) {
   const routes = defaultRoutes();
   if (!routes) {
-    ctx.log("leave: no ROUTES_API_KEY, nothing checked", {}, "WARNING");
+    ctx.log("leave: no ROUTES_PROJECT, nothing checked", {}, "WARNING");
     return;
   }
   const result = await checkLeave(await ctx.db(), { routes, log: ctx.log });

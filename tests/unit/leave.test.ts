@@ -177,35 +177,38 @@ describe("push text", () => {
 });
 
 describe("Routes client (TRF-R1)", () => {
+  type Body = { origin: unknown; destination: unknown; travelMode: string; routingPreference: string };
   it("asks for a traffic-aware drive and reads minutes and ends", async () => {
-    let sent: { url: string; init: RequestInit } | null = null;
-    const fake = (async (url: string, init: RequestInit) => {
-      sent = { url, init };
-      return Response.json({
-        routes: [
-          {
-            duration: "1532s",
-            legs: [
-              {
-                startLocation: { latLng: { latitude: 43.65, longitude: -79.38 } },
-                endLocation: { latLng: { latitude: 43.72, longitude: -79.45 } },
-              },
-            ],
-          },
-        ],
-      });
-    }) as unknown as typeof fetch;
-    const route = await googleRoutes("test-key-123", fake)(HOME, { address: "Bayview Tennis Club" });
+    const bodies: Body[] = [];
+    const request = async () => async (body: unknown) => {
+      bodies.push(body as Body);
+      return {
+        status: 200,
+        data: {
+          routes: [
+            {
+              duration: "1532s",
+              legs: [
+                {
+                  startLocation: { latLng: { latitude: 43.65, longitude: -79.38 } },
+                  endLocation: { latLng: { latitude: 43.72, longitude: -79.45 } },
+                },
+              ],
+            },
+          ],
+        },
+      };
+    };
+    const route = await googleRoutes(request)(HOME, { address: "Bayview Tennis Club" });
     expect(route).toEqual({ minutes: 26, start: HOME, end: FIELD });
-    const body = JSON.parse(String(sent!.init.body));
-    expect(body).toMatchObject({ travelMode: "DRIVE", routingPreference: "TRAFFIC_AWARE" });
-    expect(body.destination).toEqual({ address: "Bayview Tennis Club" });
-    expect((sent!.init.headers as Record<string, string>)["x-goog-api-key"]).toBe("test-key-123");
+    expect(bodies[0]).toMatchObject({ travelMode: "DRIVE", routingPreference: "TRAFFIC_AWARE" });
+    expect(bodies[0].origin).toEqual({ location: { latLng: { latitude: 43.65, longitude: -79.38 } } });
+    expect(bodies[0].destination).toEqual({ address: "Bayview Tennis Club" });
   });
-  it("null when there's no route; throws on an error status", async () => {
-    const empty = (async () => Response.json({})) as unknown as typeof fetch;
-    expect(await googleRoutes("k", empty)(HOME, HOME)).toBeNull();
-    const down = (async () => new Response("no", { status: 503 })) as unknown as typeof fetch;
-    await expect(googleRoutes("k", down)(HOME, HOME)).rejects.toThrow("Routes API 503");
+  it("null when there's no route or the address isn't found; throws on other errors", async () => {
+    const answer = (status: number, data: unknown) => async () => async () => ({ status, data });
+    expect(await googleRoutes(answer(200, {}))(HOME, HOME)).toBeNull();
+    expect(await googleRoutes(answer(400, {}))(HOME, HOME)).toBeNull();
+    await expect(googleRoutes(answer(503, {}))(HOME, HOME)).rejects.toThrow("Routes API 503");
   });
 });

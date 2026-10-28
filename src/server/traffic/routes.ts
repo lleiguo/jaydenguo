@@ -1,9 +1,11 @@
 import type { Point } from "../../domain/leave";
-import { registerSecret } from "../log";
+import { googleRequester, type Requester } from "../tennis/drive";
 
 // Drive time with live traffic (intent 0027, TRF-R1): Google Routes
-// `computeRoutes`, TRAFFIC_AWARE, leaving now. The key is ROUTES_API_KEY,
-// restricted to this API (TRFSEC-4). Addresses and places are never logged.
+// `computeRoutes`, TRAFFIC_AWARE, leaving now, called with the worker's own
+// service account like the tennis drive times (TEN-9), so there's no API key
+// (TRFSEC-4). Without ROUTES_PROJECT (local runs) there's no route service.
+// Addresses and places are never logged.
 
 export type Place = Point | { address: string };
 
@@ -19,8 +21,7 @@ export type Route = {
 // resolve, TRF-E2). Throws on any other failure (TRF-R4).
 export type RouteFn = (origin: Place, destination: Place) => Promise<Route | null>;
 
-const URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
-const FIELDS = "routes.duration,routes.legs.startLocation,routes.legs.endLocation";
+export const ROUTE_FIELDS = "routes.duration,routes.legs.startLocation,routes.legs.endLocation";
 
 const waypoint = (p: Place) =>
   "address" in p ? { address: p.address } : { location: { latLng: { latitude: p.lat, longitude: p.lng } } };
@@ -31,25 +32,28 @@ const point = (l: LatLng): Point | null =>
     ? { lat: l.latLng.latitude, lng: l.latLng.longitude }
     : null;
 
-export function googleRoutes(key: string, fetchFn: typeof fetch = fetch): RouteFn {
+export function googleRoutes(request: () => Promise<Requester>): RouteFn {
+  let requester: Promise<Requester> | null = null;
   return async (origin, destination) => {
-    const res = await fetchFn(URL, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": key, "x-goog-fieldmask": FIELDS },
-      body: JSON.stringify({
-        origin: waypoint(origin),
-        destination: waypoint(destination),
-        travelMode: "DRIVE",
-        routingPreference: "TRAFFIC_AWARE",
-      }),
-      signal: AbortSignal.timeout(15_000),
+    requester ??= request();
+    const res = await (
+      await requester
+    )({
+      origin: waypoint(origin),
+      destination: waypoint(destination),
+      travelMode: "DRIVE",
+      routingPreference: "TRAFFIC_AWARE",
     });
-    // Status only: the body can echo the addresses.
-    if (!res.ok) throw new Error(`Routes API ${res.status}`);
-    const data = (await res.json()) as {
-      routes?: { duration?: string; legs?: { startLocation?: LatLng; endLocation?: LatLng }[] }[];
-    };
-    const route = data.routes?.[0];
+    // A route the service can't make is a 200 with no routes, or a 400 or
+    // 404 for an address it can't find. Status only: the body can echo the
+    // addresses.
+    if (res.status === 400 || res.status === 404) return null;
+    if (res.status !== 200) throw new Error(`Routes API ${res.status}`);
+    const route = (
+      res.data as {
+        routes?: { duration?: string; legs?: { startLocation?: LatLng; endLocation?: LatLng }[] }[];
+      } | null
+    )?.routes?.[0];
     const seconds = route?.duration ? Number.parseFloat(route.duration) : NaN;
     if (!route || !Number.isFinite(seconds)) return null;
     const legs = route.legs ?? [];
@@ -62,8 +66,6 @@ export function googleRoutes(key: string, fetchFn: typeof fetch = fetch): RouteF
 }
 
 export function defaultRoutes(): RouteFn | null {
-  const key = process.env.ROUTES_API_KEY;
-  if (!key) return null;
-  registerSecret(key);
-  return googleRoutes(key);
+  const project = process.env.ROUTES_PROJECT;
+  return project ? googleRoutes(() => googleRequester(project, ROUTE_FIELDS)) : null;
 }

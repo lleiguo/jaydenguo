@@ -1,5 +1,5 @@
 # Scheduled triggers (plan M1.5, M1.13 and M3b; spec SYNC-1, NFR-3, TEN-9..11;
-# intent 0020 BACK-1; intent 0025 MD-1). Cloud Scheduler starts an
+# intent 0020 BACK-1; intent 0025 MD-1; intent 0027 TRF-R3). Cloud Scheduler starts an
 # execution of the worker job with the job name as an argument override,
 # using the Cloud Run Admin API. The scheduler stores no personal data.
 locals {
@@ -50,6 +50,13 @@ locals {
       description = "Summarize today's mail and send the morning notification (intent 0025)"
       schedule    = var.mail_digest_schedule
       args        = ["mail:digest"]
+    }
+    # Intent 0027, TRF-R3: "Time to leave", every 5 minutes through the day.
+    # Runs with no phone turned on do nothing and call no route.
+    "leave-check" = {
+      description = "Time to leave: drive times with traffic to the next events (intent 0027)"
+      schedule    = var.leave_check_schedule
+      args        = ["leave:check"]
     }
     "nightly-backup" = {
       description = "Export the database to the backup bucket (NFR-3)"

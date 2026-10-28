@@ -53,7 +53,7 @@ TRFSEC (security and privacy).
 | TRFSEC-1 | Latest place only. | One row per device; each report overwrites it; rows older than 24 h are deleted by the job; no history table. |
 | TRFSEC-2 | Never logged or pushed. | Logs carry event id and minutes, never coordinates or addresses; push payloads carry id and kind only (PUSH-2). A test greps logs from a run for coordinates. |
 | TRFSEC-3 | Own device only. | The location route takes the device from the session; one parent can't write or read another's. |
-| TRFSEC-4 | Key. | The Routes API key is restricted to the Routes API, kept in Secret Manager, read by the worker only. |
+| TRFSEC-4 | No key. | The worker calls the Routes API with its own service account, as the tennis drive times do (TEN-9, `ROUTES_PROJECT`); there's no API key to leak. (As built: the plan's key and secret weren't needed.) |
 
 ## 3. Design
 - **Data.** `device_locations (device_id pk → devices, lat, lng,
@@ -69,14 +69,16 @@ TRFSEC (security and privacy).
   (TRF-E), route if due (TRF-R3), decide P1–P5, send through the
   existing push sender.
 - **Routes client.** `src/server/traffic/routes.ts`, one function
-  `driveMinutes(origin, destination)`; a fake for tests.
+  (origin, destination) → minutes and the route's ends, on the tennis
+  drive-time requester (`src/server/tennis/drive.ts`); a fake for tests.
 - **API.** `POST/DELETE /api/v1/devices/current/location` (OpenAPI
   updated); `leave_people` on `PATCH /api/v1/devices/current`.
 - **iPhone.** CoreLocation significant-change monitoring when the kind
   is on; the two Settings screens; `leave` target = event. Build bump
   and TestFlight after.
-- **Infra.** Enable `routes.googleapis.com`, an API key restricted to
-  it, its secret, the scheduler job. Terraform apply by the owner.
+- **Infra.** The scheduler job `leave-check` (every 5 min, 06:00–21:55
+  home time). The Routes API, the worker's role on it and `ROUTES_PROJECT`
+  are already there for TEN-9. Terraform apply by the owner.
 
 ## 4. Testing
 - Unit: leave-by maths, back-to-back origin, P1–P5 decision table

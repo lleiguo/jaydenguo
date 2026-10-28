@@ -8,14 +8,14 @@ location and settings, then infra goes live.
 | # | Step | Needed for |
 |---|---|---|
 | O-1 | Answer the intent's questions (or "defaults"). | all |
-| O-2 | Terraform apply: Routes API, key secret, scheduler job. | TL4 |
+| O-2 | Terraform apply: the `leave-check` scheduler job. | TL4 |
 | O-3 | Type the home address in Settings → General. | prod test |
 | O-4 | Install the TestFlight build, turn on "Time to leave", allow location. | prod test |
 
 ## 2. Spikes
 | # | Question | How | Blocks |
 |---|---|---|---|
-| SP-T1 | Does Routes resolve our event location texts, and what does a call cost? | Run `computeRoutes` against the next month's real event locations from a dev key; count resolved vs not. | TL2 |
+| SP-T1 | Does Routes resolve our event location texts, and what does a call cost? | As built: answered in production rather than from a dev key (that would mean copying real event locations off the server): count `leave: no route` against `leave: sent` in the worker logs over the first week. Calls are the TEN-9 Routes SKU at ~6 per event per phone. | after TL4 |
 | SP-T2 | How fresh is significant-change location on the owner's iPhone? | Simulator plus a day on the phone in a debug build. | TL3 |
 
 ## 3. Milestones
@@ -24,7 +24,7 @@ location and settings, then infra goes live.
 | TL1 | Schema (device_locations, leave_alerts, leave_people, kind `leave`), location API, home address on the web. | TRF-A4, TRFSEC-1..3 | |
 | TL2 | Routes client, `leave:check` job, decision table, pushes. | TRF-E, TRF-R, TRF-P, TRFSEC-2 | |
 | TL3 | iPhone: kind switch, location permission and reporting, people, home; build bump, TestFlight. | TRF-A1..A4 | |
-| TL4 | Infra: API, key, secret, scheduler. | TRFSEC-4 | |
+| TL4 | Infra: the scheduler job (the Routes API and the worker's access exist for TEN-9; no key). Built with TL2. | TRF-R3, TRFSEC-4 | |
 
 ## 4. Done when
 - A leave-by push arrives on the owner's iPhone before a real event with
