@@ -21,7 +21,10 @@ struct HubApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             model.lock.sceneChanged(phase)
-            if phase == .active { model.pickUpSharedReview() }
+            if phase == .active {
+                model.pickUpSharedReview()
+                model.leave.report()
+            }
             if phase == .background {
                 model.scheduleRefresh()
                 // Cookie stops listening and speaking when the app leaves the screen.

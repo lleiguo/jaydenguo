@@ -57,6 +57,9 @@ targets:
         NSFaceIDUsageDescription: Face ID keeps the hub locked when someone else picks up your phone.
         # Cookie listens only while her button is held (intent 0007, CK-6).
         NSMicrophoneUsageDescription: Cookie listens while you hold her button, to hear your question. Recordings aren't kept.
+        # Time to leave (intent 0027, TRF-A1): only while that notification is on.
+        NSLocationWhenInUseUsageDescription: Time to leave works out the drive to your next event from where you are. The hub keeps only your latest place, rounded, for a day.
+        NSLocationAlwaysAndWhenInUseUsageDescription: With Always, Time to leave can tell you you're running late even when the app is closed. The hub keeps only your latest place, rounded, for a day.
         HubAppGroup: $(HUB_APP_GROUP)
         # Background app refresh keeps the widgets current (EXT-2).
         # audio: today's mail keeps reading with the screen locked (intent 0025, MA-3).

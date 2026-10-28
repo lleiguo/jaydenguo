@@ -10,6 +10,7 @@ struct NotificationsScreen: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @State private var status: UNAuthorizationStatus?
+    @State private var people: [Components.Schemas.Person] = []
 
     var body: some View {
         Form {
@@ -72,13 +73,67 @@ struct NotificationsScreen: View {
                         .accessibilityIdentifier("kind-\(item.kind)")
                     }
                 }
+                if model.leaveOn { TimeToLeaveSection(settings: settings, people: people) }
             }
         }
         .navigationTitle("Notifications")
         .task(id: scenePhase == .active) {
             status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
             await model.loadNotificationSettings()
+            if let list = try? await model.client.api.listPeople().ok.body.json.people { people = list }
         }
+    }
+}
+
+/// "Time to leave" (intent 0027, TRF-A1, TRF-A3): whether the phone may
+/// share its place, and whose events it covers.
+private struct TimeToLeaveSection: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openURL) private var openURL
+    let settings: Components.Schemas.DeviceSettings
+    let people: [Components.Schemas.Person]
+
+    var body: some View {
+        Section {
+            switch model.leave.status {
+            case .authorizedAlways:
+                Label("Uses where this phone is, even when the app is closed.", systemImage: "location.fill")
+            case .authorizedWhenInUse:
+                Label("Uses where this phone is while the app is open, else home.", systemImage: "location")
+                Button("Allow all the time, for running late") { model.leave.askAlways() }
+            case .notDetermined:
+                Text("Starts from home until this phone shares where it is.")
+                Button("Share where this phone is") { model.leave.sync(on: true) }
+            default:
+                Text("Location is off for the hub, so it starts from home.")
+                Button("Open iOS Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                }
+            }
+            if people.count > 1 {
+                ForEach(people, id: \.id) { person in
+                    Toggle(person.name, isOn: Binding(
+                        get: { covers(person.id) },
+                        set: { on in Task { await model.setLeavePeople(choose(person.id, on)) } }
+                    ))
+                    .accessibilityIdentifier("leave-person")
+                }
+            }
+        } header: {
+            Text("Time to leave")
+        } footer: {
+            Text("Tells you when to leave for an event with a place in the next two hours, from live traffic, and if you're running late. Home's address is in Settings → General on the website. The hub keeps only this phone's latest place, rounded, for a day.")
+        }
+    }
+
+    private var chosen: [String] { settings.leavePeople ?? [] }
+    private func covers(_ id: String) -> Bool { chosen.isEmpty || chosen.contains(id) }
+
+    /// Empty means everyone; switching the last one off isn't allowed.
+    private func choose(_ id: String, _ on: Bool) -> [String] {
+        var set = Set(chosen.isEmpty ? people.map(\.id) : chosen)
+        if on { set.insert(id) } else if set.count > 1 { set.remove(id) }
+        return set.count == people.count ? [] : Array(set)
     }
 }
 

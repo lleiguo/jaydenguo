@@ -35,4 +35,4 @@ location and settings, then infra goes live.
   row per phone, none older than 24 h.
 
 ## 5. Status
-Approved 2026-10-27. TL1 built (schema, location API, home address). TL2 built (Routes client, `leave:check` job, pushes); goes live with TL4.
+Approved 2026-10-27. TL1 built (schema, location API, home address). TL2 built (Routes client, `leave:check` job, pushes); goes live with TL4. TL3 built (the switch shows from `extra`; location permission and reporting, Time to leave section with whose events); SP-T2 is checked on the owner's phone after TestFlight.
