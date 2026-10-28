@@ -1,5 +1,5 @@
 # Plan: Tell me when to leave, and when I'm running late, from live traffic
-Status: draft (2026-10-27), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-27, in chat: "intent approved, build it"), with [spec.md](spec.md).
 
 Order: server first (works from home with no app change), then the app's
 location and settings, then infra goes live.
@@ -35,4 +35,4 @@ location and settings, then infra goes live.
   row per phone, none older than 24 h.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-27. TL1 next.

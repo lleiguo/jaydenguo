@@ -1,5 +1,5 @@
 # Spec: Tell me when to leave, and when I'm running late, from live traffic
-Status: draft (2026-10-27). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-27, in chat: "intent approved, build it"); T-1..T-5 recommendations accepted. Written by Claude from [intent.md](intent.md).
 
 Read with 0001 (CON-1 places and buffers, CAL-3), 0004 (PUSH-1..6) and
 0023 (NTF-SEC1, `OPT_IN_KINDS`). IDs here: TRF (traffic alerts),

@@ -1,5 +1,5 @@
 # Intent: Tell me when to leave, and when I'm running late, from live traffic
-Status: draft (2026-10-27). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-27, in chat: "intent approved, build it"); defaults kept. Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "can we add a feature to notify me if I'm late for next event due to real-time traffic?"
