@@ -73,6 +73,8 @@ final class AppModel {
     let cookieTalk: CookieTalk
     /// Reading today's mail aloud (intent 0025, MA-1..3).
     let mailPlayer: MailPlayer
+    /// This phone's place for "Time to leave" (intent 0027, TRF-A2).
+    let leave: LeaveLocation
 
     init(client: HubClient, events: AsyncStream<HubEvent>, lock: AppLock) {
         self.client = client
@@ -80,6 +82,7 @@ final class AppModel {
         cookie = CookieStore(client: client)
         cookieTalk = CookieTalk(store: cookie, client: client)
         mailPlayer = MailPlayer(client: client)
+        leave = LeaveLocation(client: client)
         mailPlayer.onRead = { id in
             Task { _ = try? await client.api.markMailRead(path: .init(id: id)).noContent }
         }
@@ -175,6 +178,7 @@ final class AppModel {
         openClashes = 0
         toast = nil
         notificationSettings = nil
+        leave.sync(on: false)
         askForNotifications = false
         selectedTab = .today
         tennisPath = []
@@ -378,6 +382,7 @@ final class AppModel {
             await offerCookieNotifications()
             await offerNewNotifications()
             await offerMailNotifications()
+            applyLeave()
         } catch {
             pushProblem = HubError.from(error)?.message ?? "Couldn't turn on notifications for this phone."
         }
@@ -423,6 +428,7 @@ final class AppModel {
 
     func loadNotificationSettings() async {
         notificationSettings = try? await client.api.getDeviceSettings().ok.body.json
+        applyLeave()
     }
 
     func setNotificationKinds(_ kinds: [String]) async {
@@ -430,6 +436,26 @@ final class AppModel {
             notificationSettings = try await client.api.setDeviceKinds(body: .json(.init(
                 kinds: kinds.compactMap { .init(rawValue: $0) }
             ))).ok.body.json
+            applyLeave()
+        } catch {
+            show(HubError.from(error)?.message ?? "Couldn't save that.")
+        }
+    }
+
+    /// "Time to leave" is on for this phone (intent 0027).
+    var leaveOn: Bool { notificationSettings?.kinds.contains { $0.rawValue == "leave" } ?? false }
+
+    /// Starts or stops sharing this phone's place with the kind (TRF-A2).
+    private func applyLeave() {
+        guard notificationSettings != nil else { return }
+        leave.sync(on: leaveOn)
+    }
+
+    /// Whose events "Time to leave" covers on this phone (TRF-A3); empty
+    /// for everyone.
+    func setLeavePeople(_ ids: [String]) async {
+        do {
+            notificationSettings = try await client.api.setDeviceKinds(body: .json(.init(leavePeople: ids))).ok.body.json
         } catch {
             show(HubError.from(error)?.message ?? "Couldn't save that.")
         }
