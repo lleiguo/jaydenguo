@@ -7604,8 +7604,7 @@
           "kinds",
           "available",
           "more",
-          "extra",
-          "leavePeople"
+          "extra"
         ]
       },
       "DeviceTokenResponse": {
@@ -10534,8 +10533,7 @@
           }
         },
         "required": [
-          "homeTimeZone",
-          "homeAddress"
+          "homeTimeZone"
         ]
       },
       "Shared": {

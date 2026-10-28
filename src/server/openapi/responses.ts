@@ -62,7 +62,9 @@ export type ClashesResponse = {
 };
 export type SeriesResponse = Awaited<ReturnType<typeof getSeries>>;
 export type PeopleResponse = { people: Person[] };
-export type SettingsResponse = { homeTimeZone: string; homeAddress: string | null };
+// `homeAddress` (intent 0027) is optional so app builds and fixtures from
+// before it decode.
+export type SettingsResponse = { homeTimeZone: string; homeAddress?: string | null };
 export type SchoolTodayResponse = { schoolDay: SchoolDay | null; schoolDays: SchoolDay[] };
 
 // Google Calendar copy (GCO)
