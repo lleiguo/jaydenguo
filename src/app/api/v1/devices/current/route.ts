@@ -16,7 +16,7 @@ export const POST = api(async ({ db, session, request }) =>
   Response.json(await registerDevice(db, session, registerDeviceInput.parse(await request.json()))),
 );
 
-export const PATCH = api(async ({ db, session, request }) => {
-  const { kinds } = deviceKindsInput.parse(await request.json());
-  return Response.json(await setDeviceKinds(db, session, kinds));
-});
+// Kinds, and whose events "Time to leave" covers (intent 0027, TRF-A3).
+export const PATCH = api(async ({ db, session, request }) =>
+  Response.json(await setDeviceKinds(db, session, deviceKindsInput.parse(await request.json()))),
+);

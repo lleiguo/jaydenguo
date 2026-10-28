@@ -232,8 +232,8 @@
     "/api/v1/settings": {
       "get": {
         "operationId": "getSettings",
-        "summary": "The home time zone.",
-        "description": "Spec: CAL-9",
+        "summary": "The home time zone and home's address.",
+        "description": "Spec: CAL-9, TRF-R2",
         "responses": {
           "200": {
             "description": "OK",
@@ -259,8 +259,8 @@
       },
       "patch": {
         "operationId": "updateSettings",
-        "summary": "Change the home time zone.",
-        "description": "Spec: CAL-9",
+        "summary": "Change the home time zone or home's address.",
+        "description": "Spec: CAL-9, TRF-R2",
         "requestBody": {
           "required": true,
           "content": {
@@ -270,11 +270,12 @@
                 "properties": {
                   "homeTimeZone": {
                     "type": "string"
+                  },
+                  "homeAddress": {
+                    "type": "string",
+                    "maxLength": 300
                   }
-                },
-                "required": [
-                  "homeTimeZone"
-                ]
+                }
               }
             }
           }
@@ -4861,8 +4862,8 @@
       },
       "patch": {
         "operationId": "setDeviceKinds",
-        "summary": "Choose which kinds of notification this phone gets.",
-        "description": "Spec: PUSH-3",
+        "summary": "Choose which kinds of notification this phone gets, and whose events Time to leave covers.",
+        "description": "Spec: PUSH-3, TRF-A3",
         "requestBody": {
           "required": true,
           "content": {
@@ -4885,14 +4886,21 @@
                         "cookie",
                         "tennis_result",
                         "swim",
-                        "mail"
+                        "mail",
+                        "leave"
                       ]
                     }
+                  },
+                  "leavePeople": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
                   }
-                },
-                "required": [
-                  "kinds"
-                ]
+                }
               }
             }
           }
@@ -4904,6 +4912,93 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeviceSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/current/location": {
+      "post": {
+        "operationId": "saveDeviceLocation",
+        "summary": "This phone's latest place, for Time to leave (kept a day, rounded to about 100 m).",
+        "description": "Spec: TRF-A2, TRFSEC-1",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "lng": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "accuracyM": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000
+                  }
+                },
+                "required": [
+                  "lat",
+                  "lng"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLocationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in words the app can show.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "forgetDeviceLocation",
+        "summary": "Forget this phone's place.",
+        "description": "Spec: TRF-A2",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLocationResponse"
                 }
               }
             }
@@ -7378,6 +7473,17 @@
           "reason"
         ]
       },
+      "DeviceLocationResponse": {
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "saved"
+        ]
+      },
       "DeviceSettings": {
         "type": "object",
         "properties": {
@@ -7399,7 +7505,8 @@
                 "cookie",
                 "tennis_result",
                 "swim",
-                "mail"
+                "mail",
+                "leave"
               ]
             }
           },
@@ -7421,7 +7528,8 @@
                     "cookie",
                     "tennis_result",
                     "swim",
-                    "mail"
+                    "mail",
+                    "leave"
                   ]
                 },
                 "label": {
@@ -7452,7 +7560,8 @@
                     "cookie",
                     "tennis_result",
                     "swim",
-                    "mail"
+                    "mail",
+                    "leave"
                   ]
                 },
                 "label": {
@@ -7481,6 +7590,12 @@
                 "kind",
                 "label"
               ]
+            }
+          },
+          "leavePeople": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         },
@@ -9445,7 +9560,8 @@
               "cookie",
               "tennis_result",
               "swim",
-              "mail"
+              "mail",
+              "leave"
             ]
           },
           "title": {
@@ -10408,6 +10524,12 @@
         "properties": {
           "homeTimeZone": {
             "type": "string"
+          },
+          "homeAddress": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [

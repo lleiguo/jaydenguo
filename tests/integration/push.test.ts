@@ -5,6 +5,7 @@ import { and, eq, inArray, like, ne, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   conflicts,
+  deviceLocations,
   devices,
   events,
   notifications,
@@ -31,6 +32,7 @@ import {
   notifySyncFailed,
   notifyTennisResults,
 } from "@/server/push/kinds";
+import { forgetLocation, pruneLocations, saveLocation } from "@/server/push/location";
 import {
   deviceSettings,
   getNotification,
@@ -134,7 +136,7 @@ describe("push notifications", () => {
     expect(settings.kinds).not.toContain("suggestion");
     expect(settings.kinds).toContain("clash");
     expect(settings.available.map((a) => a.kind)).toContain("suggestion");
-    const chosen = await setDeviceKinds(db, s, ["suggestion", "video"]);
+    const chosen = await setDeviceKinds(db, s, { kinds: ["suggestion", "video"] });
     expect(chosen.kinds.sort()).toEqual(["suggestion", "video"]);
     // A new token for the same phone keeps its choice.
     expect((await register(s, TOKEN_B)).kinds.sort()).toEqual(["suggestion", "video"]);
@@ -189,7 +191,7 @@ describe("push notifications", () => {
     expect(settings.kinds).not.toContain("cookie");
     expect(settings.available.map((a) => a.kind)).not.toContain("cookie");
     // An app that knows it turns it on itself.
-    await setDeviceKinds(db, mine, [...settings.kinds, "cookie"]);
+    await setDeviceKinds(db, mine, { kinds: [...settings.kinds, "cookie"] });
 
     process.env.ALLOWED_EMAILS = `${OWNER},other-parent@example.test`;
     try {
@@ -199,7 +201,7 @@ describe("push notifications", () => {
       });
       const theirs = (await findSession(db, token))!;
       await register(theirs, TOKEN_B);
-      await setDeviceKinds(db, theirs, ["cookie"]);
+      await setDeviceKinds(db, theirs, { kinds: ["cookie"] });
 
       await notify(
         db,
@@ -232,6 +234,47 @@ describe("push notifications", () => {
     await notify(db, note("clash:3|4"), { log });
     expect(sent.map((p) => p.path.slice(-64)).sort()).toEqual([TOKEN_A, DEAD].sort());
     expect((await db.select().from(devices)).map((d) => d.token).sort()).toEqual([TOKEN_A, TOKEN_B].sort());
+  });
+
+  it("keeps only each phone's latest place, rounded, its own, for a day (intent 0027, TRF-A2, TRF-A3, TRFSEC-1, TRFSEC-3)", async () => {
+    const s = await phone();
+    const settings = await register(s, TOKEN_A);
+    expect(settings.available.map((a) => a.kind)).not.toContain("leave");
+    expect(settings.extra.map((a) => a.kind)).toContain("leave");
+    expect(settings.kinds).not.toContain("leave");
+    expect(settings.leavePeople).toEqual([]);
+    const place = { lat: 43.65432, lng: -79.38765, accuracyM: 20 };
+    // Off until the phone turns it on; never from a browser.
+    await expect(saveLocation(db, s, place)).rejects.toMatchObject({ status: 409 });
+    await expect(saveLocation(db, await phone("browser"), place)).rejects.toBeInstanceOf(HttpError);
+    const person = crypto.randomUUID();
+    const chosen = await setDeviceKinds(db, s, {
+      kinds: [...settings.kinds, "leave"],
+      leavePeople: [person],
+    });
+    expect(chosen.leavePeople).toEqual([person]);
+    await saveLocation(db, s, place);
+    await saveLocation(db, s, { lat: 43.7, lng: -79.4 });
+    const rows = await db.select().from(deviceLocations);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ lat: 43.7, lng: -79.4, accuracyM: null });
+    // The second parent's phone has its own row; neither touches the other.
+    const other = await phone();
+    await register(other, TOKEN_B);
+    await setDeviceKinds(db, other, { kinds: ["leave"] });
+    await saveLocation(db, other, place);
+    expect((await db.select().from(deviceLocations)).map((r) => r.lat).sort()).toEqual([43.654, 43.7]);
+    await forgetLocation(db, other);
+    expect(await db.select().from(deviceLocations)).toHaveLength(1);
+    // Kinds alone keep whose events it covers; switching it off forgets the place.
+    expect((await setDeviceKinds(db, s, { kinds: ["leave", "clash"] })).leavePeople).toEqual([person]);
+    await setDeviceKinds(db, s, { kinds: ["clash"] });
+    expect(await db.select().from(deviceLocations)).toHaveLength(0);
+    // A day old goes.
+    await setDeviceKinds(db, s, { kinds: ["leave"] });
+    await saveLocation(db, s, place);
+    expect(await pruneLocations(db, new Date(Date.now() + 23 * 3_600_000))).toBe(0);
+    expect(await pruneLocations(db, new Date(Date.now() + 25 * 3_600_000))).toBe(1);
   });
 
   it("notifies a new clash once, and not an accepted one (PUSH-1, PUSH-5)", async () => {
@@ -322,11 +365,11 @@ describe("push notifications", () => {
     // `more` never gains a kind: builds 20–23 decode it into a fixed list
     // (intent 0025). Later kinds are in `extra`.
     expect(settings.more.map((a) => a.kind)).toEqual(["cookie", "tennis_result", "swim"]);
-    expect(settings.extra).toEqual([{ kind: "mail", label: "Today's mail" }]);
+    expect(settings.extra.map((a) => a.kind)).toEqual(["mail", "leave"]);
     expect(settings.kinds).not.toContain("swim");
     const fresh = await phone();
     await register(fresh, TOKEN_B);
-    await setDeviceKinds(db, fresh, ["swim", "clash"]);
+    await setDeviceKinds(db, fresh, { kinds: ["swim", "clash"] });
     await notify(db, { ...note("swim:1"), kind: "swim" }, { log });
     expect(sent.map((p) => p.path.slice(-64))).toEqual([TOKEN_B]);
   });
@@ -371,7 +414,7 @@ describe("push notifications", () => {
     await db.delete(settings).where(like(settings.key, "notified_since:%"));
     const s = await phone();
     await register(s, TOKEN_A);
-    await setDeviceKinds(db, s, ["tennis_result"]);
+    await setDeviceKinds(db, s, { kinds: ["tennis_result"] });
     const [src] = await db.insert(sources).values({ kind: "tennis_tc", name: "Results test" }).returning();
     const [me, opp] = await db
       .insert(tennisPlayers)
@@ -427,7 +470,7 @@ describe("push notifications", () => {
     await db.delete(settings).where(like(settings.key, "notified_since:%"));
     const s = await phone();
     await register(s, TOKEN_A);
-    await setDeviceKinds(db, s, ["swim"]);
+    await setDeviceKinds(db, s, { kinds: ["swim"] });
     const [src] = await db.insert(sources).values({ kind: "commit_swim", name: "Swim test" }).returning();
     const day = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString().slice(0, 10);
     const [old, next] = await db
