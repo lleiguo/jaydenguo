@@ -115,6 +115,12 @@ variable "household_sync_night_schedule" {
   default     = "0 22-23,0-5 * * *"
 }
 
+variable "leave_check_schedule" {
+  description = "Cron schedule for Time to leave (intent 0027, TRF-R3), in home_time_zone: every 5 minutes, 06:00 to 21:55."
+  type        = string
+  default     = "*/5 6-21 * * *"
+}
+
 variable "mail_digest_schedule" {
   description = "Cron schedule for today's mail and its morning notification (intent 0025, MD-1, MA-4), in home_time_zone."
   type        = string

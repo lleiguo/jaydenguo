@@ -6,9 +6,10 @@
 
 export type DriveTimer = (from: string, to: string) => Promise<number | null>;
 
-type Requester = (body: unknown) => Promise<{ status: number; data: unknown }>;
+export type Requester = (body: unknown) => Promise<{ status: number; data: unknown }>;
 
-async function googleRequester(project: string): Promise<Requester> {
+// Also used by "Time to leave" (intent 0027), with its own field mask.
+export async function googleRequester(project: string, fieldMask = "routes.duration"): Promise<Requester> {
   const { GoogleAuth } = await import("google-auth-library");
   const client = await new GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/cloud-platform"],
@@ -19,7 +20,7 @@ async function googleRequester(project: string): Promise<Requester> {
       method: "POST",
       headers: {
         "X-Goog-User-Project": project,
-        "X-Goog-FieldMask": "routes.duration",
+        "X-Goog-FieldMask": fieldMask,
       },
       data: body,
       validateStatus: () => true,

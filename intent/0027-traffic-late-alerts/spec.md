@@ -20,23 +20,23 @@ TRFSEC (security and privacy).
 |---|---|---|
 | TRF-E1 | Candidates. | Timed (not all-day), not skipped or deleted, not a school period, starting in the next 2 hours, attendance `required`, owned by a person in the phone's chosen people (default: everyone). |
 | TRF-E2 | A destination. | The event's location text (`location_name`). No location, or the route service can't resolve it → no push, logged once per event as `leave: no route` (without the address). |
-| TRF-E3 | Back to back. | If the phone's previous candidate event ends within 2 hours before this one, the origin is that event's place, not the phone's place. |
+| TRF-E3 | Back to back. | If the phone's previous candidate event ends within 2 hours before this one and hasn't ended yet, the origin is that event's place, not the phone's place. (As built: once it has ended the phone is there, so its fresh place is used.) |
 
 ### 2.2 Drive time (TRF-R)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | TRF-R1 | Live traffic. | Drive time from a traffic-aware route (Google Routes `computeRoutes`, `TRAFFIC_AWARE`, departure now) from the origin to the destination. |
 | TRF-R2 | Origin. | The phone's latest place if reported in the last 30 min; else home (the address in Settings → General); else no push. |
-| TRF-R3 | Few calls. | At most one route call per phone per event per 10 min, and none for events more than 2 h away. A test with 3 events a day for 30 days stays under 1,500 calls. |
+| TRF-R3 | Few calls. | At most one route call per phone per event per 10 min (every 30 min until 40 min before leave-by), and none for events more than 2 h away. A test with 3 events a day for 30 days stays under 1,500 calls. |
 | TRF-R4 | Failure. | A route error skips that run (no push, no retry storm); 3 failures in a row for the same event push nothing and log once. |
 
 ### 2.3 Pushes (TRF-P)
 | ID | Requirement | Acceptance criteria |
 |---|---|---|
 | TRF-P1 | Leave by. | leave-by = start − drive time − 5 min. When now ≥ leave-by − 10 min, push once per phone per event, kind `leave`: "Leave by 3:42 for <title>", body "<place>: 28 min with traffic". Opens the event. |
-| TRF-P2 | Traffic got worse. | If, after TRF-P1, leave-by moves 10+ min earlier, push once more: "Leave now for <title>: traffic is heavier (38 min)". |
+| TRF-P2 | Traffic got worse. | If, after TRF-P1, leave-by moves 10+ min earlier, push once more: "Leave by 3:32 for <title>" (or "Leave now …"), body "Traffic is heavier: 38 min with traffic to <place>". |
 | TRF-P3 | Running late. | After leave-by, if the phone's place is fresh and it is still within 300 m of the origin used for TRF-P1, and the arrival (now + drive time) is after start, push once: "Leave now: you'll get to <title> at 4:07, 7 min late". With no fresh place, no running-late push. |
-| TRF-P4 | Quiet when moving or there. | No TRF-P2/P3 once the phone is more than 300 m from the origin and closer to the destination, or within 300 m of it. |
+| TRF-P4 | Quiet when moving or there. | No TRF-P2/P3 once the phone is more than 300 m from the origin, or within 300 m of the destination. (As built: any move of 300 m counts as on the way; the destination is known only on a run that routes.) |
 | TRF-P5 | At most three. | No more than 3 `leave` pushes per phone per event; none after the event starts. |
 
 ### 2.4 iPhone (TRF-A)
@@ -53,7 +53,7 @@ TRFSEC (security and privacy).
 | TRFSEC-1 | Latest place only. | One row per device; each report overwrites it; rows older than 24 h are deleted by the job; no history table. |
 | TRFSEC-2 | Never logged or pushed. | Logs carry event id and minutes, never coordinates or addresses; push payloads carry id and kind only (PUSH-2). A test greps logs from a run for coordinates. |
 | TRFSEC-3 | Own device only. | The location route takes the device from the session; one parent can't write or read another's. |
-| TRFSEC-4 | Key. | The Routes API key is restricted to the Routes API, kept in Secret Manager, read by the worker only. |
+| TRFSEC-4 | No key. | The worker calls the Routes API with its own service account, as the tennis drive times do (TEN-9, `ROUTES_PROJECT`); there's no API key to leak. (As built: the plan's key and secret weren't needed.) |
 
 ## 3. Design
 - **Data.** `device_locations (device_id pk → devices, lat, lng,
@@ -69,14 +69,16 @@ TRFSEC (security and privacy).
   (TRF-E), route if due (TRF-R3), decide P1–P5, send through the
   existing push sender.
 - **Routes client.** `src/server/traffic/routes.ts`, one function
-  `driveMinutes(origin, destination)`; a fake for tests.
+  (origin, destination) → minutes and the route's ends, on the tennis
+  drive-time requester (`src/server/tennis/drive.ts`); a fake for tests.
 - **API.** `POST/DELETE /api/v1/devices/current/location` (OpenAPI
   updated); `leave_people` on `PATCH /api/v1/devices/current`.
 - **iPhone.** CoreLocation significant-change monitoring when the kind
   is on; the two Settings screens; `leave` target = event. Build bump
   and TestFlight after.
-- **Infra.** Enable `routes.googleapis.com`, an API key restricted to
-  it, its secret, the scheduler job. Terraform apply by the owner.
+- **Infra.** The scheduler job `leave-check` (every 5 min, 06:00–21:55
+  home time). The Routes API, the worker's role on it and `ROUTES_PROJECT`
+  are already there for TEN-9. Terraform apply by the owner.
 
 ## 4. Testing
 - Unit: leave-by maths, back-to-back origin, P1–P5 decision table
