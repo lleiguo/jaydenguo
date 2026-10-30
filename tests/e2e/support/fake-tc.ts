@@ -71,7 +71,7 @@ function routes(): Map<string, string> {
 }
 
 // The hand-built entry pages' tournaments: A has his event (U9 Orange Boys,
-// event 6), B clashes with A and is farther, C has no orange event.
+// event 6), B clashes with A and is farther, C has no event for him (U12 green).
 export const ENTRY_FIXTURE = {
   a: "a0000000-0000-4000-8000-00000000000a",
   b: "b0000000-0000-4000-8000-00000000000b",

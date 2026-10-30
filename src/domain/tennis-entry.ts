@@ -6,21 +6,23 @@ import type { EntryStatus } from "./tennis-constants";
 // on an entry list.
 
 export type EntryPrefs = {
-  // The event name must contain one of these words (any case)...
+  // The event name must contain one of these words (any case), the earlier
+  // word first (orange before green)...
   include: string[];
   // ...and none of these.
   exclude: string[];
-  // Between several fitting events, one containing these wins (e.g. "U9"
-  // when a tournament has both U9 and U10 orange events).
+  // Between fitting events of the same word, one containing these wins (e.g.
+  // "U9" when a tournament has both U9 and U10 orange events).
   prefer: string[];
   maxDriveMinutes: number;
 };
 
 export const DEFAULT_ENTRY_PREFS: EntryPrefs = {
-  include: ["orange"],
+  include: ["orange", "green"],
   // Not "mixed": "double" covers mixed doubles, and a U9 singles event for
   // boys and girls together is called e.g. "U9 Mixed - Orange".
-  exclude: ["girl", "women", "double"],
+  // "gs" and "gu1", "gu9": the site's girls' events ("GS 10 - Green", "GU10").
+  exclude: ["girl", "women", "double", "gs", "gu1", "gu9"],
   prefer: ["u9"],
   maxDriveMinutes: 120,
 };
@@ -60,13 +62,24 @@ function has(name: string, word: string): boolean {
   return new RegExp(`(^|[^a-z0-9])${esc}`, "i").test(name);
 }
 
+// He plays U10, as the entry search asks for (0028 GRN-4).
+const OLDEST_AGE = 10;
+
+// Only for older players: every age in the name is over his. "U12 Green" is,
+// "RT 9 - 12 (Green)" and a name with no age aren't.
+function tooOld(name: string): boolean {
+  const ages = [...name.matchAll(/\d+/g)].map((m) => Number(m[0])).filter((n) => n >= 5 && n < 100);
+  return ages.length > 0 && ages.every((n) => n > OLDEST_AGE);
+}
+
 // The one event to enter him in, or null when none fits.
 export function pickEvent<E extends { name: string }>(events: E[], prefs: EntryPrefs): E | null {
-  const fits = events.filter(
-    (e) => prefs.include.some((w) => has(e.name, w)) && !prefs.exclude.some((w) => has(e.name, w)),
-  );
-  if (!fits.length) return null;
-  return fits.find((e) => prefs.prefer.some((w) => has(e.name, w))) ?? fits[0];
+  const open = events.filter((e) => !tooOld(e.name) && !prefs.exclude.some((w) => has(e.name, w)));
+  for (const word of prefs.include) {
+    const fits = open.filter((e) => has(e.name, word));
+    if (fits.length) return fits.find((e) => prefs.prefer.some((w) => has(e.name, w))) ?? fits[0];
+  }
+  return null;
 }
 
 // The site's search radius options (km, straight line). The search asks

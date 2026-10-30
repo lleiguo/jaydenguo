@@ -22,6 +22,8 @@ import type { MyEntry } from "@/adapters/tennis-tc/registrar";
 import { syncSource } from "@/worker/sync";
 import { createFakeTc, ENTRY_FIXTURE, TC_FIXTURE, TC_NOW, TC_PROFILE_URL } from "../e2e/support/fake-tc";
 
+const MIGRATION_0043 = "db/migrations/0043_tennis_green_ball.sql";
+
 // TEN-9..11: the Thursday, Friday and draw-day jobs against a fake of the
 // tournament site, into Postgres.
 
@@ -37,6 +39,8 @@ describe("tennis tournament entries", () => {
   let opensA = "";
   // And whether the search still shows no "Online Entry" button for A.
   let closedA = false;
+  // And what tournament C's event list offers, when not the fixture's.
+  let eventC = "";
   // And whether A's event page shows only its draws (list hidden).
   let hiddenA = false;
   // And whether the current tournament's event page shows only its draws.
@@ -87,25 +91,27 @@ describe("tennis tournament entries", () => {
     server = createFakeTc({
       requests,
       edit: (file, html) =>
-        file === "entries/event-current.html" && hiddenCurrent
-          ? readFileSync("tests/fixtures/tennis-tc/entries/event-draws-only.html", "utf8")
-              .replaceAll(ENTRY_FIXTURE.a, TC_FIXTURE.currentTournament)
-              .replace("draw=9", "draw=15")
-          : file === "entries/event-a6.html"
-            ? hiddenA
-              ? readFileSync("tests/fixtures/tennis-tc/entries/event-draws-only.html", "utf8")
-              : html.replace("<!--SELF-->", selfRow)
-            : file === "entries/search.html" && closedA
-              ? html.replace(
-                  /<a role="button" href="\/onlineentry\/onlineentry\.aspx\?id=a0000000[^]*?<\/a>/,
-                  "",
-                )
-              : file === "entries/tournament-a.html" && opensA
+        file === "entries/events-c.html" && eventC
+          ? html.replace("U12 (Green)", eventC)
+          : file === "entries/event-current.html" && hiddenCurrent
+            ? readFileSync("tests/fixtures/tennis-tc/entries/event-draws-only.html", "utf8")
+                .replaceAll(ENTRY_FIXTURE.a, TC_FIXTURE.currentTournament)
+                .replace("draw=9", "draw=15")
+            : file === "entries/event-a6.html"
+              ? hiddenA
+                ? readFileSync("tests/fixtures/tennis-tc/entries/event-draws-only.html", "utf8")
+                : html.replace("<!--SELF-->", selfRow)
+              : file === "entries/search.html" && closedA
                 ? html.replace(
-                    '<ul class="list">',
-                    `<ul class="list"><li class="list__item"><span class="list__value">Entry opens</span><time datetime="${opensA}T08:00:00">${opensA}</time></li>`,
+                    /<a role="button" href="\/onlineentry\/onlineentry\.aspx\?id=a0000000[^]*?<\/a>/,
+                    "",
                   )
-                : html,
+                : file === "entries/tournament-a.html" && opensA
+                  ? html.replace(
+                      '<ul class="list">',
+                      `<ul class="list"><li class="list__item"><span class="list__value">Entry opens</span><time datetime="${opensA}T08:00:00">${opensA}</time></li>`,
+                    )
+                  : html,
     });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -142,6 +148,80 @@ describe("tennis tournament entries", () => {
     // A second run adds nothing: known tournaments are skipped.
     expect(await runEnter(ctx(), s, { drive, registrar: manualRegistrar })).toMatchObject({ found: 0 });
     expect(await entriesOf(s.id)).toHaveLength(2);
+  });
+
+  it("0028: upcoming tournaments with no event for him are read again, settings on the old default follow", async () => {
+    const sql = readFileSync(MIGRATION_0043, "utf8");
+    selfRow = "";
+    const s = await newSource();
+    await runRefresh(ctx(), s, { drive });
+    const row = (await entriesOf(s.id)).find((r) => r.tournamentExternalId === ENTRY_FIXTURE.c)!;
+    expect(row.note).toMatch(/^No event for him: /);
+    const copy = (id: string, over: Partial<typeof tennisEntries.$inferInsert>) => {
+      return db
+        .insert(tennisEntries)
+        .values({ ...row, id: undefined, tournamentExternalId: id, ...over })
+        .returning();
+    };
+    await copy("past", { startDate: "2020-01-04", endDate: "2020-01-05" });
+    await copy("far", { note: "About 200 min away, over the 120 min limit." });
+    await db
+      .update(tennisEntries)
+      .set({ startDate: "2999-01-02", endDate: "2999-01-02" })
+      .where(eq(tennisEntries.id, row.id));
+    await db
+      .update(tennisEntries)
+      .set({ startDate: "2999-01-02", endDate: "2999-01-02" })
+      .where(eq(tennisEntries.tournamentExternalId, "far"));
+    const entryOf = (entry: object) => ({
+      profileUrl: TC_PROFILE_URL(base),
+      entry: { homePostalCode: "A1A 1A1", ...entry },
+    });
+    const [own] = await db
+      .insert(sources)
+      .values({
+        kind: "tennis_tc",
+        name: "Own words",
+        config: entryOf({ include: "orange, red", exclude: "girl" }),
+        categoryMapping: { default: "tennis" },
+      })
+      .returning();
+    await db
+      .update(sources)
+      .set({ config: entryOf({ include: "orange", exclude: "girl, women, double" }) })
+      .where(eq(sources.id, s.id));
+
+    await handle.pool.query(sql);
+
+    const left = (await entriesOf(s.id)).map((r) => r.tournamentExternalId);
+    expect(left).toEqual(expect.arrayContaining(["past", "far"]));
+    expect(left).not.toContain(ENTRY_FIXTURE.c);
+    const [saved] = await db.select().from(sources).where(eq(sources.id, s.id));
+    expect((saved.config as { entry: object }).entry).toMatchObject({
+      include: "orange, green",
+      exclude: "girl, women, double, gs, gu1, gu9",
+    });
+    const [kept] = await db.select().from(sources).where(eq(sources.id, own.id));
+    expect((kept.config as { entry: object }).entry).toMatchObject({
+      include: "orange, red",
+      exclude: "girl",
+    });
+    await db.delete(sources).where(eq(sources.id, own.id));
+
+    // Found again, this time with a green event he can play: open now, so
+    // the refresh leaves it to the Thursday job.
+    eventC = "BS 10 - Green";
+    try {
+      const [fresh] = await db.select().from(sources).where(eq(sources.id, s.id));
+      await runRefresh(ctx(), fresh, { drive });
+      expect((await entriesOf(s.id)).map((r) => r.tournamentExternalId)).not.toContain(ENTRY_FIXTURE.c);
+      await runEnter(ctx(), fresh, { drive, registrar: manualRegistrar });
+      const c = (await entriesOf(s.id)).find((r) => r.tournamentExternalId === ENTRY_FIXTURE.c);
+      expect(c).toMatchObject({ eventName: "BS 10 - Green" });
+      expect(c!.status).not.toBe("skipped");
+    } finally {
+      eventC = "";
+    }
   });
 
   it("every refresh: keeps a matching tournament not open yet, and skipped ones with why; Thursday enters it once open", async () => {
