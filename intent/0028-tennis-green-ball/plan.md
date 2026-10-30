@@ -1,5 +1,5 @@
 # Plan: Green ball tournaments count for Jayden
-Status: draft (2026-10-30), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-30, in chat: "Approve intent 0028 with the defaults: enter green events automatically, closest tournament wins on a shared weekend, and events only for ages over 10 stay out."), with [spec.md](spec.md).
 
 Order: one small change, so one PR.
 
@@ -24,4 +24,4 @@ None. Event names are from the site's pages already read (0001 spikes).
 - The next Thursday job treats those tournaments as it does orange ones.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-30. G1 next.

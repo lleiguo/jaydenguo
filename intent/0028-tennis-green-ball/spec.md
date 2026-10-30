@@ -1,5 +1,5 @@
 # Spec: Green ball tournaments count for Jayden
-Status: draft (2026-10-30). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-30, in chat: "Approve intent 0028 with the defaults: enter green events automatically, closest tournament wins on a shared weekend, and events only for ages over 10 stay out."). Written by Claude from [intent.md](intent.md).
 
 Read with [0001's spec](../0001-jayden-hub/spec.md) (TEN-9, TEN-12). IDs
 here: GRN (green ball).

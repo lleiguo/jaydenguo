@@ -1,5 +1,5 @@
 # Intent: Green ball tournaments count for Jayden
-Status: draft (2026-10-30). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-30, in chat: "Approve intent 0028 with the defaults: enter green events automatically, closest tournament wins on a shared weekend, and events only for ages over 10 stay out."). Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "for Jayden's tennis, let's include "green" ball tournament into ocnsideration, don't skip those"
