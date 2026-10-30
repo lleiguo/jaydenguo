@@ -90,7 +90,6 @@ describe("entry rules", () => {
     const events = parseEventList(page("events-a.html"));
     expect(pickEvent(events, DEFAULT_ENTRY_PREFS)?.eventNo).toBe("6");
     expect(pickEvent([{ name: "U10 (Orange Ball)" }], DEFAULT_ENTRY_PREFS)?.name).toBe("U10 (Orange Ball)");
-    expect(pickEvent([{ name: "RT 9 - 12 (Green)" }], DEFAULT_ENTRY_PREFS)).toBeNull();
     expect(pickEvent([{ name: "U9 Orange Doubles" }], DEFAULT_ENTRY_PREFS)).toBeNull();
     expect(pickEvent([{ name: "U9 Orange Mixed Doubles" }], DEFAULT_ENTRY_PREFS)).toBeNull();
     // Boys and girls together in one singles event (Rising Stars).
@@ -100,10 +99,29 @@ describe("entry rules", () => {
         DEFAULT_ENTRY_PREFS,
       )?.name,
     ).toBe("U9 Mixed - Orange");
-    // "u9" doesn't match "U19".
+    // "U19" is too old, and "u9" doesn't match it.
     expect(pickEvent([{ name: "U19 Orange" }, { name: "U10 Orange" }], DEFAULT_ENTRY_PREFS)?.name).toBe(
-      "U19 Orange",
+      "U10 Orange",
     );
+  });
+
+  it("green events fit him when there's no orange one (0028)", () => {
+    const pick = (...names: string[]) =>
+      pickEvent(
+        names.map((name) => ({ name })),
+        DEFAULT_ENTRY_PREFS,
+      )?.name ?? null;
+    for (const name of ["BS 10 - Green", "U10 Green Boys", "RT 9 - 12 (Green)", "Green Ball"])
+      expect(pick(name)).toBe(name);
+    // Orange first, whatever the order on the page; U9 only within a colour.
+    expect(pick("U9 Green", "U10 Orange")).toBe("U10 Orange");
+    expect(pick("U10 Green", "U9 Green")).toBe("U9 Green");
+    // Girls' events, however they're named.
+    for (const name of ["GS 10 - Green", "GS10 - Green", "GU10 Green", "GU9 Green", "U9 Orange Girls"])
+      expect(pick(name)).toBeNull();
+    // Older players' events.
+    for (const name of ["U12 Green", "BS 12 - Green", "RT 11 - 12 (Green)"]) expect(pick(name)).toBeNull();
+    expect(pick("U12 Green", "BS 10 - Green")).toBe("BS 10 - Green");
   });
 
   it("reads settings from the source, with defaults", () => {

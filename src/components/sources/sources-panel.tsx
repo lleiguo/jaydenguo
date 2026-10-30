@@ -622,8 +622,12 @@ function EntryForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
         />
       </label>
       <label className="flex flex-col">
-        Event name has one of (comma-separated)
-        <input name="include" defaultValue={e.include ?? "orange"} className="rounded border px-2 py-1" />
+        Event name has one of (comma-separated, first one preferred)
+        <input
+          name="include"
+          defaultValue={e.include ?? "orange, green"}
+          className="rounded border px-2 py-1"
+        />
       </label>
       <label className="flex flex-col">
         If several fit, prefer
@@ -633,7 +637,7 @@ function EntryForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
         Never events with
         <input
           name="exclude"
-          defaultValue={e.exclude ?? "girl, women, double"}
+          defaultValue={e.exclude ?? "girl, women, double, gs, gu1, gu9"}
           className="rounded border px-2 py-1"
         />
       </label>

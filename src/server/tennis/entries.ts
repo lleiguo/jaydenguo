@@ -34,7 +34,7 @@ import type { DriveTimer } from "./drive";
 
 // The tournament-entry jobs (TEN-9..11, plan M3b):
 // - Thursday noon (`tennis:enter`): find U10 tournaments open for entry
-//   near home, pick his event (e.g. U9 orange), keep those within the
+//   near home, pick his event (e.g. U9 orange, else green), keep those within the
 //   drive limit, one per weekend, and enter him, or list them with the
 //   site's entry link for the owner.
 // - Friday 10:00 (`tennis:acceptance`): read each event's entry list and

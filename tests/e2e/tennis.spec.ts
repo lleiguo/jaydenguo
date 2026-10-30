@@ -131,7 +131,7 @@ test.describe("tennis", () => {
         `update tennis_entries set entry_opens = '2024-10-01', entry_deadline = '2024-10-03'
          where tournament_external_id = 'e2e-not-open'`,
       );
-      await row("e2e-skipped", "Entry Green Ball Open", "skipped", null);
+      await row("e2e-skipped", "Entry Older Open", "skipped", null);
       // Intent 0017: accepted, with the list as the Friday job keeps it
       // (invented names).
       const { rows } = await row("e2e-accepted", "Entry Accepted Open", "main_draw", null);
@@ -151,7 +151,7 @@ test.describe("tennis", () => {
           [rows[0].id, i, [name], [tp], status, place],
         );
       await pool.query(
-        `update tennis_entries set note = 'No event for him: U10 Green Boys.' where tournament_external_id = 'e2e-skipped'`,
+        `update tennis_entries set note = 'No event for him: U12 Green Boys.' where tournament_external_id = 'e2e-skipped'`,
       );
     } finally {
       await pool.end();
@@ -171,8 +171,8 @@ test.describe("tennis", () => {
     await expect(notOpen).toHaveCount(1);
     await expect(notOpen).toContainText("Entry Later Cup");
     await expect(notOpen).toContainText("opens 2024-10-01 · closes 2024-10-03");
-    await expect(page.getByTestId("skipped")).toContainText("Entry Green Ball Open");
-    await expect(page.getByTestId("skipped")).toContainText("No event for him: U10 Green Boys.");
+    await expect(page.getByTestId("skipped")).toContainText("Entry Older Open");
+    await expect(page.getByTestId("skipped")).toContainText("No event for him: U12 Green Boys.");
     const upcoming = page
       .getByRole("region", { name: /^Tournaments .* entered in$/ })
       .getByTestId("upcoming-tournament");
