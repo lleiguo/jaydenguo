@@ -15,7 +15,7 @@ None. Event names are from the site's pages already read (0001 spikes).
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| G1 | `pickEvent` order and age check, new defaults, Sources page, data migration, tests. | GRN-1..6 | |
+| G1 | `pickEvent` order and age check, new defaults, Sources page, data migration, tests. | GRN-1..6 | [#214](https://github.com/lleiguo/jaydenguo/pull/214) |
 
 ## 4. Done when
 - On production, the tennis settings show "orange, green" (or the owner's
@@ -24,4 +24,4 @@ None. Event names are from the site's pages already read (0001 spikes).
 - The next Thursday job treats those tournaments as it does orange ones.
 
 ## 5. Status
-Approved 2026-10-30. G1 next.
+Approved 2026-10-30. G1 merged and deployed 2026-10-30 (#214). The owner's check of the Sources page and the Tennis page after the next refresh is left (O-2, section 4).
