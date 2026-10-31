@@ -62,22 +62,30 @@ function has(name: string, word: string): boolean {
   return new RegExp(`(^|[^a-z0-9])${esc}`, "i").test(name);
 }
 
-// He plays U10, as the entry search asks for (0028 GRN-4).
-const OLDEST_AGE = 10;
+// He plays U10 and can play up to U12, as the entry search asks for (0029
+// UGR-1, UGR-3).
+const HIS_AGE = 10;
+const OLDEST_AGE = 12;
 
-// Only for older players: every age in the name is over his. "U12 Green" is,
-// "RT 9 - 12 (Green)" and a name with no age aren't.
-function tooOld(name: string): boolean {
+// Every age in the name is over this one. "U12 Green" is over 10, "RT 9 - 12
+// (Green)" and a name with no age aren't.
+function allOver(name: string, age: number): boolean {
   const ages = [...name.matchAll(/\d+/g)].map((m) => Number(m[0])).filter((n) => n >= 5 && n < 100);
-  return ages.length > 0 && ages.every((n) => n > OLDEST_AGE);
+  return ages.length > 0 && ages.every((n) => n > age);
 }
 
-// The one event to enter him in, or null when none fits.
+// The one event to enter him in, or null when none fits. Word order first,
+// then his own age over playing up, then `prefer`.
 export function pickEvent<E extends { name: string }>(events: E[], prefs: EntryPrefs): E | null {
-  const open = events.filter((e) => !tooOld(e.name) && !prefs.exclude.some((w) => has(e.name, w)));
+  const open = events.filter(
+    (e) => !allOver(e.name, OLDEST_AGE) && !prefs.exclude.some((w) => has(e.name, w)),
+  );
   for (const word of prefs.include) {
     const fits = open.filter((e) => has(e.name, word));
-    if (fits.length) return fits.find((e) => prefs.prefer.some((w) => has(e.name, w))) ?? fits[0];
+    if (!fits.length) continue;
+    const own = fits.filter((e) => !allOver(e.name, HIS_AGE));
+    const pool = own.length ? own : fits;
+    return pool.find((e) => prefs.prefer.some((w) => has(e.name, w))) ?? pool[0];
   }
   return null;
 }

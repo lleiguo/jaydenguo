@@ -33,7 +33,7 @@ import { notifyEntryActions, notifyEntryChange } from "../push/kinds";
 import type { DriveTimer } from "./drive";
 
 // The tournament-entry jobs (TEN-9..11, plan M3b):
-// - Thursday noon (`tennis:enter`): find U10 tournaments open for entry
+// - Thursday noon (`tennis:enter`): find U10 and U12 tournaments open for entry
 //   near home, pick his event (e.g. U9 orange, else green), keep those within the
 //   drive limit, one per weekend, and enter him, or list them with the
 //   site's entry link for the owner.
@@ -51,10 +51,10 @@ import type { DriveTimer } from "./drive";
 
 type EntryRow = typeof tennisEntries.$inferSelect;
 
-// The site's "U10" age group and "Online entry open" status, as the search
-// form names them. The age group, not a tournament category: his events sit
-// in Rookie tournaments and in Provincial ones ("Rising Stars") alike.
-const U10_AGE_GROUP = "10";
+// The site's "U10" and "U12" age groups and "Online entry open" status, as the
+// search form names them. The age group, not a tournament category: his events
+// sit in Rookie tournaments and in Provincial ones ("Rising Stars") alike.
+const AGE_GROUPS = ["10", "12"];
 const ENTRY_OPEN = "2";
 const MAX_SEARCH_PAGES = 5;
 const ENTER_REQUESTS = 150;
@@ -235,26 +235,28 @@ type ListedValues = {
   updatedAt: Date;
 };
 
-// One search of the site, page by page (20 results a page).
+// One search of the site for each age group, page by page (20 results a
+// page). A tournament in both comes back once.
 async function search(client: TcClient, form: Record<string, string>): Promise<TcSearchResult[]> {
-  const out: TcSearchResult[] = [];
-  for (let pageNo = 1; pageNo <= MAX_SEARCH_PAGES; pageNo++) {
-    const res = await client.get("/find/tournament/DoSearch", {
-      xhr: true,
-      form: { ...form, Page: String(pageNo) },
-    });
-    const results = res ? parseSearchResults(res.html) : [];
-    out.push(...results);
-    if (results.length < 20) break;
+  const out = new Map<string, TcSearchResult>();
+  for (const ageGroup of AGE_GROUPS) {
+    for (let pageNo = 1; pageNo <= MAX_SEARCH_PAGES; pageNo++) {
+      const res = await client.get("/find/tournament/DoSearch", {
+        xhr: true,
+        form: { ...form, "TournamentExtendedFilter.AgeGroupID": ageGroup, Page: String(pageNo) },
+      });
+      const results = res ? parseSearchResults(res.html) : [];
+      for (const t of results) if (!out.has(t.id)) out.set(t.id, t);
+      if (results.length < 20) break;
+    }
   }
-  return out;
+  return [...out.values()];
 }
 
 const searchForm = (settings: EntrySettings, radiusKm: number) => ({
   "TournamentFilter.DateFilterType": "0",
   "TournamentFilter.PostalCode": settings.postalCode!,
   "TournamentFilter.Distance": String(radiusKm),
-  "TournamentExtendedFilter.AgeGroupID": U10_AGE_GROUP,
 });
 
 // His account's "My entries" list, for tournaments still to come: each
@@ -811,7 +813,7 @@ export async function runAcceptance(
   return { ...counts, listed };
 }
 
-// U10 tournaments near home in the coming months that the app hasn't
+// U10 and U12 tournaments near home in the coming months that the app hasn't
 // seen. One that fits him and opens for entry later is kept as "not open
 // yet" (the Thursday job enters him once it opens); one that doesn't fit is
 // kept as skipped, with why. One open now is left to the Thursday job, and

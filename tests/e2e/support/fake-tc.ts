@@ -110,6 +110,8 @@ type Options = {
   edit?: (file: string, html: string) => string;
   // Paths requested, for assertions.
   requests?: string[];
+  // The form of each tournament search.
+  searches?: URLSearchParams[];
   // Entry forms submitted, and tournaments whose entry asks for payment.
   submissions?: EntrySubmission[];
   paid?: Set<string>;
@@ -147,6 +149,7 @@ export function createFakeTc(opts: Options = {}): Server {
     // The old /sport/*.aspx pages are told apart by their query string.
     const path = (url.pathname + (url.pathname.endsWith(".aspx") ? url.search : "")).toLowerCase();
     opts.requests?.push(url.pathname);
+    if (opts.searches && path === "/find/tournament/dosearch") opts.searches.push(await readBody(req));
     const to = redirects.get(path);
     if (to) {
       res.writeHead(302, { location: to }).end();

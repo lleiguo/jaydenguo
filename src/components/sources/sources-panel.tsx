@@ -588,8 +588,8 @@ function EntryForm({ s, onSaved }: { s: Source; onSaved: () => void }) {
       }}
     >
       <p className="text-neutral-600 dark:text-neutral-400">
-        Thursdays at noon the app looks for U10 tournaments open for entry near home and picks his event;
-        Fridays at 10:00 it reads the acceptance lists; on draw days it checks for his draw every hour.
+        Thursdays at noon the app looks for U10 and U12 tournaments open for entry near home and picks his
+        event; Fridays at 10:00 it reads the acceptance lists; on draw days it checks for his draw every hour.
       </p>
       <label className="flex items-start gap-2">
         <input name="autoEnter" type="checkbox" defaultChecked={e.autoEnter !== false} className="mt-1" />

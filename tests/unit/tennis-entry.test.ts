@@ -119,9 +119,40 @@ describe("entry rules", () => {
     // Girls' events, however they're named.
     for (const name of ["GS 10 - Green", "GS10 - Green", "GU10 Green", "GU9 Green", "U9 Orange Girls"])
       expect(pick(name)).toBeNull();
-    // Older players' events.
-    for (const name of ["U12 Green", "BS 12 - Green", "RT 11 - 12 (Green)"]) expect(pick(name)).toBeNull();
+  });
+
+  it("U12 orange and green events fit him, after his own age (0029)", () => {
+    const pick = (...names: string[]) =>
+      pickEvent(
+        names.map((name) => ({ name })),
+        DEFAULT_ENTRY_PREFS,
+      )?.name ?? null;
+    for (const name of [
+      "U12 Orange",
+      "U12 (Orange Ball)",
+      "U12 Green",
+      "BS 12 - Green",
+      "U12 (Green Ball)",
+      "RT 11 - 12 (Green)",
+    ])
+      expect(pick(name)).toBe(name);
+    // His own age within a colour; orange before green whatever the age.
     expect(pick("U12 Green", "BS 10 - Green")).toBe("BS 10 - Green");
+    expect(pick("U12 Green", "U9 Green")).toBe("U9 Green");
+    expect(pick("U12 Orange", "U10 Orange")).toBe("U10 Orange");
+    expect(pick("U12 Green", "U10 Orange")).toBe("U10 Orange");
+    expect(pick("U12 Orange", "U10 Green")).toBe("U12 Orange");
+    // Nothing older, and no girls' or doubles events.
+    for (const name of [
+      "U14 Orange",
+      "U14 Green",
+      "BS 14 - Green",
+      "RT 13 - 14 (Green)",
+      "GS 12 - Green",
+      "GU12 Green",
+      "U12 Green Doubles",
+    ])
+      expect(pick(name)).toBeNull();
   });
 
   it("reads settings from the source, with defaults", () => {
