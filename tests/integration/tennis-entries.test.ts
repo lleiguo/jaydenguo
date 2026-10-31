@@ -23,6 +23,7 @@ import { syncSource } from "@/worker/sync";
 import { createFakeTc, ENTRY_FIXTURE, TC_FIXTURE, TC_NOW, TC_PROFILE_URL } from "../e2e/support/fake-tc";
 
 const MIGRATION_0043 = "db/migrations/0043_tennis_green_ball.sql";
+const MIGRATION_0044 = "db/migrations/0044_tennis_u12_events.sql";
 
 // TEN-9..11: the Thursday, Friday and draw-day jobs against a fake of the
 // tournament site, into Postgres.
@@ -33,6 +34,7 @@ describe("tennis tournament entries", () => {
   let server: Server;
   let base: string;
   const requests: string[] = [];
+  const searches: URLSearchParams[] = [];
   // Tests set his row on tournament A's entry list here.
   let selfRow = "";
   // And when online entry opens for tournament A ("" = no date shown).
@@ -90,9 +92,10 @@ describe("tennis tournament entries", () => {
     process.env.FETCH_MIN_GAP_MS = "0";
     server = createFakeTc({
       requests,
+      searches,
       edit: (file, html) =>
         file === "entries/events-c.html" && eventC
-          ? html.replace("U12 (Green)", eventC)
+          ? html.replace("U14 (Green)", eventC)
           : file === "entries/event-current.html" && hiddenCurrent
             ? readFileSync("tests/fixtures/tennis-tc/entries/event-draws-only.html", "utf8")
                 .replaceAll(ENTRY_FIXTURE.a, TC_FIXTURE.currentTournament)
@@ -148,6 +151,54 @@ describe("tennis tournament entries", () => {
     // A second run adds nothing: known tournaments are skipped.
     expect(await runEnter(ctx(), s, { drive, registrar: manualRegistrar })).toMatchObject({ found: 0 });
     expect(await entriesOf(s.id)).toHaveLength(2);
+  });
+
+  it("0029: searches U10 and U12, and a U12 event skipped before comes back", async () => {
+    const sql = readFileSync(MIGRATION_0044, "utf8");
+    selfRow = "";
+    const s = await newSource();
+    searches.length = 0;
+    await runRefresh(ctx(), s, { drive });
+    // A refresh searches twice: for entries he already has, then for new ones.
+    expect(searches.map((f) => f.get("TournamentExtendedFilter.AgeGroupID"))).toEqual([
+      "10",
+      "12",
+      "10",
+      "12",
+    ]);
+    // In both searches, and read once: one row, nothing twice.
+    const ids = (await entriesOf(s.id)).map((r) => r.tournamentExternalId);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    const row = (await entriesOf(s.id)).find((r) => r.tournamentExternalId === ENTRY_FIXTURE.c)!;
+    expect(row.note).toMatch(/^No event for him: /);
+    const copy = (id: string, over: Partial<typeof tennisEntries.$inferInsert>) =>
+      db.insert(tennisEntries).values({ ...row, id: undefined, tournamentExternalId: id, ...over });
+    await copy("past", { startDate: "2020-01-04", endDate: "2020-01-05" });
+    await copy("far", {
+      note: "About 200 min away, over the 120 min limit.",
+      startDate: "2999-01-02",
+      endDate: "2999-01-02",
+    });
+    await db
+      .update(tennisEntries)
+      .set({ startDate: "2999-01-02", endDate: "2999-01-02" })
+      .where(eq(tennisEntries.id, row.id));
+    await handle.pool.query(sql);
+    const left = (await entriesOf(s.id)).map((r) => r.tournamentExternalId);
+    expect(left).toEqual(expect.arrayContaining(["past", "far"]));
+    expect(left).not.toContain(ENTRY_FIXTURE.c);
+
+    eventC = "U12 (Green)";
+    try {
+      await runRefresh(ctx(), s, { drive });
+      await runEnter(ctx(), s, { drive, registrar: manualRegistrar });
+      const c = (await entriesOf(s.id)).find((r) => r.tournamentExternalId === ENTRY_FIXTURE.c);
+      expect(c).toMatchObject({ eventName: "U12 (Green)" });
+      expect(c!.status).not.toBe("skipped");
+    } finally {
+      eventC = "";
+    }
   });
 
   it("0028: upcoming tournaments with no event for him are read again, settings on the old default follow", async () => {
