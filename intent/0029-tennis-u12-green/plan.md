@@ -1,5 +1,5 @@
 # Plan: U12 green events count for Jayden
-Status: draft (2026-10-31), with [spec.md](spec.md).
+Status: approved (owner, 2026-10-31, in chat: "Approve defaults"): enter U12 green events automatically, also search the U12 age group, closest tournament wins on a shared weekend. With [spec.md](spec.md).
 
 Order: the spike first, because the search needs its answer; then one small
 change, so one PR.
@@ -26,4 +26,4 @@ change, so one PR.
 - The next Thursday job treats those tournaments as it does other green ones.
 
 ## 5. Status
-Draft. Waiting on the owner's approval of intent, spec and plan.
+Approved 2026-10-31. SP-U1, then U1 next.

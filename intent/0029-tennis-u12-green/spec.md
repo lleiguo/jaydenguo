@@ -1,5 +1,5 @@
 # Spec: U12 green events count for Jayden
-Status: draft (2026-10-31). Written by Claude from [intent.md](intent.md).
+Status: approved (owner, 2026-10-31, in chat: "Approve defaults"): enter U12 green events automatically, also search the U12 age group, closest tournament wins on a shared weekend. Written by Claude from [intent.md](intent.md).
 
 Read with [0028's spec](../0028-tennis-green-ball/spec.md) and
 [0001's spec](../0001-jayden-hub/spec.md) (TEN-9, TEN-12). IDs here: UGR

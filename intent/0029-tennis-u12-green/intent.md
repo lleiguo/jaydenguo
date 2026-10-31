@@ -1,5 +1,5 @@
 # Intent: U12 green events count for Jayden
-Status: draft (2026-10-31). Drafted by Claude from the owner's request.
+Status: approved (owner, 2026-10-31, in chat: "Approve defaults"): enter U12 green events automatically, also search the U12 age group, closest tournament wins on a shared weekend. Drafted by Claude from the owner's request.
 Owner: Jayden's parent (lleiguo).
 
 "U12 green event should be included"
