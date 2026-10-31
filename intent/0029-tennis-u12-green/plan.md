@@ -13,7 +13,7 @@ change, so one PR.
 ## 2. Spikes
 | # | Question | How | Blocks |
 |---|---|---|---|
-| SP-U1 | What value does the site's search form use for the U12 age group? U10 is "10", so "12" is likely but unchecked. | Read the options on the public search page. | U1 |
+| SP-U1 | What value does the site's search form use for the U12 age group? Answered 2026-10-31: "12" (the public search page lists U10 as "10", U12 as "12"). | Read the options on the public search page. | U1 |
 
 ## 3. Milestones
 | # | What | Spec | PR |
@@ -26,4 +26,4 @@ change, so one PR.
 - The next Thursday job treats those tournaments as it does his other ones.
 
 ## 5. Status
-Approved 2026-10-31. SP-U1, then U1 next.
+Approved 2026-10-31. SP-U1 done; U1 next.
