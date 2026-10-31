@@ -18,7 +18,7 @@ change, so one PR.
 ## 3. Milestones
 | # | What | Spec | PR |
 |---|---|---|---|
-| U1 | Age limit and order in `pickEvent`, U12 search, Sources page sentence, data migration, tests. | UGR-1..5 | |
+| U1 | Age limit and order in `pickEvent`, U12 search, Sources page sentence, data migration, tests. | UGR-1..5 | [#217](https://github.com/lleiguo/jaydenguo/pull/217) |
 
 ## 4. Done when
 - On production, after a refresh, no upcoming tournament with a U12 orange or
@@ -26,4 +26,4 @@ change, so one PR.
 - The next Thursday job treats those tournaments as it does his other ones.
 
 ## 5. Status
-Approved 2026-10-31. SP-U1 done; U1 next.
+Approved 2026-10-31. SP-U1 done; U1 merged and deployed 2026-10-31 (#217), migration 0044 applied. The owner's check of the Tennis page after the next refresh is left (O-2, section 4).
